@@ -90,6 +90,7 @@ export function buildConversationSidebarContacts(p: {
   directory: Record<string, ContactMeshEntryClient>
   partnerOptions: readonly InboxPartnerOption[]
   favorites: ReadonlySet<string>
+  /** Fallback wenn keine Posteingangs-Nachricht (Telefonbuch „zuletzt“). */
   lastContacted: Readonly<Record<string, number>>
   hidden: ReadonlySet<string>
   sendPath?: ActiveSendPath
@@ -119,6 +120,8 @@ export function buildConversationSidebarContacts(p: {
     const existing = byKey.get(address)
     if (!existing) continue
     existing.unreadCount = opt.unreadCount ?? 0
+    const msgAt = opt.lastMessageAt ?? 0
+    if (msgAt > existing.lastContactedAt) existing.lastContactedAt = msgAt
   }
 
   const items = Array.from(byKey.values()).filter((item) =>

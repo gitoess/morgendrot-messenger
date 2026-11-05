@@ -14,6 +14,8 @@ import {
   LazyChatViewProtokollAnchorButton,
   LazyChatViewTangleInventoryButton,
 } from '@/frontend/components/lazy/messenger-scope-b'
+/** Eager: On-Chain/NFT-Dialog ohne Lazy-Delay in der Toolbar. */
+import { ChatViewEvidenceImageViewerButton } from '@/frontend/components/chat-view-evidence-image-viewer'
 import {
   ChatViewPendingSendsButton,
   type OfflineMailboxQueueListItem,
@@ -353,6 +355,15 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          <div className="inline-flex items-center">
+            <ChatViewEvidenceImageViewerButton
+              messages={messages}
+              triggerLabel="On-Chain / NFT"
+              defaultMode="owner"
+              triggerClassName="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            />
+          </div>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

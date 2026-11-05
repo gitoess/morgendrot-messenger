@@ -1,38 +1,19 @@
 /**
- * Package-ID → MAILBOX_ID aus `public/package-profiles.manifest.json` (H.24b-Vorbereitung).
+ * Package-ID → MAILBOX_ID aus `public/package-profiles.manifest.json` (H.24b).
  * Wichtig: Posteingang scannt immer ein Mailbox-**Objekt**; PACKAGE_ID allein reicht nicht für alte Deploys.
+ *
+ * Nutzt den zentralen Parser aus `package-profile.ts` (§ H.24b P0) — keine eigene Parse-Logik.
  */
 
-let cacheByPackage: Record<string, string> | null = null
-
-async function loadManifestMailboxMap(): Promise<Record<string, string>> {
-  if (cacheByPackage) return cacheByPackage
-  if (typeof window === 'undefined') return {}
-  try {
-    const r = await fetch('/package-profiles.manifest.json', { cache: 'no-store' })
-    if (!r.ok) return {}
-    const j = (await r.json()) as {
-      profiles?: Array<{ packageId?: string; mailboxId?: string }>
-    }
-    const map: Record<string, string> = {}
-    for (const p of j.profiles ?? []) {
-      const pkg = (p.packageId ?? '').trim().toLowerCase()
-      const mb = (p.mailboxId ?? '').trim()
-      if (/^0x[a-f0-9]{64}$/i.test(pkg) && /^0x[a-f0-9]{64}$/i.test(mb)) {
-        map[pkg] = mb
-      }
-    }
-    cacheByPackage = map
-    return map
-  } catch {
-    return {}
-  }
-}
+import {
+  loadPackageProfilesManifest,
+  packageMailboxMap,
+} from '@/frontend/lib/package-profile'
 
 /** Liefert die zum Profil gehörende MAILBOX_ID, falls im Manifest hinterlegt. */
 export async function lookupMailboxIdForPackage(packageId: string): Promise<string | undefined> {
   const pkg = packageId.trim().toLowerCase()
   if (!/^0x[a-f0-9]{64}$/.test(pkg)) return undefined
-  const map = await loadManifestMailboxMap()
-  return map[pkg]
+  const manifest = await loadPackageProfilesManifest()
+  return packageMailboxMap(manifest.profiles)[pkg]
 }

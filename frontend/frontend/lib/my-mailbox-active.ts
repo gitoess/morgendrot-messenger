@@ -1,7 +1,13 @@
 /**
  * Ein aktives Send-/Posteingang-Ziel: Team- oder Private-Mailbox (nicht Server-Shared).
  * Server-MAILBOX_ID (.env) wird immer separat mitgelesen.
+ *
+ * § H.24b P3 Adoption: aktive Mailbox pro Einsatzprofil (scoped localStorage).
  */
+
+import { readScoped, removeScoped, writeScoped } from '@/frontend/lib/package-profile-namespace'
+
+const ACTIVE_MAILBOX_DOMAIN = 'activeMailbox'
 
 export type ActiveSendMailbox =
   | { kind: 'none' }
@@ -31,16 +37,16 @@ export function notifyActiveMailboxChanged(): void {
 
 function readActiveRaw(): string {
   if (typeof window === 'undefined') return ''
-  const v3 = (window.localStorage.getItem(LS_ACTIVE) ?? '').trim()
+  const v3 = (readScoped(ACTIVE_MAILBOX_DOMAIN, LS_ACTIVE) ?? '').trim()
   if (v3) return v3
-  return (window.localStorage.getItem(LS_LEGACY) ?? '').trim()
+  return (readScoped(ACTIVE_MAILBOX_DOMAIN, LS_LEGACY) ?? '').trim()
 }
 
 function writeActiveRaw(value: string): void {
   if (typeof window === 'undefined') return
   const t = value.trim()
-  if (!t) window.localStorage.removeItem(LS_ACTIVE)
-  else window.localStorage.setItem(LS_ACTIVE, t)
+  if (!t) removeScoped(ACTIVE_MAILBOX_DOMAIN, LS_ACTIVE)
+  else writeScoped(ACTIVE_MAILBOX_DOMAIN, LS_ACTIVE, t)
 }
 
 export function readActiveSendMailbox(): ActiveSendMailbox {

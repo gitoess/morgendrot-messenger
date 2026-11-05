@@ -27,8 +27,8 @@ export function ChatViewContactSendMailboxSelect(p: ChatViewContactSendMailboxSe
   const entry = /^0x[a-f0-9]{64}$/.test(wallet) ? contactDirectory[wallet] : undefined
 
   const options = useMemo(
-    () => buildSendMailboxTargetOptions(entry, serverMailboxId),
-    [entry, serverMailboxId]
+    () => buildSendMailboxTargetOptions(entry, serverMailboxId, wallet),
+    [entry, serverMailboxId, wallet]
   )
 
   const value = useMemo(() => {

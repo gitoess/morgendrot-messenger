@@ -216,7 +216,7 @@ Automatisch aus Session, Telefonbuch und Gerät — **Klartext**, vom Nutzer im 
 3. **Send-Pfad:** `isEmergencySend` → **`encrypted=false`**, Online **`/send-plain`**
 4. **Wire optional:** `MORG_EMERGENCY_V2` mit `sub`/`loc` — erst wenn v1-Dialog stabil (kein Blocker für B2.5)
 
-**Verwandt:** **`docs/MESSENGER-CHAT-HANDBUCH.md`** § SOS · **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`** §3.1 · **`docs/INITIAL-PROFILE-METADATA-AND-FUTURE-FIELDS-CRITIQUE.md`** (SOS ≠ `initialProfile`).
+**Verwandt:** **`docs/MESSENGER-CHAT-HANDBUCH.md`** § SOS · **`docs/SOS-WANDERER-V1.md`** (Wanderer v1) · **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`** §3.1 · **`docs/INITIAL-PROFILE-METADATA-AND-FUTURE-FIELDS-CRITIQUE.md`** (SOS ≠ `initialProfile`).
 
 ---
 

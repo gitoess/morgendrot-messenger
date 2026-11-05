@@ -1,7 +1,7 @@
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import {
   CONTACT_MAILBOX_SLOT_LABELS,
-  readContactMailboxSlots,
+  resolveContactMailboxSlots,
   type ContactMailboxSlotId,
 } from '@/frontend/lib/contact-mailbox-slots'
 import { maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
@@ -38,7 +38,7 @@ export function getComposerMailboxRecipientHint(p: {
     }
   }
 
-  const slots = readContactMailboxSlots(entry)
+  const slots = resolveContactMailboxSlots(to, entry)
   const known = Object.entries(slots) as [ContactMailboxSlotId, string][]
   if (known.length === 0) {
     return {

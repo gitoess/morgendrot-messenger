@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Lock, Unlock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
+import { writePassphraseProtectEnabled } from '@/frontend/lib/passphrase-message-local-store'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -65,7 +66,10 @@ export function ChatViewEncryptionModeToggle(p: {
       >
         <button
           type="button"
-          onClick={() => p.onEncryptedChange(true)}
+          onClick={() => {
+            writePassphraseProtectEnabled(false)
+            p.onEncryptedChange(true)
+          }}
           className={cn(
             'inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-colors',
             p.encrypted ? 'bg-emerald-500/20 text-emerald-400' : 'text-muted-foreground hover:bg-muted/60'

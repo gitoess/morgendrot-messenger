@@ -67,6 +67,13 @@ export const LazyChatViewTangleInventoryButton = dynamic(
   { ssr: false, loading: () => null }
 )
 
+/** B2 — Evidenz-Bild Object-ID Viewer (Experiment) */
+export const LazyChatViewEvidenceImageViewerButton = dynamic(
+  () =>
+    import('@/frontend/components/chat-view-evidence-image-viewer').then((m) => m.ChatViewEvidenceImageViewerButton),
+  { ssr: false, loading: () => null }
+)
+
 /** B2 — Peering-QR (QR / Scan / Einfügen) */
 export const LazyPeeringQrActions = dynamic(
   () => import('@/frontend/components/peering-qr-actions').then((m) => m.PeeringQrActions),

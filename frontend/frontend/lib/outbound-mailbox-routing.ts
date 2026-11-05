@@ -5,7 +5,6 @@ import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { normalizeMailboxObjectIdInput } from '@/frontend/lib/composer-mailbox-object-id'
 import {
   type ContactSendMailboxTarget,
-  defaultContactSendSlot,
   readContactSendMailboxTarget,
   resolveContactMailboxSlotObjectId,
 } from '@/frontend/lib/contact-mailbox-slots'
@@ -37,7 +36,7 @@ export function resolveOutboundMailboxObjectId(
   if (target === 'event') return undefined
 
   if (target === 'shared' || target === 'private' || target === 'team' || target === 'buffer') {
-    const fromSlot = resolveContactMailboxSlotObjectId(entry, target)
+    const fromSlot = resolveContactMailboxSlotObjectId(entry, target, to)
     if (fromSlot) return fromSlot
     if (target === 'shared') {
       const serverMb = readCachedServerMailboxObjectId().trim()

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { bootstrapCapacitorStandaloneSession } from '@/frontend/lib/capacitor-standalone-bootstrap'
+import { isCapacitorNativePlatform } from '@/frontend/lib/capacitor-platform'
 import {
   clearStuckRadixBodyLock,
   isNativeVaultOverlayOpen,
@@ -11,6 +12,9 @@ import {
 /** Läuft einmal pro App-Start auf nativer Capacitor-Plattform. */
 export function CapacitorStandaloneBootstrap() {
   useEffect(() => {
+    if (isCapacitorNativePlatform()) {
+      document.documentElement.classList.add('capacitor-native')
+    }
     bootstrapCapacitorStandaloneSession()
     const sweep = () => {
       if (isNativeVaultOverlayOpen()) {

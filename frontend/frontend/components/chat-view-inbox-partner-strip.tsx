@@ -23,7 +23,13 @@ import {
   inboxSourceFilterReadAllowed,
 } from '@/frontend/lib/messenger-capability-gates'
 
-export type InboxPartnerOption = { address: string; label: string; unreadCount?: number }
+export type InboxPartnerOption = {
+  address: string
+  label: string
+  unreadCount?: number
+  /** Letzte Nachricht im Posteingang (Sortierung Sidebar, Telegram-ähnlich). */
+  lastMessageAt?: number
+}
 
 const MAX_VISIBLE_CHIPS = 5
 

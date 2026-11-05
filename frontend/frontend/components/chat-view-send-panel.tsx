@@ -43,6 +43,7 @@ import {
   type ChatViewActiveConversationBarProps,
 } from '@/frontend/components/chat-view-active-conversation-bar'
 import { ChatViewEncryptionModeToggle } from '@/frontend/components/chat-view-encryption-mode-toggle'
+import { PassphraseProtectComposerToggle } from '@/frontend/components/chat-view-passphrase-protect-toggle'
 import {
   encryptedHandshakeStatusLabel,
   type EncryptedRecipientHandshakeStatus,
@@ -627,6 +628,9 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             <p className="text-xs font-medium text-muted-foreground">Verschlüsselung</p>
             <ChatViewEncryptionModeToggle {...encryptionModeToggle} />
           </div>
+        ) : null}
+        {forcedTransport === 'internet' ? (
+          <PassphraseProtectComposerToggle encrypted={encrypted} onEncryptedChange={encryptionModeToggle?.onEncryptedChange} />
         ) : null}
         {showRecipientRow ? (
           <div className="min-h-[4.5rem]">

@@ -2,8 +2,10 @@
 
 import type { OutgoingHandshakeOffer, PendingHandshakeOffer } from '@/frontend/lib/handshake-offers-types'
 import { OFFLINE_CACHE_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
+import { readScoped, writeScoped } from '@/frontend/lib/package-profile-namespace'
 
 const LS_KEY = 'morgendrot.handshakeOffersCache.v1'
+const HANDSHAKE_DOMAIN = 'handshakes'
 
 type HandshakeOffersCacheEnvelope = {
   savedAtMs: number
@@ -22,7 +24,7 @@ export function cacheHandshakeOffers(
       offers,
       outgoingOffers,
     }
-    window.localStorage.setItem(LS_KEY, JSON.stringify(payload))
+    writeScoped(HANDSHAKE_DOMAIN, LS_KEY, JSON.stringify(payload))
   } catch {
     /* ignore */
   }
@@ -33,7 +35,7 @@ export function readCachedHandshakeOffers(
 ): { offers: PendingHandshakeOffer[]; outgoingOffers: OutgoingHandshakeOffer[]; ageMinutes: number } | null {
   if (typeof window === 'undefined') return null
   try {
-    const raw = window.localStorage.getItem(LS_KEY)?.trim()
+    const raw = readScoped(HANDSHAKE_DOMAIN, LS_KEY)?.trim()
     if (!raw) return null
     const j = JSON.parse(raw) as Partial<HandshakeOffersCacheEnvelope>
     const savedAtMs = Number(j.savedAtMs ?? 0)

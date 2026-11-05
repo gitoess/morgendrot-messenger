@@ -11,6 +11,12 @@ import {
   buildChatOutgoingWireContent,
   buildLoraMeshDualWireTexts,
 } from '@/frontend/features/send/chat-view-outgoing-payload'
+import { encryptPassphraseMessage } from '@/frontend/lib/passphrase-message-crypto'
+import {
+  readPassphraseProtectEnabled,
+  rememberPassphraseMessagePassphrase,
+} from '@/frontend/lib/passphrase-message-local-store'
+import { takeEncryptedSendKeyEpochRenewHint } from '@/frontend/lib/session-epoch-renew-hint'
 import { buildTxtFileWireParts } from '@/frontend/features/send/chat-view-txt-split'
 import {
   validateLoraDualWireUtf8,
@@ -673,6 +679,54 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       textSnaps = textSnaps.map((s) => prependMorgEmergencyV1Marker(s, k))
     }
 
+    /** Passphrase-Schutz: Ciphertext als Klartext-Wire; Key nur off-chain (kein Handshake). */
+    let sharedPassphraseNote = ''
+    const passphraseProtect = readPassphraseProtectEnabled()
+    if (passphraseProtect) {
+      if (sendEncrypted) {
+        applyValidationError(
+          {
+            ok: false,
+            message:
+              'Passphrase-Schutz braucht Klartext-Transport (Ciphertext on-chain). Oben „Unverschlüsselt“ wählen oder Passphrase-Schutz aus.',
+            idleMs: 9000,
+          },
+          setStatus,
+          setStatusMsg
+        )
+        return
+      }
+      try {
+        const wrapped: string[] = []
+        let lastPass = ''
+        for (const snap of textSnaps) {
+          if (!snap.trim()) {
+            wrapped.push(snap)
+            continue
+          }
+          const { wire, passphrase } = await encryptPassphraseMessage(snap)
+          rememberPassphraseMessagePassphrase(wire, passphrase)
+          lastPass = passphrase
+          wrapped.push(wire)
+        }
+        textSnaps = wrapped
+        if (lastPass) {
+          sharedPassphraseNote = ` Passphrase zum Teilen: ${lastPass}`
+        }
+      } catch (e) {
+        applyValidationError(
+          {
+            ok: false,
+            message: e instanceof Error ? e.message : 'Passphrase-Verschlüsselung fehlgeschlagen.',
+            idleMs: 8000,
+          },
+          setStatus,
+          setStatusMsg
+        )
+        return
+      }
+    }
+
     const meshKlartextOkWithoutZeroXRecipient =
       forcedTransport === 'mesh' &&
       (!meshPlaintextToNodeEnabled || parseMeshtasticNodeIdToNumber(meshPlaintextNodeId) !== null)
@@ -1028,7 +1082,11 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       const digestSuffix = formatTxDigestStatusSuffix(
         isSendPartSuccess(lastOk) ? lastOk.mailboxCapture?.txDigest : undefined
       )
-      let statusLine = successMsg + digestSuffix
+      const epochRenewHint =
+        encrypted && isPrivate && isSendPartSuccess(lastOk) && lastOk.mailboxCapture?.encrypted === true
+          ? takeEncryptedSendKeyEpochRenewHint(recipient.trim()) ?? ''
+          : ''
+      let statusLine = successMsg + digestSuffix + sharedPassphraseNote + epochRenewHint
       if (forensicGate && isSendPartSuccess(lastOk) && lastOk.mailboxCapture) {
         const imgHash = await sha256HexFromBase64Bytes(attachedBlobBase64)
         await runForensicMailboxAttestationAfterSend({
@@ -1040,7 +1098,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           },
           imageContentSha256Hex: imgHash,
           deviceTimeTrustWarn: !!deviceTimeTrustWarn,
-          baseSuccessMsg: successMsg,
+          baseSuccessMsg: successMsg + epochRenewHint,
           setStatusMsg,
           mailboxTxDigest: lastOk.mailboxCapture.txDigest,
         })

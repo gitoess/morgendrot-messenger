@@ -8,6 +8,7 @@ import { dirname, join } from 'node:path'
 import {
   clickButton,
   createCdpSession,
+  clickIfPresent,
   readNetworkProfilesOk,
   sleep,
   unlockVaultIfNeeded,
@@ -40,33 +41,88 @@ async function discoverWs(retries = 8) {
 }
 
 async function openSettingsHandoff(session) {
-  await session.evaluate(
+  for (let i = 0; i < 6; i++) {
+    const st = await session.evaluate(
+      `(() => {
+        const root = document.getElementById('settings-handoff-import');
+        const input = document.querySelector('#settings-handoff-import input[type="file"]')
+          || document.querySelector('input[type="file"][accept*="zip"]');
+        if (root && input) {
+          root.scrollIntoView({ block: 'start' });
+          return { done: true, hasRoot: true, hasInput: true, step: 'ready' };
+        }
+        const backBtn = [...document.querySelectorAll('button')].find((b) => {
+          const t = (b.textContent || '').replace(/\\s+/g, ' ').trim();
+          return /^Zurück/i.test(t);
+        });
+        const settingsBtn = [...document.querySelectorAll('button,[role="button"]')].find((el) => {
+          const al = (el.getAttribute('aria-label') || '').trim();
+          return al === 'Einstellungen' || al === 'Settings';
+        });
+        const inSettings = /Einstellungen|Settings/i.test(
+          (document.querySelector('header span.font-semibold')?.textContent || '').trim()
+        );
+        return {
+          done: false,
+          hasRoot: Boolean(root),
+          hasInput: Boolean(input),
+          hasBack: Boolean(backBtn),
+          hasSettingsBtn: Boolean(settingsBtn),
+          inSettings,
+        };
+      })()`
+    )
+    if (st?.done) return st
+
+    if (st?.inSettings || st?.hasRoot) {
+      await session.evaluate(
+        `(() => {
+          try {
+            sessionStorage.setItem('morgendrot.settingsActiveCategory', 'general');
+          } catch { /* ignore */ }
+          const tabs = [...document.querySelectorAll('[role="tab"]')];
+          const general = tabs.find((t) => /Allgemein|General/i.test((t.textContent || '').trim()));
+          general?.click();
+        })()`
+      )
+      await sleep(1000)
+      continue
+    }
+
+    if (st?.hasBack) {
+      await clickIfPresent(session, `(t) => /^Zurück/i.test(t)`)
+      await sleep(900)
+      continue
+    }
+
+    if (st?.hasSettingsBtn) {
+      await session.evaluate(
+        `(() => {
+          const btn = [...document.querySelectorAll('button,[role="button"]')].find((el) => {
+            const al = (el.getAttribute('aria-label') || '').trim();
+            return al === 'Einstellungen' || al === 'Settings';
+          });
+          btn?.click();
+          return Boolean(btn);
+        })()`
+      )
+      await sleep(1200)
+      continue
+    }
+
+    await clickIfPresent(session, `(t) => /Handoff-ZIP importieren/i.test(t)`)
+    await sleep(1200)
+  }
+
+  return session.evaluate(
     `(() => {
-      const settingsBtn = [...document.querySelectorAll('button,[role="button"]')].find(
-        (el) => el.getAttribute('aria-label') === 'Einstellungen'
-      );
-      if (settingsBtn) {
-        settingsBtn.click();
-        return { ok: true, via: 'aria-settings' };
-      }
-      const gear = document.querySelector('header button svg');
-      const parent = gear?.closest('button');
-      if (parent) {
-        parent.click();
-        return { ok: true, via: 'header-gear' };
-      }
-      return { ok: false };
+      const root = document.getElementById('settings-handoff-import');
+      const input = document.querySelector('#settings-handoff-import input[type="file"]')
+        || document.querySelector('input[type="file"][accept*="zip"]');
+      root?.scrollIntoView({ block: 'start' });
+      return { hasRoot: Boolean(root), hasInput: Boolean(input) };
     })()`
   )
-  await sleep(1200)
-  await session.evaluate(
-    `(() => {
-      const target = document.getElementById('settings-handoff-import');
-      target?.scrollIntoView({ block: 'start' });
-      return Boolean(target);
-    })()`
-  )
-  await sleep(500)
 }
 
 async function injectZipFile(session, zipB64, fileName) {
@@ -90,6 +146,33 @@ async function injectZipFile(session, zipB64, fileName) {
   )
 }
 
+async function waitForHandoffApplyButton(session, timeoutMs = 60_000) {
+  const start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    const st = await session.evaluate(
+      `(() => {
+        const root = document.getElementById('settings-handoff-import');
+        const buttons = [...(root?.querySelectorAll('button') || [])].map((b) =>
+          (b.textContent || '').replace(/\\s+/g, ' ').trim()
+        );
+        const apply = buttons.find(
+          (t) =>
+            /Handoff übernehmen/i.test(t) ||
+            /Lokal vormerken/i.test(t) ||
+            /Import bestätigen/i.test(t)
+        );
+        const hasError = Boolean(root?.querySelector('.text-destructive, [class*="destructive"]'));
+        const errText = [...(root?.querySelectorAll('li') || [])].map((li) => (li.textContent||'').trim()).join(' | ');
+        return { apply: apply || '', buttons: buttons.slice(0, 8), hasError, errText: errText.slice(0, 240) };
+      })()`
+    )
+    if (st?.apply) return st
+    if (st?.hasError && st?.errText) throw new Error('ZIP-Vorschau Fehler: ' + st.errText)
+    await sleep(1000)
+  }
+  throw new Error('Handoff-Apply-Button Timeout')
+}
+
 async function waitForHandoffPreview(session, timeoutMs = 45_000) {
   const start = Date.now()
   while (Date.now() - start < timeoutMs) {
@@ -111,11 +194,13 @@ async function waitForHandoffPreview(session, timeoutMs = 45_000) {
 }
 
 async function applyStandaloneHandoff(session) {
+  const btn = await waitForHandoffApplyButton(session)
+  console.log('   Apply-Button:', btn.apply)
   await clickButton(
     session,
-    `(t) => /Handoff übernehmen/i.test(t) || /Lokal vormerken/i.test(t)`
+    `(t) => /Handoff übernehmen/i.test(t) || /Lokal vormerken/i.test(t) || /Import bestätigen/i.test(t)`
   )
-  await sleep(1500)
+  await sleep(2500)
 }
 
 async function readHandoffState(session) {
@@ -178,7 +263,12 @@ async function main() {
   await waitForAppReady(session)
 
   await unlockVaultIfNeeded(session)
-  await openSettingsHandoff(session)
+  const nav = await openSettingsHandoff(session)
+  console.log('Settings Handoff:', JSON.stringify(nav))
+  if (!nav?.hasInput) {
+    session.close()
+    process.exit(2)
+  }
 
   const zipB64 = zipBytes.toString('base64')
   const injected = await injectZipFile(session, zipB64, 'block2-handoff-smoke.zip')
@@ -188,9 +278,11 @@ async function main() {
     process.exit(2)
   }
 
-  console.log('… warte auf Vorschau')
+  console.log('… warte auf Vorschau + Apply-Button')
   const preview = await waitForHandoffPreview(session)
   console.log('   Vorschau:', JSON.stringify(preview))
+  const applyBtn = await waitForHandoffApplyButton(session)
+  console.log('   Button:', JSON.stringify(applyBtn))
 
   console.log('… Handoff übernehmen (Standalone)')
   await applyStandaloneHandoff(session)

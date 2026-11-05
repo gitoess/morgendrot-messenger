@@ -354,8 +354,15 @@ function MessengerDashboardBody({
         onReloadStatus={() => void s.checkStatus()}
       />
       {s.activeView ? (
-      <div className="min-h-screen bg-background">
-        {/* Slim Header */}
+      <div
+        className={cn(
+          'bg-background',
+          isCapacitorNativePlatform() && s.activeView.type === 'chat'
+            ? 'flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden'
+            : 'min-h-screen'
+        )}
+      >
+        {!(isCapacitorNativePlatform() && s.activeView.type === 'chat') ? (
         <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
           <div className="flex h-14 items-center gap-4 px-4">
             <button
@@ -377,9 +384,17 @@ function MessengerDashboardBody({
             </span>
           </div>
         </header>
+        ) : null}
 
         {/* View Content */}
-        <main className="mx-auto max-w-5xl p-4">
+        <main
+          className={cn(
+            'mx-auto max-w-5xl',
+            isCapacitorNativePlatform() && s.activeView.type === 'chat'
+              ? 'flex min-h-0 flex-1 flex-col overflow-hidden p-0'
+              : 'p-4'
+          )}
+        >
           {s.initialProfileBanner ? (
             <div
               className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100"

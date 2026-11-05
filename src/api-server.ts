@@ -968,12 +968,12 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                             );
                             return;
                         }
-                        if (
-                            CFG.SIGNER === 'sdk' &&
-                            signerPost &&
-                            !vaultHadSdkSignerImport &&
-                            (createNew || vaultFileExists(vaultPath))
-                        ) {
+                        /**
+                         * Seed nach erfolgreichem Unlock in den lokalen Tresor schreiben —
+                         * auch bei „Seed importieren“ ohne bestehende Vault-Datei (sonst
+                         * hasLocal=false und Passwort-Login geht nach Restart verloren).
+                         */
+                        if (CFG.SIGNER === 'sdk' && signerPost && !vaultHadSdkSignerImport) {
                             const saveArgs = [password, '', vaultPath, 'includeIotaMnemonic'];
                             const saveRes = (await handler('/vault-save', saveArgs, {})) as {
                                 ok?: boolean;

@@ -26,6 +26,7 @@ import {
 } from '@/frontend/lib/inbox-overview-unread'
 import {
   filterInboxMessagesByPartnerAndDirection,
+  buildPartnerLastMessageAtMap,
   isIgnoredInboxCounterpartyAddress,
   messageCounterpartyAddress,
   messageTouchesInternetTransport,
@@ -450,6 +451,11 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     [wireFilteredMessages, myAddress, partnerLastSeenMap, pinnwandMatchContext]
   )
 
+  const partnerLastMessageAt = useMemo(
+    () => buildPartnerLastMessageAtMap(displayMessages, myAddress),
+    [displayMessages, myAddress]
+  )
+
   const inboxPartnerOptions = useMemo(() => {
     const live = uniqueCounterpartyAddresses(displayMessages, myAddress)
     const byNorm = new Map<string, string>()
@@ -472,6 +478,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
           address,
           label: label || short,
           unreadCount: partnerUnreadByNorm[norm] ?? 0,
+          lastMessageAt: partnerLastMessageAt[norm] ?? 0,
         }
       })
       .sort((a, b) => a.label.localeCompare(b.label, 'de'))
@@ -482,6 +489,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     inboxPartnerMemory,
     inboxPartnerBlockedNorms,
     partnerUnreadByNorm,
+    partnerLastMessageAt,
   ])
 
   const inboxUnreadThreadOptions = useMemo((): InboxUnreadThreadOption[] => {

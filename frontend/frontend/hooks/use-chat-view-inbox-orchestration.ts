@@ -5,8 +5,8 @@
  * Aus use-chat-view-core extrahiert (P1 Port-Assembler-Scheibe).
  */
 
-import { useCallback, useEffect, useMemo, useRef, type MutableRefObject } from 'react'
-import { fetchAllInboxMessagesForExport, type ContactMeshEntryClient } from '@/frontend/lib/api'
+import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react'
+import { fetchAllInboxMessagesForExport, type ContactMeshEntryClient, readBootstrapCachedApiStatus } from '@/frontend/lib/api'
 import { extractCompletedSlideSequences } from '@/frontend/features/inbox/inbox-slideshow'
 import { buildChatInboxRows, type ChatInboxRow } from '@/frontend/features/inbox/chat-view-inbox-rows'
 import { useChatViewInbox } from '@/frontend/hooks/use-chat-view-inbox'
@@ -44,6 +44,10 @@ import {
 import { writeActiveGroupId } from '@/frontend/lib/messenger-group-store'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import { shouldApplyMeshFirstTransportDefault } from '@/frontend/lib/standalone-onboarding'
+import {
+  PACKAGE_PROFILE_REGISTRY_CHANGED,
+  readActiveProfileSnapshot,
+} from '@/frontend/lib/package-profile-registry'
 
 export type UseChatViewInboxOrchestrationParams = {
   channelMode: MessengerChatChannel
@@ -99,6 +103,11 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     setPackageIdBusy,
   } = useChatViewPackageFilterState()
 
+  const [serverPackageId, setServerPackageId] = useState<string | undefined>(() => {
+    const boot = readBootstrapCachedApiStatus()?.packageId?.trim()
+    return boot || undefined
+  })
+
   const {
     messages,
     setMessages,
@@ -116,6 +125,8 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
   } = useChatViewInbox({
     refreshContactDirectory,
     myAddress,
+    packageId: inboxPackageFilter,
+    apiPackageId: serverPackageId,
   })
 
   const meshInboundTextBufferRef = useRef<string[]>([])
@@ -187,6 +198,12 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
       localPackageId: inboxPackageFilter.trim(),
       probeGeolocationForDeviceTime: isPrivate,
     })
+
+  useEffect(() => {
+    const pkg = (apiStatus?.packageId ?? '').trim()
+    if (!pkg || pkg === serverPackageId) return
+    setServerPackageId(pkg)
+  }, [apiStatus?.packageId, serverPackageId])
 
   useEffect(() => {
     const addr = resolveComposerIotaAddress(recipient, partner, encrypted).trim().toLowerCase()
@@ -324,8 +341,28 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
   useEffect(() => {
     if (!packageIdMismatch) return
     setInboxPackageFilter('')
-    void loadMessages('reset')
+    void loadMessages('reset', undefined, { silent: true })
   }, [packageIdMismatch, setInboxPackageFilter, loadMessages])
+
+  useEffect(() => {
+    const serverPkg = (apiStatus?.packageId ?? '').trim().toLowerCase()
+    if (!serverPkg || !/^0x[a-f0-9]{64}$/.test(serverPkg)) return
+    const snap = readActiveProfileSnapshot()
+    if (!snap?.resolved || !snap.packageId) return
+    const profilePkg = snap.packageId.trim().toLowerCase()
+    if (profilePkg !== serverPkg) return
+    if (!inboxPackageFilter.trim()) setInboxPackageFilter(snap.packageId)
+  }, [apiStatus?.packageId, inboxPackageFilter, setInboxPackageFilter])
+
+  useEffect(() => {
+    const onProfileChange = () => {
+      const snap = readActiveProfileSnapshot()
+      if (snap?.resolved && snap.packageId) setInboxPackageFilter(snap.packageId)
+      void loadMessages('reset', snap?.resolved ? snap.packageId : undefined)
+    }
+    window.addEventListener(PACKAGE_PROFILE_REGISTRY_CHANGED, onProfileChange)
+    return () => window.removeEventListener(PACKAGE_PROFILE_REGISTRY_CHANGED, onProfileChange)
+  }, [loadMessages, setInboxPackageFilter])
 
   useEffect(() => {
     if (!isPinnwandChannel(channelMode)) return

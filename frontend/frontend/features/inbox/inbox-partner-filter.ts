@@ -61,6 +61,23 @@ export function messageCounterpartyAddress(msg: Message, myAddress: string): str
   return f && f.length > 0 ? f : null
 }
 
+/** Letzte Nachricht pro Gegenüber (Telegram-ähnliche Chat-Reihenfolge). */
+export function buildPartnerLastMessageAtMap(
+  messages: readonly Message[],
+  myAddress: string
+): Readonly<Record<string, number>> {
+  const out: Record<string, number> = {}
+  if (!myAddress.trim()) return out
+  for (const m of messages) {
+    const cp = messageCounterpartyAddress(m, myAddress)
+    if (!cp || isIgnoredInboxCounterpartyAddress(cp)) continue
+    const key = cp.trim().toLowerCase()
+    const ts = Number(m.timestamp) || 0
+    if (ts > (out[key] ?? 0)) out[key] = ts
+  }
+  return out
+}
+
 export type InboxDirectionFilter = 'all' | 'in' | 'out'
 
 export type InboxPartnerFilterOpts = {

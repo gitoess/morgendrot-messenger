@@ -1,6 +1,6 @@
 'use client'
 
-import { Download, Eraser, KeyRound, MoreVertical, Settings2, UserCircle, Users } from 'lucide-react'
+import { Download, Eraser, Flame, KeyRound, MoreVertical, Settings2, UserCircle, Users } from 'lucide-react'
 import { ChatViewEncryptionModeToggle } from '@/frontend/components/chat-view-encryption-mode-toggle'
 import {
   DropdownMenu,
@@ -21,6 +21,13 @@ export type ChatViewConversationMenuProps = {
   onExportHistory?: () => void
   onClearHistory?: () => void
   onRenewEncryptionKeys?: () => void | Promise<void>
+  /** z. B. „Schlüssel erneuern (Epoch 2)“ */
+  renewEncryptionLabel?: string
+  renewEncryptionHint?: string
+  burnOnRead?: {
+    enabled: boolean
+    onEnabledChange: (v: boolean) => void
+  }
   onManageGroup?: () => void
   onCreateGroup?: () => void
   encryptionToggle?: {
@@ -33,6 +40,7 @@ export type ChatViewConversationMenuProps = {
 /** Telegram-ähnliches ⋮-Menü für die aktive Konversation. */
 export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
   const enc = p.encryptionToggle
+  const burn = p.burnOnRead
   return (
     <div className="flex items-center justify-between gap-2 border-b border-border/60 px-3 py-2.5">
       <div className="min-w-0 flex-1">
@@ -81,9 +89,24 @@ export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
             </DropdownMenuItem>
           ) : null}
           {p.onRenewEncryptionKeys ? (
-            <DropdownMenuItem onSelect={() => void p.onRenewEncryptionKeys?.()}>
+            <DropdownMenuItem
+              onSelect={() => void p.onRenewEncryptionKeys?.()}
+              title={
+                p.renewEncryptionHint ??
+                'Session-Epoch erhöhen (Forward Secrecy ab Rotation). Alte Nachrichten bleiben lesbar.'
+              }
+            >
               <KeyRound className="mr-2 h-4 w-4" />
-              Schlüssel erneuern
+              {p.renewEncryptionLabel ?? 'Schlüssel erneuern'}
+            </DropdownMenuItem>
+          ) : null}
+          {burn ? (
+            <DropdownMenuItem
+              onSelect={() => burn.onEnabledChange(!burn.enabled)}
+              title="Bei löschbaren Chain-Nachrichten nach dem Lesen Purge vorschlagen (mit Bestätigung)."
+            >
+              <Flame className={burn.enabled ? 'mr-2 h-4 w-4 text-orange-600' : 'mr-2 h-4 w-4'} />
+              {burn.enabled ? 'Burn-on-read: an' : 'Burn-on-read: aus'}
             </DropdownMenuItem>
           ) : null}
           {p.onClearHistory ? (

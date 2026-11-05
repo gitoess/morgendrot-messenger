@@ -5,6 +5,8 @@ import type { Transaction } from '@iota/iota-sdk/transactions'
 export type DirectSignAndExecuteResult = {
   digest?: string
   status?: string
+  /** Bei failure: MoveAbort / InsufficientGas / … aus effects.status.error */
+  errorDetail?: string
 }
 
 function parseEffectsStatus(resp: unknown): string | undefined {
@@ -15,6 +17,21 @@ function parseEffectsStatus(resp: unknown): string | undefined {
     const o = e as Record<string, unknown>
     if (typeof o.status === 'string') return o.status.trim().toLowerCase()
     if (typeof o.type === 'string') return o.type.trim().toLowerCase()
+  }
+  return undefined
+}
+
+function parseEffectsErrorDetail(resp: unknown): string | undefined {
+  const e = (resp as { effects?: { status?: unknown } })?.effects?.status
+  if (!e || typeof e !== 'object') return undefined
+  const o = e as Record<string, unknown>
+  if (typeof o.error === 'string' && o.error.trim()) return o.error.trim()
+  if (o.error != null) {
+    try {
+      return JSON.stringify(o.error)
+    } catch {
+      return String(o.error)
+    }
   }
   return undefined
 }
@@ -40,5 +57,10 @@ export async function signAndExecuteTransactionWithSigner(opts: {
   })
   const digest = (resp as { digest?: string })?.digest
   const status = parseEffectsStatus(resp)
-  return { digest, status: status || (digest ? 'success' : undefined) }
+  const errorDetail = parseEffectsErrorDetail(resp)
+  return {
+    digest,
+    status: status || (digest ? 'success' : undefined),
+    ...(errorDetail ? { errorDetail } : {}),
+  }
 }

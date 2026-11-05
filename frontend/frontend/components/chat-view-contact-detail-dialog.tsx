@@ -179,7 +179,7 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
   if (!address) return null
 
   const hasLora = Boolean(entry?.meshNodeId?.trim())
-  const hasPrivateMailbox = entry ? contactHasAnyMailboxSlot(entry) : false
+  const hasPrivateMailbox = entry ? contactHasAnyMailboxSlot(entry, address) : false
   const loraOnly = hasLora && !connectedSet.has(address.toLowerCase())
 
   return (

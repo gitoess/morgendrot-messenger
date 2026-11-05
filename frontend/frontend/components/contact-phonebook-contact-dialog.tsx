@@ -90,7 +90,7 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
     }
     if (openSnapshotRef.current) return
     const rawAddr = (initial?.address ?? editKey).trim().toLowerCase()
-    const slotInit = slotsFromEntry(initial)
+    const slotInit = slotsFromEntry(initial, rawAddr.startsWith('0x') ? rawAddr : undefined)
     const snapshot: ContactPhonebookFormValues = {
       address: contactFormWalletFromStorageKey(rawAddr),
       label: initial?.label ?? '',

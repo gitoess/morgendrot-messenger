@@ -1,6 +1,9 @@
 /** Lokal abgelehnte Handshake-Anfragen (bleiben on-chain bis Purge). */
 
+import { readScoped, writeScoped } from '@/frontend/lib/package-profile-namespace'
+
 const LS_KEY = 'morgendrot.dismissedHandshakeOffers.v1'
+const HANDSHAKE_DOMAIN = 'handshakes'
 
 export type DismissedHandshakeRecord = {
   sender: string
@@ -11,7 +14,7 @@ export type DismissedHandshakeRecord = {
 function readAll(): DismissedHandshakeRecord[] {
   if (typeof window === 'undefined') return []
   try {
-    const raw = window.localStorage.getItem(LS_KEY)
+    const raw = readScoped(HANDSHAKE_DOMAIN, LS_KEY)
     if (!raw) return []
     const j = JSON.parse(raw) as unknown
     if (!Array.isArray(j)) return []
@@ -34,7 +37,7 @@ function readAll(): DismissedHandshakeRecord[] {
 function writeAll(rows: DismissedHandshakeRecord[]): void {
   if (typeof window === 'undefined') return
   const trimmed = rows.slice(-200)
-  window.localStorage.setItem(LS_KEY, JSON.stringify(trimmed))
+  writeScoped(HANDSHAKE_DOMAIN, LS_KEY, JSON.stringify(trimmed))
 }
 
 export function handshakeOfferFingerprint(sender: string, nonce: string): string {
@@ -68,7 +71,7 @@ const LS_OUTGOING_KEY = 'morgendrot.dismissedOutgoingHandshakeOffers.v1'
 function readOutgoingAll(): DismissedHandshakeRecord[] {
   if (typeof window === 'undefined') return []
   try {
-    const raw = window.localStorage.getItem(LS_OUTGOING_KEY)
+    const raw = readScoped(HANDSHAKE_DOMAIN, LS_OUTGOING_KEY)
     if (!raw) return []
     const j = JSON.parse(raw) as unknown
     if (!Array.isArray(j)) return []
@@ -90,7 +93,7 @@ function readOutgoingAll(): DismissedHandshakeRecord[] {
 
 function writeOutgoingAll(rows: DismissedHandshakeRecord[]): void {
   if (typeof window === 'undefined') return
-  window.localStorage.setItem(LS_OUTGOING_KEY, JSON.stringify(rows.slice(-200)))
+  writeScoped(HANDSHAKE_DOMAIN, LS_OUTGOING_KEY, JSON.stringify(rows.slice(-200)))
 }
 
 /** `sender`-Feld = Empfänger-Adresse (recipient). */

@@ -7,6 +7,7 @@ import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import {
   CONTACT_MAILBOX_SLOT_LABELS,
   type ContactMailboxSlotId,
+  persistContactMailboxSlots,
   slotsFromEntry,
   slotsToSavePayload,
 } from '@/frontend/lib/contact-mailbox-slots'
@@ -106,20 +107,21 @@ export function ContactMailboxPhonebookDialog(p: ContactMailboxPhonebookDialogPr
       label = newLabel.trim() || undefined
     }
 
-    const existingSlots = slotsFromEntry(directory[address])
+    const existingSlots = slotsFromEntry(directory[address], address)
     const merged = {
       mailboxSharedId: slot === 'shared' ? mbId : existingSlots.mailboxSharedId ?? '',
       mailboxPrivateId: slot === 'private' ? mbId : existingSlots.mailboxPrivateId ?? '',
       mailboxTeamId: slot === 'team' ? mbId : existingSlots.mailboxTeamId ?? '',
       mailboxBufferId: slot === 'buffer' ? mbId : existingSlots.mailboxBufferId ?? '',
     }
+    const slotScope = persistContactMailboxSlots(address, merged)
 
     setLocalBusy(true)
     try {
       const r = await saveContactEntry({
         address,
         ...(label ? { label } : {}),
-        ...slotsToSavePayload(merged),
+        ...(slotScope === 'telefonbuch' ? slotsToSavePayload(merged) : {}),
       })
       if (!r.ok) {
         setError(r.error || 'Speichern fehlgeschlagen.')

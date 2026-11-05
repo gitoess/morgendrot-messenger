@@ -87,6 +87,7 @@ import {
 } from '@/frontend/lib/standalone-onboarding'
 import { DIRECT_IOTA_UI_CHANGED } from '@/frontend/lib/direct-iota-ui-events'
 import { clearDirectChatEcdhKeyMaterial } from '@/frontend/lib/direct-chat-ecdh-session'
+import { wipeLocalPassphraseStoresOnLock } from '@/frontend/lib/privacy-lock-wipe'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { useChatViewPendingHandshakes, OPEN_MESSENGER_INBOX_EVENT } from '@/frontend/hooks/use-chat-view-pending-handshakes'
 import { useOfflineStatus } from '@/frontend/hooks/use-offline-status'
@@ -719,7 +720,8 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     setUnlocking(false)
     if (res.ok) {
       const vaultPw = password
-      if (unlockMode === 'create') {
+      /** create + import: Seed im lokalen Tresor halten, sonst nach Restart wieder Seed nötig. */
+      if (unlockMode === 'create' || unlockMode === 'import') {
         for (let i = 0; i < 12; i++) {
           await new Promise((r) => setTimeout(r, 250))
           const snap = await fetchStatus()
@@ -862,6 +864,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     if (isStandaloneMessengerWithoutBasis()) {
       clearDirectIotaSessionSignerOnLock()
       clearDirectChatEcdhKeyMaterial()
+      wipeLocalPassphraseStoresOnLock()
       setLocked(resolveStandaloneDeviceLocked())
       navigateTo(null)
       window.dispatchEvent(new Event(DIRECT_IOTA_UI_CHANGED))
@@ -871,6 +874,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     if (r.ok) {
       clearDirectIotaSessionSignerOnLock()
       clearDirectChatEcdhKeyMaterial()
+      wipeLocalPassphraseStoresOnLock()
       setMainnetSignerHint(null)
       await checkStatus()
       navigateTo(null)

@@ -44,6 +44,8 @@ import {
 } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 import type { Message } from '@/frontend/lib/types'
 import { buildInboxCacheKey, buildInboxWalletScopeKey } from '@/frontend/lib/inbox-cache-key'
+import { resolveEffectiveInboxPackageId } from '@/frontend/lib/package-profile-inbox'
+import { scopedKey } from '@/frontend/lib/package-profile-namespace'
 
 export type InboxLoadMode = 'reset' | 'append' | 'poll'
 
@@ -57,6 +59,8 @@ export type UseChatViewInboxParams = {
   refreshContactDirectory: () => void
   /** Optional: Posteingang für diese Package-ID (0x…); leer = Backend-Standard. */
   packageId?: string
+  /** GET /api/status packageId — Abgleich mit aktivem Einsatzprofil. */
+  apiPackageId?: string
   myAddress?: string
   /** Zusätzliche Mailbox-IDs (z. B. Team-Mailbox der aktiven Gruppe). */
   alsoMailboxIds?: string[]
@@ -93,9 +97,13 @@ function mergeFetchedInboxPageIntoState(
 
 const PAGE_SIZE = 50
 /** Erster Load / Aktualisieren: ältere über „Weitere laden“ (50er-Chunks, unbegrenzt solange hasMore). */
+const RESET_PAGE_SIZE_WEB = 500
+const RESET_PAGE_SIZE_NATIVE = 200
 function resetPageSize(): number {
-  return isCapacitorNativePlatform() ? 100 : 300
+  return isCapacitorNativePlatform() ? RESET_PAGE_SIZE_NATIVE : RESET_PAGE_SIZE_WEB
 }
+/** Auto-Append nach Reset: zusätzliche 50er-Chunks (≈ Ziel ~2500 Web / ~1200 APK beim ersten Laden). */
+const AUTO_APPEND_ROUNDS_ON_RESET = 40
 /** Auto-Poll (Status-Tick): klein — volle Union nur bei Aktualisieren. */
 const POLL_PAGE_SIZE = 80
 
@@ -152,7 +160,7 @@ function readInboxCache(
 }
 
 export function useChatViewInbox(p: UseChatViewInboxParams) {
-  const { refreshContactDirectory, packageId, myAddress = '', alsoMailboxIds = [] } = p
+  const { refreshContactDirectory, packageId, apiPackageId, myAddress = '', alsoMailboxIds = [] } = p
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -172,7 +180,12 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
   const autoAppendBudgetRef = useRef(0)
   const lastInboxCacheKeyRef = useRef<string | null>(null)
   const lastInboxWalletScopeRef = useRef<string | null>(null)
+  const inboxMessageCountRef = useRef(0)
   inboxLiveSourceRef.current = inboxLiveSource
+
+  useEffect(() => {
+    inboxMessageCountRef.current = messages.length
+  }, [messages.length])
 
   const clearInboxRam = useCallback(() => {
     awaitingManualRefreshRef.current = true
@@ -207,15 +220,23 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
       if (awaitingManualRefreshRef.current && mode !== 'reset') return
       const silent = opts?.silent === true || mode === 'poll'
       const forceLive = opts?.forceLive === true && mode === 'reset' && !silent
-      if (inboxLoadInFlightRef.current && (mode === 'poll' || silent)) return
+      if (inboxLoadInFlightRef.current) return
       const trimPkg = (v: unknown): string | undefined =>
         typeof v === 'string' ? v.trim() || undefined : undefined
-      const pkg = trimPkg(overridePackageId) ?? trimPkg(packageId)
-      const cacheKey = buildInboxCacheKey({
-        packageId: pkg,
-        activeMailboxId: readActiveSendMailboxObjectId(),
-        myAddress,
-      })
+      const pkg =
+        trimPkg(overridePackageId) ??
+        resolveEffectiveInboxPackageId({
+          inboxFilter: trimPkg(packageId),
+          apiPackageId: trimPkg(apiPackageId),
+        })
+      const cacheKey = scopedKey(
+        'inbox',
+        buildInboxCacheKey({
+          packageId: pkg,
+          activeMailboxId: readActiveSendMailboxObjectId(),
+          myAddress,
+        })
+      )
       const walletScopeKey = buildInboxWalletScopeKey({ packageId: pkg, myAddress })
       const walletScopeChanged =
         mode === 'reset' &&
@@ -352,7 +373,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
           applyMappedToState(page, mappedLength, res.hasMore === true)
           const chainHasMore = res.hasMore === true
           if (!silent && chainHasMore) {
-            if (mode === 'reset') autoAppendBudgetRef.current = 3
+            if (mode === 'reset') autoAppendBudgetRef.current = AUTO_APPEND_ROUNDS_ON_RESET
             if ((mode === 'reset' || mode === 'append') && autoAppendBudgetRef.current > 0) {
               autoAppendBudgetRef.current -= 1
               const epoch = loadEpoch
@@ -367,7 +388,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
         } else if (!res.ok) {
           const cached = readInboxCache(cacheKey)
           if (cached && mode !== 'append') {
-            if (!silent) {
+            if (!silent && (forceLive || inboxMessageCountRef.current === 0)) {
               setLoadError('Offline: letzte bekannte Nachrichten aktiv. Aktuell sind nur LoRa/Queue-Aktionen moeglich.')
             }
             console.info('[inbox] Live-Fetch fehlgeschlagen, nutze Cache-Fallback.', {
@@ -380,7 +401,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
             applyMappedToState(cached.messages, Math.min(cached.messages.length, pageSize), false)
             return
           }
-          if (!silent) {
+          if (!silent && (forceLive || inboxMessageCountRef.current === 0)) {
             setLoadError(
               res.error || 'Posteingang konnte nicht geladen werden.'
             )
@@ -389,7 +410,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
         } else {
           const cached = readInboxCache(cacheKey)
           if (cached && mode !== 'append') {
-            if (!silent) {
+            if (!silent && (forceLive || inboxMessageCountRef.current === 0)) {
               setLoadError('Offline: letzte bekannte Nachrichten aktiv. Aktuell sind nur LoRa/Queue-Aktionen moeglich.')
             }
             console.info('[inbox] Live-Fetch ohne gueltige Liste, nutze Cache-Fallback.', {
@@ -401,7 +422,9 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
             applyMappedToState(cached.messages, Math.min(cached.messages.length, pageSize), false)
             return
           }
-          if (!silent) setLoadError('Posteingang: Antwort ohne gültige Nachrichtenliste (data/messages).')
+          if (!silent && (forceLive || inboxMessageCountRef.current === 0)) {
+            setLoadError('Posteingang: Antwort ohne gültige Nachrichtenliste (data/messages).')
+          }
           if (mode === 'append') applyLocalOverlayFallback()
         }
       } finally {
@@ -410,7 +433,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
         setLoadingMore(false)
       }
     },
-    [packageId, myAddress, alsoMailboxIds]
+    [packageId, apiPackageId, myAddress, alsoMailboxIds]
   )
 
   const loadMessagesRef = useRef(loadMessages)
@@ -430,7 +453,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
       return () => window.clearTimeout(t)
     }
     void loadMessagesRef.current('reset')
-  }, [packageId, myAddress, alsoMailboxIdsKey])
+  }, [packageId, apiPackageId, myAddress, alsoMailboxIdsKey])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -472,7 +495,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
       if (!getDirectIotaSessionSigner()) return
       if (inboxLiveSourceRef.current === 'rpc') return
       if (inboxLoadInFlightRef.current) return
-      void loadMessagesRef.current('reset')
+      void loadMessagesRef.current('reset', undefined, { silent: true })
     }
     window.addEventListener(DIRECT_IOTA_UI_CHANGED, onDirectIotaUiChanged)
     return () => window.removeEventListener(DIRECT_IOTA_UI_CHANGED, onDirectIotaUiChanged)

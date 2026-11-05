@@ -10,6 +10,8 @@ export type ChatViewMobileBottomNavProps = {
   onChange: (tab: ChatViewMobileTab) => void
   inboxUnreadCount?: number
   className?: string
+  /** In flex shell — nicht fixed über dem Inhalt. */
+  embedded?: boolean
 }
 
 export function ChatViewMobileBottomNav(p: ChatViewMobileBottomNavProps) {
@@ -27,8 +29,9 @@ export function ChatViewMobileBottomNav(p: ChatViewMobileBottomNavProps) {
   return (
     <nav
       className={cn(
-        'fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/98 backdrop-blur-md',
+        'border-t border-border bg-card/98 backdrop-blur-md',
         'pb-[max(0.35rem,env(safe-area-inset-bottom))]',
+        p.embedded ? 'shrink-0' : 'fixed inset-x-0 bottom-0 z-40',
         p.className
       )}
       aria-label="Messenger Navigation"

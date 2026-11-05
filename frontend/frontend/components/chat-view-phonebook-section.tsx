@@ -1,11 +1,12 @@
 ﻿'use client'
 
 /**
- * Telefonbuch ÔÇö Kartenliste, Filter, Favoriten, Modal f├╝r Anlegen/Bearbeiten.
+ * Telefonbuch — Kartenliste, Filter, Favoriten, Modal für Anlegen/Bearbeiten.
  */
 
 import { useCallback, useMemo, useState } from 'react'
 import { Plus, Search } from 'lucide-react'
+import { toast } from 'sonner'
 import { PhonebookMeshBackupPanel } from '@/frontend/components/phonebook-mesh-backup-panel'
 import { PhonebookContactDistributePanel } from '@/frontend/components/phonebook-contact-distribute-panel'
 import type { ContactMeshEntryClient, ApiStatus } from '@/frontend/lib/api'
@@ -59,7 +60,7 @@ export type ChatViewPhonebookSectionProps = {
   teamMailboxCreateAllowed?: boolean
   /** Boss/Kommandant: initialProfile-JSON ins Telefonbuch. */
   allowInitialProfileImport?: boolean
-  /** Boss/Kommandant: Team-Telefonbuch ÔÇ×Aus Team entfernenÔÇ£. */
+  /** Boss/Kommandant: Team-Telefonbuch „Aus Team entfernen“. */
   apiStatus?: ApiStatus | null
   /** Mailbox-Verwaltung liegt unter Einstellungen. */
   onOpenSettings?: () => void
@@ -161,7 +162,9 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
     async (values: ContactPhonebookFormValues) => {
       const storageKey = resolveContactStorageKey(values.address, values.telegramChatId)
       if (!storageKey) {
-        setStatusMsg('IOTA-Adresse (0x + 64 Hex) oder Telegram Chat-ID n├Âtig.')
+        const msg = 'IOTA-Adresse (0x + 64 Hex) oder Telegram Chat-ID nötig.'
+        setStatusMsg(msg)
+        toast.error(msg)
         return
       }
       const previousKey = (dialog?.editStorageKey ?? '').trim().toLowerCase()
@@ -188,7 +191,9 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
           recordContactLastContacted(storageKey)
           bumpMeta()
           refreshContactDirectory()
-          setStatusMsg(r.message || 'Kontakt gespeichert.')
+          const okMsg = r.message || 'Kontakt gespeichert.'
+          setStatusMsg(okMsg)
+          toast.success(okMsg)
           setDialog(null)
           if (onSelectContact && storageKey.startsWith('0x')) {
             onSelectContact(storageKey, {
@@ -205,7 +210,9 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
           }
           return
         }
-        setStatusMsg(r.error || 'Speichern fehlgeschlagen.')
+        const errMsg = r.error || 'Speichern fehlgeschlagen.'
+        setStatusMsg(errMsg)
+        toast.error(errMsg)
       } finally {
         setBusy(false)
       }
@@ -245,7 +252,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
       }
       markTeamMemberRemoveSent(address)
       setTeamRemoveTick((n) => n + 1)
-      setStatusMsg(`ÔÇ×${displayName}" ÔÇö Entfernung an das Team gesendet${formatTeamWireDeliveryChannels(r.channels)}.`)
+      setStatusMsg(`„${displayName}" — Entfernung an das Team gesendet${formatTeamWireDeliveryChannels(r.channels)}.`)
     },
     [directory, p.apiStatus, setStatusMsg]
   )
@@ -342,7 +349,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Name, Adresse oder Meshtastic suchenÔÇª"
+          placeholder="Name, Adresse oder Meshtastic suchen…"
           className="min-h-12 w-full rounded-xl border border-border bg-input py-3 pl-11 pr-4 text-base text-foreground placeholder:text-muted-foreground"
         />
       </div>
@@ -375,7 +382,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
         <p className="text-xs text-muted-foreground">
           {visibleDirectoryCount} {visibleDirectoryCount === 1 ? 'Kontakt' : 'Kontakte'} gespeichert
           {rows.length !== visibleDirectoryCount
-            ? ` ┬À ${rows.length} angezeigt (Filter ÔÇ×${PHONEBOOK_FILTER_LABELS[filter]}ÔÇ£)`
+            ? ` · ${rows.length} angezeigt (Filter „${PHONEBOOK_FILTER_LABELS[filter]}“)`
             : ''}
         </p>
       ) : null}
@@ -383,10 +390,10 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
       {rows.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border bg-muted/10 px-4 py-8 text-center text-sm text-muted-foreground">
           {visibleDirectoryCount > 0 && filter === 'recent'
-            ? `${visibleDirectoryCount} Kontakt(e) sind gespeichert, aber keiner hat ÔÇ×Zuletzt kontaktiertÔÇ£. Filter ÔÇ×AlleÔÇ£ w├ñhlen oder einen Kontakt ├Âffnen/speichern.`
+            ? `${visibleDirectoryCount} Kontakt(e) sind gespeichert, aber keiner hat „Zuletzt kontaktiert“. Filter „Alle“ wählen oder einen Kontakt öffnen/speichern.`
             : visibleDirectoryCount > 0 && filter !== 'all'
-              ? `Keine Treffer f├╝r ÔÇ×${PHONEBOOK_FILTER_LABELS[filter]}ÔÇ£${search.trim() ? ' und diese Suche' : ''}. Filter ÔÇ×AlleÔÇ£ probieren.`
-              : `Keine Kontakte${search.trim() ? ' f├╝r diese Suche' : ''}. ÔÇ×Neuer KontaktÔÇ£ oder QR-Scan nutzen.`}
+              ? `Keine Treffer für „${PHONEBOOK_FILTER_LABELS[filter]}“${search.trim() ? ' und diese Suche' : ''}. Filter „Alle“ probieren.`
+              : `Keine Kontakte${search.trim() ? ' für diese Suche' : ''}. „Neuer Kontakt“ oder QR-Scan nutzen.`}
         </p>
       ) : (
         <div className="space-y-6">

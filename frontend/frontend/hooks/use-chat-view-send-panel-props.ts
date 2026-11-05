@@ -23,6 +23,7 @@ import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
 import { readMessengerGroups } from '@/frontend/lib/messenger-group-store'
 import { resolveActiveSendPath } from '@/frontend/lib/messenger-channel-send-path'
+import { isCapacitorNativePlatform } from '@/frontend/lib/capacitor-platform'
 import type { ChatViewActiveConversationBarProps } from '@/frontend/components/chat-view-active-conversation-bar'
 
 export type ChatViewActiveConversationContext = {
@@ -336,7 +337,8 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     myAddress: inboxFeedRead.myAddress,
     hideComposerIotaRecipient:
       (hasActiveDirectConversation && !isIotaBroadcastAll) ||
-      (composerSendPath.isPrivate &&
+      (!isCapacitorNativePlatform() &&
+        composerSendPath.isPrivate &&
         sendTransportRead.encrypted &&
         sendTransportRead.forcedTransport === 'internet' &&
         composerSendPath.composerDelivery === 'chain' &&

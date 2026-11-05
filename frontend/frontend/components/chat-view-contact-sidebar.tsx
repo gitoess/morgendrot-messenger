@@ -66,6 +66,8 @@ export type ChatViewContactSidebarProps = {
   outgoingHandshakeOffers?: readonly OutgoingHandshakeOffer[]
   selfProfile?: ChatViewMyWalletIdInlineProps
   className?: string
+  /** Native Handy: keine Mindesthöhe — Parent scrollt. */
+  compactNative?: boolean
 }
 
 function SidebarRow(p: {
@@ -234,7 +236,8 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
     <>
       <aside
         className={cn(
-          'flex min-h-[420px] flex-col overflow-hidden rounded-xl border border-border bg-card/40',
+          'flex flex-col overflow-hidden rounded-xl border border-border bg-card/40',
+          p.compactNative ? 'min-h-0' : 'min-h-[420px]',
           p.className
         )}
         aria-label="Konversationen"

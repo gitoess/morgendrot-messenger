@@ -11,6 +11,9 @@ import {
   setActivePrivateMailboxObjectId as persistActivePrivateMailbox,
   type ActiveSendMailbox,
 } from '@/frontend/lib/my-mailbox-active'
+import { readScoped, removeScoped, writeScoped } from '@/frontend/lib/package-profile-namespace'
+
+const PRIVATE_MAILBOX_DOMAIN = 'privateMailboxes'
 
 export type MyPrivateMailboxEntry = {
   objectId: string
@@ -75,37 +78,37 @@ function parseEntries(raw: string | null): MyPrivateMailboxEntry[] {
 
 function readListRaw(): MyPrivateMailboxEntry[] {
   if (typeof window === 'undefined') return []
-  const raw = window.localStorage.getItem(LS_LIST)
+  const raw = readScoped(PRIVATE_MAILBOX_DOMAIN, LS_LIST)
   if (!raw) return migrateLegacyIfNeeded()
   return parseEntries(raw)
 }
 
 function readArchiveRaw(): MyPrivateMailboxEntry[] {
   if (typeof window === 'undefined') return []
-  return parseEntries(window.localStorage.getItem(LS_ARCHIVE))
+  return parseEntries(readScoped(PRIVATE_MAILBOX_DOMAIN, LS_ARCHIVE))
 }
 
 function migrateLegacyIfNeeded(): MyPrivateMailboxEntry[] {
   if (typeof window === 'undefined') return []
-  const legacy = (window.localStorage.getItem(LS_LEGACY) ?? '').trim()
+  const legacy = (readScoped(PRIVATE_MAILBOX_DOMAIN, LS_LEGACY) ?? '').trim()
   if (!legacy || !isValidObjectId(legacy)) return []
   const entry: MyPrivateMailboxEntry = { objectId: legacy, createdAtMs: Date.now() }
   writeListRaw([entry])
   persistActivePrivateMailbox(legacy)
-  window.localStorage.removeItem(LS_LEGACY)
+  removeScoped(PRIVATE_MAILBOX_DOMAIN, LS_LEGACY)
   return [entry]
 }
 
 function writeListRaw(entries: MyPrivateMailboxEntry[]): void {
   if (typeof window === 'undefined') return
-  if (!entries.length) window.localStorage.removeItem(LS_LIST)
-  else window.localStorage.setItem(LS_LIST, JSON.stringify(entries))
+  if (!entries.length) removeScoped(PRIVATE_MAILBOX_DOMAIN, LS_LIST)
+  else writeScoped(PRIVATE_MAILBOX_DOMAIN, LS_LIST, JSON.stringify(entries))
 }
 
 function writeArchiveRaw(entries: MyPrivateMailboxEntry[]): void {
   if (typeof window === 'undefined') return
-  if (!entries.length) window.localStorage.removeItem(LS_ARCHIVE)
-  else window.localStorage.setItem(LS_ARCHIVE, JSON.stringify(entries))
+  if (!entries.length) removeScoped(PRIVATE_MAILBOX_DOMAIN, LS_ARCHIVE)
+  else writeScoped(PRIVATE_MAILBOX_DOMAIN, LS_ARCHIVE, JSON.stringify(entries))
 }
 
 export function readMyPrivateMailboxes(): MyPrivateMailboxEntry[] {

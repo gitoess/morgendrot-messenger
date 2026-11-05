@@ -6,15 +6,30 @@ import type {
   MessengerCapabilitiesMatrix,
   TransportChannel,
 } from '@morgendrot/shared/messenger-capabilities-matrix'
+import { readActiveProfileSnapshot } from '@/frontend/lib/package-profile-registry'
+import { resolveProfileCapabilities } from '@/frontend/lib/package-profile-capabilities'
+import type { PackageProfile } from '@/frontend/lib/package-profile'
 
 export type { MessengerCapabilitiesMatrix, TransportChannel }
 
 /** Sendepfad-Buttons im Composer-Header → Transport-Kanal in der Capabilities-Matrix. */
 export type ComposerSendPathKey = 'internet' | 'mesh' | 'adhoc' | 'telegram'
 
-/** Aufgelöste Matrix aus Status-API (Handoff-Runtime) oder undefined → Legacy ROLE_ID. */
+/** Aufgelöste Matrix aus Status-API (Handoff-Runtime) + aktives Einsatzprofil (§ H.24a Adoption). */
 export function getStatusCapabilities(status: ApiStatus | null | undefined): MessengerCapabilitiesMatrix | undefined {
-  return status?.capabilities
+  const base = status?.capabilities
+  if (!base) return undefined
+  const snap = readActiveProfileSnapshot()
+  if (!snap?.capabilities) return base
+  const asProfile: PackageProfile = {
+    id: snap.id,
+    label: snap.label,
+    bundled: false,
+    readOnly: false,
+    resolved: snap.resolved,
+    capabilities: snap.capabilities,
+  }
+  return resolveProfileCapabilities(base, asProfile)
 }
 
 export function canTransportRead(status: ApiStatus | null | undefined, channel: TransportChannel): boolean {

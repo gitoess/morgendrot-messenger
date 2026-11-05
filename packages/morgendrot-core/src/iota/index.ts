@@ -122,6 +122,6 @@ export {
   isDirectChainExecutionSuccess,
 } from './sign-and-execute'
 export type { DirectSignAndExecuteResult } from './sign-and-execute'
-export { collectGasCoinRefs, attachGasPaymentForOwner } from './gas-payment'
+export { collectGasCoinRefs, attachGasPaymentForOwner, getOwnerIotaBalanceMist } from './gas-payment'
 export type { GasCoinRef } from './gas-payment'
 export type { IotaClient } from '@iota/iota-sdk/client'

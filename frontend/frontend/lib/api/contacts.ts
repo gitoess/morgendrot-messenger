@@ -2,6 +2,12 @@ import { fetchApiText, formatFetchFailureMessage } from '@/frontend/lib/api-fetc
 import { parseOkEnvelopePassthrough } from '@/frontend/lib/api-simple-ok-envelope'
 import { API_BASE } from '@/frontend/lib/api/api-base'
 import { OFFLINE_CACHE_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
+import {
+  cacheContactDirectorySnapshot,
+  readPersistentContactDirectory,
+  saveContactEntryToLocalStore,
+  shouldPersistContactsLocallyOnly,
+} from '@/frontend/lib/contact-directory-local-store'
 
 /** Kontakt mit optionalem Meshtastic-Mapping (GET /api/contact-labels → directory). */
 export type ContactMeshEntryClient = {
@@ -27,23 +33,6 @@ type CachedContactDirectoryEnvelope = {
   savedAtMs: number
   labels?: Record<string, string>
   directory?: Record<string, ContactMeshEntryClient>
-}
-
-function cacheContactDirectorySnapshot(payload: {
-  labels?: Record<string, string>
-  directory?: Record<string, ContactMeshEntryClient>
-}): void {
-  if (typeof window === 'undefined') return
-  try {
-    const envelope: CachedContactDirectoryEnvelope = {
-      savedAtMs: Date.now(),
-      labels: payload.labels,
-      directory: payload.directory,
-    }
-    window.localStorage.setItem(CONTACT_DIRECTORY_CACHE_KEY, JSON.stringify(envelope))
-  } catch {
-    // Kein Hard-Fail bei gesperrtem oder vollem Speicher.
-  }
 }
 
 function readCachedContactDirectorySnapshot():
@@ -107,10 +96,34 @@ export async function fetchContactDirectory(): Promise<{
   cacheAgeMs?: number
   error?: string
 }> {
+  if (shouldPersistContactsLocallyOnly()) {
+    const directory = readPersistentContactDirectory()
+    const labels: Record<string, string> = {}
+    for (const [addr, entry] of Object.entries(directory)) {
+      labels[addr] = entry.label || 'Partner'
+    }
+    return { ok: true, directory, labels, fromCache: true, cacheAgeMs: 0 }
+  }
+
   try {
     const fr = await fetchApiText(API_BASE, '/api/contact-labels')
     if (!fr.ok) {
       const cached = readCachedContactDirectorySnapshot()
+      const persistent = readPersistentContactDirectory()
+      if (Object.keys(persistent).length > 0) {
+        const labels: Record<string, string> = {}
+        for (const [addr, entry] of Object.entries(persistent)) {
+          labels[addr] = entry.label || 'Partner'
+        }
+        return {
+          ok: true,
+          labels,
+          directory: persistent,
+          fromCache: true,
+          cacheAgeMs: cached?.cacheAgeMs ?? 0,
+          error: fr.error,
+        }
+      }
       if (cached) {
         console.info('[contacts] Live-Request fehlgeschlagen, nutze Cache-Fallback.', { error: fr.error })
         return {
@@ -137,6 +150,27 @@ export async function fetchContactDirectory(): Promise<{
         directory[a] = { label: label || 'Partner' }
       }
     }
+    const liveCount = directory ? Object.keys(directory).length : 0
+    const persistent = readPersistentContactDirectory()
+    const persistentCount = Object.keys(persistent).length
+    /**
+     * Leere Live-Antwort darf einen vorhandenen lokalen Cache nicht auslöschen
+     * (z. B. anderes Repo-cwd ohne .morgendrot-contact-labels.json).
+     */
+    if (liveCount === 0 && persistentCount > 0) {
+      const fallbackLabels: Record<string, string> = {}
+      for (const [addr, entry] of Object.entries(persistent)) {
+        fallbackLabels[addr] = entry.label || 'Partner'
+      }
+      return {
+        ok: true,
+        labels: fallbackLabels,
+        directory: persistent,
+        fromCache: true,
+        cacheAgeMs: 0,
+        error: typeof b.error === 'string' ? b.error : undefined,
+      }
+    }
     cacheContactDirectorySnapshot({ labels, directory })
     return {
       ok: true,
@@ -148,6 +182,22 @@ export async function fetchContactDirectory(): Promise<{
     }
   } catch (error) {
     const cached = readCachedContactDirectorySnapshot()
+    const persistent = readPersistentContactDirectory()
+    if (Object.keys(persistent).length > 0) {
+      const msg = formatFetchFailureMessage(error)
+      const labels: Record<string, string> = {}
+      for (const [addr, entry] of Object.entries(persistent)) {
+        labels[addr] = entry.label || 'Partner'
+      }
+      return {
+        ok: true,
+        labels,
+        directory: persistent,
+        fromCache: true,
+        cacheAgeMs: cached?.cacheAgeMs ?? 0,
+        error: msg,
+      }
+    }
     if (cached) {
       const msg = formatFetchFailureMessage(error)
       console.info('[contacts] Ausnahme beim Live-Request, nutze Cache-Fallback.', { error: msg })
@@ -180,15 +230,32 @@ export async function saveContactEntry(body: {
   clearMesh?: boolean
   roleTags?: string[]
 }): Promise<{ ok: boolean; message?: string; error?: string }> {
+  if (shouldPersistContactsLocallyOnly()) {
+    return saveContactEntryToLocalStore(body)
+  }
+
   try {
     const fr = await fetchApiText(API_BASE, '/api/contact-label', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-    if (!fr.ok) return { ok: false, error: fr.error }
+    if (!fr.ok) {
+      const local = saveContactEntryToLocalStore(body)
+      if (local.ok) {
+        return { ok: true, message: local.message || 'Kontakt offline gespeichert.' }
+      }
+      return { ok: false, error: fr.error }
+    }
     const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'Kontakt speichern fehlgeschlagen.' })
-    if (!r.ok) return { ok: false, error: r.error }
+    if (!r.ok) {
+      const local = saveContactEntryToLocalStore(body)
+      if (local.ok) {
+        return { ok: true, message: local.message || 'Kontakt offline gespeichert.' }
+      }
+      return { ok: false, error: r.error }
+    }
+    saveContactEntryToLocalStore(body)
     const b = r.body
     return {
       ok: true,
@@ -196,6 +263,10 @@ export async function saveContactEntry(body: {
       error: typeof b.error === 'string' ? b.error : undefined,
     }
   } catch (error) {
+    const local = saveContactEntryToLocalStore(body)
+    if (local.ok) {
+      return { ok: true, message: local.message || 'Kontakt offline gespeichert.' }
+    }
     return { ok: false, error: formatFetchFailureMessage(error) }
   }
 }

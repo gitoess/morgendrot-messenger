@@ -16,6 +16,7 @@ import { ChatViewSendPathCompact } from '@/frontend/components/chat-view-send-pa
 import { ChatViewInboxPanel, type ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
 import { useChatViewInboxPanelProps } from '@/frontend/hooks/use-chat-view-inbox-panel-props'
 import { ChatViewPackageIdBanner } from '@/frontend/components/chat-view-package-id-banner'
+import { ChatViewEinsatzProfileBanner } from '@/frontend/components/chat-view-einsatz-profile-banner'
 import { ChatViewSendPanel } from '@/frontend/components/chat-view-send-panel'
 import { ChatViewChatHeader, type ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
 import { ChatViewOfflineQueueStrip } from '@/frontend/components/chat-view-offline-queue-strip'
@@ -90,6 +91,8 @@ import {
   PEER_KEY_RENEWAL_CONFIRM,
   renewDirectChatPeerEncryption,
 } from '@/frontend/lib/peer-key-renewal'
+import { getSendKeyEpochForRecipient } from '@/frontend/lib/direct-session-keys-archive'
+import { useInboxBurnOnRead } from '@/frontend/hooks/use-inbox-burn-on-read'
 import { isValidRecipient0x } from '@/frontend/lib/encrypted-recipient-handshake-status'
 import type { PendingHandshakesPollState } from '@/frontend/hooks/use-chat-view-pending-handshakes'
 import { useOfflineStatus } from '@/frontend/hooks/use-offline-status'
@@ -130,6 +133,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     phonebookNavRequest,
     onOpenSettings,
   } = c
+  const { burnOnReadEnabled, setBurnOnReadEnabled } = useInboxBurnOnRead()
 
   const {
     channelMode,
@@ -549,7 +553,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         },
         { handshakeReady: isContactHandshakeReady(handshakeStatus), activeSendPath }
       )
-      recordContactLastContacted(address)
     },
     [
       channelMode,
@@ -948,6 +951,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     }
 
     if (inboxPartnerFiltersArmed && (activeConversationTitle || telegramAlarmSelected)) {
+      const canRenew =
+        !!inboxPartnerKey && isValidRecipient0x(inboxPartnerKey) && !telegramAlarmSelected
+      const epoch = canRenew ? getSendKeyEpochForRecipient(inboxPartnerKey) : 0
       return {
         title: activeConversationTitle ?? 'Einsatz-Alarmgruppe',
         subtitle: activeConversationSubtitle,
@@ -957,8 +963,18 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           inboxPartnerKey && !telegramAlarmSelected ? () => handleOpenContactDetail(inboxPartnerKey) : undefined,
         onExportHistory: () => panelMessengerPorts.inboxExportActions.onExportEinsatzberichtTxt(),
         onClearHistory: () => panelMessengerPorts.inboxActions.onHideAllVisibleLocal(),
-        onRenewEncryptionKeys:
-          inboxPartnerKey && isValidRecipient0x(inboxPartnerKey) ? handleRenewPeerEncryption : undefined,
+        onRenewEncryptionKeys: canRenew ? handleRenewPeerEncryption : undefined,
+        renewEncryptionLabel: canRenew
+          ? `Schlüssel erneuern (Epoch ${epoch || 1})`
+          : undefined,
+        renewEncryptionHint:
+          'Session-Epoch erhöhen — Forward Secrecy ab Rotation (nicht pro Nachricht). Alte Nachrichten bleiben lesbar.',
+        burnOnRead: telegramAlarmSelected
+          ? undefined
+          : {
+              enabled: burnOnReadEnabled,
+              onEnabledChange: setBurnOnReadEnabled,
+            },
         encryptionToggle: {
           encrypted,
           onEncryptedChange: setEncrypted,
@@ -1001,6 +1017,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     inboxPartnerKey,
     handleOpenContactDetail,
     handleRenewPeerEncryption,
+    burnOnReadEnabled,
+    setBurnOnReadEnabled,
     composerDelivery,
     panelMessengerPorts.inboxExportActions,
     panelMessengerPorts.inboxActions,
@@ -1025,8 +1043,12 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const showNativeComposerFooter = useNativeMessengerTabs
 
-  const nativeComposerFooter = showNativeComposerFooter ? (
-    <div className="sticky bottom-[3.5rem] z-20 -mx-1 space-y-2 border-t border-border bg-background/98 px-1 pt-2 backdrop-blur-sm">
+  const showNativeComposer =
+    showNativeComposerFooter &&
+    (mobileTab === 'inbox' || mobileTab === 'chats')
+
+  const nativeComposerFooter = showNativeComposer ? (
+    <div className="shrink-0 space-y-2 border-t border-border bg-background/98 px-2 pt-2 backdrop-blur-sm">
       {sendPathProps?.visible ? <ChatViewSendPathCompact {...sendPathProps} layout="grid" /> : null}
       {composerBlock}
     </div>
@@ -1056,6 +1078,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const sharedContactSidebar = (
     <ChatViewContactSidebar
+      compactNative={useNativeMessengerTabs}
       directory={directory}
       partnerOptions={inboxPartnerOptions}
       activePartnerKey={inboxPartnerKey}
@@ -1121,6 +1144,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       {isPrivate && uiCaps.showPackageIdBanner && !useNativeMessengerTabs ? (
         <ChatViewPackageIdBanner {...packageIdBannerProps} />
       ) : null}
+
+      {isPrivate && !useNativeMessengerTabs ? <ChatViewEinsatzProfileBanner /> : null}
 
       {!showConversationSidebar && channelMode === 'private' && composerDelivery === 'chain' && !useNativeMessengerTabs ? (
         <ChatViewTransportCard {...transportCardProps} />
@@ -1211,14 +1236,37 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   return (
     <>
       {useNativeMessengerTabs ? (
-        <div className="pb-[calc(3.5rem+env(safe-area-inset-bottom,0px)+0.35rem)]">
-          <div className="space-y-2">
+        <div className="flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden">
+          <div className="shrink-0 space-y-2 px-2 pt-1">
             <ChatViewChatHeader {...nativeHeaderProps} />
 
             {uiCaps.showProminentOfflineQueueBanner ? (
               <ChatViewOfflineQueueStrip {...offlineQueueStripProps} />
             ) : null}
 
+            {mobileTab === 'chats' && inChatThread ? (
+              <div className="flex items-center gap-2 border-b border-border/60 px-1 pb-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 shrink-0 px-2"
+                  onClick={handleMobileBackToChatList}
+                >
+                  <ChevronLeft className="mr-0.5 h-4 w-4" aria-hidden />
+                  Chats
+                </Button>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{activeConversationTitle ?? 'Chat'}</p>
+                  {activeConversationSubtitle ? (
+                    <p className="truncate text-[11px] text-muted-foreground">{activeConversationSubtitle}</p>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-2">
             {mobileTab === 'chats' && !inChatThread ? (
               <>
                 <ChatViewMessengerSearch
@@ -1247,24 +1295,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
             {mobileTab === 'chats' && inChatThread ? (
               <>
-                <div className="flex items-center gap-2 border-b border-border/60 px-1 pb-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-9 shrink-0 px-2"
-                    onClick={handleMobileBackToChatList}
-                  >
-                    <ChevronLeft className="mr-0.5 h-4 w-4" aria-hidden />
-                    Chats
-                  </Button>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{activeConversationTitle ?? 'Chat'}</p>
-                    {activeConversationSubtitle ? (
-                      <p className="truncate text-[11px] text-muted-foreground">{activeConversationSubtitle}</p>
-                    ) : null}
-                  </div>
-                </div>
                 {telegramAlarmSelected ? (
                   <ChatViewTelegramAlarmThreadBanner partnerKeyReady={telegramAlarmPartnerKeyReady} />
                 ) : null}
@@ -1274,7 +1304,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                   inboxSearchQuery={messengerSearchQuery}
                   conversationMenu={conversationMenuProps}
                 />
-                {nativeComposerFooter}
               </>
             ) : null}
 
@@ -1298,7 +1327,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                   inboxSearchQuery={messengerSearchQuery}
                   conversationMenu={undefined}
                 />
-                {nativeComposerFooter}
               </>
             ) : null}
 
@@ -1314,7 +1342,11 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               </div>
             ) : null}
           </div>
+
+          {nativeComposerFooter}
+
           <ChatViewMobileBottomNav
+            embedded
             active={mobileTab}
             onChange={setMobileTab}
             inboxUnreadCount={mobileInboxUnreadBadge}

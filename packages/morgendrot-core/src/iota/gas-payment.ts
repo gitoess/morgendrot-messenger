@@ -7,6 +7,19 @@ const DEFAULT_GAS_BUDGET = BigInt(10_000_000)
 
 export type GasCoinRef = { objectId: string; version: number; digest: string }
 
+export async function getOwnerIotaBalanceMist(client: IotaClient, owner: string): Promise<bigint> {
+  const res = (await client.getBalance({ owner } as Parameters<IotaClient['getBalance']>[0])) as {
+    totalBalance?: string | number
+  }
+  const raw = res?.totalBalance
+  if (raw === undefined || raw === null) return 0n
+  try {
+    return BigInt(String(raw))
+  } catch {
+    return 0n
+  }
+}
+
 export async function collectGasCoinRefs(client: IotaClient, owner: string): Promise<GasCoinRef[]> {
   const out: GasCoinRef[] = []
   let cursor: string | undefined
@@ -44,5 +57,11 @@ export async function attachGasPaymentForOwner(
   txb.setGasBudget(gasBudget)
   const coins = await collectGasCoinRefs(client, owner)
   if (coins.length === 0) throw new Error('Keine Coin-Objekte für Gas — Wallet mit IOTA (MIST) füllen.')
+  const bal = await getOwnerIotaBalanceMist(client, owner)
+  if (bal < gasBudget) {
+    throw new Error(
+      `Wallet-Saldo zu niedrig für Gas-Budget: ${bal} MIST verfügbar, ${gasBudget} MIST nötig. IOTA nachladen.`
+    )
+  }
   txb.setGasPayment(coins)
 }

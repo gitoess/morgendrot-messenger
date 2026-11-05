@@ -21,6 +21,10 @@
 
 **Nachtrag 2026-04-28:** **Handy-first / Client-IOTA** — wenn IOTA **aktiv** ist: Client-Signatur + direkter RPC-Upload (**local-first**); Node optional (Relay, Gas, Archiv). Doku: **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**, **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, **§ H.15**.
 
+**Nachtrag 2026-11-05 (On-Chain / NFT UI):** Posteingang-Menü **Werkzeuge** entfernt — alles unter **On-Chain / NFT** (Object/Besitzer/Wire/Mint + Tab **Klartext-MB**: bekannte `MAILBOX_ID` → nur `PlainMsgKey`). Details **`docs/EVIDENCE-IMAGE-AND-NFT-ATTRIBUTES.md`**.
+
+**Nachtrag 2026-11-05 (Privacy / H.23 UX, Claims):** Vault-Lock leert lokale Passphrase-Stores; Chat-⋮ **Schlüssel erneuern** (Epoch) + Hinweis nach Enc-Send; Opt-in **Burn-on-read** (Purge mit Bestätigung). Claims ehrlich: **`docs/SECURITY-CLAIMS-CHECK-2026-11.md`**. **Kein** Double-Ratchet / Decoys / Outboxes in dieser Tranche. **Empfohlene nächste Arbeit:** Feldtest ImageNFT-Mint + Passphrase-Nachricht + Lock-Wipe + Epoch-Renew (2 Geräte) — **vor** neuer Architektur (§ H.23 Ratchet).
+
 **Nachtrag 2026-05-20 (Strategie — korrigiert):** **IOTA bleibt gekoppelt**; **Funk-Default** im Helfer-UI (`TRANSPORT_PROFILE=mesh-first`). **Delayed LoRa → IOTA**, **Offline-TX/Outbox** und **Pfad 4** bleiben — siehe **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**. Keine volle IOTA-TX im LoRa-Frame (**§ H.3m**). **Keine neuen Move-Publishes** in Tranche A; Fokus Runtime + Simple Mode.
 
 **Nachtrag 2026-06-16 (§ H.36 — Team-Member-Update & Einstiegs-Wizard):** Spec **`docs/TEAM-MEMBER-UPDATE-WIZARD-SPEC.md`**: geführter linearer Wizard (Boss/Helfer/Wanderer) orchestriert Handoff/Seed/Funk **ohne** zweiten Export-Assistenten; spontaner **Join-Request**; Wire `MORG_TEAM_MEMBER_UPDATE_V1` + Empfänger **Ja/Nein**; Transport **IOTA = Persistenz**, **LAN = Zustellung** (Boss-Relay Ist via § H.16), Funk nur Ping. **P0** Wizard-Skelett → **P1** Wire+LAN+IOTA → **P2** Join-Queue.
@@ -39,8 +43,8 @@
 | **§ H.15 Standalone 4b–4d** | Samsung APK: Klartext + verschl. + Posteingang RPC **PASS**; CDP `apk-standalone-helper-boss-send-test.mjs` **PASS**; **§3 Simple-Mode** CDP **6/6 PASS** | **4e/4f** (2. Gerät) |
 | **Boss-Inbox Stabilität** | `use-chat-view-inbox` — Reset/Poll-Merge, Wallet-Scope, kein Cache-Flash (`inbox-cache-key.ts`) | — |
 | **APK Mobile-Shell (Capacitor)** | **`chat-view-mobile-bottom-nav.tsx`**, **`chat-view-main-content.tsx`** — Tabs Chats/Posteingang/Kontakte; Sendepfad 2×2; Composer sticky; CDP-Nav angepasst | Voll-Shell P1 (Backlog); manuell §3 |
-| **Handoff-Export** | `queryGlobalsCreatedForPackage` + `reconcileHandoffExportGlobals` in API-ZIP-Route; Vitest 6/6 | Zweiter PC / echte Boss-ZIP am Gerät |
-| **§ H.36 P1/P2** | **P1 Feldtest PASS (2026-07-07):** `scripts/apk-h36-lan-fieldtest.mjs` — Boss `POST /api/team-sync/push`, APK `lan-inbox`, Posteingang **„Empfangen über: LAN“** (**WLAN-only** `192.168.x.x` + USB-Reverse); APK **Mixed-Content** + `network_security_config` | **`sig` freeze** Code-Ist; Join-Queue Feldtest |
+| **Handoff-Export** | `queryGlobalsCreatedForPackage` + `reconcileHandoffExportGlobals` in API-ZIP-Route; Vitest 6/6; **echte Boss-ZIP am Samsung PASS** (`apk-standalone-handoff-zip-import-test.mjs`) | Zweiter PC |
+| **§ H.36 P1/P2** | **P1 Feldtest PASS:** `apk-h36-lan-fieldtest.mjs` (LAN + Posteingang). **P2 Feldtest PASS (2026-07-07):** `apk-h36-join-queue-sig-fieldtest.mjs` — Join-Queue API + sig-Freeze UI | Einsatzleitung-Panel Feld (Boss-Browser); Boss-`sig` mit echtem Vault |
 
 **Nachtrag 2026-06-17 (Messenger-Navigation, Telefonbuch, § H.36/H.3n/H.26 Teil-Ist):**
 
@@ -51,7 +55,7 @@
 | **Handbuch** | **`docs/MESSENGER-CHAT-HANDBUCH.md`** + **`frontend/public/handbook/…`** — Abschnitt Kontakt anlegen, Funk-Export-Umfang | — |
 | **§ H.36 P0** | **`onboarding/`** — Wizard Host/Dialog/Shell, Progress-Store, Resume-Card, Einstellungen-Sektion; Deep-Links Handoff/Seed/WLAN | Feldtest Boss/Helfer/Wanderer linear |
 | **§ H.36 P1 (Teil)** | Wire **`MORG_TEAM_*`** + LAN-Poll + Kanal-Feedback; **Boss-`sig` freeze** (`docs/MORG-TEAM-WIRE-SIG-SCHEMA.md`) | Feldtest Block 2 (zweiter PC); manueller LAN-Zustelltest |
-| **§ H.3n B2.5 (Teil)** | **`ChatViewSosEmergencySheet`** + Lage-Bundle; SOS **Fan-out** Funk+Online parallel (`chat-view-emergency-fanout.ts`); Klartext erzwingen; Dashboard-SOS mit Boss-Partner-Override (`resolve-dashboard-emergency-partner.ts`); CDP **`apk-h36-sos-fanout-fieldtest.mjs`** | Fan-out **Feld-PASS** (Composer-Status + Boss-Inbox); Boss-Vault-PW am PC |
+| **§ H.3n B2.5 (Teil)** | **`ChatViewSosEmergencySheet`** + Lage-Bundle; SOS **Fan-out** Funk+Online (`chat-view-emergency-fanout.ts`); Dashboard-SOS + Boss-Partner-Override — **Code-Ist** | Fan-out **Feld-PASS** (klein); **Wanderer v1** → **§ H.3n B2.6** (Roadmap **Schluss**) |
 | **§ H.26 B4b (Teil)** | Einstellungen **`settings-telegram-einsatz-group`**, Handoff-Extras, Alarmgruppe-Join-Karten, **`postTelegramGroupAlarm`**, Inbound ohne Telefonbuch-Eintrag | Einladungslink-Onboarding Feldtest; **B4c** Multi-Pick |
 | **§ H.1b Scope B lazy** | **`lazy/messenger-scope-b.ts`** — BossView, ConfigView, Handoff-Import, Pulse/Relay/Protokoll lazy (Wellen 1–4 laut **`docs/MESSENGER-SCOPE-P0-LAZY-PLAN.md`**) | Manuell Network-Tab Helfer vs Boss; optional CI Bundle-Diff |
 
@@ -59,7 +63,7 @@
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat. **Zuordnung § A ↔ § H:** siehe **§ A–H: Brücke** (unmittelbar unter dem Gesamtüberblick).
 
-**Nächste konkrete Schritte (2026-07-07):** **§ H.3n B2.5** Fan-out-Feldtest **PASS** (Boss-Vault + Composer-Status); **4e/4f** wenn zweites Gerät; **§ H.1a** Vitest-Slices. **Erledigt (Feld):** Modus A; Standalone **4b–4d** + Helfer→Boss + **§3 Simple** + **§ H.36 P1 LAN WLAN-only**; **B2.5 PARTIAL** (Dashboard-SOS → Chat, Pending konsumiert). **Backlog:** **§ H.24** Package-Profile; **§ H.28** Discord/Matrix; LoRa **Ticket A–C**; **§ H.26** B5 `/nodes`/`/qr`.
+**Nächste konkrete Schritte (2026-07-07):** **§ H.15 4e/4f** + Block-2 §3 Simple-Checks wenn **zweites Gerät**. **Erledigt (Feld):** Modus A; Standalone **4b–4d** + Helfer→Boss + **§ H.36 P1 LAN** + **§ H.36 P2 Join-Queue/sig**; **Handoff-ZIP** am Samsung; B2.5 Fan-out **PARTIAL**. **Ganz hinten:** **§ H.3n B2.6 SOS Wanderer v1**; **§ H.25a** LoRa-Bild; **§ H.24** Package-Profile.
 
 ### Spätere Tests (Rollen / Consumer / Feld)
 
@@ -338,6 +342,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 | **§ H.27** | **Handshake-Anfragen UX** — Toast, Badge, Ablehnen, Polling, Inbox-Zeile; Push-Backlog — **`docs/HANDSHAKE-ANFRAGEN-UX.md`** |
 | **§ H.28** | **Discord- & Matrix-API-Bot-Anbindung** — Runtime-Integration (Alarme, optionale Kontakt-Hinweise); **sehr spätes Backlog** (nach stabiler Phase B und nach H.24/H.25/H.15-Feldabschluss) — **`docs/DISCORD-MATRIX-INTEGRATION-ZIELBILD.md`** |
 | **§ H.31** | **Multi-Pinnwand** — mehrere Bretter pro Einsatz (Boss schreibt, alle lesen); **Backlog ganz hinten** — **`docs/BROADCAST-PINNWAND.md`** |
+| **§ H.3n B2.6** | **SOS Wanderer v1** — „Für Wanderung registrieren“, Tour-QR, GPS live, Funk-Kürzel, Fan-out-Härtung; Spec **`docs/SOS-WANDERER-V1.md`** — **Roadmap-Schluss** (nach § H.15 4e/4f, § H.36 Feld, § H.25a Feld; **nicht** vor laufendem Block-2-Plan). **Verfeinerung 2026-07-07:** gestufte Standortkette (live-GPS → letzter Fix → **Standort-QR/Wegpunkt** → Startpunkt → Freitext) + eigener QR-Typ `morg.wanderung.waypoint` (§3.3.1/§3.5, abgegrenzt vom Tour-QR) — GPS bleibt primär, Wegpunkt ist Ergänzung/Fallback. |
 | **§ H.32** | **Posteingang „Antworten“** + **„Einsatz beenden“** (nur **Cache/lokale IDs**, keine Chain) — **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`**, **§ H.7** |
 | **§ H.34** | **Messenger P10-Light** — Composer-Bindings-Hook, README (optional, nach P9) |
 | **§ H.35** | **ATAK Schichtmodell** — **`docs/ATAK-COT-INTEGRATION-ZIELBILD.md` § 6** (Ideenspec, ggf. nicht umsetzen) |
@@ -350,7 +355,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 
 **Prinzip:** Erst **Phase A** absichern, dann **Phase B** (Mesh + Delayed Upload), dann **Phase C** (Makros/Gateway). **Nicht** parallel: großer UI-Refactor (**§ H.1b**) und neuer **Mesh-Kern** in derselben Woche; **§ I**-Produktversprechen vor **B**; **Kabel-Bridge** (**§ A.8**) bewusst **nach** klarer Queue-/Sync-Semantik (**§ H.12**) oder mit Spec-Abgleich. **Ab 2026-04-28:** **§ H.15** (Client-IOTA, optionaler Node) in **kleinen Scheiben** parallel zu **§ H.0–H.2** **erlaubt**, solange **`TESTING.md`**-Ritual und **kein** unkontrollierter Cross-Refactor mit **Mesh-Kern** (**§ C.0b** weiter beachten).
 
-**Operative Reihenfolge (einheitlich):** **§ C.0b** → **„nächsten drei“** (Schreibtisch) → **weitere Phase-A-Scheiben** (**§ H.2**, **§ H.1a**, Mailbox-Spec, **§ H.3n**, …) → **§ H.15 Stufe 2** Handy-Smoke **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** **zuletzt** (nicht vor den vorgenannten Punkten erzwingen).
+**Operative Reihenfolge (einheitlich):** **§ C.0b** → **„nächsten drei“** (Schreibtisch) → **weitere Phase-A-Scheiben** (**§ H.2**, **§ H.1a**, Mailbox-Spec) → **§ H.15 Stufe 2** Handy-Smoke **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** (4e/4f) → **§ H.36** / Block-2 Feld → **§ H.25a** LoRa-Bild Feld → **§ H.3n B2.6 SOS Wanderer v1** **`docs/SOS-WANDERER-V1.md`** **am Schluss** (Spec fertig, Umsetzung später).
 
 | Stufe | Reihenfolge | Hinweis |
 |-------|-------------|---------|
@@ -1157,9 +1162,10 @@ Zentrale Übersicht (regelmäßig aktualisieren): **`docs/OPERATIONS-SNAPSHOT-20
 | **Produktentscheidung (2026-06-16)** | **Zivil-SOS = Klartext-only**, Reichweite zuerst — **kein** Verschlüsselungs-Schalter im SOS-UI. Fan-out über **alle erreichbaren** Wege (Funk, Online **`/send-plain`**, Telegram Notify). Details **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** **§9**. Verschlüsseltes SOS nur **Backlog** (OPSEC-/Militär-Profil). |
 | **Doku** | **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** — Idealbild, **§9 Zivil-SOS**, Korrekturen (Meshtastic priorisiert nicht von selbst; **keine** volle IOTA-Signatur über Funk; **Duty Cycle**; Sprache = Hash/Chunks), Abgrenzung normaler Chat vs. Emergency, Phasen B1–B4 + **B2.5** (SOS-Sheet). |
 | **Ist-Code (Messenger)** | **B1+B2:** UI-SOS, `MORG_EMERGENCY_V1` (**§7** Freeze), Mesh-Flash-Burst, **Backoff-Retry** + **Mailbox-Ack stoppt Funk** (`morg-sos-mesh-retry`, `/send` zwischen Versuchen; Opt-out `localStorage`), **IOTA-Spiegel** nach reinem Funk-Erfolg, einheitliche **`[SOS]`**-Anzeige (Vitest: `chat-message-display-normalize`). **B2.5 Teil-Ist (2026-06-17):** **`ChatViewSosEmergencySheet`** + Lage-Bundle (`sos-lage-bundle.ts`); SOS auf **Dashboard** + Chat (`emergencyWire`); Telegram-Gruppen-Hinweis bei SOS (`postTelegramGroupAlarm`). **Lücke §9:** normales Composer-SOS erzwingt noch nicht pauschal **`encrypted=false`** / **`/send-plain`**. |
-| **Nächste Scheibe (B2.5 Rest)** | Sendepfad SOS → **Klartext erzwingen** (auch bei aktivem Schloss); Fan-out-Feldabnahme (Funk + Online + Telegram). |
-| **Bezug** | **`emergency-binary-wire.ts`** (v2, Byte `0x02`), **`src/shared/opcodes.ts`**, **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**, **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**, **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**, **`docs/MESHTASTIC-BUILDING-BLOCKS.md`** §3. |
-| **Priorität** | **B2.5 Rest** (Klartext erzwingen + Fan-out-Feldtest) **nach** Sidebar-/Telefonbuch-Abnahme; **Phase B** Basis-Queue (**B3**) parallel planbar — **nicht** vor **§ C.0b** Stufe 4-Voraussetzungen; **nicht** parallel zu großem **§ H.1b**-Refactor ohne Absprache. |
+| **Nächste Scheibe (B2.5 Rest, klein)** | Optional: Klartext erzwingen bei `emergencyWire`; Fan-out-Feldtest abschließen — **ohne** Wanderer-UI |
+| **Wanderer v1 (B2.6)** | **`docs/SOS-WANDERER-V1.md`** §10 — Registrierung → Sheet → Fan-out — **Roadmap-Schluss**, nicht vor Block-2/H.15/H.36 |
+| **Bezug** | **`emergency-binary-wire.ts`** (v2, Byte `0x02`), **`src/shared/opcodes.ts`**, **`docs/SOS-WANDERER-V1.md`**, **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**, **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**, **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**, **`docs/MESHTASTIC-BUILDING-BLOCKS.md`** §3. |
+| **Priorität** | **B2.5 Rest** nur bei Gelegenheit; **B2.6 Wanderer** **nach** § H.15 4e/4f, § H.36 Feld, § H.25a Feld — **nicht** parallel zum aktuellen Block-2-Plan |
 
 ### H.3o Meshtastic-Verschlüsselung & Steuerungsmodell (**Backlog**, Phase B)
 
@@ -1588,8 +1594,24 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 **Nachtrag 2026-06 (Expertenmodus Posteingang):** Messenger-UI **Ist** — client opt-in **Expertenmodus** (Einstellungen) + **Pkg:**-Menü im Posteingang (temporär vs. `/set-package-id`); Typen `InboxPackageViewMode` / `multi_union` vorbereitet. Doku: **`docs/INBOX-PACKAGE-EXPERT-MODE.md`**. **Volles Multi-Package-Dropdown / Side-by-Side-Vergleich** bleibt **H.24b**-Backlog (parallele Einsätze auf einem Gerät).
 
-**Status:** **Backlog** — **später umsetzen** (nach **§ H.22 M4d**-Stabilisierung, **§ H.23**-Grundentscheid; kleine Scheiben parallel zu **§ H.0** / **§ H.2** möglich).  
+**Status:** **Teil-Ist (Schreibtisch 2026-07-08)** — P0–P4 + Adoption + Kontakt-Mailbox-Slots namespaced; **offen:** Multi-Package-Dropdown, P1c Server-Doku, Feldtest Einsatzwechsel am Gerät.  
 **SSOT Wechsel-Logik:** **`docs/PACKAGE-PROFILE-WECHSEL-SPEC.md`**.
+
+**P0 Ist (2026-07-07):** Datenmodell + Manifest-Parser — **`frontend/frontend/lib/package-profile.ts`** (`PackageProfile`-Typ, `parsePackageProfile` / `parsePackageProfilesManifest`, `resolvedPackageProfiles`, `packageMailboxMap`, `loadPackageProfilesManifest`). Validiert `id`-Slug + hex64-IDs, verwirft `REPLACE_*`-Platzhalter (→ `resolved:false`), ignoriert `_`-Doku-Keys, dedupliziert nach `id`. `package-profile-mailbox.ts` nutzt jetzt diesen Parser (keine Doppel-Logik). Vitest **`frontend/lib/package-profile.test.ts`** geschrieben.
+
+**P1b Ist (2026-07-07):** Client-Registry — **`frontend/frontend/lib/package-profile-registry.ts`**: persistierter Zustand (`morgendrot.packageProfiles.registry.v1`: benutzerdefinierte Profile + `activeProfileId`), `combineProfiles` (bundled zuerst, bundled gewinnt id-Kollision + read-only), `activeProfile`/`setActiveProfile`, `addUserProfile` (schützt Bundle-ids, ersetzt gleiche user-id) / `removeUserProfile` (leert aktive id), `shortPackageId`, `buildSwitchWarning` (Pflichttext §3.2 + `unresolved`-Hinweis), `loadPackageProfileRegistry` (Manifest + LS → kombinierte Registry). Event `PACKAGE_PROFILE_REGISTRY_CHANGED`. Vitest **`frontend/lib/package-profile-registry.test.ts`** geschrieben. **Kein** Server-Hot-Swap (§7.5) — nur Client.
+
+**P2 Ist (2026-07-07):** UI — **`frontend/frontend/components/settings-einsatz-profiles-section.tsx`** (in `settings-view.tsx` unter **Allgemein**, nach `ActiveProfilePanel`). Profil-Liste (Farbpunkt, Kurz-Package-ID, Badges „Bundle“/„aktiv“/„nicht konfiguriert“), **„Einsatz wechseln“**-Button pro Profil → nicht-wegklickbares **Warn-Modal** (`AlertDialog` + `buildSwitchWarning`, §3.2) mit Hot-Swap-Hinweis (§7.5), aktives Banner. **„+ Profil hinzufügen“** / Entfernen nur für **Boss** (`canManage={isBossRole}` — Kommandant hat heute kein `configChange`, §7.1). Aktivierung clientseitig (Registry/Banner), **keine** Server-Config-Änderung.
+
+**P1b-Rest Ist (2026-07-07):** aktives Profil **anwenden** — **`frontend/frontend/lib/package-profile-apply.ts`** (`planProfileApplication` rein + `applyPackageProfile`): setzt beim Wechsel den `API_BASE`-Override (`morgendrot.apiBaseOverride` via `applyInstallQrApiBase`, §7.6-Risiko) **nur auf Native/APK** (`shouldShowCapacitorApiBaseSettings()`), auf PC mit Rewrites bewusst übersprungen (Statuszeile „API-Basis unverändert (PC/Rewrites)“). Warnungen bei fehlendem apiBase / nicht-`resolved`. Vitest **`frontend/lib/package-profile-apply.test.ts`** (jsdom, localStorage).
+
+**P3 Ist (2026-07-07):** Client-Namespace-Fundament — **`frontend/frontend/lib/package-profile-namespace.ts`**: Scope-Klassifikation (`PROFILE_DATA_SCOPE`: Telefonbuch/Kontakte **global**; private Mailboxes, Handshakes, `peerMap`, aktive Mailbox, Inbox **pro Profil** §3.3), `namespacedKey`/`scopedKey` (rückwärtskompatibel — ohne aktives Profil bleibt Legacy-Key), `readScoped`/`writeScoped`/`removeScoped`. Stores übernehmen es **inkrementell** (kein Big-Bang-Rewire). Vitest **`frontend/lib/package-profile-namespace.test.ts`** (jsdom).
+
+**P4 Ist (2026-07-07):** Capabilities pro Profil (§ H.24a) — `PackageProfile.capabilities` (optionaler `MessengerCapabilitiesOverride`, im Parser gelesen) + **`frontend/frontend/lib/package-profile-capabilities.ts`** (`resolveProfileCapabilities(base, profile)` mergt Profil-Override auf die aus ROLE_ID/Handoff abgeleitete Basis-Matrix via `mergeCapabilitiesOverride`; `profileHasCapabilityOverride`). **Keine** neue Rechte-Quelle — nur profilabhängige Sichtbarkeit/Transport. Vitest **`frontend/lib/package-profile-capabilities.test.ts`**.
+
+**Adoption Ist (2026-07-08):** Fundament in Stores + Messenger-UI verdrahtet — **Namespaces:** `my-mailbox-active.ts`, `my-private-mailbox-store.ts`, `handshake-offers-cache.ts`, `connected-peers-snapshot.ts`, `dismissed-handshake-offers.ts`, Posteingang-Cache (`use-chat-view-inbox.ts` via `scopedKey`), **`contact-mailbox-slots.ts`** (Send-Slot + vier Mailbox-Slots pro Wallet/Profil, Spec §3.3). **Registry:** `activeProfileSnapshot` bei Aktivierung (`package-profile-registry.ts`). **Capabilities:** `getStatusCapabilities` in `messenger-capability-gates.ts` mergt Profil-Override. **Posteingang:** `package-profile-inbox.ts` (`resolveEffectiveInboxPackageId`), Orchestrator reagiert auf `PACKAGE_PROFILE_REGISTRY_CHANGED`. **UI:** `ChatViewEinsatzProfileBanner` in `chat-view-main-content.tsx`. **P1a Ist (2026-07-08):** `frontend/public/templates/package-profiles.manifest.json` mit echten IDs aus `.morgendrot-globals-ids.json` (`npm run sync:package-profiles`). Vitest **`package-profile-inbox.test.ts`** + **`contact-mailbox-slots.test.ts`**. **Offen:** Multi-Package-Dropdown, Capability-Gating in Transport-Kacheln am Gerät prüfen, Feldtest Einsatzwechsel.
+
+**Test-Lauf:** `cd frontend && npm run test:unit -- package-profile contact-mailbox-slots` — **PASS (46/46, 7 Dateien, 2026-07-08)**.
 
 #### H.24b — PACKAGE wechseln = Einsatzprofil (nicht Chat-Raum) — **priorisiert innerhalb H.24**
 

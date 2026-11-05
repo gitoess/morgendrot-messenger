@@ -56,6 +56,8 @@ import {
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import { openProtokollAnchorDialogFromPrefill, openR1CourierDialogFromPrefill } from '@/frontend/lib/messenger-imperative-dialogs'
 import { isTeamBroadcastInboxMessage, teamBroadcastPurgeHint } from '@/frontend/lib/mailbox-purge-routing'
+import { BURN_ON_READ_CONFIRM } from '@/frontend/lib/inbox-burn-on-read'
+import { useInboxBurnOnRead } from '@/frontend/hooks/use-inbox-burn-on-read'
 import { EinsatzInboxExplorerLink } from '@/frontend/components/einsatz-inbox-explorer-link'
 import { EinsatzInboxMessageBadges } from '@/frontend/components/einsatz-inbox-message-badges'
 import { useEinsatzInboxBadges } from '@/frontend/hooks/use-einsatz-inbox-badges'
@@ -133,6 +135,7 @@ export type ChatViewInboxListProps = InboxFeedReadPort & {
 }
 
 export function ChatViewInboxList(p: ChatViewInboxListProps) {
+  const { burnOnReadEnabled } = useInboxBurnOnRead()
   const {
     loadError,
     inboxFromCache = false,
@@ -560,10 +563,18 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   <DropdownMenuItem
                     disabled={!row.msg.chainPurgeable}
                     title={teamBroadcastPurgeHint(row.msg, myAddress) ?? undefined}
-                    onClick={() => void onPurgeInboxMessageChain(row.msg)}
+                    onClick={() => {
+                      if (
+                        burnOnReadEnabled &&
+                        !window.confirm(BURN_ON_READ_CONFIRM)
+                      ) {
+                        return
+                      }
+                      void onPurgeInboxMessageChain(row.msg)
+                    }}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Auf Chain löschen (Rebate)
+                    {burnOnReadEnabled ? 'Burn-on-read: von Chain löschen' : 'Auf Chain löschen (Rebate)'}
                   </DropdownMenuItem>
                   {parseHandoffZipWire(row.msg.content ?? '') ? (
                     <DropdownMenuItem
@@ -596,6 +607,27 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
               selfMessage={row.msg}
               onSarqNakWire={onSarqNakWire}
             />
+            {burnOnReadEnabled &&
+            row.msg.chainPurgeable &&
+            myAddress.trim() &&
+            !isMessageOutgoing(row.msg, myAddress) ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-orange-500/35 bg-orange-500/10 px-3 py-2">
+                <span className="text-[11px] text-orange-950 dark:text-orange-100">
+                  Burn-on-read aktiv — nach dem Lesen von der Chain löschen?
+                </span>
+                <button
+                  type="button"
+                  disabled={sending}
+                  className="rounded-md border border-orange-600/50 bg-background px-2.5 py-1 text-[11px] font-semibold text-orange-800 hover:bg-orange-500/15 disabled:opacity-50 dark:text-orange-200"
+                  onClick={() => {
+                    if (!window.confirm(BURN_ON_READ_CONFIRM)) return
+                    void onPurgeInboxMessageChain(row.msg)
+                  }}
+                >
+                  Jetzt löschen
+                </button>
+              </div>
+            ) : null}
                 </>
               )
             })()}

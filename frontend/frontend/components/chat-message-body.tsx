@@ -25,10 +25,131 @@ import {
 } from '@/frontend/lib/lora-progressive-image-client'
 import { messageLooksLikePath4ImageTransferWire } from '@/frontend/lib/lora-sarq-parser'
 import { MorgSegV1ChatSink } from '@/frontend/components/morg-seg-v1-chat-sink'
+import {
+  decryptPassphraseMessageWire,
+  isPassphraseMessageWire,
+} from '@/frontend/lib/passphrase-message-crypto'
+import {
+  forgetPassphraseMessagePassphrase,
+  lookupPassphraseMessagePassphrase,
+  rememberPassphraseMessagePassphrase,
+} from '@/frontend/lib/passphrase-message-local-store'
 import { cn } from '@/lib/utils'
 
 const TXT_PREVIEW_CHARS = 480
 const TXT_COLLAPSE_MAX_H = 'max-h-36' /* 9rem */
+
+function PassphraseMessageBody(p: {
+  content: string
+  onCopyRaw: () => void
+  copiedRaw: boolean
+}) {
+  const remembered = lookupPassphraseMessagePassphrase(p.content)
+  const [pass, setPass] = useState(remembered || '')
+  const [plain, setPlain] = useState<string | null>(null)
+  const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [showPass, setShowPass] = useState(false)
+
+  useEffect(() => {
+    if (!remembered || plain) return
+    let alive = true
+    void decryptPassphraseMessageWire(p.content, remembered)
+      .then((t) => {
+        if (alive) setPlain(t)
+      })
+      .catch(() => {
+        /* remembered wrong — user enters manually */
+      })
+    return () => {
+      alive = false
+    }
+  }, [p.content, remembered, plain])
+
+  const onUnlock = async () => {
+    setBusy(true)
+    setErr('')
+    try {
+      const t = await decryptPassphraseMessageWire(p.content, pass)
+      rememberPassphraseMessagePassphrase(p.content, pass.trim())
+      setPlain(t)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="space-y-2 rounded-lg border border-amber-600/40 bg-amber-500/10 p-3">
+      <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
+        Passphrase-Nachricht (kein Handshake) — Ciphertext on-chain, Schlüssel off-chain.
+      </p>
+      {plain ? (
+        <>
+          <p className="whitespace-pre-wrap break-words text-sm text-foreground">{plain}</p>
+          <div className="flex flex-wrap gap-2 items-center">
+            <button
+              type="button"
+              className="text-xs font-medium text-primary hover:underline"
+              onClick={() => setShowPass((v) => !v)}
+            >
+              {showPass ? 'Passphrase verbergen' : 'Passphrase anzeigen'}
+            </button>
+            {showPass ? (
+              <>
+                <code className="max-w-full break-all rounded bg-muted/50 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
+                  {(pass.trim() || remembered || '').trim()}
+                </code>
+                <button
+                  type="button"
+                  className="text-xs font-medium text-primary hover:underline"
+                  onClick={() => void navigator.clipboard.writeText((pass.trim() || remembered || '').trim())}
+                >
+                  Kopieren
+                </button>
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground hover:underline"
+                  onClick={() => {
+                    forgetPassphraseMessagePassphrase(p.content)
+                    setPass('')
+                    setShowPass(false)
+                  }}
+                >
+                  Lokal vergessen
+                </button>
+              </>
+            ) : null}
+            <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={p.onCopyRaw}>
+              {p.copiedRaw ? 'Kopiert' : 'Wire kopieren'}
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <input
+            type="password"
+            value={pass}
+            onChange={(e) => setPass(e.target.value)}
+            placeholder="Passphrase eingeben (≥8)"
+            className="w-full rounded-md border border-border bg-input px-3 py-2 font-mono text-xs"
+            autoComplete="off"
+          />
+          {err ? <p className="text-xs text-destructive">{err}</p> : null}
+          <button
+            type="button"
+            disabled={busy || pass.trim().length < 8}
+            onClick={() => void onUnlock()}
+            className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
+          >
+            {busy ? '…' : 'Entschlüsseln'}
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
 
 function IncompleteMediaBadge({ title }: { title: string }) {
   return (
@@ -515,6 +636,16 @@ export function ChatMessageBody({
     } catch {
       setCopied(false)
     }
+  }
+
+  if (isPassphraseMessageWire(raw) || isPassphraseMessageWire(wire)) {
+    return (
+      <PassphraseMessageBody
+        content={isPassphraseMessageWire(raw) ? raw : wire}
+        onCopyRaw={() => void copyRaw()}
+        copiedRaw={copied === 'raw'}
+      />
+    )
   }
 
   if (looksSarqSeg && selfMessage) {

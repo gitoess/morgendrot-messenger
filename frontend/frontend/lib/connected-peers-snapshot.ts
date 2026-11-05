@@ -1,8 +1,10 @@
 'use client'
 
 import { OFFLINE_CACHE_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
+import { readScoped, writeScoped } from '@/frontend/lib/package-profile-namespace'
 
 const LS_KEY = 'morgendrot.connectedPeersSnapshot.v1'
+const PEER_MAP_DOMAIN = 'peerMap'
 
 export type ConnectedPeersSnapshot = {
   addresses: string[]
@@ -19,7 +21,7 @@ export function persistConnectedPeersSnapshot(addresses: string[]): void {
   const list = [...new Set(addresses.map(normalizeAddr).filter(Boolean))]
   try {
     const payload: ConnectedPeersSnapshot = { addresses: list, savedAtMs: Date.now() }
-    window.localStorage.setItem(LS_KEY, JSON.stringify(payload))
+    writeScoped(PEER_MAP_DOMAIN, LS_KEY, JSON.stringify(payload))
   } catch {
     /* ignore */
   }
@@ -30,7 +32,7 @@ export function readConnectedPeersSnapshot(
 ): { addresses: string[]; ageMinutes: number } | null {
   if (typeof window === 'undefined') return null
   try {
-    const raw = window.localStorage.getItem(LS_KEY)?.trim()
+    const raw = readScoped(PEER_MAP_DOMAIN, LS_KEY)?.trim()
     if (!raw) return null
     const j = JSON.parse(raw) as Partial<ConnectedPeersSnapshot>
     const savedAtMs = Number(j.savedAtMs ?? 0)
