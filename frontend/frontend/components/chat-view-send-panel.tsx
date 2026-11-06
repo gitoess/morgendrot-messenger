@@ -164,6 +164,8 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
     ChatViewActiveConversationBarProps,
     'encrypted' | 'forcedTransport' | 'onEncryptedChange'
   >
+  /** Immer gesetzt — Passphrase-Schutz muss ECDH-Verschlüsselung abschalten können. */
+  onEncryptedChange?: (encrypted: boolean) => void
   /** Pinnwand-Kanal: Empfänger = feste Brett-0x (Server). */
   isPinnwandChannel?: boolean
   pinnwandBroadcastAddress?: string
@@ -237,6 +239,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     hideComposerIotaRecipient = false,
     activeConversationBar,
     encryptionModeToggle,
+    onEncryptedChange,
     isPinnwandChannel = false,
     pinnwandBroadcastAddress = '',
     canPostToPinnwand: canPostPinnwand = true,
@@ -656,7 +659,10 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
           </div>
         ) : null}
         {forcedTransport === 'internet' ? (
-          <PassphraseProtectComposerToggle encrypted={encrypted} onEncryptedChange={encryptionModeToggle?.onEncryptedChange} />
+          <PassphraseProtectComposerToggle
+            encrypted={encrypted}
+            onEncryptedChange={onEncryptedChange ?? encryptionModeToggle?.onEncryptedChange}
+          />
         ) : null}
         {showRecipientRow ? (
           <div className="min-h-[4.5rem]">

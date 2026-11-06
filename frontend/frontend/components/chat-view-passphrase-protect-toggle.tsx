@@ -85,9 +85,9 @@ export function PassphraseProtectComposerToggle(p: {
         <span>
           <span className="font-medium text-foreground">Passphrase-Schutz</span>
           {' — '}
-          einzelnes Nachrichten-Passwort (nicht Gruppen-Geheimnis). Ciphertext on-chain; Passphrase zum
-          Teilen separat. Kein Extra-Dialog nach dem Senden — Speichern steuerst du unten mit der
-          Checkbox.
+          eigenes Nachrichten-Passwort (ohne Handshake). Schaltet „Verschlüsselt“ (ECDH) aus — beides
+          gleichzeitig geht nicht: entweder Partner-Schlüssel oder Passphrase zum Teilen. Ciphertext
+          on-chain; Speichern auf diesem Gerät steuerst du unten.
         </span>
       </label>
 

@@ -10,15 +10,36 @@ Diese Anleitung listet **alle Privacy-/Vault-Funktionen, die heute im Messenger 
 
 ---
 
-## 0. Schnellstart Test (1 Gerät)
+## 0. Schnellstart Test (1 Gerät) — in Alltagssprache
 
-Voraussetzung: `npm run dev` → Next-UI **http://127.0.0.1:3341/**, Tresor entsperrt, Session-Signer geladen.
+Voraussetzung: Messenger offen (http://127.0.0.1:3341/), Tresor schon entsperrt.
 
-| # | Was | Wo | Erwartung |
-|---|-----|-----|-----------|
-| 1 | Passphrase-Nachricht senden | Composer → **Passphrase-Schutz** | Wire `MORG_PWMSG…`; Hinweis „für dich auf diesem Gerät“ |
-| 2 | Privacy sperren | Badge **Tresor: bereit** (Chat) oder Header-Schloss | **Chat bleibt offen/lesbar**; Badge **Privacy: gesperrt**; **kein** Login-Overlay |
-| 3 | Entsperren | Badge tippen → Passwort (Signer-Sync) | Klartext wieder da; Soft-Lock weg |
+### A) Passphrase-Nachricht (ohne Handshake-Verschlüsselung)
+
+1. Links **ich** oder einen Kontakt wählen.  
+2. Oben auf **Unverschlüsselt** stellen (oder Passphrase-Schutz anhaken — das schaltet Verschlüsselt automatisch aus).  
+3. Haken **Passphrase-Schutz** setzen. Adressfeld `0x…` muss sichtbar sein.  
+4. Kurzen Text tippen → **Senden**.  
+5. In der Statuszeile steht die Passphrase (und „gemerkt“, wenn Checkbox an).
+
+### B) Privacy sperren (Chat bleibt sichtbar)
+
+1. Rechts oben auf das grüne Badge **Tresor: bereit** klicken → bestätigen.  
+2. Es erscheint **kein** großes Login-Fenster. Der Chat bleibt offen.  
+3. Die Passphrase-Nachricht zeigt nur noch Kauderwelsch (Ciphertext), kein Klartext.  
+4. Badge heißt jetzt **Privacy: gesperrt**.  
+5. Badge erneut tippen → Passwort eingeben → Klartext ist wieder da.
+
+### C) Empfänger ändern
+
+Unter dem Namen (**ich** / Kontakt) auf **Empfänger leeren / ändern** klicken → Adressfeld erscheint → neue `0x…` eintippen oder Kontakt neu wählen.
+
+| # | Kurz | Erwartung |
+|---|------|-----------|
+| 1 | Passphrase senden | Wire + Hinweis gemerkt |
+| 2 | Privacy sperren | Chat offen, nur Ciphertext, kein Login-Overlay |
+| 3 | Badge + Passwort | Klartext wieder |
+| 4 | Empfänger leeren | Adressfeld editierbar |
 | 4 | **Erneut sperren** | Passphrase-Bubble | Confirm → Passphrase erneut nötig |
 | 5 | ImageNFT verschlüsselt minten | Posteingang → **On-Chain / NFT** → Mint | Passphrase lokal gemerkt |
 | 6 | NFT als Schlüsselkarte | Galerie → **Als Schlüsselkarte merken** | Vault-Sidecar `nftKeycard.enc.v1` |

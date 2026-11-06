@@ -1,6 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import * as capacitorPlatform from '@/frontend/lib/capacitor-platform'
 import { useChatViewSendPanelProps } from '@/frontend/hooks/use-chat-view-send-panel-props'
 import { testMessengerPorts } from '@/frontend/lib/test-fixtures/messenger-ports'
 import type { ChatViewSendPanelPropsDeps } from '@/frontend/hooks/use-chat-view-send-panel-props'
@@ -70,7 +69,8 @@ describe('useChatViewSendPanelProps', () => {
     expect(result.current.sendPanelProps.activeConversationBar?.displayName).toBe('Alice')
   })
 
-  it('blendet Composer-0x bei verschlüsseltem Online-Chain-Pfad auf Desktop aus', () => {
+  it('zeigt Composer-0x bei Verschlüsselung immer (auch mit Partner)', () => {
+    const addr = '0x' + 'e'.repeat(64)
     const { result } = renderHook(() =>
       useChatViewSendPanelProps(
         baseDeps({
@@ -79,29 +79,19 @@ describe('useChatViewSendPanelProps', () => {
             forcedTransport: 'internet',
             composerDelivery: 'chain',
             isPrivate: true,
+            partner: addr,
+            recipient: addr,
           }),
-        })
-      )
-    )
-    expect(result.current.sendPanelProps.hideComposerIotaRecipient).toBe(true)
-  })
-
-  it('zeigt Composer-0x auf Native auch ohne aktiven Chat bei Verschlüsselung', () => {
-    vi.spyOn(capacitorPlatform, 'isCapacitorNativePlatform').mockReturnValue(true)
-    const { result } = renderHook(() =>
-      useChatViewSendPanelProps(
-        baseDeps({
-          messengerPorts: testMessengerPorts({
-            encrypted: true,
-            forcedTransport: 'internet',
-            composerDelivery: 'chain',
-            isPrivate: true,
-          }),
+          activeConversation: {
+            inboxPartnerKey: addr,
+            inboxConversationGroupId: null,
+            inboxPartnerFiltersArmed: true,
+            directory: { [addr]: { label: 'Bob' } },
+          },
         })
       )
     )
     expect(result.current.sendPanelProps.hideComposerIotaRecipient).toBe(false)
-    vi.restoreAllMocks()
   })
 
   it('syncPartnerAndRecipient setzt Partner und bei Privat auch Recipient', () => {
