@@ -33,8 +33,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          # Kein Actions-npm-Cache: zwischen grünem und rotem Lauf flackerte npm ci
+          # (Exit 1 in ~30s) bei unverändertem Lockfile — verdächtig für Cache-Korruption.
 
       - name: Node / npm versions
         run: |
@@ -46,13 +46,27 @@ jobs:
           uname -a
 
       - name: npm ci
-        run: npm ci --no-fund --no-audit
+        run: |
+          set -e
+          if ! npm ci --no-fund --no-audit --prefer-online; then
+            echo '::warning::npm ci failed — clean retry'
+            npm cache clean --force || true
+            rm -rf node_modules
+            npm ci --no-fund --no-audit --prefer-online --loglevel=verbose
+          fi
 
       - name: "@morgendrot/core unit tests"
         working-directory: packages/morgendrot-core
         env:
           CI: 'true'
-        run: npm ci --no-fund --no-audit && npm run test:unit
+        run: |
+          set -e
+          if ! npm ci --no-fund --no-audit --prefer-online; then
+            npm cache clean --force || true
+            rm -rf node_modules
+            npm ci --no-fund --no-audit --prefer-online
+          fi
+          npm run test:unit
 
       - run: npm run lint
 
