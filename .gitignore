@@ -51,6 +51,7 @@ tsc-out.txt
 .morgendrot-streams-anchor-history
 .streams-mock-data.json
 .morgendrot-package-id
+.morgendrot-nft-gate-seal-master
 .morgendrot-partner
 .morgendrot-package-hints.json
 .messenger-gas-state.json

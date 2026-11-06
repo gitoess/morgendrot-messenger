@@ -205,8 +205,9 @@ struct NftTimeLease has key {
 | **B2-P5d** | Optional: W2-UX „Ciphertext von W1 holen“ (Object-ID / Besitzer-Galerie + Gate-Hinweis) | P5b ✅; Mailbox-Fremdscan später |
 | **P4a-dual** | Wallet+NFT-Gate parallel zur Leihe (`requiredWallet` = W2) | **Ist** (App) |
 | **P4a2** | Pubkey-Wrap | **Ist** |
+| **P4b** | Seal Policy + Key-Broker PoC | **Ist** (`docs/NFT-GATE-SEAL-P4B-SPEC.md`) |
 
-**Reihenfolge gesamt:** … → **P4a ✅** → **P4a-dual ✅** → **P5a/b ✅** → **P4a2 ✅** → P5d optional → 2-Geräte → P4b.
+**Reihenfolge gesamt:** … → **P4a ✅** → **P4a-dual ✅** → **P5a/b ✅** → **P4a2 ✅** → **P4b ✅** → P5d optional → 2-Geräte.
 
 **Nicht hier:** MeshSleepyChannel / Offline-Zahlungen — Phase C (`docs/MESH-SLEEPY-CHANNEL-SPEC.md`).
 

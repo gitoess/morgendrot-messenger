@@ -26,14 +26,14 @@
 | **H.23 A4 UX:** ⋮ → Schlüssel erneuern (Epoch-Anzeige) + Hinweis nach Enc-Send | Rotation auffindbar | Kein Auto-Ratchet |
 | **Burn-on-read Opt-in** (Chat-⋮) | Purge nach Lesen vorschlagen; bei aktiv → Composer erzwingt Mailbox (Event nicht purgebar) | Mit Bestätigung; nur Mailbox-Objekte; Explorer behält TX/Events |
 | **H.23 B1 Team-Key** | Enc Team-Broadcast + Handoff; UI erzeugen/rotieren; Enc-Send ohne Auto-Fork; Browser-Sidecar `teamKeys.enc.v1` (Nest `.team-keys.enc` optional später) | Legacy-Klartext wird beim Unlock migriert/gelöscht; 2-Geräte-Feldtest bewusst später |
-| **H.23 B2 NFT-Schlüsselkarte** | Enc-Store + Galerie Multi-Slot + Composer-Bindung + Mint→Slot + Besitz-Check + `[morg-keycard]` + **P4a** DEK-Capsule (`MORG_NFTGATE_V1`) | Zusätzlicher Zugriffsmodus; Secrets off-chain; P4a = App-Gate (ehrlich); P4b Seal fehlt |
+| **H.23 B2 NFT-Schlüsselkarte** | Enc-Store + Galerie + P4a/dual/P4a2/P4b-PoC (`MORG_NFTGATE_V1`, Seal-Broker) | Secrets off-chain; P4b = Policy+Broker PoC (nicht Mysten-Seal) |
 
 ## Bewusst **nicht** in dieser Runde (weiterhin Backlog)
 
 | Thema | Roadmap | Hinweis |
 |-------|---------|---------|
 | Double Ratchet / FS pro Nachricht | § H.23 Phase 3 / E2EE **C1** | Spec+PoC C1.1–C1.5 (Opt-in Hook); Composer v2 Default |
-| Starkes NFT-Besitz-Gate | B2-P4a/dual/P4a2 Ist (App + ECDH-Wrap); P4b Seal später | Kein Marketing „unter Zwang unmöglich“ vor P4b; Klartext kopierbar |
+| Starkes NFT-Besitz-Gate | P4a/dual/P4a2/P4b-PoC Ist (Broker+Policy); kein Mysten-DSM | „Unter Zwang“ nur mit remote Broker ehrlich; Klartext kopierbar |
 | NFT-Zeitkapsel / Timelock | B2-P5a/b Ist (Move+UI); NFT=Gate, Ciphertext getrennt | Kein Auto-Rücklauf ohne reclaim-TX; NFT allein ≠ Nachrichten |
 | MeshSleepyChannel / Offline-Zahlung Mesh | Phase-C Backlog | Nicht Ist; kein Watchtower-Claim |
 | NFT-gesichertes Ausgeben (Guarded Purse / Bearer) | B2-S0–S3 Ist (Purse + Bearer Treasury `0x10b16597…`); nur Token | A: X∧NFT; B: NFT-Bearer; **lose Coins außerhalb ungeschützt**; kein Klartext-Claim |

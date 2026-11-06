@@ -12,6 +12,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-11-06** | PC (Windows), **B2-P4b Seal PoC** | `nft_gate_seal` Upgrade `0x1fb0e9b7…`; Broker `/api/nft-gate-seal/*`; Gate `nft_seal_p4b`; Vitest Capsule+PTB. | **PASS (Move+Vitest+on-chain)** |
 | **2026-11-06** | PC (Windows), **B2-S3 + P4a2** | `nft_bearer_treasury` Upgrade `0x10b16597…`; Panel; P4a2 ECDH-Wrap Vitest; Composer-Checkbox. | **PASS (Move+Vitest+on-chain)** |
 | **2026-11-06** | PC (Windows), **B2-S2 Guarded Purse UI** | Panel unter NFT-Galerie; Actions+Local-Store; Vitest store+txb; Pflichttext lose Coins; Cache-Wipe Keys. | **PASS (Code)** — Chain-Feldspend manuell offen. |
 | **2026-11-06** | PC (Windows), **B2-S1 Guarded Purse Move** | `nft_guarded_purse` + Upgrade → Package `0x0c94e888…` (Stamm `0x06e099…`). PTB Vitest 3/3; RPC exposed `create_purse`/`spend`/…. | **PASS (Move+Vitest+on-chain)** |

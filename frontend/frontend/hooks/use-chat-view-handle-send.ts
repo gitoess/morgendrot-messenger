@@ -23,6 +23,7 @@ import {
   readPassphraseNftKeycardBindSlotId,
   readPassphraseNftPubkeyWrapP4a2Enabled,
   readPassphraseNftRequiredWallet,
+  readPassphraseNftSealP4bEnabled,
   readPassphraseNftStrongGateEnabled,
   readPassphraseProtectEnabled,
   readPassphraseRememberOnDeviceEnabled,
@@ -726,17 +727,29 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         )
 
         if (strongGate) {
-          // B2-P4a / dual / P4a2: DEK-Capsule, kein Blank-DEK / keine Passphrase im Vault.
+          // B2-P4a / dual / P4a2 / P4b: DEK-Capsule, kein Blank-DEK / keine Passphrase im Vault.
           const dual = readPassphraseNftDualWalletGateEnabled()
-          const p4a2 = dual && readPassphraseNftPubkeyWrapP4a2Enabled()
-          const requiredWallet = dual ? readPassphraseNftRequiredWallet() : null
+          const p4b = readPassphraseNftSealP4bEnabled()
+          const p4a2 = !p4b && dual && readPassphraseNftPubkeyWrapP4a2Enabled()
+          const requiredWallet = dual || (p4b && readPassphraseNftRequiredWallet())
+            ? readPassphraseNftRequiredWallet()
+            : null
           if (dual && !requiredWallet) {
             throw new Error(
               'Dual-Gate: erlaubte Wallet-Adresse setzen (0x…), oder „Wallet + NFT“ aus.'
             )
           }
           let recipientEcdhPubRaw: Uint8Array | null = null
-          if (p4a2 && requiredWallet) {
+          let sealWrapKeyRaw: Uint8Array | null = null
+          if (p4b) {
+            const { fetchNftSealWrapKey } = await import('@/frontend/lib/nft-gate-seal-client')
+            const wr = await fetchNftSealWrapKey({
+              nftObjectId: cardOid!,
+              requiredWallet: dual ? requiredWallet : null,
+            })
+            if (!wr.ok) throw new Error(`P4b Seal-Broker: ${wr.error}`)
+            sealWrapKeyRaw = wr.wrapKeyRaw
+          } else if (p4a2 && requiredWallet) {
             const { base64ToUint8 } = await import('@morgendrot/shared/bytes-base64')
             const { getDirectChatEcdhPeerPubBase64 } = await import(
               '@/frontend/lib/direct-chat-ecdh-session'
@@ -757,8 +770,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             const { wire, nftObjectId, gate } = await encryptNftGateMessage({
               plainUtf8: snap,
               nftObjectId: cardOid!,
-              requiredWallet,
+              requiredWallet: dual || p4b ? requiredWallet : null,
               recipientEcdhPubRaw,
+              sealWrapKeyRaw,
             })
             bindWireToNftKeycard({
               objectId: nftObjectId,
@@ -770,11 +784,13 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           }
           textSnaps = wrapped
           await flushNftKeycardVaultPersist()
-          sharedPassphraseNote = p4a2
-            ? ` Starkes P4a2 (Wallet+NFT+Pubkey): nur ${requiredWallet!.slice(0, 10)}… mit NFT + ECDH-Privatkey. Klartext danach kopierbar.`
-            : dual
-              ? ` Starkes Dual-Gate (Wallet+NFT): nur Adresse ${requiredWallet!.slice(0, 10)}… mit NFT-Leserecht. Klartext danach kopierbar. Kein Blank-DEK im Vault.`
-              : ' Starkes NFT-Gate (P4a): Lesen nur mit Besitz/Leihe der Schlüsselkarte — kein Passphrase-Teilen, kein Blank-DEK im Vault. Klartext danach kopierbar.'
+          sharedPassphraseNote = p4b
+            ? ' Starkes P4b Seal: DEK nur mit Key-Broker nach NFT-AddressOwner. Wire allein reicht nicht. Klartext danach kopierbar.'
+            : p4a2
+              ? ` Starkes P4a2 (Wallet+NFT+Pubkey): nur ${requiredWallet!.slice(0, 10)}… mit NFT + ECDH-Privatkey. Klartext danach kopierbar.`
+              : dual
+                ? ` Starkes Dual-Gate (Wallet+NFT): nur Adresse ${requiredWallet!.slice(0, 10)}… mit NFT-Leserecht. Klartext danach kopierbar. Kein Blank-DEK im Vault.`
+                : ' Starkes NFT-Gate (P4a): Lesen nur mit Besitz/Leihe der Schlüsselkarte — kein Passphrase-Teilen, kein Blank-DEK im Vault. Klartext danach kopierbar.'
         } else {
           const { passphrase: batchPass, reused } = resolvePassphraseForProtectSend(
             generatePassphraseMessageSharePassphrase

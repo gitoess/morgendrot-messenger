@@ -100,17 +100,35 @@ function NftGateMessageBody(p: {
       const { getDirectChatEcdhPrivateKey } = await import(
         '@/frontend/lib/direct-chat-ecdh-session'
       )
+      let sealWrapKeyRaw: Uint8Array | null = null
+      if (meta?.gate === 'nft_seal_p4b') {
+        const { fetchNftSealUnwrapKey } = await import('@/frontend/lib/nft-gate-seal-client')
+        const ur = await fetchNftSealUnwrapKey({
+          nftObjectId: nftOid,
+          requesterAddress: me,
+          requiredWallet: meta.requiredWallet || null,
+        })
+        if (!ur.ok) throw new Error(ur.error)
+        sealWrapKeyRaw = ur.wrapKeyRaw
+      }
       const t = await decryptNftGateMessageWire(p.content, {
-        nftAccessOk,
+        nftAccessOk: meta?.gate === 'nft_seal_p4b' ? true : nftAccessOk,
         signerAddress: me,
         ecdhPrivateKey:
           meta?.gate === 'nft_and_wallet_pubkey_p4a2' ? getDirectChatEcdhPrivateKey() : null,
+        sealWrapKeyRaw,
       })
-      if (meta?.gate === 'nft_and_wallet_p4a' || meta?.gate === 'nft_and_wallet_pubkey_p4a2') {
+      if (
+        meta?.gate === 'nft_and_wallet_p4a' ||
+        meta?.gate === 'nft_and_wallet_pubkey_p4a2' ||
+        meta?.gate === 'nft_seal_p4b'
+      ) {
         const label =
-          meta.gate === 'nft_and_wallet_pubkey_p4a2'
-            ? `P4a2: Wallet ${meta.requiredWallet?.slice(0, 12) ?? '—'}… + NFT + Pubkey`
-            : `Dual-Gate: Wallet ${meta.requiredWallet?.slice(0, 12) ?? '—'}… + NFT`
+          meta.gate === 'nft_seal_p4b'
+            ? `P4b Seal: Broker + NFT ${nftOid.slice(0, 10)}…`
+            : meta.gate === 'nft_and_wallet_pubkey_p4a2'
+              ? `P4a2: Wallet ${meta.requiredWallet?.slice(0, 12) ?? '—'}… + NFT + Pubkey`
+              : `Dual-Gate: Wallet ${meta.requiredWallet?.slice(0, 12) ?? '—'}… + NFT`
         setLeaseBadge((prev) => [prev, label].filter(Boolean).join(' · '))
       }
       setPlain(t)

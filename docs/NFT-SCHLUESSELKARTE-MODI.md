@@ -66,9 +66,9 @@ Nutzen: beide haben ein sichtbares Token + denselben Slot-Inhalt — **kein** st
 | **P4a** App-Gate + Capsule (`MORG_NFTGATE_V1`, NFT-Besitz/Leihe) | **Ist** — ehrlich: stark nur mit ehrlicher App |
 | **P4a-dual** Wallet **und** NFT | **Ist** — Composer „Wallet + NFT“; Capsule an `nftId`+`requiredWallet`; App prüft Signer=Adresse **und** NFT-Leserecht |
 | **P4a2** Pubkey-Wrap an `requiredWallet` | **Ist** — Gate `nft_and_wallet_pubkey_p4a2`; DEK via ECDH an Peer-Pub; Composer-Checkbox unter Dual |
-| **P4b** Seal/Policy Move | Backlog — erst dann Marketing „auch unter Zwang“ |
+| **P4b** Seal/Policy + Key-Broker | **Ist (PoC)** — `nft_gate_seal` + `/api/nft-gate-seal/*`; Gate `nft_seal_p4b`; Spec `docs/NFT-GATE-SEAL-P4B-SPEC.md` |
 
-Ohne P4b bleibt Marketing „auch unter Zwang unmöglich“ eine **Produktlüge**.  
+Marketing „auch unter Zwang unmöglich“ nur mit **remote** Broker (nicht Master auf dem Gerät) und ohne Broker-Admin-Zwang — ehrlich bleiben.  
 **Klartext-OPSEC:** Einmal entschlüsselt → kopierbar/Screenshot — Gate schützt **Zugriff**, nicht Nachnutzung.
 
 ### 6a. Dual-Gate: festgelegte Wallet + NFT (Option)
@@ -79,7 +79,7 @@ Ohne P4b bleibt Marketing „auch unter Zwang unmöglich“ eine **Produktlüge*
 |----------|--------|-----|
 | **App-Dual (P4a-dual)** | Beide Checks in der App; Capsule-HKDF an nft+wallet gebunden (Meta nicht umetikettierbar) | **Ist** |
 | **Pubkey-Dual (P4a2)** | DEK via ECDH an Empfänger-Pubkey (+ nft/wallet-Bindung); Wire allein unzureichend | **Ist** |
-| **Seal (P4b)** | Chain erzwingt Policy | Backlog |
+| **Seal (P4b)** | Chain-Policy `seal_approve*` + Key-Broker (PoC, nicht Mysten-DSM) | **Ist** |
 
 **Zeitkapsel:** parallel denkbar — `requiredWallet` = W2; während Leihe zählt Lease-Borrower als NFT-Leserecht, Signer muss trotzdem = `requiredWallet`.  
 **Nicht** mit MeshSleepyChannel/Payments vermischen.

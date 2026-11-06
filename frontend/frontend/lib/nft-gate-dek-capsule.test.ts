@@ -102,9 +102,42 @@ describe('nft-gate-dek-capsule B2-P4a / dual / P4a2', () => {
     ).toBe(false)
   })
 
+  it('P4b Seal: Broker-Key nötig; Wire allein reicht nicht', async () => {
+    const sealKey = crypto.getRandomValues(new Uint8Array(32))
+    const wrong = crypto.getRandomValues(new Uint8Array(32))
+    const { wire } = await encryptNftGateMessage({
+      plainUtf8: 'nur mit broker',
+      nftObjectId: OID,
+      sealWrapKeyRaw: sealKey,
+    })
+    expect(peekNftGateMeta(wire)?.gate).toBe('nft_seal_p4b')
+    expect(peekNftGateMeta(wire)?.sealPolicy).toBe('nft_owner')
+
+    await expect(
+      decryptNftGateMessageWire(wire, { nftAccessOk: true, signerAddress: WALLET })
+    ).rejects.toThrow(/Seal-Key|Broker|P4b/)
+
+    await expect(
+      decryptNftGateMessageWire(wire, {
+        nftAccessOk: true,
+        signerAddress: WALLET,
+        sealWrapKeyRaw: wrong,
+      })
+    ).rejects.toThrow(/Seal|beschädigt|P4b/)
+
+    expect(
+      await decryptNftGateMessageWire(wire, {
+        nftAccessOk: true,
+        signerAddress: WALLET,
+        sealWrapKeyRaw: sealKey,
+      })
+    ).toBe('nur mit broker')
+  })
+
   it('lehnt ungültige Object-ID ab', async () => {
     await expect(
       encryptNftGateMessage({ plainUtf8: 'x', nftObjectId: '0xabc' })
     ).rejects.toThrow(/Object-ID/)
   })
 })
+

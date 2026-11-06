@@ -11,6 +11,7 @@ import {
   readPassphraseNftDualWalletGateEnabled,
   readPassphraseNftPubkeyWrapP4a2Enabled,
   readPassphraseNftRequiredWallet,
+  readPassphraseNftSealP4bEnabled,
   readPassphraseNftStrongGateEnabled,
   readPassphraseProtectEnabled,
   readPassphraseRememberOnDeviceEnabled,
@@ -21,6 +22,7 @@ import {
   writePassphraseNftKeycardBindSlotId,
   writePassphraseNftPubkeyWrapP4a2Enabled,
   writePassphraseNftRequiredWallet,
+  writePassphraseNftSealP4bEnabled,
   writePassphraseNftStrongGateEnabled,
   writePassphraseProtectEnabled,
   writePassphraseRememberOnDeviceEnabled,
@@ -49,6 +51,7 @@ export function PassphraseProtectComposerToggle(p: {
   const [strongGate, setStrongGate] = useState(false)
   const [dualWallet, setDualWallet] = useState(false)
   const [pubkeyWrapP4a2, setPubkeyWrapP4a2] = useState(false)
+  const [sealP4b, setSealP4b] = useState(false)
   const [requiredWallet, setRequiredWallet] = useState('')
   const [rememberOnDevice, setRememberOnDevice] = useState(true)
   const [vaultSessionOpen, setVaultSessionOpen] = useState(() => hasVaultPasswordSession())
@@ -66,6 +69,7 @@ export function PassphraseProtectComposerToggle(p: {
       setStrongGate(readPassphraseNftStrongGateEnabled())
       setDualWallet(readPassphraseNftDualWalletGateEnabled())
       setPubkeyWrapP4a2(readPassphraseNftPubkeyWrapP4a2Enabled())
+      setSealP4b(readPassphraseNftSealP4bEnabled())
       setRequiredWallet(readPassphraseNftRequiredWallet() ?? '')
       setCards(
         listNftKeycards().map(({ objectId, entry }) => ({
@@ -317,6 +321,28 @@ export function PassphraseProtectComposerToggle(p: {
                         <input
                           type="checkbox"
                           className="mt-0.5"
+                          checked={sealP4b}
+                          onChange={(e) => {
+                            const next = e.target.checked
+                            setSealP4b(next)
+                            writePassphraseNftSealP4bEnabled(next)
+                            if (next) {
+                              setPubkeyWrapP4a2(false)
+                              writePassphraseNftPubkeyWrapP4a2Enabled(false)
+                            }
+                          }}
+                        />
+                        <span>
+                          <span className="font-medium text-foreground">Seal / Key-Broker (P4b)</span>
+                          {' — '}
+                          DEK nur mit Broker-Key nach NFT-AddressOwner-Check. Wire allein reicht nicht.
+                          PoC: einzelner API-Broker, nicht Mysten-Seal.
+                        </span>
+                      </label>
+                      <label className="flex flex-wrap items-start gap-2">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5"
                           checked={dualWallet}
                           onChange={(e) => {
                             const next = e.target.checked
@@ -358,13 +384,19 @@ export function PassphraseProtectComposerToggle(p: {
                                 const next = e.target.checked
                                 setPubkeyWrapP4a2(next)
                                 writePassphraseNftPubkeyWrapP4a2Enabled(next)
+                                if (next) {
+                                  setSealP4b(false)
+                                  writePassphraseNftSealP4bEnabled(false)
+                                }
                               }}
+                              disabled={sealP4b}
                             />
                             <span>
                               <span className="font-medium text-foreground">Pubkey-Wrap (P4a2)</span>
                               {' — '}
                               DEK zusätzlich an ECDH-Pubkey der erlaubten Wallet; Wire allein entschlüsselt
                               nicht. Braucht Peer-Pub (Handshake) für diese Adresse.
+                              {sealP4b ? ' (aus: P4b aktiv)' : ''}
                             </span>
                           </label>
                         </>

@@ -160,6 +160,7 @@ import { handleStatusRoutes } from './api/routes/handle-status-routes.js';
 import { handleTelegramIntegrationRoutes } from './api/routes/handle-telegram-integration-routes.js';
 import { handleEinsatzManifestRoutes } from './api/routes/handle-einsatz-manifest-routes.js';
 import { handleForensicBatchRoutes } from './api/routes/handle-forensic-batch-routes.js';
+import { handleNftGateSealRoutes } from './api/routes/handle-nft-gate-seal-routes.js';
 import { handleBossWalletRoutes } from './api/routes/handle-boss-wallet-routes.js';
 import { createIpRateLimiter, normalizeApiClientIp } from './api/routes/api-ip-rate-limit.js';
 import {
@@ -460,6 +461,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
         if (await handleTelegramIntegrationRoutes(req, res, url, cors, sendJson)) return;
         if (await handleEinsatzManifestRoutes(req, res, url, cors, sendJson)) return;
         if (await handleForensicBatchRoutes(req, res, url, cors, sendJson, routeCtx)) return;
+        if (await handleNftGateSealRoutes(req, res, url, cors, sendJson)) return;
 
         /** Öffentlicher Claim-Token-Schritt (Idempotenz); Burn/Mint folgt später im selben Flow. */
         if (url === '/api/voucher-claim' && req.method === 'POST') {

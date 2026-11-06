@@ -102,7 +102,7 @@ Bei Passphrase-Send mit Bindung: Meta im bestehenden PWMSG oder Prefix-Hinweis z
 | **P3** | Description-Marker `[morg-keycard]` (öffentlich) — **Ist**; Move nein | Nein |
 | **P4a** | Starkes Besitz-Gate App: DEK-Capsule `MORG_NFTGATE_V1`, Owner/Leihe, kein Blank-DEK — **Ist** | Nein |
 | **P4a-dual** | Wallet **und** NFT (App + Capsule-Bindung) — **Ist**; Pubkey-Wrap = P4a2 | Nein |
-| **P4b** | Seal/Policy Move — marketingfest — **Backlog** | Seal/Policy |
+| **P4b** | Seal/Policy + Key-Broker PoC — **Ist** (`docs/NFT-GATE-SEAL-P4B-SPEC.md`) | Seal/Policy + Broker |
 | **P5a/b** | Zeitkapsel Move + UI PoC — **Ist 2026-11-06** (`nft_time_lease.move`, Panel); Publish für Chain | Ja (Lease) |
 | **P5c** | Seal/Policy marketingfest — **Backlog** | Seal |
 | **S0/S1** | NFT-Guarded Spend (Coins getrennt; Purse/Treasury) — **S0 Spec Ist**, Move Backlog | Ja (Purse) |

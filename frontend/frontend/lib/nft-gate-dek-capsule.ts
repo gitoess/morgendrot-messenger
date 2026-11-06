@@ -5,8 +5,9 @@
  * Dual: HKDF(nftId|wallet) + Signer-Check.
  * P4a2: DEK via ECDH(ephemeral → recipientPub) gebunden an nft+wallet —
  *        Wire allein reicht nicht; Privatkey der requiredWallet nötig.
+ * P4b:  DEK via Broker-Seal-Key (HKDF master+identity); Wire allein reicht nicht.
  *
- * Spec: docs/NFT-SCHLUESSELKARTE-MODI.md §6a
+ * Spec: docs/NFT-SCHLUESSELKARTE-MODI.md §6a · docs/NFT-GATE-SEAL-P4B-SPEC.md
  */
 
 import { deriveSharedSecret, generateKeyPair } from '@morgendrot/shared/morgendrot-crypto'
@@ -24,16 +25,22 @@ const HEX64 = /^0x[a-f0-9]{64}$/
 export const NFT_GATE_WIRE_PREFIX = PREFIX
 export const NFT_GATE_SCHEMA = SCHEMA
 
-export type NftGateMode = 'nft_owner_p4a' | 'nft_and_wallet_p4a' | 'nft_and_wallet_pubkey_p4a2'
+export type NftGateMode =
+  | 'nft_owner_p4a'
+  | 'nft_and_wallet_p4a'
+  | 'nft_and_wallet_pubkey_p4a2'
+  | 'nft_seal_p4b'
 
 export type NftGateMetaV1 = {
   schema: typeof SCHEMA
   gate: NftGateMode
   nftObjectId: string
-  /** Dual / P4a2 — Signer muss diese Adresse sein. */
+  /** Dual / P4a2 / optional P4b Dual-Policy — Signer muss diese Adresse sein. */
   requiredWallet?: string
   /** P4a2: ephemeral P-256 uncompressed pub (65 B) base64. */
   ephemeralPubRawB64?: string
+  /** P4b: Policy-Hinweis für Broker. */
+  sealPolicy?: 'nft_owner' | 'nft_and_wallet'
   algo: 'AES-256-GCM'
   bodyIvB64: string
   wrapSaltB64: string
@@ -148,7 +155,11 @@ export function evaluateNftGateAccess(opts: {
   if (!opts.nftAccessOk) {
     return { ok: false, error: 'Kein NFT-Besitz / keine aktive Leihe — Klartext gesperrt (P4a).' }
   }
-  if (opts.meta.gate === 'nft_and_wallet_p4a' || opts.meta.gate === 'nft_and_wallet_pubkey_p4a2') {
+  const needsWallet =
+    opts.meta.gate === 'nft_and_wallet_p4a' ||
+    opts.meta.gate === 'nft_and_wallet_pubkey_p4a2' ||
+    (opts.meta.gate === 'nft_seal_p4b' && Boolean(opts.meta.requiredWallet))
+  if (needsWallet) {
     const need = opts.meta.requiredWallet ? normHex(opts.meta.requiredWallet) : ''
     const me = opts.signerAddress ? normHex(opts.signerAddress) : ''
     if (!HEX64.test(need)) {
@@ -182,14 +193,19 @@ function parseNftGateBlob(content: string): { meta: NftGateMetaV1; body: Uint8Ar
   if (
     meta.gate !== 'nft_owner_p4a' &&
     meta.gate !== 'nft_and_wallet_p4a' &&
-    meta.gate !== 'nft_and_wallet_pubkey_p4a2'
+    meta.gate !== 'nft_and_wallet_pubkey_p4a2' &&
+    meta.gate !== 'nft_seal_p4b'
   ) {
     throw new Error('Unbekannter Gate-Modus.')
   }
   const nftObjectId = normHex(meta.nftObjectId)
   if (!HEX64.test(nftObjectId)) throw new Error('nftObjectId ungültig.')
   let requiredWallet: string | undefined
-  if (meta.gate === 'nft_and_wallet_p4a' || meta.gate === 'nft_and_wallet_pubkey_p4a2') {
+  if (
+    meta.gate === 'nft_and_wallet_p4a' ||
+    meta.gate === 'nft_and_wallet_pubkey_p4a2' ||
+    (meta.gate === 'nft_seal_p4b' && meta.requiredWallet)
+  ) {
     requiredWallet = meta.requiredWallet ? normHex(meta.requiredWallet) : ''
     if (!HEX64.test(requiredWallet)) throw new Error('requiredWallet ungültig.')
   }
@@ -197,6 +213,9 @@ function parseNftGateBlob(content: string): { meta: NftGateMetaV1; body: Uint8Ar
     if (!meta.ephemeralPubRawB64) throw new Error('P4a2: ephemeralPubRawB64 fehlt.')
     const eph = b64ToBytes(meta.ephemeralPubRawB64)
     if (eph.length !== P256_RAW_PUB_LEN) throw new Error('P4a2: ephemeral Pub ungültig.')
+  }
+  if (meta.gate === 'nft_seal_p4b' && !meta.sealPolicy) {
+    meta.sealPolicy = requiredWallet ? 'nft_and_wallet' : 'nft_owner'
   }
   return {
     meta: {
@@ -211,13 +230,18 @@ function parseNftGateBlob(content: string): { meta: NftGateMetaV1; body: Uint8Ar
 export async function encryptNftGateMessage(opts: {
   plainUtf8: string
   nftObjectId: string
-  /** Dual / Basis für P4a2. */
+  /** Dual / Basis für P4a2 / optional P4b. */
   requiredWallet?: string | null
   /**
    * P4a2: uncompressed P-256 Pub (65 B) der requiredWallet.
    * Wenn gesetzt → Gate nft_and_wallet_pubkey_p4a2.
    */
   recipientEcdhPubRaw?: Uint8Array | null
+  /**
+   * P4b: 32-Byte Seal wrap key vom Broker.
+   * Wenn gesetzt → Gate nft_seal_p4b (hat Vorrang vor P4a2).
+   */
+  sealWrapKeyRaw?: Uint8Array | null
 }): Promise<{ wire: string; nftObjectId: string; gate: NftGateMode }> {
   const nftObjectId = normHex(opts.nftObjectId)
   if (!HEX64.test(nftObjectId)) throw new Error('NFT Object-ID: 0x + 64 Hex nötig.')
@@ -228,20 +252,28 @@ export async function encryptNftGateMessage(opts: {
     throw new Error('requiredWallet: 0x + 64 Hex nötig.')
   }
 
+  const sealKey = opts.sealWrapKeyRaw
+  const useP4b = Boolean(sealKey && sealKey.length === 32)
+  if (opts.sealWrapKeyRaw && !useP4b) {
+    throw new Error('sealWrapKeyRaw: 32 Byte nötig (Broker).')
+  }
+
   const pubRaw = opts.recipientEcdhPubRaw
-  const useP4a2 = Boolean(pubRaw && pubRaw.length === P256_RAW_PUB_LEN)
-  if (opts.recipientEcdhPubRaw && !useP4a2) {
+  const useP4a2 = !useP4b && Boolean(pubRaw && pubRaw.length === P256_RAW_PUB_LEN)
+  if (!useP4b && opts.recipientEcdhPubRaw && !useP4a2) {
     throw new Error('recipientEcdhPubRaw: 65-Byte P-256 uncompressed nötig.')
   }
   if (useP4a2 && !requiredWallet) {
     throw new Error('P4a2 braucht requiredWallet.')
   }
 
-  const gate: NftGateMode = useP4a2
-    ? 'nft_and_wallet_pubkey_p4a2'
-    : requiredWallet
-      ? 'nft_and_wallet_p4a'
-      : 'nft_owner_p4a'
+  const gate: NftGateMode = useP4b
+    ? 'nft_seal_p4b'
+    : useP4a2
+      ? 'nft_and_wallet_pubkey_p4a2'
+      : requiredWallet
+        ? 'nft_and_wallet_p4a'
+        : 'nft_owner_p4a'
 
   const dek = crypto.getRandomValues(new Uint8Array(DEK_BYTES))
   const wrapSalt = crypto.getRandomValues(new Uint8Array(SALT_BYTES))
@@ -250,7 +282,12 @@ export async function encryptNftGateMessage(opts: {
 
   let wrapKey: CryptoKey
   let ephemeralPubRawB64: string | undefined
-  if (useP4a2 && requiredWallet && pubRaw) {
+  if (useP4b && sealKey) {
+    wrapKey = await getSubtle().importKey('raw', sealKey as BufferSource, { name: 'AES-GCM' }, false, [
+      'encrypt',
+      'decrypt',
+    ])
+  } else if (useP4a2 && requiredWallet && pubRaw) {
     const eph = await generateKeyPair(true)
     const shared = await deriveSharedSecret(eph.privateKey, pubRaw)
     wrapKey = await deriveEcdhWrapKey(shared, wrapSalt, nftObjectId, requiredWallet)
@@ -280,6 +317,9 @@ export async function encryptNftGateMessage(opts: {
     nftObjectId,
     ...(requiredWallet ? { requiredWallet } : {}),
     ...(ephemeralPubRawB64 ? { ephemeralPubRawB64 } : {}),
+    ...(useP4b
+      ? { sealPolicy: requiredWallet ? 'nft_and_wallet' : 'nft_owner' }
+      : {}),
     algo: 'AES-256-GCM',
     bodyIvB64: bytesToB64(bodyIv),
     wrapSaltB64: bytesToB64(wrapSalt),
@@ -298,8 +338,8 @@ export async function encryptNftGateMessage(opts: {
 }
 
 /**
- * Bei Dual/P4a2: `signerAddress === requiredWallet`.
- * Bei P4a2 zusätzlich `ecdhPrivateKey` der requiredWallet (Chat-ECDH).
+ * Bei Dual/P4a2/P4b-Dual: `signerAddress === requiredWallet`.
+ * P4a2: `ecdhPrivateKey`. P4b: `sealWrapKeyRaw` vom Broker nach Ownership-Check.
  */
 export async function decryptNftGateMessageWire(
   content: string,
@@ -307,6 +347,7 @@ export async function decryptNftGateMessageWire(
     nftAccessOk: boolean
     signerAddress?: string | null
     ecdhPrivateKey?: CryptoKey | null
+    sealWrapKeyRaw?: Uint8Array | null
   }
 ): Promise<string> {
   const { meta, body } = parseNftGateBlob(content)
@@ -318,7 +359,16 @@ export async function decryptNftGateMessageWire(
   if (!access.ok) throw new Error(access.error)
 
   let wrapKey: CryptoKey
-  if (meta.gate === 'nft_and_wallet_pubkey_p4a2') {
+  if (meta.gate === 'nft_seal_p4b') {
+    const sk = opts.sealWrapKeyRaw
+    if (!sk || sk.length !== 32) {
+      throw new Error('P4b: Seal-Key vom Broker fehlt — Ownership/API prüfen.')
+    }
+    wrapKey = await getSubtle().importKey('raw', sk as BufferSource, { name: 'AES-GCM' }, false, [
+      'encrypt',
+      'decrypt',
+    ])
+  } else if (meta.gate === 'nft_and_wallet_pubkey_p4a2') {
     if (!opts.ecdhPrivateKey) {
       throw new Error('P4a2: Chat-ECDH-Privatkey fehlt — Vault entsperren.')
     }
@@ -353,9 +403,11 @@ export async function decryptNftGateMessageWire(
     )
   } catch {
     throw new Error(
-      meta.gate === 'nft_and_wallet_pubkey_p4a2'
-        ? 'P4a2-Capsule: falscher Privatkey oder beschädigt.'
-        : 'Capsule ungültig oder beschädigt.'
+      meta.gate === 'nft_seal_p4b'
+        ? 'P4b-Capsule: falscher Seal-Key oder beschädigt.'
+        : meta.gate === 'nft_and_wallet_pubkey_p4a2'
+          ? 'P4a2-Capsule: falscher Privatkey oder beschädigt.'
+          : 'Capsule ungültig oder beschädigt.'
     )
   }
   try {
