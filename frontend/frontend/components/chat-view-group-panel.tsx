@@ -543,12 +543,12 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
                         setTeamKeyTick((n) => n + 1)
                         setMsg(
                           r.created
-                            ? `Team-Key erzeugt (Epoch ${r.epoch}). Handoff-ZIP an Mitglieder exportieren.`
-                            : `Team-Key bereits da (Epoch ${r.epoch}).`
+                            ? `Team-Key erzeugt (Epoch ${r.epoch}). Geheimnis bleibt lokal — Handoff-ZIP an Mitglieder exportieren.`
+                            : `OK — Team-Key lokal vorhanden (Epoch ${r.epoch}). Rohkey wird nicht angezeigt; teilen nur per Handoff.`
                         )
                       }}
                     >
-                      {ready ? 'Key prüfen' : 'Team-Key erzeugen'}
+                      {ready ? `Status (Epoch ${epoch})` : 'Team-Key erzeugen'}
                     </button>
                     {ready ? (
                       <button
