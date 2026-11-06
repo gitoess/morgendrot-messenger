@@ -25,7 +25,9 @@
 
 **Nachtrag 2026-11-05 (Privacy / H.23 UX, Claims):** Vault-Lock leert lokale Passphrase-Stores; Chat-⋮ **Schlüssel erneuern** (Epoch) + Hinweis nach Enc-Send; Opt-in **Burn-on-read** (Purge mit Bestätigung). Claims ehrlich: **`docs/SECURITY-CLAIMS-CHECK-2026-11.md`**. **Kein** Double-Ratchet / Decoys / Outboxes in dieser Tranche. **Empfohlene nächste Arbeit:** Feldtest ImageNFT-Mint + Passphrase-Nachricht + Lock-Wipe + Epoch-Renew (2 Geräte) — **vor** neuer Architektur (§ H.23 Ratchet).
 
-**Nachtrag 2026-11-06 (Passphrase-Msg Vault-Sidecar):** Chat-Passphrasen nicht mehr Klartext-`localStorage` — AES-GCM Sidecar `morgendrot.passphraseMsg.enc.v1` mit Vault-Passwort; Unlock hydriert RAM; Lock leert RAM (Ciphertext bleibt); Purge/Einsatz-Ende/Einstellungen „Nur Chat-Passphrasen“ löschen Sidecar. Legacy Klartext wird beim Unlock migriert.
+**Nachtrag 2026-11-06 (Passphrase UX + Secret-Vaults):** Passphrase-Bubble: Auto-Decrypt nach Unlock; **Verbergen** (weich) / **Erneut sperren** (hart, Confirm → wieder Passphrase nötig). Chat- + ImageNFT-Passphrasen + **Team-Keys** at rest AES-GCM (`passphraseMsg.enc.v1`, `evidenceImage…enc.v1`, `teamKeys.enc.v1`); gemeinsames Unlock/Lock/Purge. Legacy Klartext wird migriert. **H.23 B1 Vault `.team-keys.enc`:** Browser-Ist = `teamKeys.enc.v1` (Nest-Datei später optional).
+
+**Nachtrag 2026-11-06 (Passphrase-Msg Vault-Sidecar):** Chat-Passphrasen nicht mehr Klartext-`localStorage` — AES-GCM Sidecar `morgendrot.passphraseMsg.enc.v1` mit Vault-Passwort; Unlock hydriert RAM; Lock leert RAM (Ciphertext bleibt); Purge/Einsatz-Ende löschen Sidecar. Legacy Klartext wird beim Unlock migriert.
 
 **Nachtrag 2026-11-05 (Burn/Mailbox + Passphrase-Reuse):** Burn-on-read erzwingt Composer-**Mailbox** (Event-Pfad nicht purgebar; Explorer behält TX/Events). Direktchat-⋮ mit **Scope-Hinweis**. Chat-**Passphrase-Schutz**: optional **Passphrase wiederverwenden**. Feldtest: Epoch-Renew Self **PASS**; Burn + Passphrase-Reuse Retest offen.
 
@@ -1588,7 +1590,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 **Ist heute:** Pairwise **ECDH** über **`/handshake`**, Keys in Shared-Mailbox-`HsKey` / Vault — siehe **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** Leitplanken. **Session:** `restorePeerMapFromHandshakeCache` nach Vault-Laden (API-Start, `/vault-load`, UI-Entsperren) — ersetzt **nicht** H.23-B, nur UX bis zur Architektur-Entscheid.
 
-**Lieferreihenfolge:** (1) ~~Architektur-Entscheid~~ **erledigt 2026-06-16** (Option A). (2) ~~**Modus-A-Feldtest**~~ **PASS 2026-07-03** (`docs/FELDTEST-BOSS-BEI-0.md`). (3) **Session Keys+ A1–A4** **erledigt 2026-06-16**; **Nest-Listener v2** **2026-07-03**. (4) **B1 Team-Key** **Teil-Ist 2026-11-05** (kein Enc-Auto-Fork, Gruppen-UI Key erzeugen/rotieren, Handoff; Vault `.team-keys.enc` offen). Double Ratchet = Phase C.
+**Lieferreihenfolge:** (1) ~~Architektur-Entscheid~~ **erledigt 2026-06-16** (Option A). (2) ~~**Modus-A-Feldtest**~~ **PASS 2026-07-03** (`docs/FELDTEST-BOSS-BEI-0.md`). (3) **Session Keys+ A1–A4** **erledigt 2026-06-16**; **Nest-Listener v2** **2026-07-03**. (4) **B1 Team-Key** **Ist 2026-11-06** (kein Enc-Auto-Fork, Gruppen-UI „Kanal einrichten“, Handoff; Vault-Sidecar `teamKeys.enc.v1`). Double Ratchet = Phase C. **Nächste Privacy-Feldarbeit:** 2-Geräte Team-Key + Passphrase Erneut-sperren; dann NFT-Schlüsselkarte (B2) spezifizieren.
 
 **Verknüpfung:** **§ H.22** (Gruppen-E2EE **M2c**), **`docs/VAULT-EINRICHTEN.md`**, **`docs/MESSAGING-MAILBOX-SSOT-SPEC.md`**, **§ H.15** (Direct-IOTA verschlüsselt).
 

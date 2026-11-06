@@ -13,6 +13,11 @@ import {
   unlockPassphraseMessageVault,
 } from '@/frontend/lib/passphrase-message-local-store'
 import {
+  lockTeamBroadcastKeyVault,
+  purgeTeamBroadcastKeyVault,
+  unlockTeamBroadcastKeyVault,
+} from '@/frontend/lib/team-broadcast-key-store'
+import {
   clearVaultPasswordSession,
   setVaultPasswordSession,
 } from '@/frontend/lib/vault-password-session'
@@ -34,7 +39,10 @@ export async function unlockLocalSecretVaults(password: string): Promise<{
   const ev = await unlockEvidencePassphraseVault(pw)
   if (!ev.ok) errors.push(`ImageNFT-Passphrasen: ${ev.error}`)
 
-  if (errors.length && !msg.ok && !ev.ok) {
+  const team = await unlockTeamBroadcastKeyVault(pw)
+  if (!team.ok) errors.push(`Team-Keys: ${team.error}`)
+
+  if (errors.length === 3) {
     clearVaultPasswordSession()
     return { ok: false, errors }
   }
@@ -44,11 +52,13 @@ export async function unlockLocalSecretVaults(password: string): Promise<{
 export function lockLocalSecretVaults(): void {
   lockPassphraseMessageVault()
   lockEvidencePassphraseVault()
+  lockTeamBroadcastKeyVault()
   clearVaultPasswordSession()
 }
 
 export function purgeLocalSecretVaults(): void {
   purgePassphraseMessageVault()
   purgeEvidencePassphraseVault()
+  purgeTeamBroadcastKeyVault()
   clearVaultPasswordSession()
 }

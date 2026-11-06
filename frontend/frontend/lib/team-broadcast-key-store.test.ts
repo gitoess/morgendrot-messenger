@@ -1,21 +1,33 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   TEAM_BROADCAST_KEY_MISSING_MSG,
+  TEAM_KEYS_ENC_LS_KEY,
   createTeamBroadcastKey,
   exportTeamBroadcastKeysSnapshot,
+  flushTeamBroadcastKeyVaultPersist,
+  hasEncryptedTeamKeysVault,
   hasTeamBroadcastKey,
   hydrateTeamBroadcastKeysFromArchiveSidecar,
   importTeamBroadcastKeysSnapshot,
+  lockTeamBroadcastKeyVault,
+  purgeTeamBroadcastKeyVault,
   requireTeamBroadcastKey,
+  unlockTeamBroadcastKeyVault,
   writeTeamBroadcastKeyRaw,
 } from '@/frontend/lib/team-broadcast-key-store'
-import { generateTeamBroadcastKeyRaw } from '@morgendrot/shared/morgendrot-team-broadcast-crypto'
+import {
+  generateTeamBroadcastKeyRaw,
+  teamBroadcastKeyToBase64,
+} from '@morgendrot/shared/morgendrot-team-broadcast-crypto'
+import { setVaultPasswordSession } from '@/frontend/lib/vault-password-session'
 
 const MB = `0x${'ab'.repeat(32)}`
 
 describe('team-broadcast-key-store (H.23 B1)', () => {
   afterEach(() => {
+    purgeTeamBroadcastKeyVault()
     window.localStorage.clear()
+    window.sessionStorage.clear()
   })
 
   it('requireTeamBroadcastKey wirft ohne Key (kein Auto-Fork)', () => {
@@ -41,18 +53,41 @@ describe('team-broadcast-key-store (H.23 B1)', () => {
   it('snapshot roundtrip', () => {
     writeTeamBroadcastKeyRaw(MB, generateTeamBroadcastKeyRaw())
     const snap = exportTeamBroadcastKeysSnapshot([MB])
-    window.localStorage.clear()
+    purgeTeamBroadcastKeyVault()
     expect(hasTeamBroadcastKey(MB)).toBe(false)
     expect(importTeamBroadcastKeysSnapshot(snap)).toBe(1)
     expect(hasTeamBroadcastKey(MB)).toBe(true)
   })
 
-  it('Archiv-Sidecar hydratisiert nach Clear der Einzelkeys', () => {
+  it('vault-enc Sidecar überlebt Lock+Unlock; Legacy-Archiv hydratisiert', async () => {
+    setVaultPasswordSession('vault-pass-99')
+    await unlockTeamBroadcastKeyVault('vault-pass-99')
     createTeamBroadcastKey(MB)
-    expect(window.localStorage.getItem('morgendrot.teamKeysArchive.v1')).toBeTruthy()
-    window.localStorage.removeItem(`morgendrot.teamBroadcastKey.v1:${MB}`)
+    await flushTeamBroadcastKeyVaultPersist()
+    expect(hasEncryptedTeamKeysVault()).toBe(true)
+    expect(window.localStorage.getItem(TEAM_KEYS_ENC_LS_KEY)).toContain('morgendrot.team-keys.enc.v1')
+    expect(window.localStorage.getItem(`morgendrot.teamBroadcastKey.v1:${MB}`)).toBeNull()
+
+    lockTeamBroadcastKeyVault()
     expect(hasTeamBroadcastKey(MB)).toBe(false)
+
+    setVaultPasswordSession('vault-pass-99')
+    const again = await unlockTeamBroadcastKeyVault('vault-pass-99')
+    expect(again.ok).toBe(true)
+    expect(hasTeamBroadcastKey(MB)).toBe(true)
+  })
+
+  it('Legacy-Archiv hydratisiert vor Unlock', () => {
+    const raw = generateTeamBroadcastKeyRaw()
+    window.localStorage.setItem(
+      'morgendrot.teamKeysArchive.v1',
+      JSON.stringify({
+        schema: 1,
+        keys: { [MB]: { keyBase64: teamBroadcastKeyToBase64(raw), keyEpoch: 1 } },
+      })
+    )
     expect(hydrateTeamBroadcastKeysFromArchiveSidecar()).toBeGreaterThanOrEqual(1)
     expect(hasTeamBroadcastKey(MB)).toBe(true)
   })
 })
+

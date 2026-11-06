@@ -42,7 +42,7 @@ export function SettingsEmergencyPurgeSection() {
         }
       } else if (purgeScope === 'chat_passphrases') {
         purgeLocalSecretVaults()
-        setStatusMsg('Chat- + ImageNFT-Passphrasen (RAM + Sidecars) gelöscht.')
+        setStatusMsg('Chat-/ImageNFT-Passphrasen + Team-Keys (RAM + Sidecars) gelöscht.')
         setConfirmPurge(false)
         setConfirmText('')
       } else {
@@ -106,9 +106,9 @@ export function SettingsEmergencyPurgeSection() {
             className="mt-1"
           />
           <span>
-            <strong className="text-foreground">Nur Passphrasen (Chat + ImageNFT)</strong>
+            <strong className="text-foreground">Nur lokale Geheimnisse</strong>
             <span className="block text-muted-foreground">
-              RAM + Sidecars (`passphraseMsg.enc`, `evidenceImage…enc`) — kein Chain-Purge.
+              RAM + Sidecars (Chat-/NFT-Passphrasen, Team-Keys) — kein Chain-Purge.
             </span>
           </span>
         </label>

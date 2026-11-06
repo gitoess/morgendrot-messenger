@@ -186,8 +186,18 @@ function PassphraseMessageBody(p: {
             <button
               type="button"
               className="text-xs text-muted-foreground hover:underline"
-              onClick={forgetLocal}
-              title="Lokalen Key löschen — Nachricht wieder nur mit Passphrase lesbar (wie Empfänger ohne Key)"
+              onClick={() => {
+                if (
+                  typeof window !== 'undefined' &&
+                  !window.confirm(
+                    'Lokal sperren? Die Passphrase wird gelöscht — zum Lesen wieder eingeben (wie Empfänger ohne Key).'
+                  )
+                ) {
+                  return
+                }
+                forgetLocal()
+              }}
+              title="Lokalen Key löschen — Nachricht wieder nur mit Passphrase lesbar"
             >
               Erneut sperren
             </button>
@@ -214,7 +224,15 @@ function PassphraseMessageBody(p: {
             <button
               type="button"
               className="text-xs text-muted-foreground hover:underline"
-              onClick={forgetLocal}
+              onClick={() => {
+                if (
+                  typeof window !== 'undefined' &&
+                  !window.confirm('Lokal sperren? Passphrase wird gelöscht — zum Lesen wieder eingeben.')
+                ) {
+                  return
+                }
+                forgetLocal()
+              }}
               title="Lokalen Key löschen — Passphrase wieder nötig"
             >
               Erneut sperren
