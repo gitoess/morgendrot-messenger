@@ -187,9 +187,9 @@ function PassphraseMessageBody(p: {
               type="button"
               className="text-xs text-muted-foreground hover:underline"
               onClick={forgetLocal}
-              title="Lokalen Key löschen — danach wieder Passphrase nötig"
+              title="Lokalen Key löschen — Nachricht wieder nur mit Passphrase lesbar (wie Empfänger ohne Key)"
             >
-              Key vergessen
+              Erneut sperren
             </button>
             <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={p.onCopyRaw}>
               {p.copiedRaw ? 'Kopiert' : 'Wire kopieren'}
@@ -211,8 +211,13 @@ function PassphraseMessageBody(p: {
             >
               Wieder anzeigen
             </button>
-            <button type="button" className="text-xs text-muted-foreground hover:underline" onClick={forgetLocal}>
-              Key vergessen
+            <button
+              type="button"
+              className="text-xs text-muted-foreground hover:underline"
+              onClick={forgetLocal}
+              title="Lokalen Key löschen — Passphrase wieder nötig"
+            >
+              Erneut sperren
             </button>
             <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={p.onCopyRaw}>
               {p.copiedRaw ? 'Kopiert' : 'Wire kopieren'}
