@@ -7,14 +7,25 @@
 
 ## 1. Ziel
 
-Ein on-chain **besessenes** NFT dient als **Schlüsselkarte**: die App speichert lokal (vault-verschlüsselt) eine oder mehrere Passphrasen/Ableitungen an die **Object-ID**. Beim Lesen prüft die App **Besitz** (`getOwnedObjects` / `getObject` Owner) und gibt den Klartext nur frei, wenn Besitz + lokaler Slot passen.
+**Zusätzlicher Zugriffsmodus** für spezielle Enc-Inhalte (Evidenz / geteilte Bilder / selten PWMSG) — **kein** Ersatz für die normale Absender-Passphrase und **nicht** für den Alltags-Direktchat (dafür ECDH/Session bzw. manuelle Passphrase).
 
-Optional beim Senden: **„Key an NFT binden“** — Passphrase-Nachricht (`MORG_PWMSG`) oder ImageNFT-MORGIMGE1 referenziert die Karten-Object-ID (off-chain Hinweis / Wire-Meta), Empfänger mit Besitz der Karte können entschlüsseln.
+Ein on-chain **besessenes** NFT dient als **Schlüsselkarte**: die App speichert lokal (vault-verschlüsselt) eine oder mehrere Passphrasen/Ableitungen an die **Object-ID**. Beim Lesen entscheidet die App nach Bindungsmodus:
+
+| Modus | Klartext frei wenn |
+|-------|-------------------|
+| **Passphrase** (Default, ohne Karte) | Nutzer kennt / Vault hat Slot — wie heute |
+| **NFT-Besitz** | Signer besitzt die Karten-Object-ID (`getOwnedObjects` / Owner) **und** lokaler Slot passt |
+| **Beides** (optional) | Besitz **und** Passphrase |
+
+Optional beim Senden: **„Key an NFT binden“** — Wire/Meta referenziert die Karten-Object-ID (off-chain Hinweis); Empfänger mit Besitz (und ggf. Passphrase) können entschlüsseln. Nutzen: geteilte Evidenz, temporäre Leserechte, Weitergabe durch **NFT-Transfer**.
+
+**Reihenfolge:** Absender-Passphrase-Komfort (Vault-Remember nach Send/Mint) stabil → dann B2 P1 UI.
 
 ## 2. Nicht-Ziele
 
 | Nicht | Warum |
 |-------|--------|
+| Ersatz für Alltags-Passphrase / Absender-Remember | Komfort-Pfad bleibt Vault-Sidecar ohne NFT |
 | Ersatz für Handshake / Session-Keys | Besitz ist on-chain öffentlich; Transfer = Leserecht weitergeben |
 | Ersatz für Team-Key | Team-Broadcast bleibt Gruppen-Geheimnis + Handoff |
 | Geheimnis on-chain speichern | Passphrasen bleiben off-chain (Vault-Sidecar) |
