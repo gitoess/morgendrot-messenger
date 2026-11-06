@@ -678,7 +678,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       setUnlocking(false)
       if (unlockResult.ok) {
         if (vaultPassword.length >= 8) {
-          void unlockPassphraseMessageVault(vaultPassword)
+          await unlockPassphraseMessageVault(vaultPassword)
         }
         vaultUnlockRequestedRef.current = false
         sessionUnlockedStableRef.current = true
@@ -726,7 +726,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     if (res.ok) {
       const vaultPw = password
       if (vaultPw.trim().length >= 8) {
-        void unlockPassphraseMessageVault(vaultPw)
+        await unlockPassphraseMessageVault(vaultPw)
       }
       /**
        * Seed im lokalen Tresor halten, sonst nach API-Restart (`npm run dm`) wieder Seed nötig.
@@ -808,7 +808,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     } else if (VAULT_ALREADY_UNLOCKED_RE.test(res.error || '')) {
       const vaultPw = password
       if (vaultPw.trim().length >= 8) {
-        void unlockPassphraseMessageVault(vaultPw)
+        await unlockPassphraseMessageVault(vaultPw)
       }
       const vaultKeysLoaded = await ensureBackendVaultKeysInSession(vaultPw)
       if (vaultKeysLoaded) {

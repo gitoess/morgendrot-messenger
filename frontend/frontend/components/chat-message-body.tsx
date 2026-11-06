@@ -207,9 +207,9 @@ function PassphraseMessageBody(p: {
           </div>
           {!known ? (
             <p className="text-[11px] text-muted-foreground">
-              Kein Schlüssel in der entsperrten Sitzung. Nach Vault-Unlock werden lokal
-              gesicherte Passphrasen wieder geladen — sonst Statuszeile nach dem Senden / Composer
-              → wiederverwenden.
+              Passphrase fehlt hier (nicht das Gruppen-Geheimnis). Sie stand nach dem Senden in der
+              Statuszeile; bei „Passphrase wiederverwenden“ auch im Composer-Feld. Nach Vault-Unlock
+              erscheint sie automatisch, wenn sie zuvor mitgespeichert wurde.
             </p>
           ) : null}
         </>

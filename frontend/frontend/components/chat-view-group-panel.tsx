@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Check, Copy, Lock, Unlock, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
@@ -36,6 +36,14 @@ import {
   hasTeamBroadcastKey,
   readTeamBroadcastKeyEpoch,
 } from '@/frontend/lib/team-broadcast-key-store'
+import { contactDisplayLabel } from '@/frontend/lib/contact-display'
+
+export type GroupHandshakeActions = {
+  sending: boolean
+  connectedAddresses: string[]
+  onHandshakeForAddress: (address: string) => void | Promise<void>
+  onConnectAcceptForAddress?: (address: string) => void | Promise<void>
+}
 
 export type ChatViewGroupPanelProps = {
   contactDirectory: Record<string, ContactMeshEntryClient>
@@ -45,12 +53,11 @@ export type ChatViewGroupPanelProps = {
   /** Handoff-Runtime: neue Gruppe anlegen / erste Speicherung. */
   groupCreateAllowed?: boolean
   onGroupsChanged?: () => void
-  onOpenPhonebook?: () => void
-  /** Einstellungen → Meine Mailboxen (Team-Postfächer verwalten). */
-  onOpenSettings?: () => void
   encrypted?: boolean
   onEncryptedChange?: (encrypted: boolean) => void
   embedded?: boolean
+  /** Pairwise-Handshake: Adressen kommen aus der Mitgliederliste (kein zweites Adressfeld). */
+  handshake?: GroupHandshakeActions | null
 }
 
 export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
@@ -60,11 +67,10 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     teamMailboxCreateAllowed = false,
     groupCreateAllowed = true,
     onGroupsChanged,
-    onOpenPhonebook,
-    onOpenSettings,
     encrypted = false,
     onEncryptedChange,
     embedded = false,
+    handshake = null,
   } = p
   const showMeshtasticSecondary = forcedTransport === 'mesh'
   const groupCreateBlockedTitle = 'Keine Berechtigung zum Anlegen neuer Gruppen (Handoff-Rechte).'
@@ -80,10 +86,12 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
   const [secondaryPskRef, setSecondaryPskRef] = useState('')
   const [teamMailboxObjectId, setTeamMailboxObjectId] = useState('')
   const [teamMbBusy, setTeamMbBusy] = useState(false)
+  const [setupBusy, setSetupBusy] = useState(false)
   const [copiedTeamMbId, setCopiedTeamMbId] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [phonebookPickerOpen, setPhonebookPickerOpen] = useState(false)
   const [teamKeyTick, setTeamKeyTick] = useState(0)
+  const [showAdvancedMailbox, setShowAdvancedMailbox] = useState(false)
 
   const reload = useCallback(() => {
     setGroups(readMessengerGroups())
@@ -112,9 +120,13 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     reload()
   }, [reload])
 
+  const memberAddresses = useMemo(
+    () => parseGroupMemberInput(membersText, contactDirectory),
+    [membersText, contactDirectory]
+  )
+
   const persistGroupDefinition = useCallback(
     (opts?: { teamMbOverride?: string; successMsg?: string }): boolean => {
-      const memberAddresses = parseGroupMemberInput(membersText, contactDirectory)
       if (memberAddresses.length === 0) return false
       const id = activeId ?? createMessengerGroupId()
       const normalizedSecondaryIndex = normalizeMeshtasticChannelIndex(secondaryChannelIndex)
@@ -149,8 +161,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     },
     [
       activeId,
-      contactDirectory,
-      membersText,
+      memberAddresses,
       name,
       onGroupsChanged,
       reload,
@@ -163,7 +174,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
 
   const saveGroup = useCallback(() => {
     if (!persistGroupDefinition({ successMsg: 'Gruppe gespeichert.' })) {
-      setMsg('Mindestens ein gültiges Mitglied (Telefonbuch-Name oder 0x + 64 Hex) eintragen.')
+      setMsg('Mindestens ein Mitglied aus dem Telefonbuch oder eine 0x-Adresse eintragen.')
     }
   }, [persistGroupDefinition])
 
@@ -185,7 +196,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     setSecondaryChannelName('')
     setSecondaryPskRef('')
     setTeamMailboxObjectId('')
-    setMsg('Neue Gruppe — Name und Mitglieder eintragen, dann speichern.')
+    setMsg('Neue Gruppe: Name + Mitglieder, dann speichern.')
   }, [])
 
   const removeGroup = useCallback(() => {
@@ -200,7 +211,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     (picked: string[]) => {
       const merged = parseGroupMemberInput([membersText, ...picked].join('\n'), contactDirectory)
       setMembersText(formatGroupMembersDisplay(contactDirectory, merged))
-      setMsg(`${picked.length} Kontakt(e) übernommen — „Gruppe speichern“ nicht vergessen.`)
+      setMsg(`${picked.length} Kontakt(e) übernommen — Speichern nicht vergessen.`)
     },
     [membersText, contactDirectory]
   )
@@ -214,37 +225,79 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
       if (!/^0x[a-fA-F0-9]{64}$/i.test(id)) return
       setTeamMailboxObjectId(id)
       if (persistGroupDefinition({ teamMbOverride: id, successMsg })) return
-      setMsg('Team-Postfach erstellt — zuerst Mitglieder eintragen, dann „Gruppe speichern“.')
+      setMsg('Postfach gesetzt — zuerst Mitglieder eintragen, dann speichern.')
     },
     [persistGroupDefinition]
   )
 
-  const createTeamMailboxForGroup = useCallback(async () => {
-    if (!teamMailboxCreateAllowed || teamMbBusy) return
+  const createTeamMailboxForGroup = useCallback(async (): Promise<string | null> => {
+    if (!teamMailboxCreateAllowed) return null
     const label =
       typeof window !== 'undefined'
         ? window.prompt('Name des Team-Postfachs:', suggestNextTeamMailboxLabel())?.trim()
         : ''
-    setTeamMbBusy(true)
+    const r = await createTeamMailboxOnChain()
+    if (!r.ok || !r.objectId) {
+      setMsg(r.error || r.message || 'Team-Postfach konnte nicht erstellt werden.')
+      return null
+    }
+    addMyTeamMailbox({
+      objectId: r.objectId,
+      ...(label ? { label } : {}),
+      ...(r.digest ? { digest: r.digest } : {}),
+    })
+    linkTeamMailboxToGroup(r.objectId, 'Team-Postfach erstellt und mit der Gruppe verknüpft.')
+    return r.objectId
+  }, [teamMailboxCreateAllowed, linkTeamMailboxToGroup])
+
+  /** Ein Klick: speichern → Postfach (falls fehlt) → Gruppen-Geheimnis. */
+  const setupTeamChannel = useCallback(async () => {
+    if (setupBusy) return
+    if (memberAddresses.length === 0) {
+      setMsg('Zuerst Mitglieder eintragen (Aus Telefonbuch).')
+      return
+    }
+    setSetupBusy(true)
     try {
-      const r = await createTeamMailboxOnChain()
-      if (!r.ok || !r.objectId) {
-        setMsg(r.error || r.message || 'Team-Postfach konnte nicht erstellt werden.')
+      if (!persistGroupDefinition()) {
+        setMsg('Gruppe konnte nicht gespeichert werden.')
         return
       }
-      addMyTeamMailbox({
-        objectId: r.objectId,
-        ...(label ? { label } : {}),
-        ...(r.digest ? { digest: r.digest } : {}),
-      })
-      linkTeamMailboxToGroup(
-        r.objectId,
-        'Team-Postfach erstellt und mit Gruppe verknüpft — Object-ID unten kopieren und an Mitglieder weitergeben.'
+      let mb = teamMailboxObjectId.trim()
+      if (!/^0x[a-fA-F0-9]{64}$/i.test(mb)) {
+        if (!teamMailboxCreateAllowed) {
+          setMsg('Kein Postfach — Tresor entsperren oder Object-ID unter „Erweitert“ einfügen.')
+          return
+        }
+        setTeamMbBusy(true)
+        const created = await createTeamMailboxForGroup()
+        setTeamMbBusy(false)
+        if (!created) return
+        mb = created
+      }
+      const key = createTeamBroadcastKey(mb)
+      if (!key.ok) {
+        setMsg(key.error)
+        return
+      }
+      setTeamKeyTick((n) => n + 1)
+      setMsg(
+        key.created
+          ? `Fertig: Postfach + Gruppen-Geheimnis (Epoch ${key.epoch}). Geheimnis per Handoff-ZIP an Mitglieder — kein Tippen wie ein Chat-Passwort.`
+          : `Bereit: Postfach + Gruppen-Geheimnis (Epoch ${key.epoch}) lokal vorhanden.`
       )
     } finally {
+      setSetupBusy(false)
       setTeamMbBusy(false)
     }
-  }, [teamMailboxCreateAllowed, teamMbBusy, linkTeamMailboxToGroup])
+  }, [
+    setupBusy,
+    memberAddresses.length,
+    persistGroupDefinition,
+    teamMailboxObjectId,
+    teamMailboxCreateAllowed,
+    createTeamMailboxForGroup,
+  ])
 
   const copyTeamMailboxId = useCallback(async (id: string) => {
     try {
@@ -261,22 +314,31 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     !!teamMailboxObjectId.trim() &&
     teamMailboxObjectId.trim().toLowerCase() !== savedTeamMbId.toLowerCase()
 
+  const mbOk = /^0x[a-fA-F0-9]{64}$/i.test(teamMailboxObjectId.trim())
+  const teamKeyReady = mbOk && hasTeamBroadcastKey(teamMailboxObjectId)
+  void teamKeyTick
+  const teamKeyEpoch = teamKeyReady ? readTeamBroadcastKeyEpoch(teamMailboxObjectId) : null
+
+  const connectedSet = useMemo(
+    () => new Set((handshake?.connectedAddresses ?? []).map((a) => a.trim().toLowerCase()).filter(Boolean)),
+    [handshake?.connectedAddresses]
+  )
+
+  const handshakeMembers = useMemo(
+    () => memberAddresses.map((a) => a.trim().toLowerCase()).filter((a) => /^0x[a-f0-9]{64}$/.test(a)),
+    [memberAddresses]
+  )
+
   return (
-    <section
-      className={cn(
-        embedded
-          ? 'space-y-3 text-sm leading-relaxed'
-          : 'mb-4 rounded-lg border border-violet-500/25 bg-violet-500/5 px-3 py-3 text-[11px] leading-relaxed text-muted-foreground'
-      )}
-    >
+    <section className={cn(embedded ? 'space-y-4 text-sm' : 'mb-4 space-y-4 rounded-lg border border-border bg-card/40 px-3 py-3')}>
       {onEncryptedChange ? (
         <AlertDialog open={plainWarnOpen} onOpenChange={setPlainWarnOpen}>
           <AlertDialogContent className="border-orange-500/40 bg-orange-950/20 sm:max-w-md">
             <AlertDialogHeader>
               <AlertDialogTitle className="text-orange-100">Unverschlüsselt in der Gruppe?</AlertDialogTitle>
               <AlertDialogDescription className="text-orange-50/95">
-                Die Nachricht wird unverschlüsselt auf der Chain gespeichert und ist für jeden einsehbar. Team-Broadcast
-                (1× Nachricht für alle) funktioniert nur unverschlüsselt.
+                Klartext liegt öffentlich auf der Chain. Ein gemeinsames Team-Postfach (1× Nachricht für alle) braucht
+                Klartext-Transport — das Gruppen-Geheimnis schützt den Inhalt dann lokal/geteilt, nicht per Handshake.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -291,14 +353,13 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
           </AlertDialogContent>
         </AlertDialog>
       ) : null}
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          <Users className="h-4 w-4 text-violet-400" aria-hidden />
-          <h3 className="text-sm font-semibold text-foreground">{embedded ? 'Einstellungen' : 'Gruppe'}</h3>
+          <Users className="h-4 w-4 text-foreground/70" aria-hidden />
+          <h3 className="text-sm font-semibold text-foreground">{embedded ? 'Gruppe' : 'Gruppe'}</h3>
           {active ? (
-            <span className="text-xs text-muted-foreground">
-              · {active.memberAddresses.length} Mitglieder
-            </span>
+            <span className="text-xs text-muted-foreground">· {active.memberAddresses.length} Mitglieder</span>
           ) : null}
         </div>
         {onEncryptedChange && !embedded ? (
@@ -326,7 +387,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               )}
             >
               <Lock className="h-3 w-3" aria-hidden />
-              Verschlüsselt
+              Pro Mitglied
             </button>
             <button
               type="button"
@@ -339,24 +400,20 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               )}
             >
               <Unlock className="h-3 w-3" aria-hidden />
-              Unverschlüsselt
+              Team-Broadcast
             </button>
           </div>
         ) : null}
       </div>
-      {onEncryptedChange && embedded ? (
-        <p className="text-xs text-muted-foreground">
-          Verschlüsselung im Chat-Kopf umschalten. Team-Broadcast (1× Chain) nur unverschlüsselt.
-        </p>
-      ) : null}
-      {encrypted && forcedTransport === 'internet' && !embedded ? (
-        <p className="mb-2 text-[10px] text-muted-foreground">
-          Verschlüsselt: je Mitglied eine Chain-Nachricht (Handshake unten). Team-Broadcast nur bei{' '}
-          <strong className="text-foreground">Unverschlüsselt</strong>.
-        </p>
-      ) : null}
+
+      <p className="text-xs leading-relaxed text-muted-foreground">
+        Kurz: Mitglieder wählen → speichern → „Kanal einrichten“. Das <strong className="text-foreground">Gruppen-Geheimnis</strong>{' '}
+        ist kein Chat-Passwort (Passphrase-Nachricht), sondern der gemeinsame Schlüssel fürs Team-Postfach — Weitergabe nur
+        per Handoff-ZIP.
+      </p>
+
       {groups.length > 0 ? (
-        <div className="mb-2 flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2">
           {groups.map((g) => (
             <button
               key={g.id}
@@ -364,7 +421,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               onClick={() => selectGroup(g.id)}
               className={
                 activeId === g.id
-                  ? 'rounded-md bg-violet-600 px-2 py-1 text-xs font-medium text-white'
+                  ? 'rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground'
                   : 'rounded-md border border-border px-2 py-1 text-xs hover:bg-muted'
               }
             >
@@ -373,7 +430,10 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
           ))}
         </div>
       ) : null}
-      <div className="space-y-2">
+
+      {/* 1 — Name & Mitglieder */}
+      <div className="space-y-2 rounded-lg border border-border bg-background/50 px-3 py-3">
+        <p className="text-xs font-semibold text-foreground">1 · Name & Mitglieder</p>
         <label className="block text-xs font-medium text-muted-foreground">Gruppenname</label>
         <input
           type="text"
@@ -382,14 +442,22 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
           placeholder="z. B. Einsatz Alpha"
           className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
         />
-        <label className="block text-xs font-medium text-muted-foreground">
-          Mitglieder (je Zeile oder Komma — Name aus Telefonbuch oder 0x + 64 Hex)
-        </label>
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <label className="block text-xs font-medium text-muted-foreground">Mitglieder</label>
+          <button
+            type="button"
+            onClick={() => setPhonebookPickerOpen(true)}
+            className="rounded-md border border-border bg-background px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-muted"
+          >
+            Aus Telefonbuch…
+          </button>
+        </div>
         <textarea
           value={membersText}
           onChange={(e) => setMembersText(e.target.value)}
-          rows={4}
+          rows={3}
           spellCheck={false}
+          placeholder="Namen oder 0x-Adressen — am einfachsten „Aus Telefonbuch…“"
           className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
         />
         {showMeshtasticSecondary ? (
@@ -425,24 +493,84 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
             </div>
           </>
         ) : null}
-        <div className="rounded-lg border border-sky-500/25 bg-sky-500/5 px-3 py-3">
-          <p className="text-xs font-medium text-foreground">Team-Postfach (Pflicht für Chain)</p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Internet + Mailbox: 1× Team-Broadcast. Hier erstellen, wählen oder Object-ID einfügen.
-          </p>
-          <div className="mt-2 flex max-w-lg flex-wrap gap-2">
+      </div>
+
+      {/* 2 — Team-Kanal */}
+      <div className="space-y-2 rounded-lg border border-border bg-background/50 px-3 py-3">
+        <p className="text-xs font-semibold text-foreground">2 · Team-Kanal (Postfach + Geheimnis)</p>
+        <p className="text-[11px] leading-relaxed text-muted-foreground">
+          Postfach = gemeinsamer Briefkasten on-chain. Geheimnis = gemeinsamer Schlüssel dafür (nicht die Passphrase
+          einzelner Nachrichten).
+        </p>
+        <button
+          type="button"
+          disabled={setupBusy || groupCreateBlocked || memberAddresses.length === 0}
+          onClick={() => void setupTeamChannel()}
+          className="w-full rounded-lg bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-40"
+        >
+          {setupBusy ? 'Richte ein…' : teamKeyReady ? 'Kanal-Status prüfen / speichern' : 'Kanal einrichten'}
+        </button>
+        {mbOk ? (
+          <div className="flex flex-wrap items-center gap-2 text-[11px]">
+            <span className={teamKeyReady ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}>
+              {teamKeyReady
+                ? `✓ Postfach + Geheimnis (Epoch ${teamKeyEpoch})`
+                : 'Postfach gesetzt — Geheimnis fehlt noch (Button oben).'}
+            </span>
+            <button
+              type="button"
+              onClick={() => void copyTeamMailboxId(teamMailboxObjectId)}
+              className="inline-flex items-center gap-1 rounded border border-border px-1.5 py-0.5 hover:bg-accent"
+            >
+              {copiedTeamMbId ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              {copiedTeamMbId ? 'ID kopiert' : 'Postfach-ID kopieren'}
+            </button>
+            {savedTeamMbId && !teamMbDirty ? (
+              <span className="text-muted-foreground">in Gruppe gespeichert</span>
+            ) : teamMbDirty ? (
+              <span className="text-amber-700 dark:text-amber-300">noch nicht gespeichert</span>
+            ) : null}
+          </div>
+        ) : null}
+        {teamKeyReady ? (
+          <button
+            type="button"
+            className="text-[11px] font-medium text-amber-800 underline-offset-2 hover:underline dark:text-amber-200"
+            onClick={() => {
+              if (!window.confirm('Gruppen-Geheimnis rotieren? Alle Mitglieder brauchen einen neuen Handoff.')) return
+              const r = createTeamBroadcastKey(teamMailboxObjectId, { rotate: true })
+              if (!r.ok) {
+                setMsg(r.error)
+                return
+              }
+              setTeamKeyTick((n) => n + 1)
+              setMsg(`Geheimnis rotiert (Epoch ${r.epoch}). Neuen Handoff exportieren.`)
+            }}
+          >
+            Geheimnis rotieren…
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="text-[11px] text-muted-foreground underline-offset-2 hover:underline"
+          onClick={() => setShowAdvancedMailbox((v) => !v)}
+        >
+          {showAdvancedMailbox ? 'Erweitert ausblenden' : 'Erweitert: vorhandenes Postfach wählen / ID einfügen'}
+        </button>
+        {showAdvancedMailbox ? (
+          <div className="space-y-2 border-t border-border pt-2">
             <select
               value={teamMailboxObjectId}
               onChange={(e) => {
                 const next = e.target.value
                 if (!next) return
                 setTeamMailboxObjectId(next)
-                linkTeamMailboxToGroup(next, 'Team-Postfach mit Gruppe verknüpft und gespeichert.')
+                linkTeamMailboxToGroup(next, 'Team-Postfach mit Gruppe verknüpft.')
               }}
-              className="min-w-[12rem] flex-1 rounded-md border border-border bg-input px-2 py-1.5 font-mono text-[11px]"
+              className="w-full rounded-md border border-border bg-input px-2 py-1.5 font-mono text-[11px]"
             >
               <option value="">
-                {teamMailboxOptions.length > 0 ? '— Team-Postfach wählen —' : '— noch keins in der Liste —'}
+                {teamMailboxOptions.length > 0 ? '— vorhandenes Postfach —' : '— noch keins lokal —'}
               </option>
               {teamMailboxOptions.map((t) => (
                 <option key={t.objectId} value={t.objectId}>
@@ -451,30 +579,6 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
                 </option>
               ))}
             </select>
-            <button
-              type="button"
-              disabled={teamMbBusy || !teamMailboxCreateAllowed}
-              title={
-                teamMailboxCreateAllowed
-                  ? 'create_team_mailbox on-chain und mit dieser Gruppe verknüpfen'
-                  : 'Nicht erlaubt (Rechte/teamManage oder Tresor/Direkt-Signer fehlen)'
-              }
-              onClick={() => void createTeamMailboxForGroup()}
-              className="rounded-md border border-sky-600/45 bg-sky-600/15 px-2 py-1.5 text-xs font-medium text-sky-950 disabled:opacity-50 dark:text-sky-100"
-            >
-              {teamMbBusy ? '…' : 'Team-Postfach erstellen'}
-            </button>
-            {onOpenSettings ? (
-              <button
-                type="button"
-                onClick={onOpenSettings}
-                className="rounded-md border border-border px-2 py-1.5 text-xs hover:bg-muted"
-              >
-                Meine Mailboxen…
-              </button>
-            ) : null}
-          </div>
-          <div className="mt-2 flex max-w-lg flex-wrap items-center gap-2">
             <input
               type="text"
               value={teamMailboxObjectId}
@@ -482,162 +586,144 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               onBlur={() => {
                 const id = teamMailboxObjectId.trim()
                 if (/^0x[a-fA-F0-9]{64}$/i.test(id)) {
-                  linkTeamMailboxToGroup(id, 'Team-Postfach-ID übernommen und gespeichert.')
+                  linkTeamMailboxToGroup(id, 'Postfach-ID übernommen.')
                 }
               }}
-              placeholder="oder Object-ID einfügen (0x…)"
-              className="min-w-[12rem] flex-1 rounded-md border border-border bg-input px-2 py-1.5 font-mono text-[11px]"
+              placeholder="Object-ID einfügen (0x…)"
+              className="w-full rounded-md border border-border bg-input px-2 py-1.5 font-mono text-[11px]"
               spellCheck={false}
               autoComplete="off"
             />
-            {teamMailboxObjectId.trim() ? (
-              <button
-                type="button"
-                onClick={() => void copyTeamMailboxId(teamMailboxObjectId)}
-                className="inline-flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-[10px] hover:bg-accent"
-              >
-                {copiedTeamMbId ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                {copiedTeamMbId ? 'Kopiert' : 'ID kopieren'}
-              </button>
-            ) : null}
-            {savedTeamMbId && !teamMbDirty ? (
-              <span className="text-[10px] text-emerald-700 dark:text-emerald-300">✓ in Gruppe gespeichert</span>
-            ) : teamMbDirty ? (
-              <span className="text-[10px] text-amber-700 dark:text-amber-300">noch nicht gespeichert</span>
+            <button
+              type="button"
+              disabled={teamMbBusy || !teamMailboxCreateAllowed}
+              onClick={() => {
+                setTeamMbBusy(true)
+                void createTeamMailboxForGroup().finally(() => setTeamMbBusy(false))
+              }}
+              className="rounded-md border border-border px-2 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
+            >
+              {teamMbBusy ? '…' : 'Nur Postfach erstellen'}
+            </button>
+            {!teamMailboxCreateAllowed ? (
+              <p className="text-[10px] text-amber-800 dark:text-amber-200">
+                Erstellen gesperrt — Tresor entsperren. ID einfügen geht immer.
+              </p>
             ) : null}
           </div>
-          {!teamMailboxCreateAllowed ? (
-            <p className="mt-1 text-[10px] text-amber-800 dark:text-amber-200">
-              Erstellen gesperrt — Tresor entsperren (Direkt-Signer) oder Boss mit teamManage. Object-ID einfügen geht
-              immer.
-            </p>
-          ) : null}
-          <div className="mt-3 rounded-md border border-violet-500/30 bg-violet-500/5 px-2.5 py-2">
-            <p className="text-[11px] font-medium text-foreground">Team-Key (§ H.23 B1)</p>
-            {(() => {
-              void teamKeyTick
-              const mb = teamMailboxObjectId.trim()
-              const mbOk = /^0x[a-fA-F0-9]{64}$/i.test(mb)
-              const ready = mbOk && hasTeamBroadcastKey(mb)
-              const epoch = ready ? readTeamBroadcastKeyEpoch(mb) : null
-              return (
-                <>
-                  <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-                    {!mbOk
-                      ? 'Zuerst Team-Postfach erstellen oder ID wählen — danach „Team-Key erzeugen“.'
-                      : ready
-                        ? `Lokal vorhanden (Epoch ${epoch}). Mitglieder: gleicher Key per Handoff-ZIP.`
-                        : 'Fehlt lokal. Für verschlüsselten Gruppenchat erzeugen und per Handoff teilen.'}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
+        ) : null}
+      </div>
+
+      {/* 3 — Handshake nur bei Pairwise-Enc */}
+      {encrypted && handshake && forcedTransport === 'internet' ? (
+        <div className="space-y-2 rounded-lg border border-border bg-background/50 px-3 py-3">
+          <p className="text-xs font-semibold text-foreground">3 · Handshake (nur „Pro Mitglied“)</p>
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            Adressen kommen aus der Mitgliederliste — nichts nochmal eintippen. Für Team-Broadcast (gemeinsames
+            Postfach) brauchst du diesen Schritt nicht.
+          </p>
+          {handshakeMembers.length === 0 ? (
+            <p className="text-[11px] text-amber-700 dark:text-amber-300">Noch keine 0x-Mitglieder — Telefonbuch nutzen.</p>
+          ) : (
+            <ul className="space-y-2">
+              {handshakeMembers.map((addr) => {
+                const connected = connectedSet.has(addr)
+                const label = contactDisplayLabel(contactDirectory, addr)
+                return (
+                  <li
+                    key={addr}
+                    className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-card px-2 py-2"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground">{label || `${addr.slice(0, 10)}…`}</p>
+                      <code className="block truncate font-mono text-[10px] text-muted-foreground">{addr}</code>
+                    </div>
+                    <span
+                      className={
+                        connected
+                          ? 'text-[10px] font-medium text-emerald-600 dark:text-emerald-400'
+                          : 'text-[10px] text-amber-700 dark:text-amber-300'
+                      }
+                    >
+                      {connected ? 'verbunden' : 'offen'}
+                    </span>
                     <button
                       type="button"
-                      disabled={!mbOk}
-                      className="rounded-md border border-violet-600/40 bg-violet-600/10 px-2 py-1 text-[11px] font-semibold text-violet-950 hover:bg-violet-500/15 disabled:opacity-40 dark:text-violet-100"
-                      onClick={() => {
-                        const r = createTeamBroadcastKey(mb)
-                        if (!r.ok) {
-                          setMsg(r.error)
-                          return
-                        }
-                        setTeamKeyTick((n) => n + 1)
-                        setMsg(
-                          r.created
-                            ? `Team-Key erzeugt (Epoch ${r.epoch}). Geheimnis bleibt lokal — Handoff-ZIP an Mitglieder exportieren.`
-                            : `OK — Team-Key lokal vorhanden (Epoch ${r.epoch}). Rohkey wird nicht angezeigt; teilen nur per Handoff.`
-                        )
-                      }}
+                      disabled={handshake.sending}
+                      onClick={() => void handshake.onHandshakeForAddress(addr)}
+                      className="shrink-0 rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
                     >
-                      {ready ? `Status (Epoch ${epoch})` : 'Team-Key erzeugen'}
+                      Handshake
                     </button>
-                    {ready ? (
+                    {handshake.onConnectAcceptForAddress ? (
                       <button
                         type="button"
-                        className="rounded-md border border-amber-600/40 px-2 py-1 text-[11px] text-amber-900 hover:bg-amber-500/10 dark:text-amber-100"
-                        onClick={() => {
-                          if (!window.confirm('Team-Key rotieren? Mitglieder brauchen neuen Handoff.')) return
-                          const r = createTeamBroadcastKey(mb, { rotate: true })
-                          if (!r.ok) {
-                            setMsg(r.error)
-                            return
-                          }
-                          setTeamKeyTick((n) => n + 1)
-                          setMsg(`Team-Key rotiert (Epoch ${r.epoch}). Neuen Handoff exportieren.`)
-                        }}
+                        disabled={handshake.sending}
+                        onClick={() => void handshake.onConnectAcceptForAddress?.(addr)}
+                        className="shrink-0 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
                       >
-                        Rotieren…
+                        Annehmen
                       </button>
                     ) : null}
-                  </div>
-                </>
-              )
-            })()}
-          </div>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
         </div>
-        <div className="flex flex-wrap gap-2 pt-1">
+      ) : null}
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={saveGroup}
+          disabled={groupCreateBlocked}
+          title={groupCreateBlocked ? groupCreateBlockedTitle : undefined}
+          className={cn(
+            'rounded-lg border border-border bg-background px-4 py-2 text-sm font-semibold hover:bg-muted',
+            groupCreateBlocked && 'cursor-not-allowed opacity-40'
+          )}
+        >
+          Speichern
+        </button>
+        <button
+          type="button"
+          onClick={newGroup}
+          disabled={!groupCreateAllowed}
+          title={!groupCreateAllowed ? groupCreateBlockedTitle : undefined}
+          className={cn(
+            'rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted',
+            !groupCreateAllowed && 'cursor-not-allowed opacity-40'
+          )}
+        >
+          Neue Gruppe
+        </button>
+        {activeId ? (
           <button
             type="button"
-            onClick={saveGroup}
-            disabled={groupCreateBlocked}
-            title={groupCreateBlocked ? groupCreateBlockedTitle : undefined}
-            className={cn(
-              'rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground',
-              groupCreateBlocked && 'cursor-not-allowed opacity-40'
-            )}
+            onClick={removeGroup}
+            className="rounded-lg border border-destructive/50 px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10"
           >
-            Speichern
+            Löschen
           </button>
-          <button
-            type="button"
-            onClick={newGroup}
-            disabled={!groupCreateAllowed}
-            title={!groupCreateAllowed ? groupCreateBlockedTitle : undefined}
-            className={cn(
-              'rounded-lg border border-border px-4 py-2 text-sm font-medium',
-              !groupCreateAllowed && 'cursor-not-allowed opacity-40'
-            )}
-          >
-            Neue Gruppe
-          </button>
-          <button
-            type="button"
-            onClick={() => setPhonebookPickerOpen(true)}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
-          >
-            Aus Telefonbuch…
-          </button>
-          {onOpenPhonebook ? (
-            <button
-              type="button"
-              onClick={onOpenPhonebook}
-              className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
-            >
-              Telefonbuch
-            </button>
-          ) : null}
-          {activeId ? (
-            <button
-              type="button"
-              onClick={removeGroup}
-              className="rounded-lg border border-destructive/50 px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10"
-            >
-              Löschen
-            </button>
-          ) : null}
-        </div>
-        {!active ? (
-          <p className="text-xs text-amber-700 dark:text-amber-300">
-            Gruppe speichern, dann im Chat Nachricht schreiben und senden.
-          </p>
         ) : null}
-        {msg ? <p className="text-xs text-foreground">{msg}</p> : null}
       </div>
+
+      {!active ? (
+        <p className="text-xs text-amber-700 dark:text-amber-300">Speichern, dann im Chat schreiben und senden.</p>
+      ) : null}
+      {msg ? (
+        <p className="rounded-md border border-border bg-muted/40 px-2.5 py-2 text-xs text-foreground" role="status">
+          {msg}
+        </p>
+      ) : null}
+
       <ContactPhonebookPickerDialog
         open={phonebookPickerOpen}
         onOpenChange={setPhonebookPickerOpen}
         directory={contactDirectory}
         title="Mitglieder aus Telefonbuch"
-        description="Kontakte auswählen — sie werden der Mitgliederliste hinzugefügt (Duplikate werden ignoriert)."
+        description="Kontakte auswählen — sie werden der Mitgliederliste hinzugefügt."
         confirmLabel="Zur Gruppe hinzufügen"
         onConfirm={applyPhonebookSelection}
       />

@@ -34,7 +34,6 @@ import {
 import { ChatViewSetupPanel } from '@/frontend/components/chat-view-setup-panel'
 import { ChatViewGroupPanel } from '@/frontend/components/chat-view-group-panel'
 import { ChatViewGroupSettingsSheet } from '@/frontend/components/chat-view-group-settings-sheet'
-import { ChatViewEncryptedPartnerPanel } from '@/frontend/components/chat-view-encrypted-partner-panel'
 import { useChatViewEncryptedPartnerPanelProps } from '@/frontend/hooks/use-chat-view-encrypted-partner-panel-props'
 import { useChatViewTransportCardProps } from '@/frontend/hooks/use-chat-view-transport-card-props'
 import { ChatViewPhonebookSheet } from '@/frontend/components/chat-view-phonebook-sheet'
@@ -887,6 +886,16 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const openGroupSettings = useCallback(() => setGroupSettingsOpen(true), [])
 
+  const groupHandshakeActions = useMemo(() => {
+    if (!encryptedPartnerPanelProps?.onHandshakeForAddress) return null
+    return {
+      sending: encryptedPartnerPanelProps.sending,
+      connectedAddresses: encryptedPartnerPanelProps.connectedAddresses ?? [],
+      onHandshakeForAddress: encryptedPartnerPanelProps.onHandshakeForAddress,
+      onConnectAcceptForAddress: encryptedPartnerPanelProps.onConnectAcceptForAddress,
+    }
+  }, [encryptedPartnerPanelProps])
+
   const groupSettingsSheetProps = useMemo(
     () => ({
       contactDirectory: groupPanelDirectory,
@@ -894,19 +903,18 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       teamMailboxCreateAllowed: canCreateTeamMailbox(connectionStatusRead.apiStatus),
       groupCreateAllowed: canCreateGroupCapability(connectionStatusRead.apiStatus),
       onGroupsChanged: refreshMessengerGroups,
-      onOpenPhonebook: () => setPhonebookOpen(true),
-      onOpenSettings,
       encrypted,
       onEncryptedChange: setEncrypted,
+      handshake: groupHandshakeActions,
     }),
     [
       groupPanelDirectory,
       forcedTransport,
       connectionStatusRead.apiStatus,
       refreshMessengerGroups,
-      onOpenSettings,
       encrypted,
       setEncrypted,
+      groupHandshakeActions,
     ]
   )
 
@@ -1129,18 +1137,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           teamMailboxCreateAllowed={canCreateTeamMailbox(connectionStatusRead.apiStatus)}
           groupCreateAllowed={canCreateGroupCapability(connectionStatusRead.apiStatus)}
           onGroupsChanged={refreshMessengerGroups}
-          onOpenPhonebook={() => setPhonebookOpen(true)}
-          onOpenSettings={onOpenSettings}
           encrypted={encrypted}
           onEncryptedChange={setEncrypted}
+          handshake={groupHandshakeActions}
         />
-      ) : null}
-
-      {!onNotesTab && isGroup && !showConversationSidebar && encryptedPartnerPanelProps ? (
-        <div className="space-y-3 rounded-xl border border-border bg-card p-4">
-          <p className="text-sm font-medium text-foreground">Handshake — Gruppenmitglieder</p>
-          <ChatViewEncryptedPartnerPanel {...encryptedPartnerPanelProps} />
-        </div>
       ) : null}
 
       {!onNotesTab && pinnwandCaps.showInboxStrip ? (
@@ -1481,7 +1481,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         open={groupSettingsOpen}
         onOpenChange={setGroupSettingsOpen}
         {...groupSettingsSheetProps}
-        encryptedPartnerPanel={encryptedPartnerPanelProps}
       />
       ) : null}
 
