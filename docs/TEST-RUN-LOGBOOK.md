@@ -12,6 +12,15 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-11-06** | PC (Windows), **Token-Spend wählbar + Doku** | `NftTokenSpendPanel` Radio Bearer\|Guarded; P4b Claims „einzelner Broker / remote“. Vitest 18/18 (spend/gate/purse/bearer/lease/seal). | **PASS (Vitest)** — manuelle Chain-Checkliste unten. |
+
+### Manuelle Checkliste (nächster Feldtest — letzte Tranchen)
+
+1. **Guarded Spend:** NFT-Galerie → Token-Spend → Radio **Guarded** → Purse anlegen/spend mit NFT bei Signer.  
+2. **Bearer Spend:** Radio **Nur NFT** → Treasury anlegen; mit NFT-Besitz withdraw (ggf. 2. Wallet).  
+3. **P4a2:** Starkes Gate + Dual + Pubkey-Wrap; Handshake für requiredWallet; Enc/Dec.  
+4. **P4b:** Seal-Checkbox; Enc; Dec ohne NFT → Broker deny; mit Owner → Klartext. Claims: einzelner Broker.  
+5. **Zeitkapsel:** create_lease / return_early (Package `0x1fb0e9b7…`).
 | **2026-11-06** | PC (Windows), **B2-P4b Seal PoC** | `nft_gate_seal` Upgrade `0x1fb0e9b7…`; Broker `/api/nft-gate-seal/*`; Gate `nft_seal_p4b`; Vitest Capsule+PTB. | **PASS (Move+Vitest+on-chain)** |
 | **2026-11-06** | PC (Windows), **B2-S3 + P4a2** | `nft_bearer_treasury` Upgrade `0x10b16597…`; Panel; P4a2 ECDH-Wrap Vitest; Composer-Checkbox. | **PASS (Move+Vitest+on-chain)** |
 | **2026-11-06** | PC (Windows), **B2-S2 Guarded Purse UI** | Panel unter NFT-Galerie; Actions+Local-Store; Vitest store+txb; Pflichttext lose Coins; Cache-Wipe Keys. | **PASS (Code)** — Chain-Feldspend manuell offen. |

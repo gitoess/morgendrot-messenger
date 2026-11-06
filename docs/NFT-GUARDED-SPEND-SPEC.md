@@ -1,11 +1,11 @@
 # NFT-gesichertes Ausgeben (Guarded Spend) — Spec / Backlog
 
 **Stand:** 2026-11-06  
-**Status:** **B2-S0–S3 Ist** — Modus A Guarded Purse + Modus B Bearer Treasury (`nft_bearer_treasury`) on-chain (`0x10b16597…`; Stamm `0x06e099…`). Panels unter NFT-Galerie.  
-**Scope:** **nur Token/Coins (IOTA)** — **kein** Klartext, kein Chat-Leserecht (das bleibt P4a/P5/P4a2).  
-**Verwandt:** Leserecht P4a-dual/P4a2 (`docs/NFT-SCHLUESSELKARTE-MODI.md` §6a) · Zeitkapsel P5 · **nicht** MeshSleepyChannel.
+**Status:** **B2-S0–S3 Ist** — beide Spend-Modi on-chain + **UI-Wahl** (Radio unter NFT-Galerie). Modules `0x1fb0e9b7…`; Stamm `0x06e099…`.  
+**Scope:** **nur Token/Coins (IOTA)** — **kein** Klartext, kein Chat-Leserecht (P4a…P4b).  
+**Verwandt:** Leserecht P4* (`docs/NFT-SCHLUESSELKARTE-MODI.md`, `docs/NFT-GATE-SEAL-P4B-SPEC.md`) · Zeitkapsel P5 · **nicht** MeshSleepyChannel.  
+**Trennung:** Token-Spend-Modus ist **orthogonal** zu P4b Seal — Seal schützt Lesen, nicht Coins.
 
-> **UI-Name:** „2FA-Schlüsselkarte für Token“ / „NFT-gesicherte Purse“  
 > Coins und NFT bleiben **getrennte** Objekte. Das NFT enthält **keine** Coins und **keinen** Klartext.
 
 ---
@@ -21,24 +21,26 @@
 | `sender == X` und „NFT wandert unabhängig“ | Widerspruch, sobald NFT ≠ bei X liegt. |
 | NFT als Capability „im Wallet“ | Capability muss **in der Move-Funktion vorgelegt** werden (Objekt-Arg); App-Check allein = kein Chain-Schutz. |
 
-**Produktentscheidung (2026-11-06):**
+**Produktentscheidung (2026-11-06, nachgeschärft):** Spend-Modus ist **optional wählbar** (nicht fest verdrahtet).
 
-| | Entscheidung |
-|--|----------------|
-| **v1** | **Nur Modus A — Guarded Purse** = 2FA-Schlüsselkarte **für Token** |
-| **v1b** | Modus B Bearer Treasury — **Ist** (S3) |
-| **Nicht** | Klartext/Chat-Gate; Mesh-Payments; „NFT allein bewegt fremde Coins“ |
+| UI-Label (Produkt) | Move | Wer darf ausgeben? |
+|--------------------|------|---------------------|
+| **Nur NFT (Bearer)** | `nft_bearer_treasury` | Wer das gebundene NFT besitzt (Senderecht wandert mit NFT) |
+| **NFT + Wallet (Guarded)** | `nft_guarded_purse` | Signer = Wallet X **und** NFT bei X (2FA) |
 
-| Modus | Wer signiert? | Wo liegen die Coins? | NFT weg von X → |
-|-------|---------------|----------------------|-----------------|
-| **A — Guarded Purse (Ist-Ziel)** | immer Wallet X | nur in `GuardedPurse` owned by X | `spend` aus Purse **blockiert**, bis NFT zurück bei X |
-| **B — Bearer Treasury (Ist)** | NFT-Owner | Shared-Vault | Senderecht wandert mit NFT |
+| Chain-Name | Wer signiert? | Wo liegen die Coins? | NFT weg von X → |
+|------------|---------------|----------------------|-----------------|
+| **Guarded Purse** | immer Wallet X | `GuardedPurse` owned by X | `spend` blockiert, bis NFT zurück |
+| **Bearer Treasury** | NFT-Owner | Shared Treasury | Senderecht wandert mit NFT |
 
-**Pflicht-Kommunikation:** Lose / freie Coins **außerhalb** der Purse sind **ungeschützt** — normales Wallet-Senden bleibt möglich. Geschützt ist **nur** das Guthaben in der Purse.
+**UI:** `NftTokenSpendPanel` — Radio Bearer | Guarded, dann das passende Panel. Default = Guarded.  
+**Nicht:** Klartext/Chat-Gate; Mesh-Payments; „NFT allein bewegt fremde lose Coins“.
+
+**Pflicht-Kommunikation:** Lose / freie Coins **außerhalb** Purse/Treasury sind **ungeschützt**.
 
 ---
 
-## 2. Modus A — Guarded Purse (empfohlen zuerst)
+## 2. Guarded Purse — NFT + Wallet (Produkt: „Guarded“)
 
 ```text
 GuardedPurse has key, store {
@@ -62,7 +64,7 @@ GuardedPurse has key, store {
 
 ---
 
-## 3. Modus B — Bearer Treasury (Senderecht mit NFT)
+## 3. Bearer Treasury — nur NFT (Produkt: „Bearer“)
 
 ```text
 NftGuardedTreasury has key {  // shared
@@ -136,7 +138,6 @@ Passt zu „NFT = Capability, wandert unabhängig“. **Nicht** dasselbe wie A.
 ## 7. Kanonische Kurzfassung (Produkt)
 
 > **Nur Token, kein Klartext.** Coins und NFT getrennt.  
-> **Guarded Purse:** X deponiert IOTA in der Purse; on-chain `spend` nur wenn `sender == X` **und** X besitzt das gebundene NFT (= 2FA-Schlüsselkarte). NFT transferiert weg → kein Purse-Spend.  
-> **Lose Coins außerhalb der Purse = ungeschützt** (UI/Claims Pflichttext).  
-> **Bearer Treasury:** Shared Vault; wer NFT hat, darf abheben (Admin freeze/reclaim).  
-> Nicht mit Leserecht/Zeitkapsel/MeshSleepy vermischen.
+> **Wählbar:** Bearer (nur NFT) **oder** Guarded (NFT∧Wallet) — UI-Radio, beide Move-Module Ist.  
+> **Lose Coins außerhalb = ungeschützt.** Orthogonal zu P4b Seal (Leserecht).  
+> Nicht mit Zeitkapsel/MeshSleepy vermischen.

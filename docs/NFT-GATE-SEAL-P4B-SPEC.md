@@ -2,7 +2,15 @@
 
 **Stand:** 2026-11-06  
 **Status:** **Ist (PoC)** — Move `nft_gate_seal` + Key-Broker API + Capsule-Gate `nft_seal_p4b`.  
-**Scope:** Leserecht (Klartext-Gate). **Nicht** Token-Spend (→ Guarded Purse / Bearer).
+**Scope:** **nur Leserecht** (Klartext-Gate). **Nicht** Token-Spend.
+
+---
+
+## Kanonische Kurzfassung (Produkt)
+
+> **P4b Seal ist ein einzelner API-Broker, kein Mysten-Seal.**  
+> „Unter Zwang unmöglich“ gilt **nur**, solange der Broker **remote und unabhängig** vom Gerät ist (Master nicht auf dem Handy).  
+> **Token-Spend** (nur NFT vs. NFT+Wallet) bleibt davon **getrennt** und ist weiterhin **optional wählbar** (`docs/NFT-GUARDED-SPEND-SPEC.md`).
 
 ---
 
@@ -42,9 +50,12 @@ Policy:   messaging::nft_gate_seal::seal_approve_nft_owner / _and_wallet
 |-----------------|--|
 | Ja | Ohne NFT-Besitz (AddressOwner) gibt der Broker keinen Key |
 | Ja | Wire allein reicht nicht (anders als P4a-HKDF) |
+| Ja | „Unter Zwang am Gerät“ **wenn** Broker remote/unabhängig und kein Master auf dem Gerät |
 | Nein | „Dezentral wie Mysten Seal“ / „auch Broker-Admin zwingt nichts“ |
 | Nein | „Unter Zwang unmöglich“ wenn Broker auf demselben Gerät / Master im Vault liegt |
 | Weiter | Einmal Klartext = kopierbar (Screenshot) |
+
+**Abgrenzung Token-Spend:** Bearer vs Guarded ist **optional** und **kein** Seal-Thema.
 
 **Zeitkapsel-Borrower:** P4b-v1 nur **AddressOwner** — Lease-Borrower später.
 
@@ -66,4 +77,4 @@ Policy:   messaging::nft_gate_seal::seal_approve_nft_owner / _and_wallet
 | Key | |
 |-----|--|
 | `NFT_GATE_SEAL_MASTER` | Base64 32 Byte (oder Hex). Fehlt → Datei `.morgendrot-nft-gate-seal-master` auto |
-| Packages | Modules-Package mit `nft_gate_seal` (Upgrade) |
+| Packages | Modules-Package mit `nft_gate_seal` (Upgrade `0x1fb0e9b7…`) |

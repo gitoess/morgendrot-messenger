@@ -9,10 +9,10 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 ### Privacy / NFT (2026-11-06)
 
 - **H.23 C1** Double Ratchet PoC C1.1–C1.5 (Envelope, Symmetric/DH, Vault-Sidecar, Opt-in Experiment) — Spec `docs/MESSENGER-DOUBLE-RATCHET-C1-SPEC.md`; kein Composer-Default.
-- **B2-P4a / dual / P4a2 / P4b:** `MORG_NFTGATE_V1`; Dual; ECDH-Pubkey-Wrap; **P4b Seal PoC** (`nft_gate_seal` + Key-Broker `/api/nft-gate-seal/*`, Gate `nft_seal_p4b`, Modules `0x1fb0e9b7…`) — Spec `docs/NFT-GATE-SEAL-P4B-SPEC.md`; kein Mysten-DSM; Klartext kopierbar.
-- **B2-P5a/b Zeitkapsel:** Move `nft_time_lease` + Upgrade Testnet (aktuell Modules `0x1fb0e9b7…`); Panel; Ciphertext ≠ NFT (§0a Spec).
-- **B2-S0–S3 Guarded Spend:** Guarded Purse + Bearer Treasury; Panels unter NFT; Pflichttext lose Coins — `docs/NFT-GUARDED-SPEND-SPEC.md`.
-- **Backlog bewusst:** MeshSleepyChannel `docs/MESH-SLEEPY-CHANNEL-SPEC.md`; 2-Geräte-Feldtest verschoben.
+- **B2-P4a / dual / P4a2 / P4b:** `MORG_NFTGATE_V1`; Dual; ECDH-Pubkey-Wrap; **P4b Seal PoC** — **einzelner API-Broker, kein Mysten-Seal**; „unter Zwang“ nur remote/unabhängig; Spec `docs/NFT-GATE-SEAL-P4B-SPEC.md`.
+- **B2-P5a/b Zeitkapsel:** Move `nft_time_lease` + Upgrade; Panel; Ciphertext ≠ NFT.
+- **B2-S0–S3 Token-Spend:** Guarded Purse + Bearer Treasury; **UI-Wahl** Bearer (nur NFT) vs Guarded (NFT+Wallet) — `NftTokenSpendPanel`; lose Coins ungeschützt; **getrennt von P4b** — `docs/NFT-GUARDED-SPEND-SPEC.md`.
+- **Backlog bewusst:** MeshSleepyChannel; 2-Geräte-Feldtest verschoben.
 
 ### Sicherheit / Sendepfad
 

@@ -335,8 +335,9 @@ export function PassphraseProtectComposerToggle(p: {
                         <span>
                           <span className="font-medium text-foreground">Seal / Key-Broker (P4b)</span>
                           {' — '}
-                          DEK nur mit Broker-Key nach NFT-AddressOwner-Check. Wire allein reicht nicht.
-                          PoC: einzelner API-Broker, nicht Mysten-Seal.
+                          DEK nur mit Broker-Key nach NFT-AddressOwner. Wire allein reicht nicht.
+                          Einzelner API-Broker, kein Mysten-Seal. „Unter Zwang“ nur wenn Broker remote/unabhängig.
+                          Token-Spend (Bearer/Guarded) ist getrennt und optional.
                         </span>
                       </label>
                       <label className="flex flex-wrap items-start gap-2">

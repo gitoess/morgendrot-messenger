@@ -33,10 +33,10 @@
 | Thema | Roadmap | Hinweis |
 |-------|---------|---------|
 | Double Ratchet / FS pro Nachricht | § H.23 Phase 3 / E2EE **C1** | Spec+PoC C1.1–C1.5 (Opt-in Hook); Composer v2 Default |
-| Starkes NFT-Besitz-Gate | P4a/dual/P4a2/P4b-PoC Ist (Broker+Policy); kein Mysten-DSM | „Unter Zwang“ nur mit remote Broker ehrlich; Klartext kopierbar |
+| Starkes NFT-Besitz-Gate | P4a/dual/P4a2/P4b-PoC Ist; **einzelner API-Broker ≠ Mysten-Seal** | „Unter Zwang“ nur bei remote/unabhängigem Broker; Klartext kopierbar |
 | NFT-Zeitkapsel / Timelock | B2-P5a/b Ist (Move+UI); NFT=Gate, Ciphertext getrennt | Kein Auto-Rücklauf ohne reclaim-TX; NFT allein ≠ Nachrichten |
 | MeshSleepyChannel / Offline-Zahlung Mesh | Phase-C Backlog | Nicht Ist; kein Watchtower-Claim |
-| NFT-gesichertes Ausgeben (Guarded Purse / Bearer) | B2-S0–S3 Ist (Purse + Bearer Treasury `0x10b16597…`); nur Token | A: X∧NFT; B: NFT-Bearer; **lose Coins außerhalb ungeschützt**; kein Klartext-Claim |
+| NFT Token-Spend (wählbar) | S0–S3 Ist; UI Bearer **oder** Guarded; nur Token | Bearer=nur NFT; Guarded=NFT∧Wallet; **lose Coins ungeschützt**; getrennt von P4b Seal |
 | Öffentlicher Vault + NFT-Timelock | B2-P5 Spec | `NFT-SCHLUESSELKARTE-PUBLIC-VAULT-TIMELOCK.md` — **kein** stiller Auto-Transfer |
 | Decoys im Handshake | Claims / Architektur | Nicht spezifiziert als nächste Scheibe |
 | Rotierende Outboxes / voller Dead-Drop | Claims / M4-Erweiterung | Feste Mailbox-IDs Ist |

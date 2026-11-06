@@ -61,7 +61,9 @@
 
 **Nachtrag 2026-11-06 (B2-S3 Bearer + P4a2 Ist):** `nft_bearer_treasury` on-chain (`0x10b16597…`) + Panel; P4a2 ECDH-Pubkey-Wrap Gate `nft_and_wallet_pubkey_p4a2` (Composer). Als Nächstes optional P4b Seal / 2-Geräte.
 
-**Nachtrag 2026-11-06 (B2-P4b Seal PoC Ist):** `nft_gate_seal` + Key-Broker `/api/nft-gate-seal/*` + Gate `nft_seal_p4b` (Modules `0x1fb0e9b7…`). Spec `docs/NFT-GATE-SEAL-P4B-SPEC.md`. Kein Mysten-Seal; Claims ehrlich. Optional: 2-Geräte.
+**Nachtrag 2026-11-06 (B2-P4b Seal PoC Ist):** `nft_gate_seal` + Key-Broker `/api/nft-gate-seal/*` + Gate `nft_seal_p4b` (Modules `0x1fb0e9b7…`). Spec `docs/NFT-GATE-SEAL-P4B-SPEC.md`. **Einzelner API-Broker, kein Mysten-Seal**; „unter Zwang“ nur bei remote/unabhängigem Broker. Token-Spend getrennt.
+
+**Nachtrag 2026-11-06 (Token-Spend wählbar):** UI-Radio **Nur NFT (Bearer)** vs **NFT+Wallet (Guarded)** unter NFT-Galerie (`NftTokenSpendPanel`). Beide Move-Pfade Ist; nicht fest verdrahtet. Orthogonal zu P4b.
 
 **Nachtrag 2026-05-20 (Strategie — korrigiert):** **IOTA bleibt gekoppelt**; **Funk-Default** im Helfer-UI (`TRANSPORT_PROFILE=mesh-first`). **Delayed LoRa → IOTA**, **Offline-TX/Outbox** und **Pfad 4** bleiben — siehe **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**. Keine volle IOTA-TX im LoRa-Frame (**§ H.3m**). **Keine neuen Move-Publishes** in Tranche A; Fokus Runtime + Simple Mode.
 

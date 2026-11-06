@@ -219,8 +219,8 @@ Intern heißt der Chain-Call weiter `/purge-msg` — in der UI nur noch **Burn**
 | Starkes NFT-Besitz-Gate | B2-P4a | Ist (App-Gate Capsule); optional **Wallet + NFT (Dual)** |
 | Dual Wallet∧NFT | P4a-dual | Composer unter Starkes Gate; Klartext danach kopierbar |
 | Pubkey-Wrap | P4a2 | Checkbox unter Dual; ECDH-Peer-Pub der erlaubten Wallet nötig |
-| Seal / Key-Broker | P4b | Checkbox unter Starkes Gate; Broker nach NFT-Owner |
-| Bearer Treasury | B2-S3 | Panel unter NFT; wer NFT hat, darf abheben |
+| Seal / Key-Broker | P4b | Checkbox unter Starkes Gate; **ein API-Broker ≠ Mysten-Seal**; remote nötig für „unter Zwang“ |
+| Token-Spend | S0–S3 | Radio: **Nur NFT (Bearer)** oder **NFT+Wallet (Guarded)** — wählbar |
 | NFT-gesichertes Senden (IOTA) | B2-S0 Spec | Backlog — **nur Token**; Purse-2FA (X∧NFT); lose Coins außerhalb = ungeschützt (`docs/NFT-GUARDED-SPEND-SPEC.md`) |
 | Öffentlicher Ciphertext-Vault + NFT-Timelock („Zeitkapsel“) | **B2-P5a/b Ist** | NFT = Gate, Texte = Ciphertext getrennt. Borrower: optional Object-ID / Besitzer=Archiv unter On-Chain/NFT laden, dann lesen. Spec **`docs/NFT-SCHLUESSELKARTE-PUBLIC-VAULT-TIMELOCK.md`** §0a |
 | Rotierende Outboxes / voller Dead-Drop | Claims-Check + Architektur | Nicht gebaut |

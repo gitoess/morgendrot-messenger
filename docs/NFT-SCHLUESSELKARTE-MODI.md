@@ -86,13 +86,18 @@ Marketing „auch unter Zwang unmöglich“ nur mit **remote** Broker (nicht Mas
 
 UI: Passphrase-Schutz → Karte binden → Starkes Gate → optional **Wallet + NFT (Dual)** + Adressfeld.
 
-### 6b. Token-2FA: Guarded Purse + Bearer Treasury (S0–S3 Ist)
+### 6b. Token-Spend: optional Bearer **oder** Guarded (S0–S3 Ist)
 
-**Scope:** nur **IOTA/Token**, nicht Klartext.  
-**Modus A:** Purse bei X; `spend` nur X∧NFT — Panel Ist.  
-**Modus B:** Shared Treasury; `withdraw` wer NFT hat — Panel Ist (`0x10b16597…`).  
-**Pflichttext:** Lose Coins außerhalb Purse/Treasury = **ungeschützt**.  
-SSOT **`docs/NFT-GUARDED-SPEND-SPEC.md`**. Nicht Leserecht/Zeitkapsel/MeshSleepy.
+**Scope:** nur **IOTA/Token**, nicht Klartext — **orthogonal zu P4b Seal**.  
+**Wählbar (UI-Radio):**
+
+| Produkt | Move | Regel |
+|---------|------|-------|
+| **Nur NFT (Bearer)** | `nft_bearer_treasury` | Wer NFT hat, darf abheben |
+| **NFT + Wallet (Guarded)** | `nft_guarded_purse` | Signer=X ∧ NFT bei X |
+
+Default UI = Guarded. Pflichttext: Lose Coins außerhalb = **ungeschützt**.  
+SSOT **`docs/NFT-GUARDED-SPEND-SPEC.md`**.
 
 ## 7. Optional: Öffentlicher Vault + NFT-Timelock (B2-P5)
 
