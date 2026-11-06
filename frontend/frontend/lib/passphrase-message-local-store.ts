@@ -46,6 +46,8 @@ export const PASSPHRASE_MESSAGE_LS_KEY = LS_KEY_LEGACY
 export const PASSPHRASE_MESSAGE_DEFAULT_LS_KEY = LS_DEFAULT_LEGACY
 export const PASSPHRASE_PROTECT_LS_KEY = 'morgendrot.composer.passphraseProtect'
 export const PASSPHRASE_REUSE_LS_KEY = 'morgendrot.composer.passphraseReuse'
+/** Absender: Passphrase nach Send auf diesem Gerät im Vault merken (Default an). */
+export const PASSPHRASE_REMEMBER_ON_DEVICE_LS_KEY = 'morgendrot.composer.passphraseRememberOnDevice'
 /** Optional: Object-ID einer NFT-Schlüsselkarte für PWMSG-Bindung (H.23 B2). */
 export const PASSPHRASE_NFT_KEYCARD_BIND_LS_KEY = 'morgendrot.composer.nftKeycardBind.v1'
 /** Optional: Slot-ID auf der gebundenen Schlüsselkarte (P2). */
@@ -343,10 +345,41 @@ export function clearAllPassphraseMessagePassphrases(): void {
 export function rememberPassphraseMessagePassphrase(wire: string, passphrase: string): void {
   const pass = passphrase.trim()
   if (pass.length < 8 || !wire.trim()) return
-  memoryByWire = { ...memoryByWire, [fingerprintPassphraseMessageWire(wire)]: pass }
+  const fp = fingerprintPassphraseMessageWire(wire)
+  if (memoryByWire[fp] === pass) {
+    // Nach Enc-Flush fehlt oft das Tab-Backup — ohne Event nachziehen (kein UI-Flackern).
+    try {
+      if (typeof window !== 'undefined' && !window.sessionStorage.getItem(SS_TAB)) writeTabBackup()
+    } catch {
+      /* ignore */
+    }
+    return
+  }
+  memoryByWire = { ...memoryByWire, [fp]: pass }
   memoryByWire = trimStore(memoryByWire)
   schedulePersist()
   emitChanged()
+}
+
+/** Default true — Absender-Komfort; Opt-out im Composer. */
+export function readPassphraseRememberOnDeviceEnabled(): boolean {
+  if (typeof window === 'undefined') return true
+  try {
+    const v = window.localStorage.getItem(PASSPHRASE_REMEMBER_ON_DEVICE_LS_KEY)
+    if (v === null || v === '') return true
+    return v !== '0'
+  } catch {
+    return true
+  }
+}
+
+export function writePassphraseRememberOnDeviceEnabled(on: boolean): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(PASSPHRASE_REMEMBER_ON_DEVICE_LS_KEY, on ? '1' : '0')
+  } catch {
+    /* ignore */
+  }
 }
 
 export function lookupPassphraseMessagePassphrase(wire: string): string | null {

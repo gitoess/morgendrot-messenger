@@ -8,11 +8,13 @@ import {
   readPassphraseNftKeycardBindObjectId,
   readPassphraseNftKeycardBindSlotId,
   readPassphraseProtectEnabled,
+  readPassphraseRememberOnDeviceEnabled,
   readPassphraseReuseEnabled,
   setDefaultPassphraseMessagePassphrase,
   writePassphraseNftKeycardBindObjectId,
   writePassphraseNftKeycardBindSlotId,
   writePassphraseProtectEnabled,
+  writePassphraseRememberOnDeviceEnabled,
   writePassphraseReuseEnabled,
 } from '@/frontend/lib/passphrase-message-local-store'
 import { listNftKeycards } from '@/frontend/lib/nft-keycard-local-store'
@@ -27,11 +29,13 @@ export function PassphraseProtectComposerToggle(p: {
   const [sharedPass, setSharedPass] = useState('')
   const [bindOid, setBindOid] = useState('')
   const [bindSlot, setBindSlot] = useState('default')
+  const [rememberOnDevice, setRememberOnDevice] = useState(true)
   const [cards, setCards] = useState<{ objectId: string; label?: string; slotIds: string[] }[]>([])
 
   useEffect(() => {
     setOn(readPassphraseProtectEnabled())
     setReuse(readPassphraseReuseEnabled())
+    setRememberOnDevice(readPassphraseRememberOnDeviceEnabled())
     setSharedPass(getDefaultPassphraseMessagePassphrase() ?? '')
     setBindOid(readPassphraseNftKeycardBindObjectId() ?? '')
     setBindSlot(readPassphraseNftKeycardBindSlotId())
@@ -82,14 +86,32 @@ export function PassphraseProtectComposerToggle(p: {
           <span className="font-medium text-foreground">Passphrase-Schutz</span>
           {' — '}
           einzelnes Nachrichten-Passwort (nicht Gruppen-Geheimnis). Ciphertext on-chain; Passphrase zum
-          Teilen separat. <span className="text-foreground/90">Für dich auf diesem Gerät</span> landet
-          sie automatisch im Vault (entsperrt → Klartext wieder da; gesperrt → nur Ciphertext). Bei
-          Wiederverwenden unten kopierbar.
+          Teilen separat. Kein Extra-Dialog nach dem Senden — Speichern steuerst du unten mit der
+          Checkbox.
         </span>
       </label>
 
       {on ? (
         <div className="ml-5 space-y-2 rounded-md border border-border/70 bg-muted/20 px-2.5 py-2">
+          <label className="flex flex-wrap items-start gap-2">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={rememberOnDevice}
+              onChange={(e) => {
+                const next = e.target.checked
+                setRememberOnDevice(next)
+                writePassphraseRememberOnDeviceEnabled(next)
+              }}
+            />
+            <span>
+              <span className="font-medium text-foreground">Auf diesem Gerät merken</span>
+              {' — '}
+              Standard an: Passphrase landet im Vault (entsperrt → Klartext; Tresor gesperrt → nur
+              Ciphertext). Aus = nur Statuszeile/Kopieren, kein Vault-Eintrag.
+            </span>
+          </label>
+
           <label className="flex flex-wrap items-start gap-2">
             <input
               type="checkbox"

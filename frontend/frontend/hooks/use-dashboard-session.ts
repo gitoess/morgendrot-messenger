@@ -882,7 +882,9 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     navigateTo(null)
   }, [navigateTo])
 
-  const lockSession = useCallback(async () => {
+  /** `stayInView: true` (Default aus dem Chat) — Messenger bleibt offen, nur Secrets/Signer weg. */
+  const lockSession = useCallback(async (opts?: { stayInView?: boolean }) => {
+    const stayInView = opts?.stayInView === true
     vaultUnlockRequestedRef.current = false
     sessionUnlockedStableRef.current = false
     lockPollStreakRef.current = 0
@@ -891,7 +893,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       clearDirectChatEcdhKeyMaterial()
       wipeLocalPassphraseStoresOnLock()
       setLocked(resolveStandaloneDeviceLocked())
-      navigateTo(null)
+      if (!stayInView) navigateTo(null)
       window.dispatchEvent(new Event(DIRECT_IOTA_UI_CHANGED))
       return { ok: true as const }
     }
@@ -902,7 +904,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       wipeLocalPassphraseStoresOnLock()
       setMainnetSignerHint(null)
       await checkStatus()
-      navigateTo(null)
+      if (!stayInView) navigateTo(null)
       window.dispatchEvent(new Event(DIRECT_IOTA_UI_CHANGED))
     }
     return r
@@ -998,19 +1000,19 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       onLockSession: async () => {
         if (
           !window.confirm(
-            'API-Sitzung sperren? Schlüssel werden aus dem Arbeitsspeicher der Basis entfernt — danach den Tresor erneut mit Passwort entsperren.'
+            'Tresor sperren? Signer und Passphrasen verlassen den Arbeitsspeicher — du bleibst im Chat (nur Ciphertext). Entsperren über dasselbe Tresor-Badge.'
           )
         ) {
           return
         }
-        await lockSession()
+        await lockSession({ stayInView: true })
       },
       onNavigateHomeWhenLocked: () => {
         if (isStandaloneMessengerWithoutBasis()) {
           requestStandaloneWalletUnlock()
           return
         }
-        requestVaultUnlock()
+        requestVaultUnlock({ navigateHome: false })
       },
     }),
     [lockSession, requestStandaloneWalletUnlock, requestVaultUnlock]

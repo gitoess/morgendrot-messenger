@@ -54,6 +54,7 @@ export const EINSATZ_END_LOCAL_STORAGE_KEYS = [
   'morgendrot.passphraseMsg.enc.v1',
   'morgendrot.composer.passphraseProtect',
   'morgendrot.composer.passphraseReuse',
+  'morgendrot.composer.passphraseRememberOnDevice',
   'morgendrot.composer.nftKeycardBind.v1',
   'morgendrot.composer.nftKeycardBindSlot.v1',
   'morgendrot.teamKeysArchive.v1',

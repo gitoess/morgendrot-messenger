@@ -79,11 +79,15 @@ function PassphraseMessageBody(p: {
   useEffect(() => {
     const sync = () => {
       const next = resolveKnownPassphraseForWire(p.content)
-      setKnown(next)
+      setKnown((prev) => {
+        if (prev === next) return prev
+        return next
+      })
       setPass((prev) => (prev.trim().length >= 8 ? prev : next))
-      if (next) {
-        setHidden(false)
+      // Nur bei Key-Verlust Klartext verwerfen — sonst Flackern nach remember()/Vault-Event.
+      if (!next) {
         setPlain(null)
+        setHidden(false)
       }
     }
     sync()

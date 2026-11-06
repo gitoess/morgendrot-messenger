@@ -53,7 +53,7 @@ describe('TresorSessionBadge (§ H.1a)', () => {
         actions={{ onLockSession, onNavigateHomeWhenLocked: vi.fn() }}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /API-Sitzung sperren/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Tresor sperren/i }))
     expect(onLockSession).toHaveBeenCalledTimes(1)
   })
 })

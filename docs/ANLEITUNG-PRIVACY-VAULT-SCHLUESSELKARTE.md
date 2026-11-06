@@ -17,8 +17,8 @@ Voraussetzung: `npm run dev` → Next-UI **http://127.0.0.1:3341/**, Tresor ents
 | # | Was | Wo | Erwartung |
 |---|-----|-----|-----------|
 | 1 | Passphrase-Nachricht senden | Composer → **Passphrase-Schutz** | Wire `MORG_PWMSG…`; Hinweis „für dich auf diesem Gerät“ |
-| 2 | Vault sperren | Tresor / Session-Lock | Bubble zeigt nur Ciphertext |
-| 3 | Vault entsperren | Passwort | Klartext wieder da (Auto-Decrypt) |
+| 2 | Vault sperren | Chat-Badge **Tresor: bereit** → sperren | **Chat bleibt offen**; Bubble nur Ciphertext |
+| 3 | Vault entsperren | Badge **Tresor: gesperrt** → Passwort | Klartext wieder da (Auto-Decrypt); kein Zwangs-Home |
 | 4 | **Erneut sperren** | Passphrase-Bubble | Confirm → Passphrase erneut nötig |
 | 5 | ImageNFT verschlüsselt minten | Posteingang → **On-Chain / NFT** → Mint | Passphrase lokal gemerkt |
 | 6 | NFT als Schlüsselkarte | Galerie → **Als Schlüsselkarte merken** | Vault-Sidecar `nftKeycard.enc.v1` |
@@ -61,7 +61,7 @@ Beim Entsperren des Tresors (Vault-Passwort) werden lokale Geheimnisse **entschl
 | Composer **Passphrase-Schutz** | Enc pro Sendung (oder wiederverwendet) |
 | **Passphrase wiederverwenden** | Gleiche Passphrase, neuer Salt/IV |
 | **Key an NFT-Schlüsselkarte binden** | Optional: Karte + Slot; Wire-Fingerprint lokal |
-| Absender-Remember | Standard: Passphrase auf **diesem Gerät** im Vault |
+| Absender-Remember | **Kein Extra-Dialog** nach dem Senden. Composer-Checkbox **„Auf diesem Gerät merken“** (Default an); Aus = nur Statuszeile/Kopieren |
 | Bubble **Verbergen** | Weich ausblenden |
 | Bubble **Erneut sperren** | Hart: Merker weg, wieder Eingabe |
 | Posteingang **Wire einfügen** | Paste Wire + Passphrase → lokaler Klartext |

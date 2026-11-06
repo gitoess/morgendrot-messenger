@@ -93,7 +93,7 @@ export function TresorSessionBadge({
       ? 'Dialog „Tresor entsperren“ öffnen.'
       : ui === 'no-keys'
         ? 'Tresor erneut entsperren (lädt Keys in die Sitzung).'
-        : 'API-Sitzung sperren — Schlüssel aus dem Arbeitsspeicher der Basis.'
+        : 'Tresor sperren — Signer/Passphrasen aus dem RAM; Chat bleibt offen (Ciphertext).'
 
   const icon =
     ui === 'ready' ? (
@@ -123,7 +123,7 @@ export function TresorSessionBadge({
       disabled={busy}
       title={activeTitle}
       aria-label={
-        ui === 'locked' || ui === 'no-keys' ? 'Tresor entsperren' : 'API-Sitzung sperren'
+        ui === 'locked' || ui === 'no-keys' ? 'Tresor entsperren' : 'Tresor sperren'
       }
       onClick={() => {
         if (ui === 'locked' || ui === 'no-keys') {

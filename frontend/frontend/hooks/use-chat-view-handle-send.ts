@@ -20,6 +20,7 @@ import {
   readPassphraseNftKeycardBindObjectId,
   readPassphraseNftKeycardBindSlotId,
   readPassphraseProtectEnabled,
+  readPassphraseRememberOnDeviceEnabled,
   resolvePassphraseForProtectSend,
   rememberPassphraseMessagePassphrase,
 } from '@/frontend/lib/passphrase-message-local-store'
@@ -718,7 +719,10 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             continue
           }
           const { wire, passphrase } = await encryptPassphraseMessage(snap, batchPass)
-          rememberPassphraseMessagePassphrase(wire, passphrase)
+          const rememberOnDevice = readPassphraseRememberOnDeviceEnabled()
+          if (rememberOnDevice) {
+            rememberPassphraseMessagePassphrase(wire, passphrase)
+          }
           const cardOid = readPassphraseNftKeycardBindObjectId()
           if (cardOid && getNftKeycard(cardOid)) {
             bindWireToNftKeycard({
@@ -731,9 +735,14 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         }
         textSnaps = wrapped
         if (batchPass) {
+          const remembered = readPassphraseRememberOnDeviceEnabled()
           sharedPassphraseNote = reused
-            ? ` Passphrase (wiederverwendet, für dich auf diesem Gerät gemerkt): ${batchPass}`
-            : ` Passphrase zum Teilen (für dich auf diesem Gerät gemerkt): ${batchPass}`
+            ? remembered
+              ? ` Passphrase (wiederverwendet, für dich auf diesem Gerät gemerkt): ${batchPass}`
+              : ` Passphrase (wiederverwendet, nicht im Vault gemerkt): ${batchPass}`
+            : remembered
+              ? ` Passphrase zum Teilen (für dich auf diesem Gerät gemerkt): ${batchPass}`
+              : ` Passphrase zum Teilen (nicht im Vault gemerkt — nur jetzt kopieren): ${batchPass}`
         }
       } catch (e) {
         applyValidationError(
