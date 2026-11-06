@@ -6,6 +6,7 @@ import { PwaServiceWorkerRegister } from '@/components/pwa-service-worker-regist
 import { AppToaster } from '@/components/app-toaster'
 import { I18nProvider } from '@/frontend/components/i18n-provider'
 import { MessengerAppearanceBootstrap } from '@/frontend/components/messenger-appearance-bootstrap'
+import { CANONICAL_LOOPBACK_REDIRECT_INLINE_SCRIPT } from '@/frontend/lib/canonical-loopback-host'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -58,6 +59,11 @@ export default function RootLayout({
   return (
     <html lang="de" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: CANONICAL_LOOPBACK_REDIRECT_INLINE_SCRIPT,
+          }}
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var k='morgendrot.appearanceTheme';var t=localStorage.getItem(k);var ids=['standard','tactical','high-contrast','light'];if(t&&ids.indexOf(t)>=0&&t!=='standard'){document.documentElement.setAttribute('data-appearance',t);}if(t==='light'){document.documentElement.style.colorScheme='light';}}catch(e){}})();`,

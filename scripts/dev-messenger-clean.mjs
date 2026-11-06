@@ -52,7 +52,7 @@ async function main() {
 
   console.log(`Ports ${MESSENGER_DEV_PORTS.join(' + ')} frei.`)
   console.log(
-    `Starte Messenger-Dev — Next http://127.0.0.1:${UI_PORT}/  API http://127.0.0.1:${API_PORT}/api/status`
+    `Starte Messenger-Dev — UI http://localhost:${UI_PORT}/  (127.0.0.1 wird dorthin umgeleitet; ein Browser-Speicher)  API http://127.0.0.1:${API_PORT}/api/status`
   )
   console.log('(Strg+C zum Beenden)\n')
 
