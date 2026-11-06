@@ -207,7 +207,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
       revokeIfObjectUrl(previewUrl)
       revokeAll(ownerItems.map((x) => x.previewUrl).filter(Boolean) as string[])
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur unmount
+    // Unmount-only cleanup (preview URLs).
   }, [])
 
   useEffect(() => {
@@ -1100,7 +1100,6 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                   </a>
                 </p>
               ) : null}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={previewUrl}
                 alt={meta.name || 'On-Chain Evidenz-Bild'}
@@ -1233,7 +1232,6 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                         <p className="text-xs text-destructive">{it.error}</p>
                       ) : null}
                       {it.previewUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={it.previewUrl}
                           alt={it.name || it.objectId}
@@ -1270,7 +1268,6 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                     </p>
                     {it.error ? <p className="text-xs text-destructive">{it.error}</p> : null}
                     {it.dataUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={it.dataUrl}
                         alt={it.caption || 'Wire-Bild'}
