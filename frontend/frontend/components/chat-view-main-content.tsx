@@ -474,6 +474,13 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       Boolean(inboxPartnerKey?.trim()),
   })
 
+  const clearActiveDirectConversation = useCallback(() => {
+    setTelegramAlarmSelected(false)
+    selectInboxConversationAll()
+    setPartner('')
+    setRecipient('')
+  }, [selectInboxConversationAll, setPartner, setRecipient])
+
   const { sendPanelProps } = useChatViewSendPanelProps({
     messengerPorts: panelMessengerPorts,
     activeGroup,
@@ -493,6 +500,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             directory,
           }
         : undefined,
+    onClearActiveDirectConversation: isPrivate ? clearActiveDirectConversation : undefined,
   })
 
   const { encryptedPartnerPanelProps } = useChatViewEncryptedPartnerPanelProps({

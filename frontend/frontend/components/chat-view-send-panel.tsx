@@ -33,6 +33,10 @@ import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/dashboard-basis-offline-hint'
 import { getDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-mnemonic-session'
 import {
+  isPrivacySoftLocked,
+  PRIVACY_SOFT_LOCK_CHANGED_EVENT,
+} from '@/frontend/lib/privacy-soft-lock'
+import {
   isMessengerSessionKeysReady,
   shouldBlockSendForMissingSessionKeys,
 } from '@/frontend/lib/messenger-session-keys-ready'
@@ -356,9 +360,16 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     (forcedTransport === 'mesh' &&
       (!meshPlaintextToNodeEnabled || parseMeshtasticNodeIdToNumber(meshPlaintextNodeId) !== null))
 
+  const [privacySoftLocked, setPrivacySoftLockedState] = useState(() => isPrivacySoftLocked())
+  useEffect(() => {
+    const sync = () => setPrivacySoftLockedState(isPrivacySoftLocked())
+    sync()
+    window.addEventListener(PRIVACY_SOFT_LOCK_CHANGED_EVENT, sync)
+    return () => window.removeEventListener(PRIVACY_SOFT_LOCK_CHANGED_EVENT, sync)
+  }, [])
   const vaultLocked = isStandaloneMessengerWithoutBasis()
-    ? !getDirectIotaSessionSigner()
-    : apiStatus?.locked === true
+    ? !getDirectIotaSessionSigner() || privacySoftLocked
+    : apiStatus?.locked === true || privacySoftLocked
   const sessionKeysReady = isMessengerSessionKeysReady(apiStatus)
   const sessionKeysMissingBlock = shouldBlockSendForMissingSessionKeys(apiStatus, statusPollAttempted)
   const isTelegramDelivery = composerDelivery === 'telegram'
@@ -388,7 +399,11 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
 
   const sendDisableReason = useMemo(() => {
     if (sending) return 'Senden läuft bereits…'
-    if (vaultLocked) return 'Tresor gesperrt — bitte zuerst entsperren.'
+    if (vaultLocked) {
+      return privacySoftLocked && apiStatus?.locked !== true
+        ? 'Privacy gesperrt — Badge tippen, Passwort eingeben (Chat bleibt sichtbar).'
+        : 'Tresor gesperrt — bitte zuerst entsperren.'
+    }
     if (onlineChainNeedsKeys && sessionKeysMissingBlock) {
       return 'Wallet-Keys fehlen — unten „Tresor entsperren“ oder Badge „Tresor: Keys fehlen“ im Header.'
     }
@@ -418,6 +433,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
   }, [
     sending,
     vaultLocked,
+    privacySoftLocked,
     onlineChainNeedsKeys,
     sessionKeysMissingBlock,
     loraOnlineFallbackOffer,

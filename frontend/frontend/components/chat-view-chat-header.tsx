@@ -5,11 +5,15 @@
  */
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BookOpen, Lock, Settings, Unlock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { isMessengerSessionKeysReady } from '@/frontend/lib/messenger-session-keys-ready'
+import {
+  isPrivacySoftLocked,
+  PRIVACY_SOFT_LOCK_CHANGED_EVENT,
+} from '@/frontend/lib/privacy-soft-lock'
 import type { ReactNode } from 'react'
 import { type MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 import {
@@ -73,7 +77,15 @@ export function TresorSessionBadge({
   actions?: ChatViewVaultBannerActions
 }) {
   const [busy, setBusy] = useState(false)
-  const ui = tresorSessionUi(sessionLocked, hasKeys)
+  const [softLocked, setSoftLocked] = useState(() => isPrivacySoftLocked())
+  useEffect(() => {
+    const sync = () => setSoftLocked(isPrivacySoftLocked())
+    sync()
+    window.addEventListener(PRIVACY_SOFT_LOCK_CHANGED_EVENT, sync)
+    return () => window.removeEventListener(PRIVACY_SOFT_LOCK_CHANGED_EVENT, sync)
+  }, [])
+  const effectivelyLocked = sessionLocked || softLocked
+  const ui = tresorSessionUi(effectivelyLocked, hasKeys)
   const shellClass = cn(
     'inline-flex max-w-[min(100%,16rem)] items-center gap-1.5 truncate rounded-md border px-2.5 py-1.5 text-xs font-bold shadow-sm',
     ui === 'locked'
@@ -84,16 +96,20 @@ export function TresorSessionBadge({
   )
   const passiveTitle =
     ui === 'locked'
-      ? 'Tresor gesperrt — Entsperr-Dialog öffnen.'
+      ? softLocked && !sessionLocked
+        ? 'Privacy gesperrt — Passphrasen/Signer aus RAM; Chat lesbar. Tippen zum Entsperren.'
+        : 'Tresor gesperrt — Entsperr-Dialog öffnen.'
       : ui === 'no-keys'
         ? 'Schlüssel fehlen in der Sitzung — erneut entsperren oder Tresor → Datei laden.'
         : 'Schlüssel geladen — Signieren und Mailbox senden möglich.'
   const activeTitle =
     ui === 'locked'
-      ? 'Dialog „Tresor entsperren“ öffnen.'
+      ? softLocked && !sessionLocked
+        ? 'Privacy entsperren (Passwort → Signer + Vault-Sidecars).'
+        : 'Dialog „Tresor entsperren“ öffnen.'
       : ui === 'no-keys'
         ? 'Tresor erneut entsperren (lädt Keys in die Sitzung).'
-        : 'Tresor sperren — Signer/Passphrasen aus dem RAM; Chat bleibt offen (Ciphertext).'
+        : 'Privacy sperren — Signer/Passphrasen aus dem RAM; Chat bleibt offen (kein Login-Fenster).'
 
   const icon =
     ui === 'ready' ? (
@@ -103,7 +119,13 @@ export function TresorSessionBadge({
     )
   const label = (
     <span className="truncate font-semibold">
-      {ui === 'locked' ? 'Tresor: gesperrt' : ui === 'no-keys' ? 'Tresor: Keys fehlen' : 'Tresor: bereit'}
+      {ui === 'locked'
+        ? softLocked && !sessionLocked
+          ? 'Privacy: gesperrt'
+          : 'Tresor: gesperrt'
+        : ui === 'no-keys'
+          ? 'Tresor: Keys fehlen'
+          : 'Tresor: bereit'}
     </span>
   )
 
@@ -320,8 +342,8 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
 
       {isPrivate && apiStatus?.locked === true && (
         <div className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
-          <strong className="font-semibold">Tresor gesperrt (API-Sitzung).</strong> Startseite öffnen und erneut
-          entsperren — ohne entsperrten Tresor sind Signieren und Senden nicht möglich.
+          <strong className="font-semibold">Tresor gesperrt (API-Sitzung).</strong> Badge tippen zum Entsperren —
+          ohne entsperrten Tresor sind Signieren und Senden nicht möglich.
         </div>
       )}
     </>

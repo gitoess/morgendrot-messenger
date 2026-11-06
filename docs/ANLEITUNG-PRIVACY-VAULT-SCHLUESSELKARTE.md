@@ -17,8 +17,8 @@ Voraussetzung: `npm run dev` → Next-UI **http://127.0.0.1:3341/**, Tresor ents
 | # | Was | Wo | Erwartung |
 |---|-----|-----|-----------|
 | 1 | Passphrase-Nachricht senden | Composer → **Passphrase-Schutz** | Wire `MORG_PWMSG…`; Hinweis „für dich auf diesem Gerät“ |
-| 2 | Vault sperren | Chat-Badge **Tresor: bereit** → sperren | **Chat bleibt offen**; Bubble nur Ciphertext |
-| 3 | Vault entsperren | Badge **Tresor: gesperrt** → Passwort | Klartext wieder da (Auto-Decrypt); kein Zwangs-Home |
+| 2 | Privacy sperren | Badge **Tresor: bereit** (Chat) oder Header-Schloss | **Chat bleibt offen/lesbar**; Badge **Privacy: gesperrt**; **kein** Login-Overlay |
+| 3 | Entsperren | Badge tippen → Passwort (Signer-Sync) | Klartext wieder da; Soft-Lock weg |
 | 4 | **Erneut sperren** | Passphrase-Bubble | Confirm → Passphrase erneut nötig |
 | 5 | ImageNFT verschlüsselt minten | Posteingang → **On-Chain / NFT** → Mint | Passphrase lokal gemerkt |
 | 6 | NFT als Schlüsselkarte | Galerie → **Als Schlüsselkarte merken** | Vault-Sidecar `nftKeycard.enc.v1` |

@@ -43,6 +43,8 @@ export type ChatViewSendPanelPropsDeps = {
   onOpenPhonebook?: () => void
   onOpenGroupSettings?: () => void
   activeConversation?: ChatViewActiveConversationContext
+  /** Kontakt-Filter + Composer-Empfänger leeren (Feld wieder editierbar). */
+  onClearActiveDirectConversation?: () => void
 }
 
 export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
@@ -204,6 +206,23 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     Boolean(activeGroupId) &&
     composerSendPath.composerDelivery === 'chain'
 
+  // Sidebar „ich“/Kontakt setzt Inbox-Filter — Composer-Partner darf nicht leer bleiben.
+  useEffect(() => {
+    if (!hasActiveDirectConversation || !isValidRecipient0x(activePartnerKey)) return
+    const partner = composerPartner.partner.trim().toLowerCase()
+    const recipient = composerDraft.recipient.trim().toLowerCase()
+    if (partner === activePartnerKey && (recipient === activePartnerKey || recipient.startsWith('0x'))) {
+      return
+    }
+    syncPartnerAndRecipient(activePartnerKey)
+  }, [
+    hasActiveDirectConversation,
+    activePartnerKey,
+    composerPartner.partner,
+    composerDraft.recipient,
+    syncPartnerAndRecipient,
+  ])
+
   const activeConversationBar: ChatViewActiveConversationBarProps | undefined = useMemo(() => {
     if (isIotaBroadcastAll) {
       return {
@@ -252,6 +271,7 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
       myAddress: inboxFeedRead.myAddress,
       onEncryptedHandshakeForRecipient: handleEncryptedHandshakeForComposerRecipient,
       onEncryptedAcceptHandshakeForRecipient: handleEncryptedAcceptForComposerRecipient,
+      onClearRecipient: deps.onClearActiveDirectConversation,
     }
   }, [
     isIotaBroadcastAll,
@@ -273,6 +293,7 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     inboxFeedRead.myAddress,
     handleEncryptedHandshakeForComposerRecipient,
     handleEncryptedAcceptForComposerRecipient,
+    deps.onClearActiveDirectConversation,
   ])
 
   const encryptionModeToggle = useMemo(() => {
