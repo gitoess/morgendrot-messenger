@@ -1,7 +1,13 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { rememberEvidencePassphrase } from '@/frontend/lib/evidence-passphrase-local-store'
 import {
-  fingerprintPassphraseMessageWire,
+  flushEvidencePassphraseVaultPersist,
+  hasEncryptedEvidencePassphraseVault,
+  lookupEvidencePassphrase,
+  purgeEvidencePassphraseVault,
+  rememberEvidencePassphrase,
+  unlockEvidencePassphraseVault,
+} from '@/frontend/lib/evidence-passphrase-local-store'
+import {
   flushPassphraseMessageVaultPersist,
   hasEncryptedPassphraseMessageVault,
   lookupPassphraseMessagePassphrase,
@@ -11,33 +17,39 @@ import {
   unlockPassphraseMessageVault,
 } from '@/frontend/lib/passphrase-message-local-store'
 import { wipeLocalPassphraseStoresOnLock } from '@/frontend/lib/privacy-lock-wipe'
+import { setVaultPasswordSession } from '@/frontend/lib/vault-password-session'
 
 describe('wipeLocalPassphraseStoresOnLock', () => {
   afterEach(() => {
     purgePassphraseMessageVault()
+    purgeEvidencePassphraseVault()
     window.localStorage.clear()
   })
 
-  it('clears RAM passphrases but keeps encrypted sidecar; ImageNFT untouched', async () => {
+  it('clears RAM for chat + ImageNFT but keeps encrypted sidecars', async () => {
+    setVaultPasswordSession('vault-pass-99')
+    await unlockPassphraseMessageVault('vault-pass-99')
+    await unlockEvidencePassphraseVault('vault-pass-99')
+
+    const wire = 'MORG_PWMSG_V1|abc'
+    rememberPassphraseMessagePassphrase(wire, 'test-pass-34')
     rememberEvidencePassphrase({
       objectId: '0x' + 'ab'.repeat(32),
       passphrase: 'test-pass-12',
     })
-    const wire = 'MORG_PWMSG_V1|abc'
-    const unlocked = await unlockPassphraseMessageVault('vault-pass-99')
-    expect(unlocked.ok).toBe(true)
-    rememberPassphraseMessagePassphrase(wire, 'test-pass-34')
     await flushPassphraseMessageVaultPersist()
-    expect(window.localStorage.getItem('morgendrot.evidenceImage.passphrases.v1')).toBeTruthy()
+    await flushEvidencePassphraseVaultPersist()
+
     expect(hasEncryptedPassphraseMessageVault()).toBe(true)
+    expect(hasEncryptedEvidencePassphraseVault()).toBe(true)
     expect(lookupPassphraseMessagePassphrase(wire)).toBe('test-pass-34')
-    expect(fingerprintPassphraseMessageWire(wire)).toMatch(/^fnv:/)
+    expect(lookupEvidencePassphrase({ objectId: '0x' + 'ab'.repeat(32) })).toBe('test-pass-12')
 
     wipeLocalPassphraseStoresOnLock()
 
-    expect(window.localStorage.getItem('morgendrot.evidenceImage.passphrases.v1')).toBeTruthy()
     expect(lookupPassphraseMessagePassphrase(wire)).toBeNull()
+    expect(lookupEvidencePassphrase({ objectId: '0x' + 'ab'.repeat(32) })).toBeNull()
     expect(window.localStorage.getItem(PASSPHRASE_MESSAGE_ENC_LS_KEY)).toBeTruthy()
-    expect(window.localStorage.getItem('morgendrot.passphraseMsg.v1')).toBeNull()
+    expect(hasEncryptedEvidencePassphraseVault()).toBe(true)
   })
 })

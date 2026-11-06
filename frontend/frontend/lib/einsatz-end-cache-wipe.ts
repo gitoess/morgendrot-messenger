@@ -8,7 +8,7 @@ import { clearLocalHistory } from '@/frontend/lib/api/clear-local-history'
 import { clearCachedApiStatusSnapshot } from '@/frontend/lib/api/status'
 import { clearDirectChatEcdhKeyMaterial } from '@/frontend/lib/direct-chat-ecdh-session'
 import { clearDirectSessionKeysArchive } from '@/frontend/lib/direct-session-keys-archive'
-import { purgePassphraseMessageVault } from '@/frontend/lib/passphrase-message-local-store'
+import { purgeLocalSecretVaults } from '@/frontend/lib/local-secret-vaults'
 import { clearDirectMailboxChainSnapshot } from '@/frontend/lib/direct-iota-chain-context'
 import { clearLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import { HANDOFF_IMPORT_DRAFT_KEY } from '@/frontend/lib/handoff-pending-server-apply'
@@ -48,6 +48,7 @@ export const EINSATZ_END_LOCAL_STORAGE_KEYS = [
   'morgendrot.einsatz.manifestLastSequence.v1',
   'morgendrot.evidenceImage.passphrases.v1',
   'morgendrot.evidenceImage.defaultPassphrase.v1',
+  'morgendrot.evidenceImage.passphrases.enc.v1',
   'morgendrot.passphraseMsg.v1',
   'morgendrot.passphraseMsg.default.v1',
   'morgendrot.passphraseMsg.enc.v1',
@@ -148,7 +149,7 @@ export function wipeEinsatzLocalBrowserState(options?: Pick<EinsatzEndCacheWipeO
   clearTeamMemberRemoveSent()
   clearDirectChatEcdhKeyMaterial()
   clearDirectSessionKeysArchive()
-  purgePassphraseMessageVault()
+  purgeLocalSecretVaults()
   clearInboxBrowserViewFilters()
 
   if (clearQueues) {

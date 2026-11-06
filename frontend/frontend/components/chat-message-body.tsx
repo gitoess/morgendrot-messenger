@@ -59,6 +59,7 @@ function PassphraseMessageBody(p: {
   const [plain, setPlain] = useState<string | null>(null)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  const [autoBusy, setAutoBusy] = useState(false)
   const [showPass, setShowPass] = useState(false)
   const [copiedPass, setCopiedPass] = useState(false)
 
@@ -78,6 +79,7 @@ function PassphraseMessageBody(p: {
       const next = resolveKnownPassphraseForWire(p.content)
       setKnown(next)
       setPass((prev) => (prev.trim().length >= 8 ? prev : next))
+      if (next) setPlain(null)
     }
     sync()
     window.addEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, sync)
@@ -87,15 +89,20 @@ function PassphraseMessageBody(p: {
   useEffect(() => {
     if (!known || plain) return
     let alive = true
+    setAutoBusy(true)
     void decryptPassphraseMessageWire(p.content, known)
       .then((t) => {
         if (!alive) return
         rememberPassphraseMessagePassphrase(p.content, known)
         setPass(known)
         setPlain(t)
+        setErr('')
       })
       .catch(() => {
         /* known wrong — user enters manually */
+      })
+      .finally(() => {
+        if (alive) setAutoBusy(false)
       })
     return () => {
       alive = false
@@ -118,9 +125,6 @@ function PassphraseMessageBody(p: {
 
   return (
     <div className="space-y-2 rounded-lg border border-amber-600/40 bg-amber-500/10 p-3">
-      <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
-        Passphrase-Nachricht (kein Handshake) — Ciphertext on-chain, Schlüssel off-chain.
-      </p>
       {plain ? (
         <>
           <p className="whitespace-pre-wrap break-words text-sm text-foreground">{plain}</p>
@@ -128,52 +132,48 @@ function PassphraseMessageBody(p: {
             <button
               type="button"
               className="text-xs font-medium text-primary hover:underline"
+              onClick={copyPassphrase}
+              disabled={effectivePass.length < 8}
+            >
+              {copiedPass ? 'Kopiert' : 'Passphrase kopieren'}
+            </button>
+            <button
+              type="button"
+              className="text-xs font-medium text-muted-foreground hover:underline"
               onClick={() => setShowPass((v) => !v)}
             >
               {showPass ? 'Passphrase verbergen' : 'Passphrase anzeigen'}
             </button>
             {showPass ? (
-              <>
-                <code className="max-w-full break-all rounded bg-muted/50 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
-                  {effectivePass}
-                </code>
-                <button
-                  type="button"
-                  className="text-xs font-medium text-primary hover:underline"
-                  onClick={copyPassphrase}
-                >
-                  {copiedPass ? 'Kopiert' : 'Passphrase kopieren'}
-                </button>
-                <button
-                  type="button"
-                  className="text-xs text-muted-foreground hover:underline"
-                  onClick={() => {
-                    forgetPassphraseMessagePassphrase(p.content)
-                    setPass('')
-                    setShowPass(false)
-                    setPlain(null)
-                  }}
-                >
-                  Lokal vergessen
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                className="text-xs font-medium text-primary hover:underline"
-                disabled={effectivePass.length < 8}
-                onClick={copyPassphrase}
-              >
-                {copiedPass ? 'Kopiert' : 'Passphrase kopieren'}
-              </button>
-            )}
+              <code className="max-w-full break-all rounded bg-muted/50 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
+                {effectivePass}
+              </code>
+            ) : null}
+            <button
+              type="button"
+              className="text-xs text-muted-foreground hover:underline"
+              onClick={() => {
+                forgetPassphraseMessagePassphrase(p.content)
+                setPass('')
+                setKnown('')
+                setShowPass(false)
+                setPlain(null)
+              }}
+            >
+              Lokal vergessen
+            </button>
             <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={p.onCopyRaw}>
               {p.copiedRaw ? 'Kopiert' : 'Wire kopieren'}
             </button>
           </div>
         </>
+      ) : autoBusy && known ? (
+        <p className="text-xs text-muted-foreground">Entschlüssele…</p>
       ) : (
         <>
+          <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
+            Passphrase-Nachricht — lokal kein Schlüssel (nach Unlock erscheint der Klartext automatisch).
+          </p>
           <input
             type="password"
             value={pass}
@@ -192,26 +192,10 @@ function PassphraseMessageBody(p: {
             >
               {busy ? '…' : 'Entschlüsseln'}
             </button>
-            {effectivePass.length >= 8 ? (
-              <button
-                type="button"
-                className="text-xs font-medium text-primary hover:underline"
-                onClick={copyPassphrase}
-              >
-                {copiedPass ? 'Kopiert' : 'Passphrase kopieren'}
-              </button>
-            ) : null}
             <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={p.onCopyRaw}>
               {p.copiedRaw ? 'Kopiert' : 'Wire kopieren'}
             </button>
           </div>
-          {!known ? (
-            <p className="text-[11px] text-muted-foreground">
-              Passphrase fehlt hier (nicht das Gruppen-Geheimnis). Sie stand nach dem Senden in der
-              Statuszeile; bei „Passphrase wiederverwenden“ auch im Composer-Feld. Nach Vault-Unlock
-              erscheint sie automatisch, wenn sie zuvor mitgespeichert wurde.
-            </p>
-          ) : null}
         </>
       )}
     </div>

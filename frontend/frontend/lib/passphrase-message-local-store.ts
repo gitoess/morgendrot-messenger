@@ -11,12 +11,14 @@ import {
   encryptHandoffEnvUtf8,
   type HandoffCryptoMetaJson,
 } from '@/frontend/lib/handoff-zip-crypto'
+import { getVaultPasswordSession, setVaultPasswordSession } from '@/frontend/lib/vault-password-session'
 
 const LS_KEY_LEGACY = 'morgendrot.passphraseMsg.v1'
 const LS_DEFAULT_LEGACY = 'morgendrot.passphraseMsg.default.v1'
 /** Vault-Passwort-verschlüsselter Sidecar (nicht die API-Vault-Datei). */
 export const PASSPHRASE_MESSAGE_ENC_LS_KEY = 'morgendrot.passphraseMsg.enc.v1'
 export const PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT = 'morgendrot:passphrase-msg-vault'
+const SS_TAB = 'morgendrot.passphraseMsg.tab.v1'
 
 const MAX_ENTRIES = 60
 const PERSIST_DEBOUNCE_MS = 400
@@ -37,8 +39,6 @@ type EncPlainV1 = {
 
 let memoryByWire: Store = {}
 let memoryDefault: string | null = null
-/** Vault-Passwort nur während entsperrter Sitzung (nicht in LS). */
-let sessionVaultPassword: string | null = null
 let persistTimer: ReturnType<typeof setTimeout> | null = null
 let persistInFlight: Promise<void> | null = null
 
@@ -156,7 +156,7 @@ export function hasEncryptedPassphraseMessageVault(): boolean {
 }
 
 export function isPassphraseMessageVaultSessionOpen(): boolean {
-  return sessionVaultPassword != null && sessionVaultPassword.length >= 8
+  return getVaultPasswordSession() != null
 }
 
 function mergeLegacyIntoMemory(): boolean {
@@ -176,9 +176,46 @@ function mergeLegacyIntoMemory(): boolean {
   return changed
 }
 
+function writeTabBackup(): void {
+  if (typeof window === 'undefined') return
+  try {
+    const plain: EncPlainV1 = {
+      v: 1,
+      byWire: { ...memoryByWire },
+      ...(memoryDefault ? { defaultPass: memoryDefault } : {}),
+    }
+    window.sessionStorage.setItem(SS_TAB, JSON.stringify(plain))
+  } catch {
+    /* ignore */
+  }
+}
+
+function readTabBackup(): EncPlainV1 | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.sessionStorage.getItem(SS_TAB)?.trim()
+    if (!raw) return null
+    return JSON.parse(raw) as EncPlainV1
+  } catch {
+    return null
+  }
+}
+
+function clearTabBackup(): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.sessionStorage.removeItem(SS_TAB)
+  } catch {
+    /* ignore */
+  }
+}
+
 async function persistEncryptedNow(): Promise<void> {
-  const pw = sessionVaultPassword
-  if (!pw || pw.length < 8 || typeof window === 'undefined') return
+  const pw = getVaultPasswordSession()
+  if (!pw || pw.length < 8 || typeof window === 'undefined') {
+    writeTabBackup()
+    return
+  }
   memoryByWire = trimStore(memoryByWire)
   const plain: EncPlainV1 = {
     v: 1,
@@ -193,9 +230,11 @@ async function persistEncryptedNow(): Promise<void> {
   }
   writeEncBlobRaw(JSON.stringify(payload))
   clearLegacyPlainStorage()
+  clearTabBackup()
 }
 
 function schedulePersist(): void {
+  writeTabBackup()
   if (!isPassphraseMessageVaultSessionOpen()) return
   if (persistTimer) clearTimeout(persistTimer)
   persistTimer = setTimeout(() => {
@@ -215,7 +254,7 @@ export async function unlockPassphraseMessageVault(password: string): Promise<
   if (pw.length < 8) {
     return { ok: false, error: 'Vault-Passwort mindestens 8 Zeichen für Chat-Passphrasen.' }
   }
-  sessionVaultPassword = pw
+  setVaultPasswordSession(pw)
   memoryByWire = {}
   memoryDefault = null
 
@@ -232,7 +271,6 @@ export async function unlockPassphraseMessageVault(password: string): Promise<
       }
       const dec = await decryptHandoffEnvUtf8(payload.crypto, b64ToBytes(payload.ciphertextB64), pw)
       if (!dec.ok) {
-        sessionVaultPassword = null
         return { ok: false, error: dec.error }
       }
       const j = JSON.parse(dec.envText) as Partial<EncPlainV1>
@@ -246,20 +284,28 @@ export async function unlockPassphraseMessageVault(password: string): Promise<
       const d = typeof j.defaultPass === 'string' ? j.defaultPass.trim() : ''
       memoryDefault = d.length >= 8 ? d : null
     } catch (e) {
-      sessionVaultPassword = null
       return { ok: false, error: e instanceof Error ? e.message : String(e) }
     }
   }
 
   const migratedLegacy = mergeLegacyIntoMemory()
-  if (migratedLegacy || Object.keys(memoryByWire).length > 0 || memoryDefault) {
+  const tab = readTabBackup()
+  if (tab?.byWire) {
+    for (const [k, v] of Object.entries(tab.byWire)) {
+      if (typeof v === 'string' && v.trim().length >= 8 && !memoryByWire[k]) memoryByWire[k] = v.trim()
+    }
+  }
+  if (!memoryDefault && tab?.defaultPass && tab.defaultPass.trim().length >= 8) {
+    memoryDefault = tab.defaultPass.trim()
+  }
+  if (migratedLegacy || Object.keys(memoryByWire).length > 0 || memoryDefault || tab) {
     await persistEncryptedNow()
   }
   emitChanged()
   return { ok: true, migratedLegacy }
 }
 
-/** Sitzung sperren: Klartext aus RAM, Ciphertext bleibt. */
+/** Sitzung sperren: Klartext aus RAM, Ciphertext bleibt. (Vault-Passwort: local-secret-vaults) */
 export function lockPassphraseMessageVault(): void {
   if (persistTimer) {
     clearTimeout(persistTimer)
@@ -267,7 +313,6 @@ export function lockPassphraseMessageVault(): void {
   }
   memoryByWire = {}
   memoryDefault = null
-  sessionVaultPassword = null
   emitChanged()
 }
 
@@ -279,9 +324,9 @@ export function purgePassphraseMessageVault(): void {
   }
   memoryByWire = {}
   memoryDefault = null
-  sessionVaultPassword = null
   removeEncBlob()
   clearLegacyPlainStorage()
+  clearTabBackup()
   emitChanged()
 }
 
