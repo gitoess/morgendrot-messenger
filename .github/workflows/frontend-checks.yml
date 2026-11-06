@@ -19,30 +19,40 @@ on:
 
 jobs:
   frontend:
-    runs-on: ubuntu-latest
+    # Pin 24.04: ubuntu-latest moved to 26.04 (Oct/Nov 2026) and npm ci started
+    # failing with exit 126 while the lockfile was unchanged since the last green run.
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     defaults:
       run:
         working-directory: frontend
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - run: npm ci
+      - name: Node / npm versions
+        run: |
+          set -eux
+          node -v
+          npm -v
+          command -v npm
+          command -v node
+          uname -a
+
+      - name: npm ci
+        run: npm ci --no-fund --no-audit
 
       - name: "@morgendrot/core unit tests"
         working-directory: packages/morgendrot-core
         env:
           CI: 'true'
-        run: npm ci && npm run test:unit
+        run: npm ci --no-fund --no-audit && npm run test:unit
 
       - run: npm run lint
 
