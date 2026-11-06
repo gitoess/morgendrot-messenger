@@ -18,6 +18,7 @@ import {
 import {
   fingerprintPassphraseMessageWire,
   readPassphraseNftKeycardBindObjectId,
+  readPassphraseNftKeycardBindSlotId,
   readPassphraseProtectEnabled,
   resolvePassphraseForProtectSend,
   rememberPassphraseMessagePassphrase,
@@ -723,6 +724,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             bindWireToNftKeycard({
               objectId: cardOid,
               wireFingerprint: fingerprintPassphraseMessageWire(wire),
+              slotId: readPassphraseNftKeycardBindSlotId(),
             })
           }
           wrapped.push(wire)

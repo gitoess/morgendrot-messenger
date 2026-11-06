@@ -33,6 +33,14 @@ export type NftKeycardEntry = {
   slots: NftKeycardSlot[]
   /** Wire-Fingerprint → Slot-ID */
   boundWires?: Record<string, string>
+  /** Gebundene ImageNFT-/Objekt-IDs → Slot-ID (P2 Mint an Slot) */
+  boundObjects?: Record<string, string>
+}
+
+/** Slot-IDs: default, img, pwmsg, … */
+export function normalizeNftKeycardSlotId(raw: string | undefined | null): string {
+  const t = (raw || 'default').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 24)
+  return t || 'default'
 }
 
 type StorePlainV1 = {
@@ -140,6 +148,9 @@ function mergeCards(into: Record<string, NftKeycardEntry>, from: Record<string, 
     if (entry.boundWires) {
       dest.boundWires = { ...(dest.boundWires || {}), ...entry.boundWires }
     }
+    if (entry.boundObjects) {
+      dest.boundObjects = { ...(dest.boundObjects || {}), ...entry.boundObjects }
+    }
   }
 }
 
@@ -214,7 +225,7 @@ export function upsertNftKeycardSlot(opts: {
   if (!/^0x[a-f0-9]{64}$/.test(oid)) return { ok: false, error: 'Ungültige Object-ID.' }
   const pass = opts.passphrase.trim()
   if (pass.length < 8) return { ok: false, error: 'Passphrase mindestens 8 Zeichen.' }
-  const slotId = (opts.slotId || 'default').trim() || 'default'
+  const slotId = normalizeNftKeycardSlotId(opts.slotId)
   const prev = memoryCards[oid] || { slots: [] }
   const slots = [...prev.slots]
   const idx = slots.findIndex((s) => s.id === slotId)
@@ -234,8 +245,39 @@ export function upsertNftKeycardSlot(opts: {
       slots,
       ...(opts.label?.trim() || prev.label ? { label: (opts.label?.trim() || prev.label)! } : {}),
       ...(prev.boundWires ? { boundWires: prev.boundWires } : {}),
+      ...(prev.boundObjects ? { boundObjects: prev.boundObjects } : {}),
     },
   })
+  schedulePersist()
+  emitChanged()
+  return { ok: true }
+}
+
+export function removeNftKeycardSlot(opts: {
+  objectId: string
+  slotId: string
+}): { ok: true } | { ok: false; error: string } {
+  const oid = normOid(opts.objectId)
+  const card = memoryCards[oid]
+  if (!card) return { ok: false, error: 'Keine Schlüsselkarte für diese Object-ID.' }
+  const slotId = normalizeNftKeycardSlotId(opts.slotId)
+  if (card.slots.length <= 1) return { ok: false, error: 'Mindestens ein Slot muss bleiben.' }
+  if (!card.slots.some((s) => s.id === slotId)) return { ok: false, error: 'Slot fehlt.' }
+  const slots = card.slots.filter((s) => s.id !== slotId)
+  const scrub = (m?: Record<string, string>) => {
+    if (!m) return undefined
+    const next: Record<string, string> = {}
+    for (const [k, v] of Object.entries(m)) {
+      if (v !== slotId) next[k] = v
+    }
+    return Object.keys(next).length ? next : undefined
+  }
+  memoryCards[oid] = {
+    ...card,
+    slots,
+    boundWires: scrub(card.boundWires),
+    boundObjects: scrub(card.boundObjects),
+  }
   schedulePersist()
   emitChanged()
   return { ok: true }
@@ -249,7 +291,7 @@ export function bindWireToNftKeycard(opts: {
   const oid = normOid(opts.objectId)
   const card = memoryCards[oid]
   if (!card) return { ok: false, error: 'Keine Schlüsselkarte für diese Object-ID.' }
-  const slotId = (opts.slotId || 'default').trim() || 'default'
+  const slotId = normalizeNftKeycardSlotId(opts.slotId)
   if (!card.slots.some((s) => s.id === slotId)) return { ok: false, error: 'Slot fehlt auf der Karte.' }
   const fp = opts.wireFingerprint.trim()
   if (!fp) return { ok: false, error: 'Wire-Fingerprint fehlt.' }
@@ -262,20 +304,50 @@ export function bindWireToNftKeycard(opts: {
   return { ok: true }
 }
 
+/** Bindet ein ImageNFT (oder anderes Objekt) an einen Slot der Schlüsselkarte. */
+export function bindObjectToNftKeycard(opts: {
+  cardObjectId: string
+  boundObjectId: string
+  slotId?: string
+}): { ok: true } | { ok: false; error: string } {
+  const cardOid = normOid(opts.cardObjectId)
+  const boundOid = normOid(opts.boundObjectId)
+  const card = memoryCards[cardOid]
+  if (!card) return { ok: false, error: 'Keine Schlüsselkarte für diese Object-ID.' }
+  if (!/^0x[a-f0-9]{64}$/.test(boundOid)) return { ok: false, error: 'Ungültige gebundene Object-ID.' }
+  const slotId = normalizeNftKeycardSlotId(opts.slotId)
+  if (!card.slots.some((s) => s.id === slotId)) return { ok: false, error: 'Slot fehlt auf der Karte.' }
+  memoryCards[cardOid] = {
+    ...card,
+    boundObjects: { ...(card.boundObjects || {}), [boundOid]: slotId },
+  }
+  schedulePersist()
+  emitChanged()
+  return { ok: true }
+}
+
 export function lookupPassphraseForNftKeycard(opts: {
   objectId?: string
   wireFingerprint?: string
   slotId?: string
 }): string | null {
   if (opts.objectId?.trim()) {
-    const card = memoryCards[normOid(opts.objectId)]
-    if (!card) return null
-    if (opts.wireFingerprint?.trim() && card.boundWires?.[opts.wireFingerprint.trim()]) {
-      const sid = card.boundWires[opts.wireFingerprint.trim()]!
-      return card.slots.find((s) => s.id === sid)?.passphrase ?? null
+    const oid = normOid(opts.objectId)
+    const asCard = memoryCards[oid]
+    if (asCard) {
+      if (opts.wireFingerprint?.trim() && asCard.boundWires?.[opts.wireFingerprint.trim()]) {
+        const sid = asCard.boundWires[opts.wireFingerprint.trim()]!
+        return asCard.slots.find((s) => s.id === sid)?.passphrase ?? null
+      }
+      const sid = normalizeNftKeycardSlotId(opts.slotId)
+      return asCard.slots.find((s) => s.id === sid)?.passphrase ?? asCard.slots[0]?.passphrase ?? null
     }
-    const sid = (opts.slotId || 'default').trim() || 'default'
-    return card.slots.find((s) => s.id === sid)?.passphrase ?? card.slots[0]?.passphrase ?? null
+    for (const card of Object.values(memoryCards)) {
+      const sid = card.boundObjects?.[oid]
+      if (!sid) continue
+      const pass = card.slots.find((s) => s.id === sid)?.passphrase
+      if (pass) return pass
+    }
   }
   if (opts.wireFingerprint?.trim()) {
     const fp = opts.wireFingerprint.trim()

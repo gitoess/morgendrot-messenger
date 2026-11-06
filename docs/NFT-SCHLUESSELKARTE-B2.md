@@ -1,7 +1,7 @@
 # NFT-Schlüsselkarte (§ H.23 B2)
 
 **Stand:** 2026-11-06  
-**Status:** **P0+P1 Ist** (Store + Galerie „Als Schlüsselkarte merken“ + optional Composer-Bindung + Besitz-Check); P2–P3 offen.  
+**Status:** **P0–P2 Ist** (Store + Galerie Multi-Slot + Composer-Bindung + ImageNFT-Mint an Slot + Besitz-Check); P3 offen.  
 **Voraussetzung:** H.23 B1 Vault-Sidecars Ist (`teamKeys.enc.v1`, Chat-/ImageNFT-Passphrasen).  
 **2-Geräte-Feldtest (Team-Key / Erneut sperren):** bewusst **später** — blockiert B2-P0 nicht.
 
@@ -61,7 +61,8 @@ Klartext-JSON:
         { "id": "default", "passphrase": "…", "note": "PWMSG" },
         { "id": "img", "passphrase": "…", "note": "MORGIMGE1" }
       ],
-      "boundWires": { "fnv:…": "default" }
+      "boundWires": { "fnv:…": "default" },
+      "boundObjects": { "0x<imageNftId>": "img" }
     }
   }
 }
@@ -94,7 +95,7 @@ Bei Passphrase-Send mit Bindung: Meta im bestehenden PWMSG oder Prefix-Hinweis z
 |-------|------------------|-------|
 | **P0** | Spec (dieses Doc) + Enc-Store + Unlock-Hook + Vitest | Nein |
 | **P1** | Galerie „Als Schlüsselkarte“ + Composer-Bindung PWMSG + Besitz-Check — **Ist** | Nein |
-| **P2** | Multi-Slot UI + ImageNFT-Mint an Slot | Nein |
+| **P2** | Multi-Slot UI + ImageNFT-Mint an Slot (+ `boundObjects`) — **Ist** | Nein |
 | **P3** | Optional Description-Marker / Move | Optional |
 
 ## 7. Abnahme (später Feld)

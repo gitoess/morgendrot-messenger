@@ -6,10 +6,12 @@ import {
   clearDefaultPassphraseMessagePassphrase,
   getDefaultPassphraseMessagePassphrase,
   readPassphraseNftKeycardBindObjectId,
+  readPassphraseNftKeycardBindSlotId,
   readPassphraseProtectEnabled,
   readPassphraseReuseEnabled,
   setDefaultPassphraseMessagePassphrase,
   writePassphraseNftKeycardBindObjectId,
+  writePassphraseNftKeycardBindSlotId,
   writePassphraseProtectEnabled,
   writePassphraseReuseEnabled,
 } from '@/frontend/lib/passphrase-message-local-store'
@@ -24,17 +26,20 @@ export function PassphraseProtectComposerToggle(p: {
   const [reuse, setReuse] = useState(false)
   const [sharedPass, setSharedPass] = useState('')
   const [bindOid, setBindOid] = useState('')
-  const [cards, setCards] = useState<{ objectId: string; label?: string }[]>([])
+  const [bindSlot, setBindSlot] = useState('default')
+  const [cards, setCards] = useState<{ objectId: string; label?: string; slotIds: string[] }[]>([])
 
   useEffect(() => {
     setOn(readPassphraseProtectEnabled())
     setReuse(readPassphraseReuseEnabled())
     setSharedPass(getDefaultPassphraseMessagePassphrase() ?? '')
     setBindOid(readPassphraseNftKeycardBindObjectId() ?? '')
+    setBindSlot(readPassphraseNftKeycardBindSlotId())
     setCards(
       listNftKeycards().map(({ objectId, entry }) => ({
         objectId,
         label: entry.label,
+        slotIds: entry.slots.map((s) => s.id),
       }))
     )
   }, [])
@@ -146,7 +151,7 @@ export function PassphraseProtectComposerToggle(p: {
           ) : null}
 
           {cards.length > 0 ? (
-            <label className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1.5">
               <span className="font-medium text-foreground">Key an NFT-Schlüsselkarte binden (optional)</span>
               <span className="text-[11px] text-muted-foreground">
                 Zusätzlich zur Passphrase — nicht Alltags-Chat. Karte unter On-Chain / NFT anlegen.
@@ -158,6 +163,12 @@ export function PassphraseProtectComposerToggle(p: {
                   const v = e.target.value
                   setBindOid(v)
                   writePassphraseNftKeycardBindObjectId(v || null)
+                  const card = cards.find((c) => c.objectId === v)
+                  const nextSlot = card?.slotIds.includes(bindSlot)
+                    ? bindSlot
+                    : card?.slotIds[0] || 'default'
+                  setBindSlot(nextSlot)
+                  writePassphraseNftKeycardBindSlotId(v ? nextSlot : null)
                 }}
               >
                 <option value="">— keine Bindung —</option>
@@ -167,7 +178,24 @@ export function PassphraseProtectComposerToggle(p: {
                   </option>
                 ))}
               </select>
-            </label>
+              {bindOid ? (
+                <select
+                  className="rounded border border-border bg-background px-2 py-1.5 text-[11px] text-foreground"
+                  value={bindSlot}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setBindSlot(v)
+                    writePassphraseNftKeycardBindSlotId(v)
+                  }}
+                >
+                  {(cards.find((c) => c.objectId === bindOid)?.slotIds || ['default']).map((sid) => (
+                    <option key={sid} value={sid}>
+                      Slot: {sid}
+                    </option>
+                  ))}
+                </select>
+              ) : null}
+            </div>
           ) : null}
         </div>
       ) : null}

@@ -48,6 +48,8 @@ export const PASSPHRASE_PROTECT_LS_KEY = 'morgendrot.composer.passphraseProtect'
 export const PASSPHRASE_REUSE_LS_KEY = 'morgendrot.composer.passphraseReuse'
 /** Optional: Object-ID einer NFT-Schlüsselkarte für PWMSG-Bindung (H.23 B2). */
 export const PASSPHRASE_NFT_KEYCARD_BIND_LS_KEY = 'morgendrot.composer.nftKeycardBind.v1'
+/** Optional: Slot-ID auf der gebundenen Schlüsselkarte (P2). */
+export const PASSPHRASE_NFT_KEYCARD_BIND_SLOT_LS_KEY = 'morgendrot.composer.nftKeycardBindSlot.v1'
 
 /** FNV-1a über vollständigen Wire — stabiler als Prefix/Suffix. */
 export function fingerprintPassphraseMessageWire(wire: string): string {
@@ -428,11 +430,41 @@ export function writePassphraseNftKeycardBindObjectId(objectId: string | null): 
   try {
     if (!objectId?.trim()) {
       window.localStorage.removeItem(PASSPHRASE_NFT_KEYCARD_BIND_LS_KEY)
+      window.localStorage.removeItem(PASSPHRASE_NFT_KEYCARD_BIND_SLOT_LS_KEY)
       return
     }
     const v = objectId.trim().toLowerCase()
     if (!/^0x[a-f0-9]{64}$/.test(v)) return
     window.localStorage.setItem(PASSPHRASE_NFT_KEYCARD_BIND_LS_KEY, v)
+  } catch {
+    /* ignore */
+  }
+}
+
+export function readPassphraseNftKeycardBindSlotId(): string {
+  if (typeof window === 'undefined') return 'default'
+  try {
+    const v = window.localStorage.getItem(PASSPHRASE_NFT_KEYCARD_BIND_SLOT_LS_KEY)?.trim().toLowerCase()
+    if (!v) return 'default'
+    return v.replace(/[^a-z0-9_-]/g, '').slice(0, 24) || 'default'
+  } catch {
+    return 'default'
+  }
+}
+
+export function writePassphraseNftKeycardBindSlotId(slotId: string | null): void {
+  if (typeof window === 'undefined') return
+  try {
+    if (!slotId?.trim()) {
+      window.localStorage.removeItem(PASSPHRASE_NFT_KEYCARD_BIND_SLOT_LS_KEY)
+      return
+    }
+    const v = slotId.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 24)
+    if (!v) {
+      window.localStorage.removeItem(PASSPHRASE_NFT_KEYCARD_BIND_SLOT_LS_KEY)
+      return
+    }
+    window.localStorage.setItem(PASSPHRASE_NFT_KEYCARD_BIND_SLOT_LS_KEY, v)
   } catch {
     /* ignore */
   }

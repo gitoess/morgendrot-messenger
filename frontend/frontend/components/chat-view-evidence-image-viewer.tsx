@@ -59,7 +59,12 @@ import {
   rememberEvidencePassphrase,
 } from '@/frontend/lib/evidence-passphrase-local-store'
 import {
+  bindObjectToNftKeycard,
   getNftKeycard,
+  listNftKeycards,
+  lookupPassphraseForNftKeycard,
+  normalizeNftKeycardSlotId,
+  removeNftKeycardSlot,
   upsertNftKeycardSlot,
 } from '@/frontend/lib/nft-keycard-local-store'
 import { checkNftKeycardOwnedBySigner } from '@/frontend/lib/nft-keycard-ownership'
@@ -156,6 +161,12 @@ export function ChatViewEvidenceImageViewerButton(p?: {
   const [mintFile, setMintFile] = useState<File | null>(null)
   const [sharePassphrase, setSharePassphrase] = useState('')
   const [mintDigest, setMintDigest] = useState('')
+  /** P2: Mint-Passphrase an Schlüsselkarte/Slot */
+  const [mintKeycardOid, setMintKeycardOid] = useState('')
+  const [mintKeycardSlot, setMintKeycardSlot] = useState('img')
+  const [gallerySlotId, setGallerySlotId] = useState('default')
+  const [galleryNewSlotId, setGalleryNewSlotId] = useState('img')
+  const [keycardTick, setKeycardTick] = useState(0)
   const [wireCandidates, setWireCandidates] = useState<InboxWireImageCandidate[]>([])
   const [wireRows, setWireRows] = useState<InboxWireImageRow[]>([])
   const [wireOffset, setWireOffset] = useState(0)
@@ -429,10 +440,11 @@ export function ChatViewEvidenceImageViewerButton(p?: {
             continue
           }
           if (it.needsPassphrase && it.ciphertext) {
-            const remembered = lookupEvidencePassphrase({
-              objectId: it.objectId,
-              allowDefault: true,
-            })
+            const remembered =
+              lookupEvidencePassphrase({
+                objectId: it.objectId,
+                allowDefault: true,
+              }) || lookupPassphraseForNftKeycard({ objectId: it.objectId })
             if (remembered) {
               try {
                 const dec = await decryptEvidenceImageBytes(it.ciphertext, remembered)
@@ -566,6 +578,29 @@ export function ChatViewEvidenceImageViewerButton(p?: {
           passphrase: r.passphrase,
         })
       }
+      let keycardNote = ''
+      if (r.passphrase && mintKeycardOid && r.objectId) {
+        const slotId = normalizeNftKeycardSlotId(mintKeycardSlot || 'img')
+        const up = upsertNftKeycardSlot({
+          objectId: mintKeycardOid,
+          slotId,
+          passphrase: r.passphrase,
+          note: 'MORGIMGE1',
+        })
+        if (up.ok) {
+          const bind = bindObjectToNftKeycard({
+            cardObjectId: mintKeycardOid,
+            boundObjectId: r.objectId,
+            slotId,
+          })
+          keycardNote = bind.ok
+            ? ` Schlüsselkarte-Slot „${slotId}“ gemerkt.`
+            : ` Slot gespeichert, Objekt-Bindung: ${bind.error}`
+          setKeycardTick((n) => n + 1)
+        } else {
+          keycardNote = ` Schlüsselkarte: ${up.error}`
+        }
+      }
       const resizeNote =
         r.resized && r.originalBytes != null
           ? ` Verkleinert ${r.originalBytes}→${r.onChainBytes} B (wie Nachrichten).`
@@ -574,7 +609,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
       if (r.passphrase) {
         setSharePassphrase(r.passphrase)
         setInfo(
-          `Mint OK (${r.onChainBytes} B on-chain).${resizeNote}${oidNote} Passphrase unten kopieren und separat teilen — für dich auf diesem Gerät im Vault gemerkt.`
+          `Mint OK (${r.onChainBytes} B on-chain).${resizeNote}${oidNote}${keycardNote} Passphrase unten kopieren und separat teilen — für dich auf diesem Gerät im Vault gemerkt.`
         )
       } else {
         setInfo(`Mint OK (Klartext on-chain, ${r.onChainBytes} B).${resizeNote}${oidNote} Digest: ${r.digest}`)
@@ -582,7 +617,17 @@ export function ChatViewEvidenceImageViewerButton(p?: {
     } finally {
       setBusy(false)
     }
-  }, [mintFile, mintName, mintDesc, mintClassification, mintContentType, mintAttrs, mintEncrypt])
+  }, [
+    mintFile,
+    mintName,
+    mintDesc,
+    mintClassification,
+    mintContentType,
+    mintAttrs,
+    mintEncrypt,
+    mintKeycardOid,
+    mintKeycardSlot,
+  ])
 
   const onScanMailboxPlain = useCallback(async () => {
     setBusy(true)
@@ -942,6 +987,45 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                 />
                 On-chain verschlüsseln (Passphrase nach Mint anzeigen)
               </label>
+              {mintEncrypt && listNftKeycards().length > 0 ? (
+                <div className="space-y-1.5 text-xs">
+                  <p className="font-medium text-foreground">Passphrase an Schlüsselkarte-Slot (optional)</p>
+                  <select
+                    className="w-full rounded border border-border bg-background px-2 py-1.5 text-[11px]"
+                    value={mintKeycardOid}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setMintKeycardOid(v)
+                      const card = listNftKeycards().find((c) => c.objectId === v)
+                      const prefer =
+                        card?.entry.slots.find((s) => s.id === 'img')?.id ||
+                        card?.entry.slots[0]?.id ||
+                        'img'
+                      setMintKeycardSlot(prefer)
+                    }}
+                  >
+                    <option value="">— keine Karte —</option>
+                    {listNftKeycards().map(({ objectId, entry }) => (
+                      <option key={objectId} value={objectId}>
+                        {(entry.label || 'Karte') + ' · ' + objectId.slice(0, 12) + '…'}
+                      </option>
+                    ))}
+                  </select>
+                  {mintKeycardOid ? (
+                    <div className="flex flex-wrap gap-2">
+                      <Input
+                        className="font-mono text-[11px]"
+                        value={mintKeycardSlot}
+                        onChange={(e) => setMintKeycardSlot(e.target.value)}
+                        placeholder="Slot-ID (z. B. img)"
+                      />
+                      <span className="self-center text-[10px] text-muted-foreground">
+                        Neu oder bestehend — Mint schreibt Passphrase in diesen Slot.
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
               <Button type="button" onClick={() => void onMint()} disabled={busy || !mintFile || !mintName.trim()}>
                 {busy ? (
                   <>
@@ -1203,9 +1287,15 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                                     setInfo(`Besitz-Check: ${own.error} — speichere lokal ohne Chain-Check.`)
                                   }
                                 }
+                                const slotId = normalizeNftKeycardSlotId(
+                                  getNftKeycard(it.objectId)
+                                    ? galleryNewSlotId.trim() || gallerySlotId
+                                    : gallerySlotId
+                                )
                                 const r = upsertNftKeycardSlot({
                                   objectId: it.objectId,
                                   label: it.name || undefined,
+                                  slotId,
                                   passphrase: pass,
                                   note: it.source === 'url' ? 'URL-NFT' : 'ImageNFT',
                                 })
@@ -1214,8 +1304,10 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                                   return
                                 }
                                 rememberEvidencePassphrase({ objectId: it.objectId, passphrase: pass })
+                                setGallerySlotId(slotId)
+                                setKeycardTick((n) => n + 1)
                                 setInfo(
-                                  `Als Schlüsselkarte gemerkt (${it.objectId.slice(0, 12)}…) — für dich auf diesem Gerät im Vault.`
+                                  `Schlüsselkarte Slot „${slotId}“ gemerkt (${it.objectId.slice(0, 12)}…) — für dich auf diesem Gerät im Vault.`
                                 )
                               } finally {
                                 setBusy(false)
@@ -1223,8 +1315,69 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                             })()
                           }}
                         >
-                          {getNftKeycard(it.objectId) ? 'Schlüsselkarte aktualisieren' : 'Als Schlüsselkarte merken'}
+                          {getNftKeycard(it.objectId) ? 'Slot speichern / aktualisieren' : 'Als Schlüsselkarte merken'}
                         </Button>
+                        {getNftKeycard(it.objectId) ? (
+                          <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+                            <span>Slots:</span>
+                            {(getNftKeycard(it.objectId)?.slots || []).map((s) => (
+                              <button
+                                key={`${it.objectId}-${s.id}-${keycardTick}`}
+                                type="button"
+                                className={
+                                  gallerySlotId === s.id
+                                    ? 'rounded border border-foreground/40 px-1.5 py-0.5 text-foreground'
+                                    : 'rounded border border-border px-1.5 py-0.5 hover:bg-muted'
+                                }
+                                onClick={() => {
+                                  setGallerySlotId(s.id)
+                                  setGalleryNewSlotId(s.id)
+                                }}
+                              >
+                                {s.id}
+                                {s.note ? ` (${s.note})` : ''}
+                              </button>
+                            ))}
+                            <Input
+                              className="h-7 w-24 font-mono text-[10px]"
+                              value={galleryNewSlotId}
+                              onChange={(e) => setGalleryNewSlotId(e.target.value)}
+                              placeholder="neuer Slot"
+                            />
+                            {(getNftKeycard(it.objectId)?.slots.length || 0) > 1 ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-[10px]"
+                                disabled={busy}
+                                onClick={() => {
+                                  const r = removeNftKeycardSlot({
+                                    objectId: it.objectId,
+                                    slotId: gallerySlotId,
+                                  })
+                                  if (!r.ok) {
+                                    setError(r.error)
+                                    return
+                                  }
+                                  const left = getNftKeycard(it.objectId)?.slots[0]?.id || 'default'
+                                  setGallerySlotId(left)
+                                  setKeycardTick((n) => n + 1)
+                                  setInfo(`Slot „${gallerySlotId}“ entfernt.`)
+                                }}
+                              >
+                                Slot entfernen
+                              </Button>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <Input
+                            className="h-7 max-w-[10rem] font-mono text-[10px]"
+                            value={gallerySlotId}
+                            onChange={(e) => setGallerySlotId(e.target.value)}
+                            placeholder="Slot-ID (default)"
+                          />
+                        )}
                       </div>
                       {storedPass ? (
                         <p className="text-[10px] text-muted-foreground">
