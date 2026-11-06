@@ -12,7 +12,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
-| **2026-11-06** | PC (Windows), **H.23 Absender-Passphrase-Komfort + B2 P1–P2** | UX Absender-Vault. B2 P1 Galerie/Composer-Bindung. B2 P2: Multi-Slot UI + Mint an Slot + `boundObjects` Auto-Unlock. Vitest ownership + vault Multi-Slot. 2-Geräte-Feldtest später. | **PASS (Code)** — Vitest P0/P1/P2; manuell: Slot speichern / Mint→Slot. |
+| **2026-11-06** | PC (Windows), **H.23 Absender-Passphrase-Komfort + B2 P1–P3** | UX Absender-Vault. B2: Galerie/Composer, Multi-Slot, Mint an Slot, `[morg-keycard]`-Marker. Vitest ownership + vault + marker. 2-Geräte-Feldtest später. | **PASS (Code)** — Vitest P0–P3. |
 | **2026-11-05** | PC (Windows), **Feldtest Privacy-Tranche + Passphrase-Reuse** | Self-Handshake → **Schlüssel erneuern** nach Self-ECDH-Fix **PASS**. Burn: Event ≠ purgebar (Architektur); Fix Mailbox-Force bei Burn + Menü-Scope-Hinweis. **Passphrase wiederverwenden** (Composer Default + neuer Salt/IV). Vitest: passphrase-message + contact-mailbox-select + slots. | **PASS (Code + Epoch Self)** — Burn + Passphrase-Reuse Feld-Retest; danach Wire-Import-Backlog. |
 | **2026-11-05** | PC (Windows), **Wire einfügen (PWMSG)** | Posteingang **Wire einfügen** Dialog; Vitest `wire-paste-import`. | **PASS (Code)** — Feldtest: Wire kopieren → einfügen → Passphrase. |
 | **2026-11-05** | PC (Windows), **§ H.23 B1 gap-close** | Enc-Send: `requireTeamBroadcastKey` (kein Auto-Fork); Gruppen-Panel Team-Key erzeugen/rotieren; Snapshot-Export; Vitest key-store + encrypted-send. | **PASS (Code)** — Feld: 2 Geräte Enc-Broadcast + Handoff; Vault `.team-keys.enc` offen. |

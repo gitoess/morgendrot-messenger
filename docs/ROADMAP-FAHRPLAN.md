@@ -37,7 +37,7 @@
 
 **Nachtrag 2026-11-05 (Wire einfügen):** Posteingang-Button **Wire einfügen** — Paste `MORG_PWMSG_V1` + Passphrase → lokaler Klartext (≠ Toolbar **Entschlüsseln** = Einsatzbericht-.json). ECDH-Wires weiter nur mit Handshake.
 
-**Nachtrag 2026-11-06 (H.23 B2 NFT-Schlüsselkarte — aktiv):** Spec **`docs/NFT-SCHLUESSELKARTE-B2.md`**. **Zusätzlicher Zugriffsmodus**, kein Ersatz für Passphrase und nicht für Alltags-Direktchat. Lesen spezieller Enc-Inhalte: **Passphrase und/oder Besitz** eines NFTs (optional **beides**). Nutzen: Evidenz teilen, temporäre Leserechte, Weitergabe per NFT-Transfer. **P0–P2 Ist:** Enc-Store + Galerie Multi-Slot + Composer-Bindung (Karte+Slot) + ImageNFT-Mint an Slot (`boundObjects`) + Besitz-Check. **P3** optional Description-Marker. **2-Geräte-Feldtest** bewusst später.
+**Nachtrag 2026-11-06 (H.23 B2 NFT-Schlüsselkarte — aktiv):** Spec **`docs/NFT-SCHLUESSELKARTE-B2.md`**. **Zusätzlicher Zugriffsmodus**, kein Ersatz für Passphrase und nicht für Alltags-Direktchat. Lesen spezieller Enc-Inhalte: **Passphrase und/oder Besitz** eines NFTs (optional **beides**). Nutzen: Evidenz teilen, temporäre Leserechte, Weitergabe per NFT-Transfer. **P0–P3 Ist:** Enc-Store + Multi-Slot + Composer-Bindung + Mint an Slot + öffentlicher `[morg-keycard]`-Marker (kein Move). **2-Geräte-Feldtest** bewusst später.
 
 **Nachtrag 2026-05-20 (Strategie — korrigiert):** **IOTA bleibt gekoppelt**; **Funk-Default** im Helfer-UI (`TRANSPORT_PROFILE=mesh-first`). **Delayed LoRa → IOTA**, **Offline-TX/Outbox** und **Pfad 4** bleiben — siehe **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**. Keine volle IOTA-TX im LoRa-Frame (**§ H.3m**). **Keine neuen Move-Publishes** in Tranche A; Fokus Runtime + Simple Mode.
 

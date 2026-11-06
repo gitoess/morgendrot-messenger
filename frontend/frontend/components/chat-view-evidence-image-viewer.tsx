@@ -67,6 +67,7 @@ import {
   removeNftKeycardSlot,
   upsertNftKeycardSlot,
 } from '@/frontend/lib/nft-keycard-local-store'
+import { unpackNftKeycardDescriptionMarker } from '@/frontend/lib/nft-keycard-description-marker'
 import { checkNftKeycardOwnedBySigner } from '@/frontend/lib/nft-keycard-ownership'
 
 type Mode = 'object' | 'owner' | 'mint' | 'wire' | 'mailbox'
@@ -564,6 +565,14 @@ export function ChatViewEvidenceImageViewerButton(p?: {
         classification: mintClassification,
         attrs: mintAttrs,
         encrypt: mintEncrypt,
+        ...(mintEncrypt && mintKeycardOid
+          ? {
+              keycardHint: {
+                cardObjectId: mintKeycardOid,
+                slotId: normalizeNftKeycardSlotId(mintKeycardSlot || 'img'),
+              },
+            }
+          : {}),
       })
       if (!r.ok) {
         setError(r.error)
@@ -1230,6 +1239,16 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                           {it.attrs.map((a) => `${a.key}=${a.value}`).join(' · ')}
                         </p>
                       ) : null}
+                      {(() => {
+                        const kh = unpackNftKeycardDescriptionMarker(it.description || '')
+                        if (!kh) return null
+                        return (
+                          <p className="text-[10px] text-muted-foreground break-all">
+                            Schlüsselkarte-Hinweis on-chain: {kh.cardObjectId.slice(0, 12)}… · Slot{' '}
+                            {kh.slotId}
+                          </p>
+                        )
+                      })()}
                       <div className="flex flex-wrap gap-2">
                         <Button
                           type="button"

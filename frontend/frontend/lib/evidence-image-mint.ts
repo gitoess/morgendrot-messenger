@@ -38,6 +38,7 @@ import {
   packEvidenceDescription,
   type EvidenceAttrPair,
 } from '@/frontend/lib/evidence-image-attrs'
+import { appendNftKeycardDescriptionMarker } from '@/frontend/lib/nft-keycard-description-marker'
 
 export type MintEvidenceImageInput = {
   plainBytes: Uint8Array
@@ -54,6 +55,8 @@ export type MintEvidenceImageInput = {
   packageId?: string
   /** false → keine Auto-Verkleinerung (Default: true) */
   autoResize?: boolean
+  /** B2 P3: öffentlicher [morg-keycard]-Hinweis in der Description */
+  keycardHint?: { cardObjectId: string; slotId?: string }
 }
 
 export type MintEvidenceImageResult =
@@ -150,10 +153,14 @@ export async function mintEvidenceImageNft(input: MintEvidenceImageInput): Promi
     /** Großzügig schätzen, aber nicht mehr als verfügbar verlangen. */
     const gasBudget = bal >= estimated ? estimated : bal
 
-    const descriptionPacked = packEvidenceDescription(
-      (input.description || '').trim() || 'MORGENDROT Evidence',
-      input.attrs || []
-    )
+    let descriptionBase = (input.description || '').trim() || 'MORGENDROT Evidence'
+    if (input.keycardHint?.cardObjectId) {
+      descriptionBase = appendNftKeycardDescriptionMarker(descriptionBase, {
+        cardObjectId: input.keycardHint.cardObjectId,
+        slotId: input.keycardHint.slotId || 'img',
+      })
+    }
+    const descriptionPacked = packEvidenceDescription(descriptionBase, input.attrs || [])
     const mintArgs = {
       packageId: input.packageId || KNOWN_IMAGE_NFT_PACKAGE_IDS[0],
       senderAddress: signerAddr,

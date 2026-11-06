@@ -1,7 +1,7 @@
 # NFT-Schlüsselkarte (§ H.23 B2)
 
 **Stand:** 2026-11-06  
-**Status:** **P0–P2 Ist** (Store + Galerie Multi-Slot + Composer-Bindung + ImageNFT-Mint an Slot + Besitz-Check); P3 offen.  
+**Status:** **P0–P3 Ist** (Store + Multi-Slot + Composer-Bindung + Mint an Slot + öffentlicher `[morg-keycard]`-Marker; kein Move).  
 **Voraussetzung:** H.23 B1 Vault-Sidecars Ist (`teamKeys.enc.v1`, Chat-/ImageNFT-Passphrasen).  
 **2-Geräte-Feldtest (Team-Key / Erneut sperren):** bewusst **später** — blockiert B2-P0 nicht.
 
@@ -73,8 +73,7 @@ Unlock/Lock/Purge über **`unlockLocalSecretVaults`** (wie Chat/ImageNFT/Team-Ke
 ### 4.2 On-chain (optional, später)
 
 - **P1:** nur bestehende ImageNFT/SimpleNFT — Bindung rein lokal + Wire-Hinweis.
-- **P2:** Description-Block `[morg-keycard]` mit öffentlicher Karten-ID / Slot-Namen (**keine** Secrets).
-- **P3:** eigenes Move-Typ nur wenn nötig (nicht Blocker).
+- **P2/P3:** Description-Block `[morg-keycard]` mit öffentlicher Karten-ID / Slot-Namen (**keine** Secrets) — **Ist** beim verschlüsselten Mint mit Schlüsselkarten-Wahl. Eigenes Move-Typ bewusst nicht.
 
 ### 4.3 Wire-Hinweis (P1)
 
@@ -96,7 +95,7 @@ Bei Passphrase-Send mit Bindung: Meta im bestehenden PWMSG oder Prefix-Hinweis z
 | **P0** | Spec (dieses Doc) + Enc-Store + Unlock-Hook + Vitest | Nein |
 | **P1** | Galerie „Als Schlüsselkarte“ + Composer-Bindung PWMSG + Besitz-Check — **Ist** | Nein |
 | **P2** | Multi-Slot UI + ImageNFT-Mint an Slot (+ `boundObjects`) — **Ist** | Nein |
-| **P3** | Optional Description-Marker / Move | Optional |
+| **P3** | Description-Marker `[morg-keycard]` (öffentlich) — **Ist**; Move nein | Nein |
 
 ## 7. Abnahme (später Feld)
 
