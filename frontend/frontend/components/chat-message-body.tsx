@@ -60,6 +60,8 @@ function PassphraseMessageBody(p: {
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
   const [autoBusy, setAutoBusy] = useState(false)
+  /** Weiches Verbergen: Klartext weg, Key bleibt (Schulterblick). */
+  const [hidden, setHidden] = useState(false)
   const [showPass, setShowPass] = useState(false)
   const [copiedPass, setCopiedPass] = useState(false)
 
@@ -79,7 +81,10 @@ function PassphraseMessageBody(p: {
       const next = resolveKnownPassphraseForWire(p.content)
       setKnown(next)
       setPass((prev) => (prev.trim().length >= 8 ? prev : next))
-      if (next) setPlain(null)
+      if (next) {
+        setHidden(false)
+        setPlain(null)
+      }
     }
     sync()
     window.addEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, sync)
@@ -87,7 +92,7 @@ function PassphraseMessageBody(p: {
   }, [p.content])
 
   useEffect(() => {
-    if (!known || plain) return
+    if (!known || plain || hidden) return
     let alive = true
     setAutoBusy(true)
     void decryptPassphraseMessageWire(p.content, known)
@@ -107,7 +112,7 @@ function PassphraseMessageBody(p: {
     return () => {
       alive = false
     }
-  }, [p.content, known, plain])
+  }, [p.content, known, plain, hidden])
 
   const onUnlock = async () => {
     setBusy(true)
@@ -115,12 +120,33 @@ function PassphraseMessageBody(p: {
     try {
       const t = await decryptPassphraseMessageWire(p.content, pass)
       rememberPassphraseMessagePassphrase(p.content, pass.trim())
+      setHidden(false)
       setPlain(t)
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e))
     } finally {
       setBusy(false)
     }
+  }
+
+  const hidePlain = () => {
+    setPlain(null)
+    setShowPass(false)
+    setHidden(true)
+  }
+
+  const revealAgain = () => {
+    setHidden(false)
+    setPlain(null)
+  }
+
+  const forgetLocal = () => {
+    forgetPassphraseMessagePassphrase(p.content)
+    setPass('')
+    setKnown('')
+    setShowPass(false)
+    setPlain(null)
+    setHidden(false)
   }
 
   return (
@@ -140,6 +166,14 @@ function PassphraseMessageBody(p: {
             <button
               type="button"
               className="text-xs font-medium text-muted-foreground hover:underline"
+              onClick={hidePlain}
+              title="Klartext ausblenden (Key bleibt lokal — ein Klick zum Wiederanzeigen)"
+            >
+              Verbergen
+            </button>
+            <button
+              type="button"
+              className="text-xs font-medium text-muted-foreground hover:underline"
               onClick={() => setShowPass((v) => !v)}
             >
               {showPass ? 'Passphrase verbergen' : 'Passphrase anzeigen'}
@@ -152,27 +186,43 @@ function PassphraseMessageBody(p: {
             <button
               type="button"
               className="text-xs text-muted-foreground hover:underline"
-              onClick={() => {
-                forgetPassphraseMessagePassphrase(p.content)
-                setPass('')
-                setKnown('')
-                setShowPass(false)
-                setPlain(null)
-              }}
+              onClick={forgetLocal}
+              title="Lokalen Key löschen — danach wieder Passphrase nötig"
             >
-              Lokal vergessen
+              Key vergessen
             </button>
             <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={p.onCopyRaw}>
               {p.copiedRaw ? 'Kopiert' : 'Wire kopieren'}
             </button>
           </div>
         </>
-      ) : autoBusy && known ? (
+      ) : autoBusy && known && !hidden ? (
         <p className="text-xs text-muted-foreground">Entschlüssele…</p>
+      ) : hidden && known ? (
+        <>
+          <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
+            Inhalt verborgen (Ciphertext on-chain). Key noch lokal — Absender und Empfänger gleich.
+          </p>
+          <div className="flex flex-wrap gap-2 items-center">
+            <button
+              type="button"
+              className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium hover:bg-muted"
+              onClick={revealAgain}
+            >
+              Wieder anzeigen
+            </button>
+            <button type="button" className="text-xs text-muted-foreground hover:underline" onClick={forgetLocal}>
+              Key vergessen
+            </button>
+            <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={p.onCopyRaw}>
+              {p.copiedRaw ? 'Kopiert' : 'Wire kopieren'}
+            </button>
+          </div>
+        </>
       ) : (
         <>
           <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
-            Passphrase-Nachricht — lokal kein Schlüssel (nach Unlock erscheint der Klartext automatisch).
+            Passphrase nötig — ohne Key nur Ciphertext (gilt für Absender und Empfänger).
           </p>
           <input
             type="password"
