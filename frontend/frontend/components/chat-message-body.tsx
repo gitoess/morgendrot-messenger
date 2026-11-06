@@ -31,6 +31,7 @@ import {
 } from '@/frontend/lib/passphrase-message-crypto'
 import {
   forgetPassphraseMessagePassphrase,
+  getDefaultPassphraseMessagePassphrase,
   lookupPassphraseMessagePassphrase,
   rememberPassphraseMessagePassphrase,
 } from '@/frontend/lib/passphrase-message-local-store'
@@ -39,32 +40,55 @@ import { cn } from '@/lib/utils'
 const TXT_PREVIEW_CHARS = 480
 const TXT_COLLAPSE_MAX_H = 'max-h-36' /* 9rem */
 
+function resolveKnownPassphraseForWire(wire: string): string {
+  return (
+    lookupPassphraseMessagePassphrase(wire)?.trim() ||
+    getDefaultPassphraseMessagePassphrase()?.trim() ||
+    ''
+  )
+}
+
 function PassphraseMessageBody(p: {
   content: string
   onCopyRaw: () => void
   copiedRaw: boolean
 }) {
-  const remembered = lookupPassphraseMessagePassphrase(p.content)
-  const [pass, setPass] = useState(remembered || '')
+  const known = resolveKnownPassphraseForWire(p.content)
+  const [pass, setPass] = useState(known)
   const [plain, setPlain] = useState<string | null>(null)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
   const [showPass, setShowPass] = useState(false)
+  const [copiedPass, setCopiedPass] = useState(false)
+
+  const effectivePass = (pass.trim() || known).trim()
+
+  const copyPassphrase = () => {
+    const v = effectivePass
+    if (v.length < 8) return
+    void navigator.clipboard.writeText(v).then(() => {
+      setCopiedPass(true)
+      window.setTimeout(() => setCopiedPass(false), 2000)
+    })
+  }
 
   useEffect(() => {
-    if (!remembered || plain) return
+    if (!known || plain) return
     let alive = true
-    void decryptPassphraseMessageWire(p.content, remembered)
+    void decryptPassphraseMessageWire(p.content, known)
       .then((t) => {
-        if (alive) setPlain(t)
+        if (!alive) return
+        rememberPassphraseMessagePassphrase(p.content, known)
+        setPass(known)
+        setPlain(t)
       })
       .catch(() => {
-        /* remembered wrong — user enters manually */
+        /* known wrong — user enters manually */
       })
     return () => {
       alive = false
     }
-  }, [p.content, remembered, plain])
+  }, [p.content, known, plain])
 
   const onUnlock = async () => {
     setBusy(true)
@@ -99,14 +123,14 @@ function PassphraseMessageBody(p: {
             {showPass ? (
               <>
                 <code className="max-w-full break-all rounded bg-muted/50 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
-                  {(pass.trim() || remembered || '').trim()}
+                  {effectivePass}
                 </code>
                 <button
                   type="button"
                   className="text-xs font-medium text-primary hover:underline"
-                  onClick={() => void navigator.clipboard.writeText((pass.trim() || remembered || '').trim())}
+                  onClick={copyPassphrase}
                 >
-                  Kopieren
+                  {copiedPass ? 'Kopiert' : 'Passphrase kopieren'}
                 </button>
                 <button
                   type="button"
@@ -115,12 +139,22 @@ function PassphraseMessageBody(p: {
                     forgetPassphraseMessagePassphrase(p.content)
                     setPass('')
                     setShowPass(false)
+                    setPlain(null)
                   }}
                 >
                   Lokal vergessen
                 </button>
               </>
-            ) : null}
+            ) : (
+              <button
+                type="button"
+                className="text-xs font-medium text-primary hover:underline"
+                disabled={effectivePass.length < 8}
+                onClick={copyPassphrase}
+              >
+                {copiedPass ? 'Kopiert' : 'Passphrase kopieren'}
+              </button>
+            )}
             <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={p.onCopyRaw}>
               {p.copiedRaw ? 'Kopiert' : 'Wire kopieren'}
             </button>
@@ -137,14 +171,34 @@ function PassphraseMessageBody(p: {
             autoComplete="off"
           />
           {err ? <p className="text-xs text-destructive">{err}</p> : null}
-          <button
-            type="button"
-            disabled={busy || pass.trim().length < 8}
-            onClick={() => void onUnlock()}
-            className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
-          >
-            {busy ? '…' : 'Entschlüsseln'}
-          </button>
+          <div className="flex flex-wrap gap-2 items-center">
+            <button
+              type="button"
+              disabled={busy || pass.trim().length < 8}
+              onClick={() => void onUnlock()}
+              className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
+            >
+              {busy ? '…' : 'Entschlüsseln'}
+            </button>
+            {effectivePass.length >= 8 ? (
+              <button
+                type="button"
+                className="text-xs font-medium text-primary hover:underline"
+                onClick={copyPassphrase}
+              >
+                {copiedPass ? 'Kopiert' : 'Passphrase kopieren'}
+              </button>
+            ) : null}
+            <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={p.onCopyRaw}>
+              {p.copiedRaw ? 'Kopiert' : 'Wire kopieren'}
+            </button>
+          </div>
+          {!known ? (
+            <p className="text-[11px] text-muted-foreground">
+              Kein lokaler Schlüssel für dieses Wire. Passphrase steht nach dem Senden in der
+              Statuszeile — oder unter Composer → Passphrase-Schutz → wiederverwenden.
+            </p>
+          ) : null}
         </>
       )}
     </div>
