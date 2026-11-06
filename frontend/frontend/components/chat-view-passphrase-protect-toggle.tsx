@@ -65,7 +65,8 @@ export function PassphraseProtectComposerToggle(p: {
           <span className="font-medium text-foreground">Passphrase-Schutz</span>
           {' — '}
           ohne Handshake; Ciphertext öffentlich, Passphrase separat teilen. Braucht Klartext-Transport.
-          Lokal gemerkte Keys nur auf diesem Gerät (Vault-Lock leert sie).
+          Keys at rest mit Vault-Passwort verschlüsselt; Lock leert nur den RAM, Purge/
+          Einsatz-Ende löscht den Sidecar.
         </span>
       </label>
 

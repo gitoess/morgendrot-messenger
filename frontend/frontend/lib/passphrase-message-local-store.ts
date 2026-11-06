@@ -1,11 +1,51 @@
-/** Gerätelokal: Wire-Fingerprint → Passphrase (erneut anzeigen / Auto-Entschlüsseln). */
+/**
+ * Passphrase-Nachrichten-Keys: im entsperrten Zustand nur im RAM;
+ * at rest AES-GCM mit Vault-Passwort (wie Session-Signer), nicht Klartext-localStorage.
+ *
+ * Lock → RAM leeren, Ciphertext behalten.
+ * Purge → RAM + Ciphertext + Legacy-Klartext weg.
+ */
 
-const LS_KEY = 'morgendrot.passphraseMsg.v1'
-/** Geräte-Standard für „Passphrase wiederverwenden“ (mehrere Nachrichten). */
-const LS_DEFAULT = 'morgendrot.passphraseMsg.default.v1'
+import {
+  decryptHandoffEnvUtf8,
+  encryptHandoffEnvUtf8,
+  type HandoffCryptoMetaJson,
+} from '@/frontend/lib/handoff-zip-crypto'
+
+const LS_KEY_LEGACY = 'morgendrot.passphraseMsg.v1'
+const LS_DEFAULT_LEGACY = 'morgendrot.passphraseMsg.default.v1'
+/** Vault-Passwort-verschlüsselter Sidecar (nicht die API-Vault-Datei). */
+export const PASSPHRASE_MESSAGE_ENC_LS_KEY = 'morgendrot.passphraseMsg.enc.v1'
+export const PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT = 'morgendrot:passphrase-msg-vault'
+
 const MAX_ENTRIES = 60
+const PERSIST_DEBOUNCE_MS = 400
 
 type Store = Record<string, string>
+
+type EncPayloadV1 = {
+  schema: 'morgendrot.passphrase-msg.enc.v1'
+  crypto: HandoffCryptoMetaJson
+  ciphertextB64: string
+}
+
+type EncPlainV1 = {
+  v: 1
+  byWire: Store
+  defaultPass?: string
+}
+
+let memoryByWire: Store = {}
+let memoryDefault: string | null = null
+/** Vault-Passwort nur während entsperrter Sitzung (nicht in LS). */
+let sessionVaultPassword: string | null = null
+let persistTimer: ReturnType<typeof setTimeout> | null = null
+let persistInFlight: Promise<void> | null = null
+
+export const PASSPHRASE_MESSAGE_LS_KEY = LS_KEY_LEGACY
+export const PASSPHRASE_MESSAGE_DEFAULT_LS_KEY = LS_DEFAULT_LEGACY
+export const PASSPHRASE_PROTECT_LS_KEY = 'morgendrot.composer.passphraseProtect'
+export const PASSPHRASE_REUSE_LS_KEY = 'morgendrot.composer.passphraseReuse'
 
 /** FNV-1a über vollständigen Wire — stabiler als Prefix/Suffix. */
 export function fingerprintPassphraseMessageWire(wire: string): string {
@@ -18,10 +58,40 @@ export function fingerprintPassphraseMessageWire(wire: string): string {
   return `fnv:${t.length}:${(h >>> 0).toString(16)}`
 }
 
-function readStore(): Store {
+function emitChanged(): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.dispatchEvent(new Event(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT))
+  } catch {
+    /* ignore */
+  }
+}
+
+function bytesToB64(u8: Uint8Array): string {
+  let s = ''
+  for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]!)
+  return btoa(s)
+}
+
+function b64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64)
+  const out = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
+  return out
+}
+
+function trimStore(s: Store): Store {
+  const keys = Object.keys(s)
+  if (keys.length <= MAX_ENTRIES) return s
+  const out: Store = { ...s }
+  for (const k of keys.slice(0, keys.length - MAX_ENTRIES)) delete out[k]
+  return out
+}
+
+function readLegacyPlainStore(): Store {
   if (typeof window === 'undefined') return {}
   try {
-    const raw = window.localStorage.getItem(LS_KEY)
+    const raw = window.localStorage.getItem(LS_KEY_LEGACY)
     if (!raw) return {}
     const j = JSON.parse(raw) as Record<string, unknown>
     const out: Store = {}
@@ -34,53 +104,230 @@ function readStore(): Store {
   }
 }
 
-function writeStore(s: Store): void {
+function readLegacyDefault(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const v = window.localStorage.getItem(LS_DEFAULT_LEGACY)?.trim() ?? ''
+    return v.length >= 8 ? v : null
+  } catch {
+    return null
+  }
+}
+
+function clearLegacyPlainStorage(): void {
   if (typeof window === 'undefined') return
   try {
-    const keys = Object.keys(s)
-    if (keys.length > MAX_ENTRIES) {
-      for (const k of keys.slice(0, keys.length - MAX_ENTRIES)) delete s[k]
-    }
-    window.localStorage.setItem(LS_KEY, JSON.stringify(s))
+    window.localStorage.removeItem(LS_KEY_LEGACY)
+    window.localStorage.removeItem(LS_DEFAULT_LEGACY)
   } catch {
     /* ignore */
   }
+}
+
+function readEncBlobRaw(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    return window.localStorage.getItem(PASSPHRASE_MESSAGE_ENC_LS_KEY)
+  } catch {
+    return null
+  }
+}
+
+function writeEncBlobRaw(json: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(PASSPHRASE_MESSAGE_ENC_LS_KEY, json)
+  } catch {
+    /* ignore */
+  }
+}
+
+function removeEncBlob(): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.removeItem(PASSPHRASE_MESSAGE_ENC_LS_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+export function hasEncryptedPassphraseMessageVault(): boolean {
+  return !!readEncBlobRaw()?.trim()
+}
+
+export function isPassphraseMessageVaultSessionOpen(): boolean {
+  return sessionVaultPassword != null && sessionVaultPassword.length >= 8
+}
+
+function mergeLegacyIntoMemory(): boolean {
+  const legacy = readLegacyPlainStore()
+  const legDef = readLegacyDefault()
+  let changed = false
+  for (const [k, v] of Object.entries(legacy)) {
+    if (!memoryByWire[k]) {
+      memoryByWire[k] = v
+      changed = true
+    }
+  }
+  if (!memoryDefault && legDef) {
+    memoryDefault = legDef
+    changed = true
+  }
+  return changed
+}
+
+async function persistEncryptedNow(): Promise<void> {
+  const pw = sessionVaultPassword
+  if (!pw || pw.length < 8 || typeof window === 'undefined') return
+  memoryByWire = trimStore(memoryByWire)
+  const plain: EncPlainV1 = {
+    v: 1,
+    byWire: { ...memoryByWire },
+    ...(memoryDefault ? { defaultPass: memoryDefault } : {}),
+  }
+  const { meta, ciphertext } = await encryptHandoffEnvUtf8(JSON.stringify(plain), pw)
+  const payload: EncPayloadV1 = {
+    schema: 'morgendrot.passphrase-msg.enc.v1',
+    crypto: meta,
+    ciphertextB64: bytesToB64(ciphertext),
+  }
+  writeEncBlobRaw(JSON.stringify(payload))
+  clearLegacyPlainStorage()
+}
+
+function schedulePersist(): void {
+  if (!isPassphraseMessageVaultSessionOpen()) return
+  if (persistTimer) clearTimeout(persistTimer)
+  persistTimer = setTimeout(() => {
+    persistTimer = null
+    persistInFlight = persistEncryptedNow().catch(() => undefined)
+  }, PERSIST_DEBOUNCE_MS)
+}
+
+/**
+ * Nach Vault-Unlock: Ciphertext laden + Legacy migrieren.
+ * Ohne gültiges Passwort bleibt die Sitzung speicherlos (nur RAM bis Reload).
+ */
+export async function unlockPassphraseMessageVault(password: string): Promise<
+  { ok: true; migratedLegacy: boolean } | { ok: false; error: string }
+> {
+  const pw = password.trim()
+  if (pw.length < 8) {
+    return { ok: false, error: 'Vault-Passwort mindestens 8 Zeichen für Chat-Passphrasen.' }
+  }
+  sessionVaultPassword = pw
+  memoryByWire = {}
+  memoryDefault = null
+
+  const raw = readEncBlobRaw()?.trim()
+  if (raw) {
+    try {
+      const payload = JSON.parse(raw) as Partial<EncPayloadV1>
+      if (
+        payload.schema !== 'morgendrot.passphrase-msg.enc.v1' ||
+        !payload.crypto ||
+        !payload.ciphertextB64
+      ) {
+        return { ok: false, error: 'Chat-Passphrasen-Vault hat unbekanntes Format.' }
+      }
+      const dec = await decryptHandoffEnvUtf8(payload.crypto, b64ToBytes(payload.ciphertextB64), pw)
+      if (!dec.ok) {
+        sessionVaultPassword = null
+        return { ok: false, error: dec.error }
+      }
+      const j = JSON.parse(dec.envText) as Partial<EncPlainV1>
+      const byWire: Store = {}
+      if (j?.byWire && typeof j.byWire === 'object') {
+        for (const [k, v] of Object.entries(j.byWire)) {
+          if (typeof v === 'string' && v.trim().length >= 8) byWire[k] = v.trim()
+        }
+      }
+      memoryByWire = byWire
+      const d = typeof j.defaultPass === 'string' ? j.defaultPass.trim() : ''
+      memoryDefault = d.length >= 8 ? d : null
+    } catch (e) {
+      sessionVaultPassword = null
+      return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    }
+  }
+
+  const migratedLegacy = mergeLegacyIntoMemory()
+  if (migratedLegacy || Object.keys(memoryByWire).length > 0 || memoryDefault) {
+    await persistEncryptedNow()
+  }
+  emitChanged()
+  return { ok: true, migratedLegacy }
+}
+
+/** Sitzung sperren: Klartext aus RAM, Ciphertext bleibt. */
+export function lockPassphraseMessageVault(): void {
+  if (persistTimer) {
+    clearTimeout(persistTimer)
+    persistTimer = null
+  }
+  memoryByWire = {}
+  memoryDefault = null
+  sessionVaultPassword = null
+  emitChanged()
+}
+
+/** Unwiderruflich: RAM + verschlüsselter Sidecar + Legacy-Klartext. */
+export function purgePassphraseMessageVault(): void {
+  if (persistTimer) {
+    clearTimeout(persistTimer)
+    persistTimer = null
+  }
+  memoryByWire = {}
+  memoryDefault = null
+  sessionVaultPassword = null
+  removeEncBlob()
+  clearLegacyPlainStorage()
+  emitChanged()
+}
+
+/** @deprecated Alias — früher Klartext-Wipe; jetzt voller Purge. */
+export function clearAllPassphraseMessagePassphrases(): void {
+  purgePassphraseMessageVault()
 }
 
 export function rememberPassphraseMessagePassphrase(wire: string, passphrase: string): void {
   const pass = passphrase.trim()
   if (pass.length < 8 || !wire.trim()) return
-  const s = readStore()
-  s[fingerprintPassphraseMessageWire(wire)] = pass
-  writeStore(s)
+  memoryByWire = { ...memoryByWire, [fingerprintPassphraseMessageWire(wire)]: pass }
+  memoryByWire = trimStore(memoryByWire)
+  schedulePersist()
+  emitChanged()
 }
 
 export function lookupPassphraseMessagePassphrase(wire: string): string | null {
-  return readStore()[fingerprintPassphraseMessageWire(wire)] ?? null
+  return memoryByWire[fingerprintPassphraseMessageWire(wire)] ?? null
 }
 
 export function forgetPassphraseMessagePassphrase(wire: string): void {
-  const s = readStore()
-  delete s[fingerprintPassphraseMessageWire(wire)]
-  writeStore(s)
+  const next = { ...memoryByWire }
+  delete next[fingerprintPassphraseMessageWire(wire)]
+  memoryByWire = next
+  schedulePersist()
+  emitChanged()
 }
 
-/** Vault-Lock / Privacy: Wire-Merker + Geräte-Standard leeren. */
-export function clearAllPassphraseMessagePassphrases(): void {
-  if (typeof window === 'undefined') return
-  try {
-    window.localStorage.removeItem(LS_KEY)
-    window.localStorage.removeItem(LS_DEFAULT)
-  } catch {
-    /* ignore */
-  }
+export function getDefaultPassphraseMessagePassphrase(): string | null {
+  return memoryDefault
 }
 
-export const PASSPHRASE_MESSAGE_LS_KEY = LS_KEY
-export const PASSPHRASE_MESSAGE_DEFAULT_LS_KEY = LS_DEFAULT
+export function setDefaultPassphraseMessagePassphrase(passphrase: string): void {
+  const pass = passphrase.trim()
+  if (pass.length < 8) return
+  memoryDefault = pass
+  schedulePersist()
+  emitChanged()
+}
 
-export const PASSPHRASE_PROTECT_LS_KEY = 'morgendrot.composer.passphraseProtect'
-export const PASSPHRASE_REUSE_LS_KEY = 'morgendrot.composer.passphraseReuse'
+export function clearDefaultPassphraseMessagePassphrase(): void {
+  memoryDefault = null
+  schedulePersist()
+  emitChanged()
+}
 
 export function readPassphraseProtectEnabled(): boolean {
   if (typeof window === 'undefined') return false
@@ -118,36 +365,6 @@ export function writePassphraseReuseEnabled(on: boolean): void {
   }
 }
 
-export function getDefaultPassphraseMessagePassphrase(): string | null {
-  if (typeof window === 'undefined') return null
-  try {
-    const v = window.localStorage.getItem(LS_DEFAULT)?.trim() ?? ''
-    return v.length >= 8 ? v : null
-  } catch {
-    return null
-  }
-}
-
-export function setDefaultPassphraseMessagePassphrase(passphrase: string): void {
-  if (typeof window === 'undefined') return
-  const pass = passphrase.trim()
-  if (pass.length < 8) return
-  try {
-    window.localStorage.setItem(LS_DEFAULT, pass)
-  } catch {
-    /* ignore */
-  }
-}
-
-export function clearDefaultPassphraseMessagePassphrase(): void {
-  if (typeof window === 'undefined') return
-  try {
-    window.localStorage.removeItem(LS_DEFAULT)
-  } catch {
-    /* ignore */
-  }
-}
-
 /**
  * Passphrase für den nächsten Send: bei Reuse Geräte-Standard (ggf. neu erzeugen),
  * sonst frische Zufallspassphrase. Pro Send-Aktion eine Passphrase für alle Snaps.
@@ -164,4 +381,14 @@ export function resolvePassphraseForProtectSend(generateFresh: () => string): {
     return { passphrase: fresh, reused: true }
   }
   return { passphrase: generateFresh().trim(), reused: false }
+}
+
+/** Tests / Debounce flush. */
+export async function flushPassphraseMessageVaultPersist(): Promise<void> {
+  if (persistTimer) {
+    clearTimeout(persistTimer)
+    persistTimer = null
+  }
+  if (persistInFlight) await persistInFlight
+  await persistEncryptedNow()
 }

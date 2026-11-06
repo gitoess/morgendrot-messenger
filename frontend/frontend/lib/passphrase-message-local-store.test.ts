@@ -1,9 +1,17 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   fingerprintPassphraseMessageWire,
+  flushPassphraseMessageVaultPersist,
   getDefaultPassphraseMessagePassphrase,
+  hasEncryptedPassphraseMessageVault,
+  lockPassphraseMessageVault,
+  lookupPassphraseMessagePassphrase,
+  PASSPHRASE_MESSAGE_ENC_LS_KEY,
+  purgePassphraseMessageVault,
+  rememberPassphraseMessagePassphrase,
   resolvePassphraseForProtectSend,
   setDefaultPassphraseMessagePassphrase,
+  unlockPassphraseMessageVault,
   writePassphraseReuseEnabled,
 } from '@/frontend/lib/passphrase-message-local-store'
 
@@ -19,6 +27,7 @@ describe('fingerprintPassphraseMessageWire', () => {
 
 describe('resolvePassphraseForProtectSend', () => {
   afterEach(() => {
+    purgePassphraseMessageVault()
     window.localStorage.clear()
   })
 
@@ -29,7 +38,8 @@ describe('resolvePassphraseForProtectSend', () => {
     expect(getDefaultPassphraseMessagePassphrase()).toBeNull()
   })
 
-  it('mit Reuse: behält Geräte-Standard', () => {
+  it('mit Reuse: behält Geräte-Standard', async () => {
+    await unlockPassphraseMessageVault('vault-pass-99')
     writePassphraseReuseEnabled(true)
     setDefaultPassphraseMessagePassphrase('shared-pass-9999')
     const a = resolvePassphraseForProtectSend(() => 'should-not-use')
@@ -38,10 +48,72 @@ describe('resolvePassphraseForProtectSend', () => {
     expect(b.passphrase).toBe(a.passphrase)
   })
 
-  it('mit Reuse ohne Default: erzeugt und speichert', () => {
+  it('mit Reuse ohne Default: erzeugt und speichert', async () => {
+    await unlockPassphraseMessageVault('vault-pass-99')
     writePassphraseReuseEnabled(true)
     const a = resolvePassphraseForProtectSend(() => 'brand-new-pass1')
     expect(a).toEqual({ passphrase: 'brand-new-pass1', reused: true })
     expect(getDefaultPassphraseMessagePassphrase()).toBe('brand-new-pass1')
+  })
+})
+
+describe('passphrase message vault enc', () => {
+  afterEach(() => {
+    purgePassphraseMessageVault()
+    window.localStorage.clear()
+  })
+
+  it('persistiert verschlüsselt, überlebt Lock+Unlock, Purge löscht Sidecar', async () => {
+    const wire = 'MORG_PWMSG_V1:secret-wire'
+    const unlocked = await unlockPassphraseMessageVault('vault-pass-99')
+    expect(unlocked.ok).toBe(true)
+    rememberPassphraseMessagePassphrase(wire, 'msg-pass-8888')
+    setDefaultPassphraseMessagePassphrase('shared-pass-7777')
+    await flushPassphraseMessageVaultPersist()
+    expect(hasEncryptedPassphraseMessageVault()).toBe(true)
+    expect(window.localStorage.getItem(PASSPHRASE_MESSAGE_ENC_LS_KEY)).toContain(
+      'morgendrot.passphrase-msg.enc.v1'
+    )
+    expect(window.localStorage.getItem('morgendrot.passphraseMsg.v1')).toBeNull()
+
+    lockPassphraseMessageVault()
+    expect(lookupPassphraseMessagePassphrase(wire)).toBeNull()
+    expect(getDefaultPassphraseMessagePassphrase()).toBeNull()
+    expect(hasEncryptedPassphraseMessageVault()).toBe(true)
+
+    const again = await unlockPassphraseMessageVault('vault-pass-99')
+    expect(again.ok).toBe(true)
+    expect(lookupPassphraseMessagePassphrase(wire)).toBe('msg-pass-8888')
+    expect(getDefaultPassphraseMessagePassphrase()).toBe('shared-pass-7777')
+
+    purgePassphraseMessageVault()
+    expect(hasEncryptedPassphraseMessageVault()).toBe(false)
+    expect(lookupPassphraseMessagePassphrase(wire)).toBeNull()
+  })
+
+  it('migriert Legacy-Klartext beim Unlock', async () => {
+    const wire = 'MORG_PWMSG_V1:legacy'
+    const fp = fingerprintPassphraseMessageWire(wire)
+    window.localStorage.setItem(
+      'morgendrot.passphraseMsg.v1',
+      JSON.stringify({ [fp]: 'legacy-pass-12' })
+    )
+    window.localStorage.setItem('morgendrot.passphraseMsg.default.v1', 'legacy-default-9')
+    const unlocked = await unlockPassphraseMessageVault('vault-pass-99')
+    expect(unlocked.ok).toBe(true)
+    if (unlocked.ok) expect(unlocked.migratedLegacy).toBe(true)
+    expect(lookupPassphraseMessagePassphrase(wire)).toBe('legacy-pass-12')
+    expect(getDefaultPassphraseMessagePassphrase()).toBe('legacy-default-9')
+    expect(window.localStorage.getItem('morgendrot.passphraseMsg.v1')).toBeNull()
+    expect(hasEncryptedPassphraseMessageVault()).toBe(true)
+  })
+
+  it('lehnt falsches Vault-Passwort ab', async () => {
+    await unlockPassphraseMessageVault('vault-pass-99')
+    rememberPassphraseMessagePassphrase('MORG_PWMSG_V1:x', 'msg-pass-8888')
+    await flushPassphraseMessageVaultPersist()
+    lockPassphraseMessageVault()
+    const bad = await unlockPassphraseMessageVault('wrong-password')
+    expect(bad.ok).toBe(false)
   })
 })

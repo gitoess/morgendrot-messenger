@@ -88,6 +88,7 @@ import {
 import { DIRECT_IOTA_UI_CHANGED } from '@/frontend/lib/direct-iota-ui-events'
 import { clearDirectChatEcdhKeyMaterial } from '@/frontend/lib/direct-chat-ecdh-session'
 import { wipeLocalPassphraseStoresOnLock } from '@/frontend/lib/privacy-lock-wipe'
+import { unlockPassphraseMessageVault } from '@/frontend/lib/passphrase-message-local-store'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { useChatViewPendingHandshakes, OPEN_MESSENGER_INBOX_EVENT } from '@/frontend/hooks/use-chat-view-pending-handshakes'
 import { useOfflineStatus } from '@/frontend/hooks/use-offline-status'
@@ -199,6 +200,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     const prev = prevLockedRef.current
     prevLockedRef.current = locked
     if (locked && !prev) {
+      wipeLocalPassphraseStoresOnLock()
       restoredDashboardViewRef.current = false
       setUnlockError('')
       setSignerImport('')
@@ -675,6 +677,9 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       }
       setUnlocking(false)
       if (unlockResult.ok) {
+        if (vaultPassword.length >= 8) {
+          void unlockPassphraseMessageVault(vaultPassword)
+        }
         vaultUnlockRequestedRef.current = false
         sessionUnlockedStableRef.current = true
         lockPollStreakRef.current = 0
@@ -720,6 +725,9 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     setUnlocking(false)
     if (res.ok) {
       const vaultPw = password
+      if (vaultPw.trim().length >= 8) {
+        void unlockPassphraseMessageVault(vaultPw)
+      }
       /**
        * Seed im lokalen Tresor halten, sonst nach API-Restart (`npm run dm`) wieder Seed nötig.
        * Nicht nur create/import: auch „Tresor öffnen“ + Mnemonic ergänzen (unlockMode=open + sdkExtra).
@@ -799,6 +807,9 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       )
     } else if (VAULT_ALREADY_UNLOCKED_RE.test(res.error || '')) {
       const vaultPw = password
+      if (vaultPw.trim().length >= 8) {
+        void unlockPassphraseMessageVault(vaultPw)
+      }
       const vaultKeysLoaded = await ensureBackendVaultKeysInSession(vaultPw)
       if (vaultKeysLoaded) {
         setApiSnapshot((prev) => (prev ? { ...prev, hasKeys: true, locked: false } : prev))

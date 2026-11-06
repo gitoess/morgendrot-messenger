@@ -6,12 +6,14 @@ import {
   suggestPassphraseForPastedWire,
 } from '@/frontend/lib/wire-paste-import'
 import {
+  purgePassphraseMessageVault,
   setDefaultPassphraseMessagePassphrase,
   writePassphraseReuseEnabled,
 } from '@/frontend/lib/passphrase-message-local-store'
 
 describe('wire-paste-import', () => {
   afterEach(() => {
+    purgePassphraseMessageVault()
     window.localStorage.clear()
   })
 

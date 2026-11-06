@@ -1,11 +1,12 @@
 /**
- * Beim Vault-/Session-Lock: Chat-Passphrase-Nachrichten-Merker leeren.
- * ImageNFT-Passphrasen bleiben (eigene Galerie ohne erneute Eingabe) —
+ * Beim Vault-/Session-Lock: Chat-Passphrase-Klartext aus RAM.
+ * Ciphertext (Vault-Passwort-Sidecar) bleibt — nach Unlock wieder verfügbar.
+ * ImageNFT-Passphrasen bleiben (eigene Galerie) —
  * werden bei Einsatz-Ende / clearAllEvidencePassphrases entfernt.
  * ECDH-Material: clearDirectChatEcdhKeyMaterial separat.
  */
-import { clearAllPassphraseMessagePassphrases } from '@/frontend/lib/passphrase-message-local-store'
+import { lockPassphraseMessageVault } from '@/frontend/lib/passphrase-message-local-store'
 
 export function wipeLocalPassphraseStoresOnLock(): void {
-  clearAllPassphraseMessagePassphrases()
+  lockPassphraseMessageVault()
 }

@@ -1,6 +1,6 @@
 # Security-Claims-Check (Ist vs. Marketing-Text)
 
-**Stand:** 2026-11-05 (nach H.23-UX + Lock-Wipe + Burn-on-read + Passphrase-Reuse + Mailbox-Force bei Burn)  
+**Stand:** 2026-11-06 (Passphrase-Msg-Keys vault-passwortverschlüsselt + Lock/Purge)  
 **Kontext:** ImageNFT-Passphrase + Passphrase-Nachrichtenkanal + Session-Epoch.
 
 | Claim | Morgendrot Ist | Urteil |
@@ -18,9 +18,10 @@
 |---------|--------|--------|
 | ImageNFT MORGIMGE1 + lokale Passphrase-Merker (Object-ID nach Mint) | Teilen ohne Handshake | Passphrase Klartext in `localStorage` dieses Geräts |
 | Galerie: Auto-Entschlüsselung + pro Eintrag Unlock | Nutzbar ohne Object-ID-Umweg | Nur wenn Passphrase lokal oder eingegeben |
-| Passphrase-Nachricht `MORG_PWMSG_V1` | Chat-ähnliches Teilen ohne ECDH; optional **Passphrase wiederverwenden**; Posteingang **Wire einfügen** (Paste+Passphrase) | Ciphertext öffentlich; Key off-chain; **kein** FS; Vault-Lock leert Default |
+| Passphrase-Nachricht `MORG_PWMSG_V1` | Chat ohne ECDH; optional **Reuse**; Wire-Paste | Ciphertext öffentlich; Key off-chain; **kein** FS |
+| Passphrase-Msg-Keys at rest | `passphraseMsg.enc.v1` AES-GCM + Vault-Passwort; Klartext nur RAM; Legacy-Migration | Nicht in API-Vault-Datei; XSS/Malware mit Vault-PW kann entschlüsseln |
 | Gegenseitiger Ausschluss Handshake ↔ Passphrase-Schutz | Weniger Fehlbedienung | — |
-| **Vault-/Session-Lock:** leert `evidenceImage.passphrases` + `passphraseMsg` Stores | Weniger Klartext-Reste nach Sperre | Nur dieses Gerät; ECDH separat |
+| **Vault-/Session-Lock:** Chat-Passphrasen aus RAM; Enc-Sidecar bleibt; Purge/Einsatz-Ende löscht Sidecar | Weniger Klartext-Reste; Keys nach Unlock wieder da | ImageNFT-Passphrasen weiter Klartext-LS bis Einsatz-Ende |
 | **H.23 A4 UX:** ⋮ → Schlüssel erneuern (Epoch-Anzeige) + Hinweis nach Enc-Send | Rotation auffindbar | Kein Auto-Ratchet |
 | **Burn-on-read Opt-in** (Chat-⋮) | Purge nach Lesen vorschlagen; bei aktiv → Composer erzwingt Mailbox (Event nicht purgebar) | Mit Bestätigung; nur Mailbox-Objekte; Explorer behält TX/Events |
 | **H.23 B1 Team-Key** | Enc Team-Broadcast + Handoff; UI erzeugen/rotieren; Enc-Send ohne Auto-Fork | Keys noch localStorage (kein `.team-keys.enc`); 2-Geräte-Feldtest offen |

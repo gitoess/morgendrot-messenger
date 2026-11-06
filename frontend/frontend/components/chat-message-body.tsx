@@ -33,6 +33,7 @@ import {
   forgetPassphraseMessagePassphrase,
   getDefaultPassphraseMessagePassphrase,
   lookupPassphraseMessagePassphrase,
+  PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT,
   rememberPassphraseMessagePassphrase,
 } from '@/frontend/lib/passphrase-message-local-store'
 import { cn } from '@/lib/utils'
@@ -53,7 +54,7 @@ function PassphraseMessageBody(p: {
   onCopyRaw: () => void
   copiedRaw: boolean
 }) {
-  const known = resolveKnownPassphraseForWire(p.content)
+  const [known, setKnown] = useState(() => resolveKnownPassphraseForWire(p.content))
   const [pass, setPass] = useState(known)
   const [plain, setPlain] = useState<string | null>(null)
   const [err, setErr] = useState('')
@@ -71,6 +72,17 @@ function PassphraseMessageBody(p: {
       window.setTimeout(() => setCopiedPass(false), 2000)
     })
   }
+
+  useEffect(() => {
+    const sync = () => {
+      const next = resolveKnownPassphraseForWire(p.content)
+      setKnown(next)
+      setPass((prev) => (prev.trim().length >= 8 ? prev : next))
+    }
+    sync()
+    window.addEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, sync)
+    return () => window.removeEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, sync)
+  }, [p.content])
 
   useEffect(() => {
     if (!known || plain) return
@@ -195,8 +207,9 @@ function PassphraseMessageBody(p: {
           </div>
           {!known ? (
             <p className="text-[11px] text-muted-foreground">
-              Kein lokaler Schlüssel für dieses Wire. Passphrase steht nach dem Senden in der
-              Statuszeile — oder unter Composer → Passphrase-Schutz → wiederverwenden.
+              Kein Schlüssel in der entsperrten Sitzung. Nach Vault-Unlock werden lokal
+              gesicherte Passphrasen wieder geladen — sonst Statuszeile nach dem Senden / Composer
+              → wiederverwenden.
             </p>
           ) : null}
         </>

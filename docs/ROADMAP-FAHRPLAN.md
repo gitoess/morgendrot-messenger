@@ -25,7 +25,9 @@
 
 **Nachtrag 2026-11-05 (Privacy / H.23 UX, Claims):** Vault-Lock leert lokale Passphrase-Stores; Chat-⋮ **Schlüssel erneuern** (Epoch) + Hinweis nach Enc-Send; Opt-in **Burn-on-read** (Purge mit Bestätigung). Claims ehrlich: **`docs/SECURITY-CLAIMS-CHECK-2026-11.md`**. **Kein** Double-Ratchet / Decoys / Outboxes in dieser Tranche. **Empfohlene nächste Arbeit:** Feldtest ImageNFT-Mint + Passphrase-Nachricht + Lock-Wipe + Epoch-Renew (2 Geräte) — **vor** neuer Architektur (§ H.23 Ratchet).
 
-**Nachtrag 2026-11-05 (Burn/Mailbox + Passphrase-Reuse):** Burn-on-read erzwingt Composer-**Mailbox** (Event-Pfad nicht purgebar; Explorer behält TX/Events). Direktchat-⋮ mit **Scope-Hinweis**. Chat-**Passphrase-Schutz**: optional **Passphrase wiederverwenden** (Geräte-Standard, neuer Salt/IV pro Wire; Vault-Lock leert Default). Feldtest: Epoch-Renew Self **PASS**; Burn + Passphrase-Reuse Retest offen. Wire-Import-Dialog weiter Backlog.
+**Nachtrag 2026-11-06 (Passphrase-Msg Vault-Sidecar):** Chat-Passphrasen nicht mehr Klartext-`localStorage` — AES-GCM Sidecar `morgendrot.passphraseMsg.enc.v1` mit Vault-Passwort; Unlock hydriert RAM; Lock leert RAM (Ciphertext bleibt); Purge/Einsatz-Ende/Einstellungen „Nur Chat-Passphrasen“ löschen Sidecar. Legacy Klartext wird beim Unlock migriert.
+
+**Nachtrag 2026-11-05 (Burn/Mailbox + Passphrase-Reuse):** Burn-on-read erzwingt Composer-**Mailbox** (Event-Pfad nicht purgebar; Explorer behält TX/Events). Direktchat-⋮ mit **Scope-Hinweis**. Chat-**Passphrase-Schutz**: optional **Passphrase wiederverwenden**. Feldtest: Epoch-Renew Self **PASS**; Burn + Passphrase-Reuse Retest offen.
 
 **Nachtrag 2026-11-05 (Wire einfügen):** Posteingang-Button **Wire einfügen** — Paste `MORG_PWMSG_V1` + Passphrase → lokaler Klartext (≠ Toolbar **Entschlüsseln** = Einsatzbericht-.json). ECDH-Wires weiter nur mit Handshake.
 

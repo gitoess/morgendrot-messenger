@@ -1,14 +1,20 @@
 'use client'
 
 import { useState } from 'react'
-import { AlertTriangle, Lock, Trash2 } from 'lucide-react'
+import { AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { emergencyPurge, vaultLockCommand, clearLocalHistory } from '@/frontend/lib/api'
+import {
+  lockPassphraseMessageVault,
+  purgePassphraseMessageVault,
+} from '@/frontend/lib/passphrase-message-local-store'
 
 export function SettingsEmergencyPurgeSection() {
   const [confirmPurge, setConfirmPurge] = useState(false)
   const [confirmText, setConfirmText] = useState('')
-  const [purgeScope, setPurgeScope] = useState<'full' | 'local_cache' | 'lock_session'>('full')
+  const [purgeScope, setPurgeScope] = useState<
+    'full' | 'local_cache' | 'lock_session' | 'chat_passphrases'
+  >('full')
   const [processing, setProcessing] = useState(false)
   const [statusMsg, setStatusMsg] = useState('')
 
@@ -19,6 +25,7 @@ export function SettingsEmergencyPurgeSection() {
     try {
       if (purgeScope === 'full') {
         const res = await emergencyPurge()
+        if (res.ok) purgePassphraseMessageVault()
         setStatusMsg(res.ok ? 'Vault on-chain notfall-gelöscht + lokaler Inbox-Cache geschreddert.' : res.error || 'Fehler')
         if (res.ok) {
           setConfirmPurge(false)
@@ -26,15 +33,24 @@ export function SettingsEmergencyPurgeSection() {
         }
       } else if (purgeScope === 'local_cache') {
         const res = await clearLocalHistory({ shred: true })
+        if (res.ok) purgePassphraseMessageVault()
         setStatusMsg(
-          res.ok ? res.message || 'Lokaler Klartext-Inbox-Cache entfernt.' : res.error || 'Fehler'
+          res.ok
+            ? `${res.message || 'Lokaler Klartext-Inbox-Cache entfernt.'} Chat-Passphrasen-Sidecar geleert.`
+            : res.error || 'Fehler'
         )
         if (res.ok) {
           setConfirmPurge(false)
           setConfirmText('')
         }
+      } else if (purgeScope === 'chat_passphrases') {
+        purgePassphraseMessageVault()
+        setStatusMsg('Chat-Passphrasen (RAM + verschlüsselter Sidecar) gelöscht.')
+        setConfirmPurge(false)
+        setConfirmText('')
       } else {
         const res = await vaultLockCommand()
+        if (res.ok) lockPassphraseMessageVault()
         setStatusMsg(res.ok ? res.message || 'Tresor gesperrt, Keys aus RAM.' : res.error || res.message || 'Fehler')
         if (res.ok) {
           setConfirmPurge(false)
@@ -79,7 +95,24 @@ export function SettingsEmergencyPurgeSection() {
           <input type="radio" name="purge-scope-settings" checked={purgeScope === 'lock_session'} onChange={() => setPurgeScope('lock_session')} className="mt-1" />
           <span>
             <strong className="text-foreground">Nur Sitzung sperren</strong>
-            <span className="block text-muted-foreground">Keys aus RAM + Inbox-Cache schreddern.</span>
+            <span className="block text-muted-foreground">
+              Keys aus RAM; Chat-Passphrasen-Ciphertext bleibt bis Unlock.
+            </span>
+          </span>
+        </label>
+        <label className="flex cursor-pointer items-start gap-2">
+          <input
+            type="radio"
+            name="purge-scope-settings"
+            checked={purgeScope === 'chat_passphrases'}
+            onChange={() => setPurgeScope('chat_passphrases')}
+            className="mt-1"
+          />
+          <span>
+            <strong className="text-foreground">Nur Chat-Passphrasen</strong>
+            <span className="block text-muted-foreground">
+              RAM + vault-verschlüsselter Sidecar (`passphraseMsg.enc`) — kein Chain-Purge.
+            </span>
           </span>
         </label>
       </div>
