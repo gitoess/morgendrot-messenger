@@ -23,10 +23,11 @@ import {
   type NftTimeLeaseLocalEntry,
 } from '@/frontend/lib/nft-time-lease-local-store'
 
+import { MESSAGING_MODULES_PACKAGE_ID } from '@/frontend/lib/messaging-modules-package'
+
 const LS_MSG_PKG = 'morgendrot.nftTimeLease.messagingPackageId.v1'
-/** Testnet Upgrade 2026-11-06 — Modul nft_time_lease (Stamm-Chat weiter PACKAGE_ID 0x06e099…). */
-export const NFT_TIME_LEASE_PACKAGE_ID_TESTNET =
-  '0x42b10c99f81ecaa885d4a8f05eb933fe9862ca1bdececb2d5b97c628e31de623'
+/** Testnet — nft_time_lease (Stamm-Chat weiter PACKAGE_ID 0x06e099…). */
+export const NFT_TIME_LEASE_PACKAGE_ID_TESTNET = MESSAGING_MODULES_PACKAGE_ID
 
 function readMsgPkg(): string {
   if (typeof window === 'undefined') return ''

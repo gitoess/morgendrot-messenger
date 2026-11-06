@@ -36,7 +36,7 @@
 | Starkes NFT-Besitz-Gate | B2-P4a Ist (App-Capsule); P4a-dual Wallet∧NFT Ist; P4b Seal später | Kein Marketing „unter Zwang unmöglich“ vor P4b; Klartext kopierbar |
 | NFT-Zeitkapsel / Timelock | B2-P5a/b Ist (Move+UI); NFT=Gate, Ciphertext getrennt | Kein Auto-Rücklauf ohne reclaim-TX; NFT allein ≠ Nachrichten |
 | MeshSleepyChannel / Offline-Zahlung Mesh | Phase-C Backlog | Nicht Ist; kein Watchtower-Claim |
-| NFT-gesichertes Ausgeben (Guarded Purse) | B2-S0 Spec; S1 Move Backlog; nur Token | 2FA: X∧NFT; **lose Coins außerhalb Purse ungeschützt**; kein Klartext-Claim |
+| NFT-gesichertes Ausgeben (Guarded Purse) | B2-S1 Move Ist (`nft_guarded_purse`); S2 UI offen; nur Token | 2FA: X∧NFT; **lose Coins außerhalb Purse ungeschützt**; kein Klartext-Claim |
 | Öffentlicher Vault + NFT-Timelock | B2-P5 Spec | `NFT-SCHLUESSELKARTE-PUBLIC-VAULT-TIMELOCK.md` — **kein** stiller Auto-Transfer |
 | Decoys im Handshake | Claims / Architektur | Nicht spezifiziert als nächste Scheibe |
 | Rotierende Outboxes / voller Dead-Drop | Claims / M4-Erweiterung | Feste Mailbox-IDs Ist |

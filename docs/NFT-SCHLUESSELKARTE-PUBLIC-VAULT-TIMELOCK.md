@@ -1,7 +1,7 @@
 # B2-P4/P5 — Öffentlicher Ciphertext-Vault + NFT-Timelock (Spec-Entwurf)
 
 **Stand:** 2026-11-06  
-**Status:** **P5a Move + P5b UI PoC Ist** — Modul on-chain (Upgrade Digest `EwGJtyxE…`, Lease-Package `0x42b10c99…`); Stamm-Chat `PACKAGE_ID`/`MAILBOX` unverändert. Panel unter NFT-Galerie.  
+**Status:** **P5a Move + P5b UI PoC Ist** — Modul on-chain (erst `0x42b10c99…`, aktuell Modules-Package `0x0c94e888…` inkl. Guarded Purse); Stamm-Chat `PACKAGE_ID`/`MAILBOX` unverändert. Panel unter NFT-Galerie.  
 **Einordnung:** Erweiterung von **starkem NFT-Besitz-Gate** (`docs/NFT-SCHLUESSELKARTE-MODI.md` §6) + zeitlich begrenzte Leserechte.  
 **Eltern:** `docs/NFT-SCHLUESSELKARTE-B2.md` (Komfort P0–P3 + P4a Ist) · Claims `docs/SECURITY-CLAIMS-CHECK-2026-11.md`
 

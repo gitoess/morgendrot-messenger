@@ -86,11 +86,11 @@ Ohne P4b bleibt Marketing „auch unter Zwang unmöglich“ eine **Produktlüge*
 
 UI: Passphrase-Schutz → Karte binden → Starkes Gate → optional **Wallet + NFT (Dual)** + Adressfeld.
 
-### 6b. Token-2FA: Guarded Purse (Backlog Move)
+### 6b. Token-2FA: Guarded Purse (Move Ist / UI S2)
 
 **Scope:** nur **IOTA/Token**, nicht Klartext.  
-**v1:** **Modus A** — Coins in Purse bei X; `spend` nur Signer=X **und** X besitzt NFT (= 2FA-Schlüsselkarte).  
-**Später:** Modus B optional.  
+**v1:** **Modus A** — Coins in Purse bei X; `spend` nur Signer=X **und** X besitzt NFT (= 2FA-Schlüsselkarte). Move **`nft_guarded_purse`** Ist (`0x0c94e888…`).  
+**Als Nächstes:** B2-S2 Messenger-UI. **Später:** Modus B optional.  
 **Pflichttext:** Lose Coins außerhalb der Purse = **ungeschützt**.  
 SSOT **`docs/NFT-GUARDED-SPEND-SPEC.md`**. Nicht Leserecht/Zeitkapsel/MeshSleepy.
 

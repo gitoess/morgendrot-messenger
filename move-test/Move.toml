@@ -1,9 +1,10 @@
 [package]
 name = "messaging"
 version = "0.0.1"
-# Letzte Upgrade-Version (nft_time_lease). Chat-Mailbox bleibt am Stamm-PACKAGE_ID 0x06e099… .
+# Letzte Upgrade-Version (nft_guarded_purse B2-S1; inkl. nft_time_lease).
+# Chat-Mailbox bleibt am Stamm-PACKAGE_ID 0x06e099… .
 # Neu-Publish: published-at entfernen + messaging = "0x0".
-published-at = "0x42b10c99f81ecaa885d4a8f05eb933fe9862ca1bdececb2d5b97c628e31de623"
+published-at = "0x0c94e8889748e41f5a90c267f1691dafceaf68183365292111dd92eec723b3d7"
 
 [dependencies]
 Iota = { git = "https://github.com/iotaledger/iota.git", subdir = "crates/iota-framework/packages/iota-framework", rev = "testnet" }

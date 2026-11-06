@@ -1,7 +1,7 @@
 # NFT-gesichertes Ausgeben (Guarded Spend) — Spec / Backlog
 
 **Stand:** 2026-11-06  
-**Status:** **Backlog B2-S1** — Entscheidung **nur Modus A (Guarded Purse)**; Modus B später. **Kein** Move-Ist.  
+**Status:** **B2-S1 Move Ist** — Modus A `messaging::nft_guarded_purse` on-chain (Upgrade-Package `0x0c94e888…`; Stamm-Chat `0x06e099…`). PTB `nft-guarded-purse-txb.ts` + Vitest. **B2-S2** UI offen. Modus B später.  
 **Scope:** **nur Token/Coins (IOTA)** — **kein** Klartext, kein Chat-Leserecht (das bleibt P4a/P5).  
 **Verwandt:** Leserecht P4a-dual (`docs/NFT-SCHLUESSELKARTE-MODI.md` §6a) · Zeitkapsel P5 · **nicht** MeshSleepyChannel.
 
@@ -108,12 +108,20 @@ Passt zu „NFT = Capability, wandert unabhängig“. **Nicht** dasselbe wie A.
 
 | ID | Inhalt | Abhängigkeit |
 |----|--------|--------------|
-| **B2-S0** | Dieses Spec + Roadmap/Claims | — |
-| **B2-S1** | Move Modus A `GuardedPurse` + Vitest/CLI Smoke | Messaging-Package Upgrade |
-| **B2-S2** | Messenger-UI Deposit/Spend + Badge | S1 |
+| **B2-S0** | Dieses Spec + Roadmap/Claims | — **Ist** |
+| **B2-S1** | Move Modus A `GuardedPurse` + Vitest/PTB | Messaging-Package Upgrade — **Ist** (`0x0c94e888…`) |
+| **B2-S2** | Messenger-UI Deposit/Spend + Badge | S1 — **Als Nächstes** |
 | **B2-S3** | Optional Modus B Bearer Treasury | nach S1 Feld |
 
-**Jetzt nicht bauen** — nach Privacy-Feldruhe / bewusst eigene Tranche.
+### On-Chain (S1)
+
+| | |
+|--|--|
+| Modul | `messaging::nft_guarded_purse` |
+| Entries | `create_purse` · `deposit` · `spend` · `destroy_empty` |
+| Checks `spend` | `sender == owner` ∧ `object::id(nft) == required_nft_id` (NFT-Arg = Besitz) |
+| Coin | generisch `Coin<C>` / Default App `0x2::iota::IOTA` |
+| Package | Upgrade `0x0c94e888…` (Cap unverändert); Mailbox-Stamm `0x06e099…` |
 
 ---
 
