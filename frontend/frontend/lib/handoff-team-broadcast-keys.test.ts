@@ -1,15 +1,51 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { parseHandoffEncryptedBundle, serializeHandoffEncryptedBundle } from '@/frontend/lib/handoff-zip-bundle'
 import {
   applyTeamBroadcastKeysFromExtras,
   collectTeamMailboxIdsFromHandoffEnv,
   enrichHandoffExtrasFromEnvContent,
 } from '@/frontend/lib/handoff-team-broadcast-keys'
+import {
+  purgeTeamBroadcastKeyVault,
+  readTeamBroadcastKeyEpoch,
+  readTeamBroadcastKeyRaw,
+  writeTeamBroadcastKeyRaw,
+} from '@/frontend/lib/team-broadcast-key-store'
 import { generateTeamBroadcastKeyRaw, teamBroadcastKeyToBase64 } from '@morgendrot/shared/morgendrot-team-broadcast-crypto'
 
 const MB = '0x' + 'a'.repeat(64)
 
+function stubBrowserStorage(store: Record<string, string> = {}) {
+  const session: Record<string, string> = {}
+  vi.stubGlobal('window', {
+    localStorage: {
+      getItem: (k: string) => store[k] ?? null,
+      setItem: (k: string, v: string) => {
+        store[k] = v
+      },
+      removeItem: (k: string) => {
+        delete store[k]
+      },
+    },
+    sessionStorage: {
+      getItem: (k: string) => session[k] ?? null,
+      setItem: (k: string, v: string) => {
+        session[k] = v
+      },
+      removeItem: (k: string) => {
+        delete session[k]
+      },
+    },
+  } as Window & typeof globalThis)
+  return store
+}
+
 describe('handoff-team-broadcast-keys', () => {
+  afterEach(() => {
+    purgeTeamBroadcastKeyVault()
+    vi.unstubAllGlobals()
+  })
+
   it('collectTeamMailboxIdsFromHandoffEnv sammelt MAILBOX + TEAM + Gruppe', () => {
     const env = {
       MAILBOX_ID: MB,
@@ -26,48 +62,25 @@ describe('handoff-team-broadcast-keys', () => {
   })
 
   it('enrichHandoffExtrasFromEnvContent fügt Team-Key ein', () => {
-    const store: Record<string, string> = {}
-    vi.stubGlobal('window', {
-      localStorage: {
-        getItem: (k: string) => store[k] ?? null,
-        setItem: (k: string, v: string) => {
-          store[k] = v
-        },
-        removeItem: (k: string) => {
-          delete store[k]
-        },
-      },
-    } as Window & typeof globalThis)
+    stubBrowserStorage()
     const raw = generateTeamBroadcastKeyRaw()
-    store[`morgendrot.teamBroadcastKey.v1:${MB}`] = teamBroadcastKeyToBase64(raw)
+    writeTeamBroadcastKeyRaw(MB, raw)
     const env = `MAILBOX_ID=${MB}\nTEAM_MAILBOX_IDS=\n`
     const extras = enrichHandoffExtrasFromEnvContent(undefined, env)
     expect(extras.teamBroadcastKeys?.length).toBe(1)
     expect(extras.teamBroadcastKeys?.[0]?.teamMailboxObjectId).toBe(MB)
-    vi.unstubAllGlobals()
   })
 
-  it('applyTeamBroadcastKeysFromExtras schreibt Key in localStorage', () => {
-    const store: Record<string, string> = {}
-    vi.stubGlobal('window', {
-      localStorage: {
-        getItem: (k: string) => store[k] ?? null,
-        setItem: (k: string, v: string) => {
-          store[k] = v
-        },
-        removeItem: (k: string) => {
-          delete store[k]
-        },
-      },
-    } as Window & typeof globalThis)
+  it('applyTeamBroadcastKeysFromExtras schreibt Key in den Vault-Store (RAM)', () => {
+    stubBrowserStorage()
     const raw = generateTeamBroadcastKeyRaw()
+    const b64 = teamBroadcastKeyToBase64(raw)
     const n = applyTeamBroadcastKeysFromExtras({
-      teamBroadcastKeys: [{ teamMailboxObjectId: MB, keyBase64: teamBroadcastKeyToBase64(raw), keyEpoch: 2 }],
+      teamBroadcastKeys: [{ teamMailboxObjectId: MB, keyBase64: b64, keyEpoch: 2 }],
     })
     expect(n).toBe(1)
-    expect(store[`morgendrot.teamBroadcastKey.v1:${MB}`]).toBeTruthy()
-    expect(store[`morgendrot.teamBroadcastKeyEpoch.v1:${MB}`]).toBe('2')
-    vi.unstubAllGlobals()
+    expect(teamBroadcastKeyToBase64(readTeamBroadcastKeyRaw(MB)!)).toBe(b64)
+    expect(readTeamBroadcastKeyEpoch(MB)).toBe(2)
   })
 })
 
