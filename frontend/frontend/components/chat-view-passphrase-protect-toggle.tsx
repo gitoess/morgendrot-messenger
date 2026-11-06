@@ -5,6 +5,7 @@ import { generatePassphraseMessageSharePassphrase } from '@/frontend/lib/passphr
 import {
   clearDefaultPassphraseMessagePassphrase,
   getDefaultPassphraseMessagePassphrase,
+  PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT,
   readPassphraseNftKeycardBindObjectId,
   readPassphraseNftKeycardBindSlotId,
   readPassphraseProtectEnabled,
@@ -18,6 +19,8 @@ import {
   writePassphraseReuseEnabled,
 } from '@/frontend/lib/passphrase-message-local-store'
 import { listNftKeycards } from '@/frontend/lib/nft-keycard-local-store'
+import { isPrivacySoftLocked } from '@/frontend/lib/privacy-soft-lock'
+import { hasVaultPasswordSession } from '@/frontend/lib/vault-password-session'
 
 /** Composer: Passphrase-Nachricht ohne Handshake (Ciphertext on-chain, Key teilen). */
 export function PassphraseProtectComposerToggle(p: {
@@ -33,19 +36,24 @@ export function PassphraseProtectComposerToggle(p: {
   const [cards, setCards] = useState<{ objectId: string; label?: string; slotIds: string[] }[]>([])
 
   useEffect(() => {
-    setOn(readPassphraseProtectEnabled())
-    setReuse(readPassphraseReuseEnabled())
-    setRememberOnDevice(readPassphraseRememberOnDeviceEnabled())
-    setSharedPass(getDefaultPassphraseMessagePassphrase() ?? '')
-    setBindOid(readPassphraseNftKeycardBindObjectId() ?? '')
-    setBindSlot(readPassphraseNftKeycardBindSlotId())
-    setCards(
-      listNftKeycards().map(({ objectId, entry }) => ({
-        objectId,
-        label: entry.label,
-        slotIds: entry.slots.map((s) => s.id),
-      }))
-    )
+    const sync = () => {
+      setOn(readPassphraseProtectEnabled())
+      setReuse(readPassphraseReuseEnabled())
+      setRememberOnDevice(readPassphraseRememberOnDeviceEnabled())
+      setSharedPass(getDefaultPassphraseMessagePassphrase() ?? '')
+      setBindOid(readPassphraseNftKeycardBindObjectId() ?? '')
+      setBindSlot(readPassphraseNftKeycardBindSlotId())
+      setCards(
+        listNftKeycards().map(({ objectId, entry }) => ({
+          objectId,
+          label: entry.label,
+          slotIds: entry.slots.map((s) => s.id),
+        }))
+      )
+    }
+    sync()
+    window.addEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, sync)
+    return () => window.removeEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, sync)
   }, [])
 
   useEffect(() => {
@@ -55,11 +63,16 @@ export function PassphraseProtectComposerToggle(p: {
     }
   }, [p.encrypted, on])
 
+  /** Wiederverwenden: bestehende Vault-Default behalten — nie still neu würfeln nach Lock. */
   const ensureSharedPass = () => {
     const existing = getDefaultPassphraseMessagePassphrase()
     if (existing) {
       setSharedPass(existing)
       return existing
+    }
+    if (isPrivacySoftLocked() || !hasVaultPasswordSession()) {
+      setSharedPass('')
+      return ''
     }
     const fresh = generatePassphraseMessageSharePassphrase()
     setDefaultPassphraseMessagePassphrase(fresh)
@@ -107,8 +120,8 @@ export function PassphraseProtectComposerToggle(p: {
             <span>
               <span className="font-medium text-foreground">Auf diesem Gerät merken</span>
               {' — '}
-              Standard an: Passphrase landet im Vault (entsperrt → Klartext; Tresor gesperrt → nur
-              Ciphertext). Aus = nur Statuszeile/Kopieren, kein Vault-Eintrag.
+              An: diese Nachricht nach Unlock wieder Klartext. Aus: nach Lock/Unlock nur Ciphertext,
+              bis du die Passphrase manuell eingibst (auch wenn „Wiederverwenden“ an ist).
             </span>
           </label>
 
@@ -127,8 +140,9 @@ export function PassphraseProtectComposerToggle(p: {
             <span>
               <span className="font-medium text-foreground">Passphrase wiederverwenden</span>
               {' — '}
-              dieselbe Passphrase für mehrere Nachrichten (weiterhin neuer Salt/IV pro Wire). Aus =
-              neue Zufallspassphrase pro Sendung.
+              dieselbe Passphrase fürs Senden (Feld unten), bleibt nach Unlock erhalten bis{' '}
+              <span className="text-foreground/90">Neu würfeln</span>. Entschlüsselt Posteingang nicht
+              automatisch.
             </span>
           </label>
 

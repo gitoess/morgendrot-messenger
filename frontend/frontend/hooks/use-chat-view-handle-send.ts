@@ -21,6 +21,7 @@ import {
   readPassphraseNftKeycardBindSlotId,
   readPassphraseProtectEnabled,
   readPassphraseRememberOnDeviceEnabled,
+  readPassphraseReuseEnabled,
   resolvePassphraseForProtectSend,
   rememberPassphraseMessagePassphrase,
 } from '@/frontend/lib/passphrase-message-local-store'
@@ -711,7 +712,11 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           generatePassphraseMessageSharePassphrase
         )
         if (batchPass.length < 8) {
-          throw new Error('Passphrase mindestens 8 Zeichen (Wiederverwenden: Feld prüfen).')
+          throw new Error(
+            readPassphraseReuseEnabled()
+              ? 'Wiederverwenden: keine Passphrase im Vault — Tresor entsperren oder „Neu würfeln“.'
+              : 'Passphrase mindestens 8 Zeichen (Wiederverwenden: Feld prüfen).'
+          )
         }
         for (const snap of textSnaps) {
           if (!snap.trim()) {

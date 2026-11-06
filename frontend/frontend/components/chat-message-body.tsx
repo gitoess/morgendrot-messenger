@@ -31,7 +31,6 @@ import {
 } from '@/frontend/lib/passphrase-message-crypto'
 import {
   forgetPassphraseMessagePassphrase,
-  getDefaultPassphraseMessagePassphrase,
   lookupPassphraseMessagePassphrase,
   PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT,
   rememberPassphraseMessagePassphrase,
@@ -41,12 +40,13 @@ import { cn } from '@/lib/utils'
 const TXT_PREVIEW_CHARS = 480
 const TXT_COLLAPSE_MAX_H = 'max-h-36' /* 9rem */
 
-function resolveKnownPassphraseForWire(wire: string): string {
-  return (
-    lookupPassphraseMessagePassphrase(wire)?.trim() ||
-    getDefaultPassphraseMessagePassphrase()?.trim() ||
-    ''
-  )
+/**
+ * Nur per-Wire-Vault-Eintrag („Auf diesem Gerät merken“).
+ * Geräte-Default (Wiederverwenden) entschlüsselt Absichtlich NICHT auto —
+ * sonst wären „nicht gemerkte“ Nachrichten nach Unlock trotzdem Klartext.
+ */
+function resolveRememberedPassphraseForWire(wire: string): string {
+  return lookupPassphraseMessagePassphrase(wire)?.trim() || ''
 }
 
 function PassphraseMessageBody(p: {
@@ -54,7 +54,7 @@ function PassphraseMessageBody(p: {
   onCopyRaw: () => void
   copiedRaw: boolean
 }) {
-  const [known, setKnown] = useState(() => resolveKnownPassphraseForWire(p.content))
+  const [known, setKnown] = useState(() => resolveRememberedPassphraseForWire(p.content))
   const [pass, setPass] = useState(known)
   const [plain, setPlain] = useState<string | null>(null)
   const [err, setErr] = useState('')
@@ -78,7 +78,7 @@ function PassphraseMessageBody(p: {
 
   useEffect(() => {
     const sync = () => {
-      const next = resolveKnownPassphraseForWire(p.content)
+      const next = resolveRememberedPassphraseForWire(p.content)
       setKnown((prev) => {
         if (prev === next) return prev
         return next
@@ -102,7 +102,7 @@ function PassphraseMessageBody(p: {
     void decryptPassphraseMessageWire(p.content, known)
       .then((t) => {
         if (!alive) return
-        rememberPassphraseMessagePassphrase(p.content, known)
+        // Schon im Vault gemerkt — kein erneutes Remember nötig (vermeidet Event-Flackern).
         setPass(known)
         setPlain(t)
         setErr('')
@@ -123,7 +123,9 @@ function PassphraseMessageBody(p: {
     setErr('')
     try {
       const t = await decryptPassphraseMessageWire(p.content, pass)
+      // Manuelle Eingabe = bewusst merken (wie Absender-Remember an).
       rememberPassphraseMessagePassphrase(p.content, pass.trim())
+      setKnown(pass.trim())
       setHidden(false)
       setPlain(t)
     } catch (e) {

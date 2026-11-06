@@ -12,6 +12,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-11-06** | PC (Windows), **Remember vs Reuse** | Nicht-gemerkt wurde nach Unlock klar (Auto-Decrypt via Default + stilles Remember). Reuse-Passphrase änderte sich nach Lock (Composer neu würfelte). Erneut sperren **PASS**. Fixes: Auto nur per-Wire; Reuse bleibt bis Neu würfeln. | **Fix Code** — Retest merken an/aus + Reuse. |
 | **2026-11-06** | PC (Windows), **Smoke-Feedback #2** | Chat-Lock öffnete Login-Overlay (API-Lock); Empfänger fehlte trotz „ich“ (Composer nicht sync); Kontakt nicht leerbar; Event ggf. Burn-on-read. Fixes: **Privacy soft-lock** (kein Auto-Dialog); Partner-Sync aus Sidebar; **Empfänger leeren/ändern**. | **Fix Code** — Retest Soft-Lock + Self-Send. |
 | **2026-11-06** | PC (Windows), **Smoke-Feedback PWMSG** | Lock warf aus dem Messenger (`navigateTo(null)`); Posteingang flackerte nach Decrypt (remember→Event→plain null); kein Speicher-Dialog (Absicht Default-Remember). Fixes: Lock `stayInView` im Chat; remember ohne No-Op-Emit; Bubble sync; Composer **Auf diesem Gerät merken**. | **Fix Code** — Retest Lock-im-Chat + Flackern. |
 | **2026-11-06** | PC (Windows), **Doku Privacy-Anleitung + Roadmap-Klarstellung** | Neu: `docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`; Claims/E2EE/Fahrplan/Handbuch verlinkt; C1/Decoys/Outboxes/HW als Backlog festgehalten. 1-Gerät-Smoke-Tabelle §0 bereit. | **Doku OK** — manueller Smoke §0 als Nächstes. |

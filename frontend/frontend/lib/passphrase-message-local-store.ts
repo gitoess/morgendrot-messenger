@@ -504,8 +504,9 @@ export function writePassphraseNftKeycardBindSlotId(slotId: string | null): void
 }
 
 /**
- * Passphrase für den nächsten Send: bei Reuse Geräte-Standard (ggf. neu erzeugen),
- * sonst frische Zufallspassphrase. Pro Send-Aktion eine Passphrase für alle Snaps.
+ * Passphrase für den nächsten Send: bei Reuse Geräte-Standard.
+ * Neu erzeugen nur wenn Vault-Session offen und noch kein Default —
+ * sonst würde Lock→Composer still die gemerkte Reuse-Passphrase überschreiben.
  */
 export function resolvePassphraseForProtectSend(generateFresh: () => string): {
   passphrase: string
@@ -514,6 +515,9 @@ export function resolvePassphraseForProtectSend(generateFresh: () => string): {
   if (readPassphraseReuseEnabled()) {
     const existing = getDefaultPassphraseMessagePassphrase()
     if (existing) return { passphrase: existing, reused: true }
+    if (!isPassphraseMessageVaultSessionOpen()) {
+      return { passphrase: '', reused: true }
+    }
     const fresh = generateFresh().trim()
     if (fresh.length >= 8) setDefaultPassphraseMessagePassphrase(fresh)
     return { passphrase: fresh, reused: true }

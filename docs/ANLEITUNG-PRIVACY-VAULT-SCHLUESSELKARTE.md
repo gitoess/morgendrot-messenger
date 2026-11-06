@@ -82,7 +82,7 @@ Beim Entsperren des Tresors (Vault-Passwort) werden lokale Geheimnisse **entschl
 | Composer **Passphrase-Schutz** | Enc pro Sendung (oder wiederverwendet) |
 | **Passphrase wiederverwenden** | Gleiche Passphrase, neuer Salt/IV |
 | **Key an NFT-Schlüsselkarte binden** | Optional: Karte + Slot; Wire-Fingerprint lokal |
-| Absender-Remember | **Kein Extra-Dialog** nach dem Senden. Composer-Checkbox **„Auf diesem Gerät merken“** (Default an); Aus = nur Statuszeile/Kopieren |
+| Absender-Remember | Checkbox **„Auf diesem Gerät merken“** (Default an): nur diese Nachricht auto-Klartext nach Unlock. Aus = nach Lock nur Ciphertext (manuell eingeben). **Wiederverwenden** = Composer-Default bis „Neu würfeln“, entschlüsselt Posteingang **nicht** automatisch |
 | Bubble **Verbergen** | Weich ausblenden |
 | Bubble **Erneut sperren** | Hart: Merker weg, wieder Eingabe |
 | Posteingang **Wire einfügen** | Paste Wire + Passphrase → lokaler Klartext |
