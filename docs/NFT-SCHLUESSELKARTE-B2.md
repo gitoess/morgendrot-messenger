@@ -2,9 +2,12 @@
 
 **Stand:** 2026-11-06  
 **Status:** **P0–P3 Ist** (Store + Multi-Slot + Composer-Bindung + Mint an Slot + öffentlicher `[morg-keycard]`-Marker; kein Move).  
+**Modi Komfort vs. stark:** **`docs/NFT-SCHLUESSELKARTE-MODI.md`** (Pflichtlektüre vor Claims).  
 **Nutzer-Anleitung (alle Funktionen + Smoke):** **`docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`**.  
 **Voraussetzung:** H.23 B1 Vault-Sidecars Ist (`teamKeys.enc.v1`, Chat-/ImageNFT-Passphrasen).  
 **2-Geräte-Feldtest (Team-Key / Erneut sperren):** bewusst **später** — blockiert B2-P0 nicht.
+
+> **Ehrlich:** Ist = **Komfort-Bindung** + Soft-Besitz-Check für Auto-Decrypt. Crypto-Key bleibt die Passphrase. Starkes Besitz-Gate = **B2-P4 Backlog**.
 
 ## 1. Ziel
 
@@ -97,6 +100,12 @@ Bei Passphrase-Send mit Bindung: Meta im bestehenden PWMSG oder Prefix-Hinweis z
 | **P1** | Galerie „Als Schlüsselkarte“ + Composer-Bindung PWMSG + Besitz-Check — **Ist** | Nein |
 | **P2** | Multi-Slot UI + ImageNFT-Mint an Slot (+ `boundObjects`) — **Ist** | Nein |
 | **P3** | Description-Marker `[morg-keycard]` (öffentlich) — **Ist**; Move nein | Nein |
+| **P4a** | Starkes Besitz-Gate App: DEK-Capsule `MORG_NFTGATE_V1`, Owner/Leihe, kein Blank-DEK — **Ist** | Nein |
+| **P4a-dual** | Wallet **und** NFT (App + Capsule-Bindung) — **Ist**; Pubkey-Wrap = P4a2 | Nein |
+| **P4b** | Seal/Policy Move — marketingfest — **Backlog** | Seal/Policy |
+| **P5a/b** | Zeitkapsel Move + UI PoC — **Ist 2026-11-06** (`nft_time_lease.move`, Panel); Publish für Chain | Ja (Lease) |
+| **P5c** | Seal/Policy marketingfest — **Backlog** | Seal |
+| **S0/S1** | NFT-Guarded Spend (Coins getrennt; Purse/Treasury) — **S0 Spec Ist**, Move Backlog | Ja (Purse) |
 
 ## 7. Abnahme (später Feld)
 
@@ -106,6 +115,8 @@ Bei Passphrase-Send mit Bindung: Meta im bestehenden PWMSG oder Prefix-Hinweis z
 
 ## 8. Verwandte Docs
 
+- **`docs/NFT-SCHLUESSELKARTE-MODI.md`** — Komfort vs. stark  
+- **`docs/NFT-SCHLUESSELKARTE-PUBLIC-VAULT-TIMELOCK.md`** — P5 Zeitkapsel Spec  
 - **`docs/MESSENGER-E2EE-ZIELARCHITEKTUR.md`** §13 B2  
 - **`docs/EVIDENCE-IMAGE-AND-NFT-ATTRIBUTES.md`**  
 - **`docs/SECURITY-CLAIMS-CHECK-2026-11.md`**  

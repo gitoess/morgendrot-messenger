@@ -65,7 +65,23 @@ export function formatDirectIotaSubmitError(reason: unknown): string {
     )
   }
   if (lower.includes('e_not_owner') || (lower.includes('not owner') && lower.includes('assert'))) {
-    return 'Purge nicht erlaubt — bei Team-Broadcast nur der Original-Sender vor Ablauf der TTL; danach jeder.'
+    return 'Burn nicht erlaubt — bei Team-Broadcast nur der Original-Sender vor Ablauf der TTL; danach jeder.'
+  }
+  if (
+    lower.includes('abort code: 10') ||
+    lower.includes('e_msg_missing') ||
+    (lower.includes('purge_message_on_uid') && lower.includes('abort'))
+  ) {
+    return (
+      'Burn fehlgeschlagen (Abort 10): Nachricht nicht in dieser Mailbox (MsgKey fehlt). ' +
+      'Oft falsche Mailbox-ID — Posteingang aktualisieren und erneut versuchen (Shared vs. private Mailbox).'
+    )
+  }
+  if (lower.includes('abort code: 43') || lower.includes('e_plain_msg_missing')) {
+    return (
+      'Burn fehlgeschlagen (Abort 43): Klartext-Eintrag nicht in dieser Mailbox. ' +
+      'Posteingang aktualisieren; ggf. verschlüsselte Variante bzw. andere Mailbox.'
+    )
   }
   if (lower.includes('locked') && lower.includes('object')) {
     return 'Objekt auf der Kette gesperrt — Mailbox-Version/Deploy prüfen.'

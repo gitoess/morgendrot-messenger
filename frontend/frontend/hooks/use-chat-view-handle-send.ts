@@ -15,17 +15,28 @@ import {
   encryptPassphraseMessage,
   generatePassphraseMessageSharePassphrase,
 } from '@/frontend/lib/passphrase-message-crypto'
+import { encryptNftGateMessage } from '@/frontend/lib/nft-gate-dek-capsule'
 import {
   fingerprintPassphraseMessageWire,
+  readPassphraseNftDualWalletGateEnabled,
   readPassphraseNftKeycardBindObjectId,
   readPassphraseNftKeycardBindSlotId,
+  readPassphraseNftRequiredWallet,
+  readPassphraseNftStrongGateEnabled,
   readPassphraseProtectEnabled,
   readPassphraseRememberOnDeviceEnabled,
+  flushPassphraseMessageVaultPersist,
+  isPassphraseMessageVaultSessionOpen,
   readPassphraseReuseEnabled,
   resolvePassphraseForProtectSend,
   rememberPassphraseMessagePassphrase,
+  rollPassphraseAfterOneShotSend,
 } from '@/frontend/lib/passphrase-message-local-store'
-import { bindWireToNftKeycard, getNftKeycard } from '@/frontend/lib/nft-keycard-local-store'
+import {
+  bindWireToNftKeycard,
+  flushNftKeycardVaultPersist,
+  getNftKeycard,
+} from '@/frontend/lib/nft-keycard-local-store'
 import { takeEncryptedSendKeyEpochRenewHint } from '@/frontend/lib/session-epoch-renew-hint'
 import { buildTxtFileWireParts } from '@/frontend/features/send/chat-view-txt-split'
 import {
@@ -708,46 +719,95 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
       try {
         const wrapped: string[] = []
-        const { passphrase: batchPass, reused } = resolvePassphraseForProtectSend(
-          generatePassphraseMessageSharePassphrase
+        const cardOid = readPassphraseNftKeycardBindObjectId()
+        const strongGate = Boolean(
+          readPassphraseNftStrongGateEnabled() && cardOid && getNftKeycard(cardOid)
         )
-        if (batchPass.length < 8) {
-          throw new Error(
-            readPassphraseReuseEnabled()
-              ? 'Wiederverwenden: keine Passphrase im Vault — Tresor entsperren oder „Neu würfeln“.'
-              : 'Passphrase mindestens 8 Zeichen (Wiederverwenden: Feld prüfen).'
-          )
-        }
-        for (const snap of textSnaps) {
-          if (!snap.trim()) {
-            wrapped.push(snap)
-            continue
+
+        if (strongGate) {
+          // B2-P4a / dual: DEK-Capsule, kein Blank-DEK / keine Passphrase im Vault.
+          const dual = readPassphraseNftDualWalletGateEnabled()
+          const requiredWallet = dual ? readPassphraseNftRequiredWallet() : null
+          if (dual && !requiredWallet) {
+            throw new Error(
+              'Dual-Gate: erlaubte Wallet-Adresse setzen (0x…), oder „Wallet + NFT“ aus.'
+            )
           }
-          const { wire, passphrase } = await encryptPassphraseMessage(snap, batchPass)
-          const rememberOnDevice = readPassphraseRememberOnDeviceEnabled()
-          if (rememberOnDevice) {
-            rememberPassphraseMessagePassphrase(wire, passphrase)
-          }
-          const cardOid = readPassphraseNftKeycardBindObjectId()
-          if (cardOid && getNftKeycard(cardOid)) {
+          for (const snap of textSnaps) {
+            if (!snap.trim()) {
+              wrapped.push(snap)
+              continue
+            }
+            const { wire, nftObjectId, gate } = await encryptNftGateMessage({
+              plainUtf8: snap,
+              nftObjectId: cardOid!,
+              requiredWallet,
+            })
             bindWireToNftKeycard({
-              objectId: cardOid,
+              objectId: nftObjectId,
               wireFingerprint: fingerprintPassphraseMessageWire(wire),
               slotId: readPassphraseNftKeycardBindSlotId(),
             })
+            wrapped.push(wire)
+            void gate
           }
-          wrapped.push(wire)
-        }
-        textSnaps = wrapped
-        if (batchPass) {
-          const remembered = readPassphraseRememberOnDeviceEnabled()
-          sharedPassphraseNote = reused
-            ? remembered
-              ? ` Passphrase (wiederverwendet, für dich auf diesem Gerät gemerkt): ${batchPass}`
-              : ` Passphrase (wiederverwendet, nicht im Vault gemerkt): ${batchPass}`
-            : remembered
-              ? ` Passphrase zum Teilen (für dich auf diesem Gerät gemerkt): ${batchPass}`
-              : ` Passphrase zum Teilen (nicht im Vault gemerkt — nur jetzt kopieren): ${batchPass}`
+          textSnaps = wrapped
+          await flushNftKeycardVaultPersist()
+          sharedPassphraseNote = dual
+            ? ` Starkes Dual-Gate (Wallet+NFT): nur Adresse ${requiredWallet!.slice(0, 10)}… mit NFT-Leserecht. Klartext danach kopierbar. Kein Blank-DEK im Vault.`
+            : ' Starkes NFT-Gate (P4a): Lesen nur mit Besitz/Leihe der Schlüsselkarte — kein Passphrase-Teilen, kein Blank-DEK im Vault. Klartext danach kopierbar.'
+        } else {
+          const { passphrase: batchPass, reused } = resolvePassphraseForProtectSend(
+            generatePassphraseMessageSharePassphrase
+          )
+          if (batchPass.length < 8) {
+            throw new Error(
+              readPassphraseReuseEnabled()
+                ? 'Wiederverwenden: keine Passphrase im Vault — Tresor entsperren oder „Neu würfeln“.'
+                : 'Passphrase mindestens 8 Zeichen (Wiederverwenden: Feld prüfen).'
+            )
+          }
+          for (const snap of textSnaps) {
+            if (!snap.trim()) {
+              wrapped.push(snap)
+              continue
+            }
+            const { wire, passphrase } = await encryptPassphraseMessage(snap, batchPass)
+            const rememberOnDevice = readPassphraseRememberOnDeviceEnabled()
+            if (rememberOnDevice) {
+              if (!isPassphraseMessageVaultSessionOpen()) {
+                throw new Error(
+                  '„Auf diesem Gerät merken“ braucht eine offene Vault-Sitzung. Privacy-Badge tippen, Vault-Passwort eingeben, dann erneut senden.'
+                )
+              }
+              rememberPassphraseMessagePassphrase(wire, passphrase)
+            }
+            if (cardOid && getNftKeycard(cardOid)) {
+              bindWireToNftKeycard({
+                objectId: cardOid,
+                wireFingerprint: fingerprintPassphraseMessageWire(wire),
+                slotId: readPassphraseNftKeycardBindSlotId(),
+              })
+            }
+            wrapped.push(wire)
+          }
+          textSnaps = wrapped
+          if (!reused) {
+            rollPassphraseAfterOneShotSend(generatePassphraseMessageSharePassphrase)
+          }
+          if (readPassphraseRememberOnDeviceEnabled() || reused || !readPassphraseReuseEnabled()) {
+            await flushPassphraseMessageVaultPersist()
+          }
+          if (batchPass) {
+            const remembered = readPassphraseRememberOnDeviceEnabled()
+            sharedPassphraseNote = reused
+              ? remembered
+                ? ` Passphrase (wiederverwendet, für dich auf diesem Gerät gemerkt): ${batchPass}`
+                : ` Passphrase (wiederverwendet, nicht im Vault gemerkt): ${batchPass}`
+              : remembered
+                ? ` Passphrase zum Teilen (für dich auf diesem Gerät gemerkt): ${batchPass}`
+                : ` Passphrase zum Teilen (nicht im Vault gemerkt — nur jetzt kopieren): ${batchPass}`
+          }
         }
       } catch (e) {
         applyValidationError(

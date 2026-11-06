@@ -6,6 +6,7 @@
  * Purge → RAM + Ciphertext + Legacy-Klartext weg.
  */
 
+import { normalizeMessengerWireContent } from '@/frontend/lib/compact-image-wire'
 import {
   decryptHandoffEnvUtf8,
   encryptHandoffEnvUtf8,
@@ -52,10 +53,18 @@ export const PASSPHRASE_REMEMBER_ON_DEVICE_LS_KEY = 'morgendrot.composer.passphr
 export const PASSPHRASE_NFT_KEYCARD_BIND_LS_KEY = 'morgendrot.composer.nftKeycardBind.v1'
 /** Optional: Slot-ID auf der gebundenen Schlüsselkarte (P2). */
 export const PASSPHRASE_NFT_KEYCARD_BIND_SLOT_LS_KEY = 'morgendrot.composer.nftKeycardBindSlot.v1'
+/**
+ * B2-P4a: Starkes NFT-Besitz-Gate beim Senden (DEK-Capsule, kein Blank-DEK-Merken).
+ * Braucht Schlüsselkarten-Bindung. App-enforced Owner-Check — kein Seal.
+ */
+export const PASSPHRASE_NFT_STRONG_GATE_LS_KEY = 'morgendrot.composer.nftStrongGate.v1'
+/** P4a-dual: zusätzlich festgelegte Wallet (AND mit NFT-Leserecht). */
+export const PASSPHRASE_NFT_DUAL_WALLET_GATE_LS_KEY = 'morgendrot.composer.nftDualWalletGate.v1'
+export const PASSPHRASE_NFT_REQUIRED_WALLET_LS_KEY = 'morgendrot.composer.nftRequiredWallet.v1'
 
-/** FNV-1a über vollständigen Wire — stabiler als Prefix/Suffix. */
+/** FNV-1a über normalisierten Wire — Send und Inbox treffen denselben Fingerprint. */
 export function fingerprintPassphraseMessageWire(wire: string): string {
-  const t = wire.trim()
+  const t = normalizeMessengerWireContent(wire)
   let h = 2166136261
   for (let i = 0; i < t.length; i++) {
     h ^= t.charCodeAt(i)
@@ -430,12 +439,15 @@ export function writePassphraseProtectEnabled(on: boolean): void {
   }
 }
 
+/** Default true — sonst geht die Passphrase nach jedem Send verloren (Neu würfeln). */
 export function readPassphraseReuseEnabled(): boolean {
-  if (typeof window === 'undefined') return false
+  if (typeof window === 'undefined') return true
   try {
-    return window.localStorage.getItem(PASSPHRASE_REUSE_LS_KEY) === '1'
+    const v = window.localStorage.getItem(PASSPHRASE_REUSE_LS_KEY)
+    if (v === null || v === '') return true
+    return v !== '0'
   } catch {
-    return false
+    return true
   }
 }
 
@@ -464,6 +476,7 @@ export function writePassphraseNftKeycardBindObjectId(objectId: string | null): 
     if (!objectId?.trim()) {
       window.localStorage.removeItem(PASSPHRASE_NFT_KEYCARD_BIND_LS_KEY)
       window.localStorage.removeItem(PASSPHRASE_NFT_KEYCARD_BIND_SLOT_LS_KEY)
+      window.localStorage.setItem(PASSPHRASE_NFT_STRONG_GATE_LS_KEY, '0')
       return
     }
     const v = objectId.trim().toLowerCase()
@@ -503,26 +516,105 @@ export function writePassphraseNftKeycardBindSlotId(slotId: string | null): void
   }
 }
 
+export function readPassphraseNftStrongGateEnabled(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return window.localStorage.getItem(PASSPHRASE_NFT_STRONG_GATE_LS_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+export function writePassphraseNftStrongGateEnabled(on: boolean): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(PASSPHRASE_NFT_STRONG_GATE_LS_KEY, on ? '1' : '0')
+    if (!on) {
+      window.localStorage.setItem(PASSPHRASE_NFT_DUAL_WALLET_GATE_LS_KEY, '0')
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+export function readPassphraseNftDualWalletGateEnabled(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return (
+      readPassphraseNftStrongGateEnabled() &&
+      window.localStorage.getItem(PASSPHRASE_NFT_DUAL_WALLET_GATE_LS_KEY) === '1'
+    )
+  } catch {
+    return false
+  }
+}
+
+export function writePassphraseNftDualWalletGateEnabled(on: boolean): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(PASSPHRASE_NFT_DUAL_WALLET_GATE_LS_KEY, on ? '1' : '0')
+  } catch {
+    /* ignore */
+  }
+}
+
+export function readPassphraseNftRequiredWallet(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const v = window.localStorage.getItem(PASSPHRASE_NFT_REQUIRED_WALLET_LS_KEY)?.trim().toLowerCase()
+    return v && /^0x[a-f0-9]{64}$/.test(v) ? v : null
+  } catch {
+    return null
+  }
+}
+
+export function writePassphraseNftRequiredWallet(address: string | null): void {
+  if (typeof window === 'undefined') return
+  try {
+    if (!address?.trim()) {
+      window.localStorage.removeItem(PASSPHRASE_NFT_REQUIRED_WALLET_LS_KEY)
+      return
+    }
+    const v = address.trim().toLowerCase()
+    if (!/^0x[a-f0-9]{64}$/.test(v)) return
+    window.localStorage.setItem(PASSPHRASE_NFT_REQUIRED_WALLET_LS_KEY, v)
+  } catch {
+    /* ignore */
+  }
+}
+
 /**
- * Passphrase für den nächsten Send: bei Reuse Geräte-Standard.
- * Neu erzeugen nur wenn Vault-Session offen und noch kein Default —
- * sonst würde Lock→Composer still die gemerkte Reuse-Passphrase überschreiben.
+ * Passphrase für den nächsten Send.
+ * Feld / Default gilt immer (auch ohne „Wiederverwenden“ — sonst wären Neu würfeln /
+ * Kopieren wirkungslos). „Wiederverwenden“ entscheidet nur, ob der Default nach dem
+ * Send stehen bleibt (reuse) oder für den nächsten Send neu gewürfelt wird.
  */
 export function resolvePassphraseForProtectSend(generateFresh: () => string): {
   passphrase: string
   reused: boolean
 } {
-  if (readPassphraseReuseEnabled()) {
-    const existing = getDefaultPassphraseMessagePassphrase()
-    if (existing) return { passphrase: existing, reused: true }
-    if (!isPassphraseMessageVaultSessionOpen()) {
-      return { passphrase: '', reused: true }
-    }
-    const fresh = generateFresh().trim()
-    if (fresh.length >= 8) setDefaultPassphraseMessagePassphrase(fresh)
-    return { passphrase: fresh, reused: true }
+  const reuse = readPassphraseReuseEnabled()
+  const existing = getDefaultPassphraseMessagePassphrase()
+  if (existing) return { passphrase: existing, reused: reuse }
+  if (!isPassphraseMessageVaultSessionOpen()) {
+    return { passphrase: '', reused: reuse }
   }
-  return { passphrase: generateFresh().trim(), reused: false }
+  const fresh = generateFresh().trim()
+  if (fresh.length >= 8) setDefaultPassphraseMessagePassphrase(fresh)
+  return { passphrase: fresh, reused: reuse }
+}
+
+/** Nach Send ohne Wiederverwenden: neue Vorschau-Passphrase fürs nächste Mal. */
+export function rollPassphraseAfterOneShotSend(generateFresh: () => string): string | null {
+  if (readPassphraseReuseEnabled()) return getDefaultPassphraseMessagePassphrase()
+  if (!isPassphraseMessageVaultSessionOpen()) {
+    clearDefaultPassphraseMessagePassphrase()
+    return null
+  }
+  const fresh = generateFresh().trim()
+  if (fresh.length >= 8) setDefaultPassphraseMessagePassphrase(fresh)
+  else clearDefaultPassphraseMessagePassphrase()
+  return getDefaultPassphraseMessagePassphrase()
 }
 
 /** Tests / Debounce flush. */

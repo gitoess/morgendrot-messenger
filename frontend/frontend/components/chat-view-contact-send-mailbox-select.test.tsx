@@ -33,7 +33,7 @@ describe('ChatViewContactSendMailboxSelect (§ H.1a)', () => {
     )
     expect(screen.getByText(/Speicher auf der Chain/i)).toBeInTheDocument()
     expect(screen.getByText(/Flüchtig — schneller Event/)).toBeInTheDocument()
-    expect(screen.getByText(/kein Burn\/Purge/)).toBeInTheDocument()
+    expect(screen.getByText(/nicht burnbar/)).toBeInTheDocument()
   })
 
   it('bei Burn-on-read: wechselt von Event auf Mailbox-Slot', () => {

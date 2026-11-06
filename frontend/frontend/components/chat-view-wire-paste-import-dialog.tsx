@@ -47,7 +47,7 @@ export function ChatViewWirePasteImportDialog() {
       const kind = classifyPastedWire(wire)
       if (kind !== 'passphrase-msg') {
         setError(
-          'Unbekanntes Wire. Unterstützt: MORG_PWMSG_V1 (Passphrase-Schutz). ECDH-Ciphertexte brauchen Handshake/Connect — nicht diesen Dialog.'
+          'Unbekanntes Wire. Unterstützt: MORG_PWMSG_V1 / MORG_NFTGATE_V1. ECDH-Ciphertexte brauchen Handshake/Connect — nicht diesen Dialog.'
         )
         return
       }

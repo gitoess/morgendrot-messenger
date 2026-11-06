@@ -52,6 +52,7 @@ import { useMessengerFeatures } from '@/frontend/hooks/use-messenger-features'
 import { DashboardMyAddressPicker } from '@/frontend/components/dashboard-my-address-picker'
 import { DashboardPwaInstallCard } from '@/frontend/components/dashboard-pwa-install-card'
 import { DashboardIotaTransferCard } from '@/frontend/components/dashboard-iota-transfer-card'
+import { DashboardIotaActivityCard } from '@/frontend/components/dashboard-iota-activity-card'
 import { shouldShowDashboardPwaInstallCard } from '@/frontend/lib/should-show-pwa-install'
 import { MeshStatus } from './mesh-status'
 import { DeploymentProfileBackdrop } from '@/frontend/components/deployment-profile-backdrop'
@@ -670,20 +671,17 @@ function MessengerDashboardBody({
           />
         ) : null}
         {!s.locked && !isEinsatzLeadHome ? (
-          <div
-            className={cn(
-              'mb-6 grid gap-4',
-              shouldShowDashboardPwaInstallCard() ? 'sm:grid-cols-2' : 'grid-cols-1'
-            )}
-          >
+          <div className="mb-6 grid gap-4 sm:grid-cols-2">
             {shouldShowDashboardPwaInstallCard() ? <DashboardPwaInstallCard /> : null}
             <DashboardIotaTransferCard
+              myAddressFull={s.apiSnapshot?.myAddressFull}
               walletNativeIotaBalance={s.apiSnapshot?.walletNativeIotaBalance ?? undefined}
               walletNativeIotaBalanceFetchFailed={s.apiSnapshot?.walletNativeIotaBalanceFetchFailed}
               hasValidMyAddressForBalance={s.hasValidMyAddressForBalance}
               onRefreshStatus={s.checkStatus}
               addressSuggestions={s.dashboardTransferAddressSuggestions}
             />
+            <DashboardIotaActivityCard />
           </div>
         ) : null}
         {/* Arbeiter/Lock im Morgendrot Projekt: Action Center. Messenger-Produkt: direkt Kacheln. */}

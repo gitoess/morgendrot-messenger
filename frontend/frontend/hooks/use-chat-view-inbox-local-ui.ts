@@ -660,7 +660,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       if (!msg.chainNonce || !msg.chainPurgeable) {
         setStatus('error')
         setStatusMsg(
-          'On-chain Purge nicht möglich (nur Funk/Event oder fehlende Nonce). Siehe ENABLE_PURGE / MAILBOX_ID.'
+          'Burn nicht möglich (nur Funk/Event oder fehlende Nonce). Siehe ENABLE_PURGE / MAILBOX_ID.'
         )
         setTimeout(() => setStatus('idle'), 8000)
         return
@@ -681,12 +681,12 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
           })
           setMessages((prev) => prev.filter((m) => m.id !== msg.id))
           setStatus('success')
-          setStatusMsg(r.message || 'Nachricht auf der Chain gelöscht (Storage-Rebate).')
+          setStatusMsg(r.message || 'Nachricht geburnt (Storage-Rebate).')
           void loadMessages('reset', undefined, { silent: true })
         } else {
           setStatus('error')
           const hint = teamBroadcastPurgeHint(msg, myAddress)
-          setStatusMsg(r.error || hint || r.message || 'Purge fehlgeschlagen')
+          setStatusMsg(r.error || hint || r.message || 'Burn fehlgeschlagen')
         }
       } finally {
         setSending(false)
@@ -780,7 +780,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     )
     if (list.length === 0) {
       setStatus('error')
-      setStatusMsg('Keine purge-fähigen Nachrichten ausgewählt (Chain-Eintrag nötig).')
+      setStatusMsg('Keine burnbaren Nachrichten ausgewählt (Mailbox-Eintrag nötig).')
       setTimeout(() => setStatus('idle'), 7000)
       return
     }
@@ -790,7 +790,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
         const r = await purgeMailboxMessageHybrid(msg, { backendReachable: true })
         if (!r.ok) {
           setStatus('error')
-          setStatusMsg(r.error || r.message || 'Purge fehlgeschlagen')
+          setStatusMsg(r.error || r.message || 'Burn fehlgeschlagen')
           setTimeout(() => setStatus('idle'), 8000)
           return
         }
@@ -798,7 +798,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
         setMessages((prev) => prev.filter((x) => x.id !== msg.id))
       }
       setStatus('success')
-      setStatusMsg(`${list.length} Nachricht(en) auf der Chain gelöscht (Rebate).`)
+      setStatusMsg(`${list.length} Nachricht(en) geburnt (Rebate).`)
       void loadMessages('reset', undefined, { silent: true })
     } finally {
       setSending(false)

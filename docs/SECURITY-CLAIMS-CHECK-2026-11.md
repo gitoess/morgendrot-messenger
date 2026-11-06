@@ -26,13 +26,18 @@
 | **H.23 A4 UX:** ⋮ → Schlüssel erneuern (Epoch-Anzeige) + Hinweis nach Enc-Send | Rotation auffindbar | Kein Auto-Ratchet |
 | **Burn-on-read Opt-in** (Chat-⋮) | Purge nach Lesen vorschlagen; bei aktiv → Composer erzwingt Mailbox (Event nicht purgebar) | Mit Bestätigung; nur Mailbox-Objekte; Explorer behält TX/Events |
 | **H.23 B1 Team-Key** | Enc Team-Broadcast + Handoff; UI erzeugen/rotieren; Enc-Send ohne Auto-Fork; Browser-Sidecar `teamKeys.enc.v1` (Nest `.team-keys.enc` optional später) | Legacy-Klartext wird beim Unlock migriert/gelöscht; 2-Geräte-Feldtest bewusst später |
-| **H.23 B2 NFT-Schlüsselkarte** | Enc-Store + Galerie Multi-Slot + Composer-Bindung + Mint→Slot + Besitz-Check + öffentlicher `[morg-keycard]`-Marker | Zusätzlicher Zugriffsmodus; **kein** Alltags-Chat-Ersatz; Secrets bleiben off-chain |
+| **H.23 B2 NFT-Schlüsselkarte** | Enc-Store + Galerie Multi-Slot + Composer-Bindung + Mint→Slot + Besitz-Check + `[morg-keycard]` + **P4a** DEK-Capsule (`MORG_NFTGATE_V1`) | Zusätzlicher Zugriffsmodus; Secrets off-chain; P4a = App-Gate (ehrlich); P4b Seal fehlt |
 
 ## Bewusst **nicht** in dieser Runde (weiterhin Backlog)
 
 | Thema | Roadmap | Hinweis |
 |-------|---------|---------|
-| Double Ratchet / FS pro Nachricht | § H.23 Phase 3 / E2EE **C1** | Erst nach Session Keys+ Feldlage |
+| Double Ratchet / FS pro Nachricht | § H.23 Phase 3 / E2EE **C1** | Spec+PoC C1.1–C1.5 (Opt-in Hook); Composer v2 Default |
+| Starkes NFT-Besitz-Gate | B2-P4a Ist (App-Capsule); P4a-dual Wallet∧NFT Ist; P4b Seal später | Kein Marketing „unter Zwang unmöglich“ vor P4b; Klartext kopierbar |
+| NFT-Zeitkapsel / Timelock | B2-P5a/b Ist (Move+UI); NFT=Gate, Ciphertext getrennt | Kein Auto-Rücklauf ohne reclaim-TX; NFT allein ≠ Nachrichten |
+| MeshSleepyChannel / Offline-Zahlung Mesh | Phase-C Backlog | Nicht Ist; kein Watchtower-Claim |
+| NFT-gesichertes Ausgeben (Guarded Purse) | B2-S0 Spec; S1 Move Backlog; nur Token | 2FA: X∧NFT; **lose Coins außerhalb Purse ungeschützt**; kein Klartext-Claim |
+| Öffentlicher Vault + NFT-Timelock | B2-P5 Spec | `NFT-SCHLUESSELKARTE-PUBLIC-VAULT-TIMELOCK.md` — **kein** stiller Auto-Transfer |
 | Decoys im Handshake | Claims / Architektur | Nicht spezifiziert als nächste Scheibe |
 | Rotierende Outboxes / voller Dead-Drop | Claims / M4-Erweiterung | Feste Mailbox-IDs Ist |
 | HW-Fragment + Keys nur RAM | Claims | Vault-at-rest Enc; kein Secure Element |

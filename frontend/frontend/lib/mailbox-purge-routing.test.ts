@@ -41,9 +41,14 @@ describe('mailbox-purge-routing', () => {
       chainNonce: '7',
       chainPurgeable: true,
       encrypted: false,
+      chainMailboxObjectId: TEAM_MB,
     }
     const t = resolveMailboxPurgeTarget(msg, ME)
     expect(t?.kind).toBe('pairwise')
+    if (t?.kind === 'pairwise') {
+      expect(t.mailboxObjectId).toBe(TEAM_MB)
+      expect(t.variant).toBe('plaintext')
+    }
   })
 
   it('team hint für fremden Sender', () => {

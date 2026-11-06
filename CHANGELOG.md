@@ -6,6 +6,14 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+### Privacy / NFT (2026-11-06)
+
+- **H.23 C1** Double Ratchet PoC C1.1–C1.5 (Envelope, Symmetric/DH, Vault-Sidecar, Opt-in Experiment) — Spec `docs/MESSENGER-DOUBLE-RATCHET-C1-SPEC.md`; kein Composer-Default.
+- **B2-P4a / P4a-dual:** `MORG_NFTGATE_V1` DEK-Capsule; optional Wallet∧NFT-Gate; Claims: Klartext kopierbar; App-Gate ehrlich.
+- **B2-P5a/b Zeitkapsel:** Move `nft_time_lease` + Upgrade Testnet (Lease-Package `0x42b10c99…`); Panel; Ciphertext ≠ NFT (§0a Spec).
+- **B2-S0 Guarded Spend:** Spec Guarded Purse (Token-2FA); lose Coins ungeschützt; Move = S1 Backlog — `docs/NFT-GUARDED-SPEND-SPEC.md`.
+- **Backlog bewusst:** MeshSleepyChannel `docs/MESH-SLEEPY-CHANNEL-SPEC.md`; 2-Geräte-Feldtest verschoben.
+
 ### Sicherheit / Sendepfad
 
 - **LAN-API P0.5:** Bei `API_BIND_HOST` ≠ localhost erfordern **alle Mutationen** (POST/PUT/PATCH/DELETE) Loopback oder `API_AUTH_TOKEN`; Startup-Warnung ohne Token; Vault-Debug-Befehle geschützt; Client sendet Token via `fetchApiText` / Handoff.

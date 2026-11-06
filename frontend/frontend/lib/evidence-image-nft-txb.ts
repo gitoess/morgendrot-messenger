@@ -1,5 +1,5 @@
 /**
- * PTB: `image_nft::mint` — separates Evidenz-Package (nicht messaging).
+ * PTB: `image_nft::mint` / Transfer / `burn` — separates Evidenz-Package (nicht messaging).
  */
 import { Transaction } from '@iota/iota-sdk/transactions'
 import { bcs } from '@iota/iota-sdk/bcs'
@@ -24,11 +24,15 @@ function utf8Bytes(s: string): Uint8Array {
   return new TextEncoder().encode(s)
 }
 
+function assertHex64(id: string, label: string): string {
+  const v = id.trim().toLowerCase()
+  if (!HEX64.test(v)) throw new Error(`Ungültige ${label}.`)
+  return v
+}
+
 export function buildMintImageNftTransaction(input: BuildMintImageNftTxInput): Transaction {
-  const pkg = (input.packageId || KNOWN_IMAGE_NFT_PACKAGE_IDS[0]).trim().toLowerCase()
-  const sender = input.senderAddress.trim().toLowerCase()
-  if (!HEX64.test(pkg)) throw new Error('Ungültige ImageNFT-PACKAGE_ID.')
-  if (!HEX64.test(sender)) throw new Error('Ungültige Absender-Adresse.')
+  const pkg = assertHex64(input.packageId || KNOWN_IMAGE_NFT_PACKAGE_IDS[0], 'ImageNFT-PACKAGE_ID')
+  const sender = assertHex64(input.senderAddress, 'Absender-Adresse')
   if (!input.imageData.length) throw new Error('image_data leer.')
 
   const txb = new Transaction()
@@ -46,6 +50,39 @@ export function buildMintImageNftTransaction(input: BuildMintImageNftTxInput): T
       v8(utf8Bytes(input.hashHex.slice(0, 128))),
       v8(utf8Bytes(input.classification.slice(0, 64))),
     ],
+  })
+  return txb
+}
+
+/** Besitz an Adresse übertragen (PTB TransferObjects — braucht `store` am ImageNFT). */
+export function buildTransferImageNftTransaction(input: {
+  senderAddress: string
+  objectId: string
+  recipientAddress: string
+}): Transaction {
+  const sender = assertHex64(input.senderAddress, 'Absender-Adresse')
+  const objectId = assertHex64(input.objectId, 'Object-ID')
+  const recipient = assertHex64(input.recipientAddress, 'Empfänger-Adresse')
+  const txb = new Transaction()
+  txb.setSender(sender)
+  txb.transferObjects([txb.object(objectId)], recipient)
+  return txb
+}
+
+/** On-chain vernichten (`image_nft::burn`) — Storage-Rebate an Absender. */
+export function buildBurnImageNftTransaction(input: {
+  senderAddress: string
+  objectId: string
+  packageId?: string
+}): Transaction {
+  const pkg = assertHex64(input.packageId || KNOWN_IMAGE_NFT_PACKAGE_IDS[0], 'ImageNFT-PACKAGE_ID')
+  const sender = assertHex64(input.senderAddress, 'Absender-Adresse')
+  const objectId = assertHex64(input.objectId, 'Object-ID')
+  const txb = new Transaction()
+  txb.setSender(sender)
+  txb.moveCall({
+    target: `${pkg}::image_nft::burn`,
+    arguments: [txb.object(objectId)],
   })
   return txb
 }

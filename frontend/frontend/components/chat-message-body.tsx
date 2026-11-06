@@ -30,23 +30,181 @@ import {
   isPassphraseMessageWire,
 } from '@/frontend/lib/passphrase-message-crypto'
 import {
+  decryptNftGateMessageWire,
+  isNftGateMessageWire,
+  peekNftGateMeta,
+  peekNftGateObjectId,
+} from '@/frontend/lib/nft-gate-dek-capsule'
+import {
+  findNftTimeLeaseByNft,
+  isNftTimeLeaseBorrowerActive,
+  NFT_TIME_LEASE_CHANGED,
+  nftTimeLeaseBadgeText,
+} from '@/frontend/lib/nft-time-lease-local-store'
+import {
+  fingerprintPassphraseMessageWire,
+  flushPassphraseMessageVaultPersist,
   forgetPassphraseMessagePassphrase,
   lookupPassphraseMessagePassphrase,
   PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT,
   rememberPassphraseMessagePassphrase,
 } from '@/frontend/lib/passphrase-message-local-store'
+import {
+  bindWireToNftKeycard,
+  findNftKeycardBindingForWireFingerprint,
+  flushNftKeycardVaultPersist,
+  listNftKeycards,
+  lookupPassphraseForNftKeycard,
+  NFT_KEYCARD_VAULT_CHANGED_EVENT,
+  unbindWireFromNftKeycard,
+} from '@/frontend/lib/nft-keycard-local-store'
+import { checkNftKeycardOwnedBySigner } from '@/frontend/lib/nft-keycard-ownership'
+import { getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { cn } from '@/lib/utils'
 
 const TXT_PREVIEW_CHARS = 480
 const TXT_COLLAPSE_MAX_H = 'max-h-36' /* 9rem */
 
+/** B2-P4a: DEK-Capsule — kein Passphrase-Feld; nur Owner-Check. */
+function NftGateMessageBody(p: {
+  content: string
+  onCopyRaw: () => void
+  copiedRaw: boolean
+}) {
+  const nftOid = peekNftGateObjectId(p.content)
+  const [plain, setPlain] = useState<string | null>(null)
+  const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [owned, setOwned] = useState<boolean | null>(null)
+  const [leaseBadge, setLeaseBadge] = useState('')
+  const [hidden, setHidden] = useState(false)
+
+  const tryUnlock = async () => {
+    if (!nftOid) {
+      setErr('Keine NFT Object-ID im Wire.')
+      return
+    }
+    setBusy(true)
+    setErr('')
+    try {
+      const me = getDirectIotaSessionSignerAddress()
+      if (!me) throw new Error('Kein Session-Signer — Wallet laden.')
+      const lease = findNftTimeLeaseByNft(nftOid)
+      setLeaseBadge(lease ? nftTimeLeaseBadgeText(lease) : '')
+      const meta = peekNftGateMeta(p.content)
+      const borrowerOk = isNftTimeLeaseBorrowerActive(lease, me)
+      const own = await checkNftKeycardOwnedBySigner(nftOid, me)
+      const addressOwned = own.ok && own.owned
+      const nftAccessOk = Boolean(addressOwned || borrowerOk)
+      setOwned(nftAccessOk ? true : own.ok ? false : null)
+      const t = await decryptNftGateMessageWire(p.content, {
+        nftAccessOk,
+        signerAddress: me,
+      })
+      if (meta?.gate === 'nft_and_wallet_p4a') {
+        setLeaseBadge((prev) =>
+          [prev, `Dual-Gate: Wallet ${meta.requiredWallet?.slice(0, 12) ?? '—'}… + NFT`].filter(Boolean).join(' · ')
+        )
+      }
+      setPlain(t)
+      setHidden(false)
+    } catch (e) {
+      setPlain(null)
+      setErr(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  useEffect(() => {
+    void tryUnlock()
+    const sync = () => void tryUnlock()
+    window.addEventListener(NFT_TIME_LEASE_CHANGED, sync)
+    return () => window.removeEventListener(NFT_TIME_LEASE_CHANGED, sync)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Wire + Lease-Events
+  }, [p.content])
+
+  return (
+    <div className="space-y-2 text-xs">
+      <p className="rounded border border-amber-700/40 bg-amber-950/20 px-2 py-1.5 text-[11px] text-amber-100/90">
+        NFT-Gate (App-Check). Kein Blank-DEK. Einmal Klartext = kopierbar. Ohne Seal: nur ehrliche App.
+        Karte: {nftOid ? `${nftOid.slice(0, 14)}…` : '—'}
+        {owned === true ? ' · Leserecht ok' : owned === false ? ' · kein Leserecht' : ''}
+      </p>
+      {leaseBadge ? (
+        <p className="rounded border border-sky-800/30 bg-sky-950/15 px-2 py-1 text-[11px] text-sky-100/90">
+          {leaseBadge}
+        </p>
+      ) : null}
+      {err ? <p className="text-destructive">{err}</p> : null}
+      {plain && !hidden ? (
+        <div className="space-y-1.5">
+          <pre className="whitespace-pre-wrap break-words rounded border border-border/60 bg-muted/30 p-2 text-[12px] text-foreground">
+            {plain}
+          </pre>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="underline" onClick={() => { setPlain(null); setHidden(true) }}>
+              Ausblenden
+            </button>
+            <button type="button" className="underline" disabled={busy} onClick={() => void tryUnlock()}>
+              Besitz erneut prüfen
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="rounded border border-border px-2 py-1 text-foreground disabled:opacity-50"
+            disabled={busy}
+            onClick={() => void tryUnlock()}
+          >
+            {busy ? 'Prüfe…' : hidden ? 'Mit NFT-Besitz anzeigen' : 'Mit NFT-Besitz entschlüsseln'}
+          </button>
+          <button type="button" className="underline text-muted-foreground" onClick={p.onCopyRaw}>
+            {p.copiedRaw ? 'Wire kopiert' : 'Wire kopieren'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /**
- * Nur per-Wire-Vault-Eintrag („Auf diesem Gerät merken“).
- * Geräte-Default (Wiederverwenden) entschlüsselt Absichtlich NICHT auto —
- * sonst wären „nicht gemerkte“ Nachrichten nach Unlock trotzdem Klartext.
+ * Per-Wire-Vault („merken“) und ggf. Schlüsselkarten-Slot.
+ * Bei Wire-Bindung an NFT: Auto nur wenn Signer die Karte **aktuell besitzt**
+ * (Komfort-Gate — Passphrase manuell bleibt möglich).
  */
-function resolveRememberedPassphraseForWire(wire: string): string {
-  return lookupPassphraseMessagePassphrase(wire)?.trim() || ''
+async function resolveAutoPassphraseForWire(wire: string): Promise<{
+  pass: string
+  gatedByKeycard: boolean
+  owned: boolean | null
+  cardObjectId?: string
+}> {
+  const fp = fingerprintPassphraseMessageWire(wire)
+  const binding = findNftKeycardBindingForWireFingerprint(fp)
+  const remembered = lookupPassphraseMessagePassphrase(wire)?.trim() || ''
+  const fromCard = binding
+    ? lookupPassphraseForNftKeycard({ wireFingerprint: fp })?.trim() || ''
+    : ''
+  const candidate = remembered || fromCard
+  if (!binding) {
+    return { pass: remembered, gatedByKeycard: false, owned: null }
+  }
+  const me = getDirectIotaSessionSignerAddress()
+  if (!me) {
+    return { pass: '', gatedByKeycard: true, owned: false, cardObjectId: binding.cardObjectId }
+  }
+  const own = await checkNftKeycardOwnedBySigner(binding.cardObjectId, me)
+  if (!own.ok || !own.owned) {
+    return { pass: '', gatedByKeycard: true, owned: false, cardObjectId: binding.cardObjectId }
+  }
+  return {
+    pass: candidate,
+    gatedByKeycard: true,
+    owned: true,
+    cardObjectId: binding.cardObjectId,
+  }
 }
 
 function PassphraseMessageBody(p: {
@@ -54,8 +212,8 @@ function PassphraseMessageBody(p: {
   onCopyRaw: () => void
   copiedRaw: boolean
 }) {
-  const [known, setKnown] = useState(() => resolveRememberedPassphraseForWire(p.content))
-  const [pass, setPass] = useState(known)
+  const [known, setKnown] = useState('')
+  const [pass, setPass] = useState('')
   const [plain, setPlain] = useState<string | null>(null)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
@@ -64,8 +222,62 @@ function PassphraseMessageBody(p: {
   const [hidden, setHidden] = useState(false)
   const [showPass, setShowPass] = useState(false)
   const [copiedPass, setCopiedPass] = useState(false)
+  const [keycardGateHint, setKeycardGateHint] = useState('')
+  const [boundCardOid, setBoundCardOid] = useState<string | null>(null)
+  const [bindPickOid, setBindPickOid] = useState('')
+  const [cardsTick, setCardsTick] = useState(0)
+  const keycards = listNftKeycards()
 
   const effectivePass = (pass.trim() || known).trim()
+
+  const refreshBindingMeta = () => {
+    const fp = fingerprintPassphraseMessageWire(p.content)
+    const b = findNftKeycardBindingForWireFingerprint(fp)
+    setBoundCardOid(b?.cardObjectId ?? null)
+    if (b?.cardObjectId) setBindPickOid(b.cardObjectId)
+  }
+
+  const bindToKeycard = () => {
+    const oid = (bindPickOid || keycards[0]?.objectId || '').trim()
+    if (!oid) {
+      setErr('Keine Schlüsselkarte — zuerst unter On-Chain / NFT „Als Schlüsselkarte merken“.')
+      return
+    }
+    const card = keycards.find((c) => c.objectId === oid)
+    const slotId = card?.entry.slots[0]?.id || 'default'
+    const r = bindWireToNftKeycard({
+      objectId: oid,
+      wireFingerprint: fingerprintPassphraseMessageWire(p.content),
+      slotId,
+    })
+    if (!r.ok) {
+      setErr(r.error)
+      return
+    }
+    if (effectivePass.length >= 8) {
+      rememberPassphraseMessagePassphrase(p.content, effectivePass)
+      void flushPassphraseMessageVaultPersist()
+    }
+    void flushNftKeycardVaultPersist()
+    setCardsTick((n) => n + 1)
+    refreshBindingMeta()
+    setErr('')
+  }
+
+  const unbindFromKeycard = () => {
+    if (!boundCardOid) return
+    const r = unbindWireFromNftKeycard({
+      objectId: boundCardOid,
+      wireFingerprint: fingerprintPassphraseMessageWire(p.content),
+    })
+    if (!r.ok) {
+      setErr(r.error)
+      return
+    }
+    void flushNftKeycardVaultPersist()
+    setCardsTick((n) => n + 1)
+    refreshBindingMeta()
+  }
 
   const copyPassphrase = () => {
     const v = effectivePass
@@ -77,23 +289,43 @@ function PassphraseMessageBody(p: {
   }
 
   useEffect(() => {
+    let alive = true
     const sync = () => {
-      const next = resolveRememberedPassphraseForWire(p.content)
-      setKnown((prev) => {
-        if (prev === next) return prev
-        return next
+      void resolveAutoPassphraseForWire(p.content).then((r) => {
+        if (!alive) return
+        if (r.gatedByKeycard && r.owned === false) {
+          setKeycardGateHint(
+            'An NFT-Schlüsselkarte gebunden — Auto-Lesen nur mit aktuellem Besitz. Passphrase manuell bleibt möglich (Komfort-Modus, kein starkes Crypto-Gate).'
+          )
+          setKnown('')
+          setPlain(null)
+          return
+        }
+        setKeycardGateHint(
+          r.gatedByKeycard
+            ? 'Schlüsselkarte: Besitz ok — Auto aus Slot/Merker.'
+            : ''
+        )
+        setBoundCardOid(r.cardObjectId ?? null)
+        if (r.cardObjectId) setBindPickOid(r.cardObjectId)
+        setKnown((prev) => (prev === r.pass ? prev : r.pass))
+        setPass((prev) => (prev.trim().length >= 8 ? prev : r.pass))
+        if (!r.pass) {
+          setPlain(null)
+          setHidden(false)
+        }
       })
-      setPass((prev) => (prev.trim().length >= 8 ? prev : next))
-      // Nur bei Key-Verlust Klartext verwerfen — sonst Flackern nach remember()/Vault-Event.
-      if (!next) {
-        setPlain(null)
-        setHidden(false)
-      }
     }
+    refreshBindingMeta()
     sync()
     window.addEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, sync)
-    return () => window.removeEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, sync)
-  }, [p.content])
+    window.addEventListener(NFT_KEYCARD_VAULT_CHANGED_EVENT, sync)
+    return () => {
+      alive = false
+      window.removeEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, sync)
+      window.removeEventListener(NFT_KEYCARD_VAULT_CHANGED_EVENT, sync)
+    }
+  }, [p.content, cardsTick])
 
   useEffect(() => {
     if (!known || plain || hidden) return
@@ -125,6 +357,7 @@ function PassphraseMessageBody(p: {
       const t = await decryptPassphraseMessageWire(p.content, pass)
       // Manuelle Eingabe = bewusst merken (wie Absender-Remember an).
       rememberPassphraseMessagePassphrase(p.content, pass.trim())
+      await flushPassphraseMessageVaultPersist()
       setKnown(pass.trim())
       setHidden(false)
       setPlain(t)
@@ -148,12 +381,36 @@ function PassphraseMessageBody(p: {
 
   const forgetLocal = () => {
     forgetPassphraseMessagePassphrase(p.content)
+    void flushPassphraseMessageVaultPersist()
     setPass('')
     setKnown('')
     setShowPass(false)
     setPlain(null)
     setHidden(false)
   }
+
+  const confirmForgetVault = () => {
+    if (
+      typeof window !== 'undefined' &&
+      !window.confirm(
+        'Passphrase aus dem Vault auf diesem Gerät löschen? Die Nachricht bleibt on-chain verschlüsselt — zum Lesen Passphrase erneut eingeben.'
+      )
+    ) {
+      return
+    }
+    forgetLocal()
+  }
+
+  const vaultForgetButton = known ? (
+    <button
+      type="button"
+      className="text-xs text-muted-foreground hover:underline"
+      onClick={confirmForgetVault}
+      title="Merker für diese Nachricht aus dem lokalen Vault entfernen"
+    >
+      Im Vault löschen
+    </button>
+  ) : null
 
   return (
     <div className="space-y-2 rounded-lg border border-amber-600/40 bg-amber-500/10 p-3">
@@ -189,28 +446,51 @@ function PassphraseMessageBody(p: {
                 {effectivePass}
               </code>
             ) : null}
-            <button
-              type="button"
-              className="text-xs text-muted-foreground hover:underline"
-              onClick={() => {
-                if (
-                  typeof window !== 'undefined' &&
-                  !window.confirm(
-                    'Lokal sperren? Die Passphrase wird gelöscht — zum Lesen wieder eingeben (wie Empfänger ohne Key).'
-                  )
-                ) {
-                  return
-                }
-                forgetLocal()
-              }}
-              title="Lokalen Key löschen — Nachricht wieder nur mit Passphrase lesbar"
-            >
-              Erneut sperren
-            </button>
+            {vaultForgetButton}
             <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={p.onCopyRaw}>
               {p.copiedRaw ? 'Kopiert' : 'Wire kopieren'}
             </button>
           </div>
+          {keycards.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              {boundCardOid ? (
+                <>
+                  <span className="text-[10px] text-muted-foreground">
+                    An Karte {boundCardOid.slice(0, 10)}… gebunden
+                  </span>
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground hover:underline"
+                    onClick={unbindFromKeycard}
+                  >
+                    Bindung lösen
+                  </button>
+                </>
+              ) : (
+                <>
+                  <select
+                    className="max-w-[14rem] rounded border border-border bg-background px-1.5 py-1 text-[10px]"
+                    value={bindPickOid || keycards[0]?.objectId || ''}
+                    onChange={(e) => setBindPickOid(e.target.value)}
+                  >
+                    {keycards.map((c) => (
+                      <option key={c.objectId} value={c.objectId}>
+                        {(c.entry.label || 'Karte') + ' · ' + c.objectId.slice(0, 10) + '…'}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-primary hover:underline"
+                    onClick={bindToKeycard}
+                    title="Keine Object-ID der Nachricht nötig — Fingerprint des Wires"
+                  >
+                    An Schlüsselkarte binden
+                  </button>
+                </>
+              )}
+            </div>
+          ) : null}
         </>
       ) : autoBusy && known && !hidden ? (
         <p className="text-xs text-muted-foreground">Entschlüssele…</p>
@@ -227,22 +507,7 @@ function PassphraseMessageBody(p: {
             >
               Wieder anzeigen
             </button>
-            <button
-              type="button"
-              className="text-xs text-muted-foreground hover:underline"
-              onClick={() => {
-                if (
-                  typeof window !== 'undefined' &&
-                  !window.confirm('Lokal sperren? Passphrase wird gelöscht — zum Lesen wieder eingeben.')
-                ) {
-                  return
-                }
-                forgetLocal()
-              }}
-              title="Lokalen Key löschen — Passphrase wieder nötig"
-            >
-              Erneut sperren
-            </button>
+            {vaultForgetButton}
             <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={p.onCopyRaw}>
               {p.copiedRaw ? 'Kopiert' : 'Wire kopieren'}
             </button>
@@ -253,6 +518,9 @@ function PassphraseMessageBody(p: {
           <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
             Passphrase nötig — ohne Key nur Ciphertext (gilt für Absender und Empfänger).
           </p>
+          {keycardGateHint ? (
+            <p className="text-[11px] text-amber-800/90 dark:text-amber-100/90">{keycardGateHint}</p>
+          ) : null}
           <input
             type="password"
             value={pass}
@@ -768,10 +1036,20 @@ export function ChatMessageBody({
     }
   }
 
+  if (isNftGateMessageWire(raw) || isNftGateMessageWire(wire)) {
+    return (
+      <NftGateMessageBody
+        content={isNftGateMessageWire(wire) ? wire : raw}
+        onCopyRaw={() => void copyRaw()}
+        copiedRaw={copied === 'raw'}
+      />
+    )
+  }
+
   if (isPassphraseMessageWire(raw) || isPassphraseMessageWire(wire)) {
     return (
       <PassphraseMessageBody
-        content={isPassphraseMessageWire(raw) ? raw : wire}
+        content={isPassphraseMessageWire(wire) ? wire : raw}
         onCopyRaw={() => void copyRaw()}
         copiedRaw={copied === 'raw'}
       />

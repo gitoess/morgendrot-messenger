@@ -5,6 +5,7 @@ import { fetchInbox } from '@/frontend/lib/api/inbox'
 import {
   mapInboxApiRowsToMessages,
   pickInboxRawMessages,
+  stampChainMailboxObjectId,
   type InboxApiRow,
 } from '@/frontend/features/inbox/inbox-map-messages'
 import { tryFetchDirectMailboxInboxViaIota } from '@/frontend/lib/direct-iota-inbox-fetch'
@@ -110,7 +111,9 @@ export async function fetchInboxFromAllOwnedMailboxes(p: {
       const resHasMore = pickInboxHasMore(resLoose)
       if (res.ok && raw != null) {
         anyOk = true
-        const mapped = mapInboxApiRowsToMessages(raw as InboxApiRow[])
+        let mapped = mapInboxApiRowsToMessages(raw as InboxApiRow[])
+        const stampMb = mailboxObjectId || p.serverMailboxId
+        if (stampMb) mapped = stampChainMailboxObjectId(mapped, stampMb)
         if (isServer) {
           serverStride = mapped.length
           serverHasMore = resHasMore
@@ -136,7 +139,9 @@ export async function fetchInboxFromAllOwnedMailboxes(p: {
     if (direct.ok) {
       anyOk = true
       loadedViaRpc = true
-      const mapped = mapInboxApiRowsToMessages(direct.rows as InboxApiRow[])
+      let mapped = mapInboxApiRowsToMessages(direct.rows as InboxApiRow[])
+      const stampMb = mailboxObjectId || p.serverMailboxId
+      if (stampMb) mapped = stampChainMailboxObjectId(mapped, stampMb)
       if (isServer && skipApiRelay) {
         serverStride = mapped.length
         serverHasMore = mapped.length >= p.limit

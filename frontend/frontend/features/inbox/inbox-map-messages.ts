@@ -26,6 +26,9 @@ export type InboxApiRow = {
   ts?: number | string
   chainPurgeable?: boolean
   chainPurgeKind?: 'pairwise' | 'team-broadcast'
+  /** Mailbox-Object-ID, aus der die Zeile kam (für Burn). */
+  chainMailboxObjectId?: string
+  mailboxObjectId?: string
   /** Backend Dedup (evid:… / mb:…) — trennt gleiche nonce=1. */
   inboxKey?: string
 }
@@ -95,6 +98,10 @@ export function mapInboxApiRowsToMessages(raw: InboxApiRow[]): Message[] {
       dedupKey,
       chainNonce: m.nonce != null && String(m.nonce).length > 0 ? String(m.nonce) : undefined,
       chainPurgeable: m.chainPurgeable === true,
+      chainMailboxObjectId: (() => {
+        const mb = (m.chainMailboxObjectId ?? m.mailboxObjectId ?? '').trim().toLowerCase()
+        return /^0x[a-f0-9]{64}$/.test(mb) ? mb : undefined
+      })(),
       chainPurgeKind:
         m.chainPurgeKind === 'team-broadcast' || (inboxKey && inboxKey.startsWith('team:'))
           ? 'team-broadcast'
@@ -105,4 +112,13 @@ export function mapInboxApiRowsToMessages(raw: InboxApiRow[]): Message[] {
   })
   mapped.sort((a, b) => b.timestamp - a.timestamp)
   return mapped
+}
+
+/** Stempel Mailbox-ID auf purgebare Zeilen (nach Multi-Mailbox-Fetch). */
+export function stampChainMailboxObjectId(messages: Message[], mailboxObjectId: string): Message[] {
+  const mb = mailboxObjectId.trim().toLowerCase()
+  if (!/^0x[a-f0-9]{64}$/.test(mb)) return messages
+  return messages.map((m) =>
+    m.chainPurgeable === true && !m.chainMailboxObjectId ? { ...m, chainMailboxObjectId: mb } : m
+  )
 }

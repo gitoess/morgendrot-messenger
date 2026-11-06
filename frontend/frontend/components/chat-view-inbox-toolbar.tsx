@@ -565,9 +565,9 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 const count = selectedInboxCount
                 if (
                   !window.confirm(
-                    `Ausgewählte Nachrichten wirklich auf Chain löschen?\n\n` +
+                    `Ausgewählte Nachrichten wirklich auf Chain löschen (Burn)?\n\n` +
                       `- Anzahl: ${count}\n` +
-                      `- Wirkung auf Chain: Purge der ausgewählten Mailbox-Einträge (sofern purge-fähig, mit Storage-Rebate)\n` +
+                      `- Wirkung auf Chain: Burn der ausgewählten Mailbox-Einträge (sofern burnbar, mit Storage-Rebate)\n` +
                       `- Lokal: Die ausgewählten Zeilen verschwinden zusätzlich aus deiner Inbox-Ansicht\n` +
                       `- Nicht betroffen: andere lokale Daten wie Telefonbuch/Kontakte\n\n` +
                       `Das ist kein reines UI-Ausblenden. Fortfahren?`
@@ -579,7 +579,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               }}
               className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-left text-destructive hover:bg-destructive/20 disabled:opacity-50"
             >
-              Ausgewählte auf Chain löschen
+              Ausgewählte burnen
             </button>
           </div>
         ) : null}

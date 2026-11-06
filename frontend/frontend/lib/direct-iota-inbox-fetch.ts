@@ -53,6 +53,7 @@ type PendingEncryptedRow = {
   ciphertext: Uint8Array
   tag: Uint8Array
   chainPurgeable: boolean
+  chainMailboxObjectId?: string
   decryptErrorPrefix: string
 }
 
@@ -144,6 +145,9 @@ async function resolvePendingEncryptedRow(pending: PendingEncryptedRow): Promise
     nonce: pending.nonce,
     ts: pending.ts,
     chainPurgeable: pending.chainPurgeable,
+    ...(pending.chainMailboxObjectId
+      ? { chainMailboxObjectId: pending.chainMailboxObjectId }
+      : {}),
     inboxKey: pending.inboxKey,
   }
 }
@@ -165,6 +169,7 @@ async function resolvePendingTeamEncRow(pending: PendingTeamEncRow): Promise<Inb
     ts: pending.ts,
     chainPurgeable: true,
     chainPurgeKind: 'team-broadcast',
+    chainMailboxObjectId: pending.teamMailboxObjectId,
     inboxKey: pending.inboxKey,
   }
 }
@@ -264,6 +269,7 @@ export async function tryFetchDirectMailboxInboxViaIota(
             nonce: r.nonce,
             ts,
             chainPurgeable: true,
+            chainMailboxObjectId: mailboxObjectId,
             inboxKey: mailboxPlainInboxKey({
               sender: r.sender,
               recipient: r.recipient,
@@ -289,6 +295,7 @@ export async function tryFetchDirectMailboxInboxViaIota(
           ciphertext: r.ciphertext,
           tag: r.tag,
           chainPurgeable: true,
+          chainMailboxObjectId: mailboxObjectId,
           decryptErrorPrefix: 'Entschlüsselung fehlgeschlagen (Key passt nicht oder Nutzlast beschädigt).',
           inboxKey: mailboxEncryptedInboxKey({
             sender: r.sender,
@@ -320,6 +327,7 @@ export async function tryFetchDirectMailboxInboxViaIota(
             ts,
             chainPurgeable: true,
             chainPurgeKind: 'team-broadcast',
+            chainMailboxObjectId: r.teamMailboxObjectId,
             inboxKey: `team:${r.teamMailboxObjectId}:${r.sender}:${r.nonce}`,
           },
         })

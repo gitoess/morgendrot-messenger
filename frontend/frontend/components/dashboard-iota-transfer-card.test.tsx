@@ -7,6 +7,12 @@ vi.mock('@/frontend/lib/api', () => ({
   transferCoins: vi.fn(),
 }))
 
+vi.mock('@/frontend/components/chat-view-evidence-image-viewer', () => ({
+  ChatViewEvidenceImageViewerButton: (p: { triggerLabel?: string }) => (
+    <button type="button">{p.triggerLabel ?? 'NFT'}</button>
+  ),
+}))
+
 describe('DashboardIotaTransferCard', () => {
   beforeEach(() => {
     vi.mocked(transferCoins).mockReset()
@@ -15,8 +21,9 @@ describe('DashboardIotaTransferCard', () => {
 
   it('zeigt Titel und deaktiviert Überweisen ohne Eingaben', () => {
     render(<DashboardIotaTransferCard />)
-    expect(screen.getByRole('heading', { name: /IOTA überweisen/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /IOTA Wallet/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Überweisen/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /^NFT$/i })).toBeInTheDocument()
     expect(screen.getByText(/Saldo nach gültiger MY_ADDRESS/i)).toBeInTheDocument()
   })
 

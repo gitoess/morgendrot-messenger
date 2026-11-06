@@ -326,6 +326,64 @@ export function bindObjectToNftKeycard(opts: {
   return { ok: true }
 }
 
+/** Einzelne Wire-Bindung lösen (Fingerprint bleibt on-chain Ciphertext). */
+export function unbindWireFromNftKeycard(opts: {
+  objectId: string
+  wireFingerprint: string
+}): { ok: true } | { ok: false; error: string } {
+  const oid = normOid(opts.objectId)
+  const card = memoryCards[oid]
+  if (!card) return { ok: false, error: 'Keine Schlüsselkarte für diese Object-ID.' }
+  const fp = opts.wireFingerprint.trim()
+  if (!fp || !card.boundWires?.[fp]) return { ok: false, error: 'Keine Wire-Bindung für diesen Fingerprint.' }
+  const next = { ...(card.boundWires || {}) }
+  delete next[fp]
+  memoryCards[oid] = {
+    ...card,
+    boundWires: Object.keys(next).length ? next : undefined,
+  }
+  schedulePersist()
+  emitChanged()
+  return { ok: true }
+}
+
+/** Einzelne Objekt-Bindung (z. B. Enc-ImageNFT) von der Karte lösen. */
+export function unbindObjectFromNftKeycard(opts: {
+  cardObjectId: string
+  boundObjectId: string
+}): { ok: true } | { ok: false; error: string } {
+  const cardOid = normOid(opts.cardObjectId)
+  const boundOid = normOid(opts.boundObjectId)
+  const card = memoryCards[cardOid]
+  if (!card) return { ok: false, error: 'Keine Schlüsselkarte für diese Object-ID.' }
+  if (!card.boundObjects?.[boundOid]) {
+    return { ok: false, error: 'Keine Objekt-Bindung für diese ID.' }
+  }
+  const next = { ...(card.boundObjects || {}) }
+  delete next[boundOid]
+  memoryCards[cardOid] = {
+    ...card,
+    boundObjects: Object.keys(next).length ? next : undefined,
+  }
+  schedulePersist()
+  emitChanged()
+  return { ok: true }
+}
+
+/** Welche Karte+Slot ist an diesen Wire-Fingerprint gebunden? */
+export function findNftKeycardBindingForWireFingerprint(wireFingerprint: string): {
+  cardObjectId: string
+  slotId: string
+} | null {
+  const fp = wireFingerprint.trim()
+  if (!fp) return null
+  for (const [objectId, entry] of Object.entries(memoryCards)) {
+    const slotId = entry.boundWires?.[fp]
+    if (slotId) return { cardObjectId: objectId, slotId }
+  }
+  return null
+}
+
 export function lookupPassphraseForNftKeycard(opts: {
   objectId?: string
   wireFingerprint?: string

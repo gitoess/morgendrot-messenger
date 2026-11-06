@@ -102,7 +102,7 @@ export function ChatViewContactSendMailboxSelect(p: ChatViewContactSendMailboxSe
           <option key={o.value} value={o.value} disabled={burnOnReadEnabled && o.value === 'event'}>
             {o.value === 'event'
               ? burnOnReadEnabled
-                ? 'Nur Wallet-Adresse (Event — kein Burn/Purge)'
+                ? 'Nur Wallet-Adresse (Event — nicht burnbar)'
                 : o.label
               : o.label}
           </option>
@@ -110,13 +110,13 @@ export function ChatViewContactSendMailboxSelect(p: ChatViewContactSendMailboxSe
       </select>
       {burnOnReadEnabled ? (
         <p className="mt-1 text-[10px] text-amber-800 dark:text-amber-200">
-          Burn-on-read aktiv: Sendung geht in eine Mailbox (purgebar). Events bleiben im Explorer als
+          Burn-on-read aktiv: Sendung geht in eine Mailbox (burnbar). Events bleiben im Explorer als
           Historie und sind nicht löschbar.
         </p>
       ) : value === 'event' ? (
         <p className="mt-1 text-[10px] text-muted-foreground">
-          Flüchtig — schneller Event auf der Chain, kein Eintrag im Postfach-Objekt (kein
-          Burn/Purge).
+          Flüchtig — schneller Event auf der Chain, kein Eintrag im Postfach-Objekt (nicht
+          burnbar).
         </p>
       ) : resolvedMb ? (
         <p className="mt-1 font-mono text-[10px] text-muted-foreground" title={resolvedMb}>

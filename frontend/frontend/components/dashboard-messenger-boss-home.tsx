@@ -5,6 +5,7 @@ import type { ApiStatus } from '@/frontend/lib/api'
 import { DashboardBossQuickActions } from '@/frontend/components/dashboard-boss-quick-actions'
 import { DashboardPwaInstallCard } from '@/frontend/components/dashboard-pwa-install-card'
 import { DashboardIotaTransferCard } from '@/frontend/components/dashboard-iota-transfer-card'
+import { DashboardIotaActivityCard } from '@/frontend/components/dashboard-iota-activity-card'
 import { shouldShowDashboardPwaInstallCard } from '@/frontend/lib/should-show-pwa-install'
 
 export function DashboardMessengerBossHome(p: {
@@ -31,7 +32,7 @@ export function DashboardMessengerBossHome(p: {
         )}
       >
         {showPwa ? <DashboardPwaInstallCard inline /> : null}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 space-y-3">
           <DashboardIotaTransferCard
             compact
             myAddressFull={p.apiSnapshot?.myAddressFull}
@@ -41,6 +42,7 @@ export function DashboardMessengerBossHome(p: {
             onRefreshStatus={p.onRefreshStatus}
             addressSuggestions={p.addressSuggestions}
           />
+          <DashboardIotaActivityCard compact />
         </div>
       </div>
     </div>

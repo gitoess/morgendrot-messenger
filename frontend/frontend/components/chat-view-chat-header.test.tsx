@@ -6,6 +6,7 @@ import {
   type ChatViewChatHeaderProps,
 } from '@/frontend/components/chat-view-chat-header'
 import { TEST_API_STATUS_SEND_READY } from '@/frontend/lib/test-fixtures/messenger-capabilities'
+import { setVaultPasswordSession } from '@/frontend/lib/vault-password-session'
 
 function baseHeader(over: Partial<ChatViewChatHeaderProps> = {}): ChatViewChatHeaderProps {
   return {
@@ -21,6 +22,7 @@ function baseHeader(over: Partial<ChatViewChatHeaderProps> = {}): ChatViewChatHe
 
 describe('TresorSessionBadge (§ H.1a)', () => {
   it('zeigt gesperrt / Keys fehlen / bereit', () => {
+    setVaultPasswordSession('vault-pass-99')
     const { rerender } = render(<TresorSessionBadge sessionLocked hasKeys={false} />)
     expect(screen.getByText(/Tresor: gesperrt/)).toBeInTheDocument()
 
@@ -31,7 +33,7 @@ describe('TresorSessionBadge (§ H.1a)', () => {
     expect(screen.getByText(/Tresor: bereit/)).toBeInTheDocument()
   })
 
-  it('navigiert zur Startseite wenn gesperrt und Aktion gesetzt', () => {
+  it('öffnet Unlock wenn gesperrt und Aktion gesetzt', () => {
     const onNavigateHomeWhenLocked = vi.fn()
     render(
       <TresorSessionBadge
@@ -40,11 +42,12 @@ describe('TresorSessionBadge (§ H.1a)', () => {
         actions={{ onLockSession: vi.fn(), onNavigateHomeWhenLocked }}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Tresor entsperren/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Vault-Passwort eingeben/i }))
     expect(onNavigateHomeWhenLocked).toHaveBeenCalledTimes(1)
   })
 
-  it('sperrt Sitzung wenn bereit und Aktion gesetzt', async () => {
+  it('sperrt Sitzung wenn bereit und Vault-Sitzung offen', async () => {
+    setVaultPasswordSession('vault-pass-99')
     const onLockSession = vi.fn().mockResolvedValue(undefined)
     render(
       <TresorSessionBadge
@@ -55,6 +58,23 @@ describe('TresorSessionBadge (§ H.1a)', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: /Tresor sperren/i }))
     expect(onLockSession).toHaveBeenCalledTimes(1)
+  })
+
+  it('ohne Vault-Sitzung: Badge „Vault: Passwort“ öffnet Sync statt zu sperren', () => {
+    setVaultPasswordSession(null)
+    const onNavigateHomeWhenLocked = vi.fn()
+    const onLockSession = vi.fn()
+    render(
+      <TresorSessionBadge
+        sessionLocked={false}
+        hasKeys
+        actions={{ onLockSession, onNavigateHomeWhenLocked }}
+      />
+    )
+    expect(screen.getByText(/Vault: Passwort/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Vault-Passwort eingeben/i }))
+    expect(onNavigateHomeWhenLocked).toHaveBeenCalledTimes(1)
+    expect(onLockSession).not.toHaveBeenCalled()
   })
 })
 

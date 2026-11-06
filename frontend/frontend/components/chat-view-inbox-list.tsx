@@ -345,7 +345,10 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
               protokollMarkedIds.has(row.msg.id) && 'border-l-4 border-l-amber-500 bg-amber-500/[0.06]',
               pinnedPinnwandIds.has(row.msg.id) &&
                 isPinnwandInboxMessage?.(row.msg) &&
-                'ring-1 ring-orange-500/40'
+                'ring-1 ring-orange-500/40',
+              burnOnReadEnabled &&
+                row.msg.chainPurgeable &&
+                'border-orange-500/50 bg-orange-500/[0.07] ring-1 ring-orange-500/25'
             )}
           >
             {(() => {
@@ -414,6 +417,22 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                       {isTeamBroadcastInboxMessage(row.msg) ? 'Team-Broadcast' : 'Mailbox'}
                     </span>
                   )}
+                  {burnOnReadEnabled && row.msg.chainPurgeable ? (
+                    <span
+                      className="inline-flex items-center gap-0.5 rounded-full bg-orange-500/20 px-2 py-0.5 text-[10px] font-semibold text-orange-900 dark:text-orange-100"
+                      title="Mailbox-Objekt — ⋮ → Burn: von Chain löschen. Nicht dasselbe wie lokal ausblenden."
+                    >
+                      Burnbar
+                    </span>
+                  ) : null}
+                  {burnOnReadEnabled && !row.msg.chainPurgeable ? (
+                    <span
+                      className="inline-flex items-center gap-0.5 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+                      title={BURN_EVENT_NOT_PURGEABLE_HINT}
+                    >
+                      Nicht burnbar (Event)
+                    </span>
+                  ) : null}
                   <EinsatzInboxMessageBadges badges={getBadgesForMessage(row.msg)} />
                   {getTxDigestForMessage(row.msg) ? (
                     <EinsatzInboxExplorerLink
@@ -556,13 +575,21 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                       </DropdownMenuItem>
                     </>
                   ) : null}
-                  <DropdownMenuItem onClick={() => onHideInboxMessageLocal(row.msg.id)}>
+                  <DropdownMenuItem
+                    onClick={() => onHideInboxMessageLocal(row.msg.id)}
+                    title="Nur in dieser App aus der Liste nehmen — Chain unverändert."
+                  >
                     <MessageCircle className="mr-2 h-4 w-4 opacity-60" />
                     Lokal ausblenden
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     disabled={!row.msg.chainPurgeable}
-                    title={teamBroadcastPurgeHint(row.msg, myAddress) ?? undefined}
+                    title={
+                      teamBroadcastPurgeHint(row.msg, myAddress) ??
+                      (row.msg.chainPurgeable
+                        ? 'Burn: Mailbox-Objekt on-chain löschen (Storage-Rebate). Explorer behält die Send-TX.'
+                        : 'Nur Mailbox-Objekte sind burnbar — Event-Pfad („Nur Wallet-Adresse“) nicht.')
+                    }
                     onClick={() => {
                       if (
                         burnOnReadEnabled &&
@@ -574,7 +601,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     }}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    {burnOnReadEnabled ? 'Burn-on-read: von Chain löschen' : 'Auf Chain löschen (Rebate)'}
+                    Burn: von Chain löschen
                   </DropdownMenuItem>
                   {parseHandoffZipWire(row.msg.content ?? '') ? (
                     <DropdownMenuItem
@@ -607,13 +634,11 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
               selfMessage={row.msg}
               onSarqNakWire={onSarqNakWire}
             />
-            {burnOnReadEnabled &&
-            row.msg.chainPurgeable &&
-            myAddress.trim() &&
-            !isMessageOutgoing(row.msg, myAddress) ? (
+            {burnOnReadEnabled && row.msg.chainPurgeable ? (
               <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-orange-500/35 bg-orange-500/10 px-3 py-2">
                 <span className="text-[11px] text-orange-950 dark:text-orange-100">
-                  Burn-on-read aktiv — Mailbox-Objekt löschen? (Explorer behält die Send-TX.)
+                  Burnbar (Mailbox) — Burn löscht das Objekt on-chain. „Lokal ausblenden“ nur UI.
+                  {isMessageOutgoing(row.msg, myAddress) ? ' (Ausgang — du kannst trotzdem burnen.)' : ''}
                 </span>
                 <button
                   type="button"
@@ -624,14 +649,11 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     void onPurgeInboxMessageChain(row.msg)
                   }}
                 >
-                  Jetzt löschen
+                  Jetzt burnen
                 </button>
               </div>
             ) : null}
-            {burnOnReadEnabled &&
-            !row.msg.chainPurgeable &&
-            myAddress.trim() &&
-            !isMessageOutgoing(row.msg, myAddress) ? (
+            {burnOnReadEnabled && !row.msg.chainPurgeable ? (
               <p className="mt-2 text-[10px] text-muted-foreground">{BURN_EVENT_NOT_PURGEABLE_HINT}</p>
             ) : null}
                 </>

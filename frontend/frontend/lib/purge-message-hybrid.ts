@@ -15,12 +15,14 @@ import {
 import type { Message } from '@/frontend/lib/types'
 import { canUseMessengerApiRelay } from '@/frontend/lib/messenger-standalone-relay'
 import { getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
+import { recordMsgBurnActivity } from '@/frontend/lib/iota-activity-local-log'
 
 export type PurgeMailboxMessageHybridResult = {
   ok: boolean
   message?: string
   error?: string
   path?: 'direct' | 'api'
+  digest?: string
 }
 
 export { resolveMailboxPurgeTarget, teamBroadcastPurgeHint }
@@ -52,8 +54,15 @@ async function purgeTeamBroadcastHybrid(
       nonce: target.nonce,
     })
     if (dr.ok) {
+      recordMsgBurnActivity({
+        digest: dr.digest,
+        peer: target.broadcastSender,
+        mailboxObjectId: target.teamMailboxObjectId,
+        nonce: target.nonce,
+        plaintext: true,
+      })
       const digest = dr.digest ? ` Digest: ${dr.digest.slice(0, 18)}…` : ''
-      return { ok: true, path: 'direct', message: `Team-Broadcast purged (Direkt-RPC).${digest}` }
+      return { ok: true, path: 'direct', digest: dr.digest, message: `Team-Broadcast geburnt (Direkt-RPC).${digest}` }
     }
     directErr = dr.error
   }
@@ -84,11 +93,27 @@ async function purgeTeamBroadcastHybrid(
   return { ok: false, error: mergeDirectThenRelayErrors(directErr, apiErr) }
 }
 
+function noteBurnSuccess(
+  target: Extract<MailboxPurgeTarget, { kind: 'pairwise' }>,
+  digest: string | undefined,
+  plaintext: boolean,
+  mailboxObjectId?: string
+): void {
+  recordMsgBurnActivity({
+    digest,
+    peer: target.peerSender === target.recipient ? undefined : target.peerSender,
+    mailboxObjectId: mailboxObjectId ?? target.mailboxObjectId,
+    nonce: target.nonce,
+    plaintext,
+  })
+}
+
 async function purgePairwiseHybrid(
   target: Extract<MailboxPurgeTarget, { kind: 'pairwise' }>,
   allowApiRelay: boolean
 ): Promise<PurgeMailboxMessageHybridResult> {
   if (canTryDirectPurgeMessageSubmit()) {
+    let usedPlain = target.variant === 'plaintext'
     let direct = await tryPurgeMailboxMessageViaDirectIota({
       recipient: target.recipient,
       peerSender: target.peerSender,
@@ -97,6 +122,7 @@ async function purgePairwiseHybrid(
       mailboxObjectId: target.mailboxObjectId,
     })
     if (!direct.ok && target.variant === 'encrypted') {
+      usedPlain = true
       direct = await tryPurgeMailboxMessageViaDirectIota({
         recipient: target.recipient,
         peerSender: target.peerSender,
@@ -106,8 +132,14 @@ async function purgePairwiseHybrid(
       })
     }
     if (direct.ok) {
+      noteBurnSuccess(target, direct.digest, usedPlain, direct.mailboxObjectId)
       const digest = direct.digest ? ` Digest: ${direct.digest.slice(0, 18)}…` : ''
-      return { ok: true, path: 'direct', message: `Nachricht purged (Direkt-RPC).${digest}` }
+      return {
+        ok: true,
+        path: 'direct',
+        digest: direct.digest,
+        message: `Nachricht geburnt (Direkt-RPC).${digest}`,
+      }
     }
     if (!allowApiRelay) {
       return { ok: false, path: 'direct', error: direct.error }
@@ -116,15 +148,20 @@ async function purgePairwiseHybrid(
       timeoutMs: 120_000,
     })
     if (api.ok) {
+      const dig =
+        typeof (api as { txDigest?: unknown }).txDigest === 'string'
+          ? (api as { txDigest: string }).txDigest
+          : undefined
+      noteBurnSuccess(target, dig, usedPlain)
       const m =
         typeof (api as { message?: unknown }).message === 'string'
           ? (api as { message: string }).message
-          : 'Nachricht purged (Morgendrot-API).'
-      return { ok: true, path: 'api', message: m }
+          : 'Nachricht geburnt (Morgendrot-API).'
+      return { ok: true, path: 'api', digest: dig, message: m }
     }
     const apiErr = formatPurgeRelayError(
       (typeof (api as { error?: unknown }).error === 'string' ? (api as { error: string }).error : '') ||
-        'API-Purge fehlgeschlagen.'
+        'API-Burn fehlgeschlagen.'
     )
     return { ok: false, error: mergeDirectThenRelayErrors(direct.error, apiErr) }
   }
@@ -132,7 +169,7 @@ async function purgePairwiseHybrid(
   if (!allowApiRelay) {
     return {
       ok: false,
-      error: 'Nachricht-Purge braucht Direkt-RPC + Signer — oder eine erreichbare Morgendrot-Basis.',
+      error: 'Burn braucht Direkt-RPC + Signer — oder eine erreichbare Morgendrot-Basis.',
     }
   }
 
@@ -140,17 +177,22 @@ async function purgePairwiseHybrid(
     timeoutMs: 120_000,
   })
   if (api.ok) {
+    const dig =
+      typeof (api as { txDigest?: unknown }).txDigest === 'string'
+        ? (api as { txDigest: string }).txDigest
+        : undefined
+    noteBurnSuccess(target, dig, target.variant === 'plaintext')
     const m =
       typeof (api as { message?: unknown }).message === 'string'
         ? (api as { message: string }).message
-        : 'Nachricht purged.'
-    return { ok: true, path: 'api', message: m }
+        : 'Nachricht geburnt.'
+    return { ok: true, path: 'api', digest: dig, message: m }
   }
   return {
     ok: false,
     error:
       (typeof (api as { error?: unknown }).error === 'string' ? (api as { error: string }).error : '') ||
-      'Purge fehlgeschlagen.',
+      'Burn fehlgeschlagen.',
   }
 }
 
@@ -169,8 +211,9 @@ export async function purgeMailboxMessageHybrid(
   if (!target) {
     return { ok: false, error: 'Purge-Ziel nicht ermittelbar (0x-Adressen/Team-Mailbox prüfen).' }
   }
-  if (target.kind === 'pairwise' && opts?.mailboxObjectId) {
-    target.mailboxObjectId = opts.mailboxObjectId
+  if (target.kind === 'pairwise') {
+    const override = (opts?.mailboxObjectId || msg.chainMailboxObjectId || '').trim()
+    if (override) target.mailboxObjectId = override.toLowerCase()
   }
   const allowApiRelay = canUseMessengerApiRelay(opts)
   if (target.kind === 'team-broadcast') {

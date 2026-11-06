@@ -25,7 +25,9 @@
 
 **Nachtrag 2026-11-05 (Privacy / H.23 UX, Claims):** Vault-Lock leert lokale Passphrase-Stores; Chat-⋮ **Schlüssel erneuern** (Epoch) + Hinweis nach Enc-Send; Opt-in **Burn-on-read** (Purge mit Bestätigung). Claims ehrlich: **`docs/SECURITY-CLAIMS-CHECK-2026-11.md`**. **Kein** Double-Ratchet / Decoys / Outboxes in dieser Tranche.
 
-**Nachtrag 2026-11-06 (Passphrase UX + Secret-Vaults):** Passphrase-Bubble: Auto-Decrypt nach Unlock; **Verbergen** (weich) / **Erneut sperren** (hart, Confirm → wieder Passphrase nötig). Chat- + ImageNFT-Passphrasen + **Team-Keys** at rest AES-GCM (`passphraseMsg.enc.v1`, `evidenceImage…enc.v1`, `teamKeys.enc.v1`); gemeinsames Unlock/Lock/Purge. Legacy Klartext wird migriert. **H.23 B1 Vault `.team-keys.enc`:** Browser-Ist = `teamKeys.enc.v1` (Nest-Datei später optional).
+**Nachtrag 2026-11-06 (B2-P4 Merker):** Starkes NFT-Besitz-Gate gewünscht („NFT weg → auch unter Zwang nicht mehr entschlüsselbar“). Ist = nur Komfort; Spec `docs/NFT-SCHLUESSELKARTE-MODI.md`. **Nicht** vor Epoch/Burn-Smoke und 2-Geräte-Feldtest bauen.
+
+**Nachtrag 2026-11-06 (Passphrase UX + Secret-Vaults):** Passphrase-Bubble: Auto-Decrypt nach Unlock; **Verbergen** (weich) / **Im Vault löschen** (hart, Confirm → Merker weg). Flush-vor-Wipe beim Soft-Lock, damit gemerkte PWMSG den Unlock überleben. Chat- + ImageNFT-Passphrasen + **Team-Keys** at rest AES-GCM (`passphraseMsg.enc.v1`, `evidenceImage…enc.v1`, `teamKeys.enc.v1`); gemeinsames Unlock/Lock/Purge. Legacy Klartext wird migriert. **H.23 B1 Vault `.team-keys.enc`:** Browser-Ist = `teamKeys.enc.v1` (Nest-Datei später optional).
 
 **Nachtrag 2026-11-06 (Priorität PC vor Handy; 2-Geräte-Feldtest hinten):** **Schreibtisch/PC zuerst** — H.23 Vault/B1 härten, dann **H.23 B2 P0** NFT-Schlüsselkarte (Spec + Enc-Store). **2-Geräte-Feldtest** (ImageNFT + Passphrase + Lock-Wipe + Team-Key/Handoff) und Standalone **4e/4f** bewusst **später** (aktuell nur 1 Handy). Handy-APK-Abnahme **nach** stabiler PC-Version.
 
@@ -40,6 +42,18 @@
 **Nachtrag 2026-11-06 (H.23 B2 NFT-Schlüsselkarte — aktiv):** Spec **`docs/NFT-SCHLUESSELKARTE-B2.md`**. **Zusätzlicher Zugriffsmodus**, kein Ersatz für Passphrase und nicht für Alltags-Direktchat. Lesen spezieller Enc-Inhalte: **Passphrase und/oder Besitz** eines NFTs (optional **beides**). Nutzen: Evidenz teilen, temporäre Leserechte, Weitergabe per NFT-Transfer. **P0–P3 Ist:** Enc-Store + Multi-Slot + Composer-Bindung + Mint an Slot + öffentlicher `[morg-keycard]`-Marker (kein Move). **2-Geräte-Feldtest** bewusst später.
 
 **Nachtrag 2026-11-06 (Privacy-Anleitung + Weiter-Reihenfolge):** Nutzer-/Test-Anleitung aller Ist-Funktionen: **`docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`**. Claims-Matrix: **`docs/SECURITY-CLAIMS-CHECK-2026-11.md`**. **Nächste Schritte (kanonisch):** (1) **1-Gerät-Smoke** laut Anleitung §0 → Logbuch. (2) Fixes aus Smoke. (3) Dann **entweder** 2-Geräte-Feldtest (Team-Key/Passphrase/Lock) **oder** Start **H.23 C1** Double-Ratchet Spec — **nicht** parallel Decoys/Outboxes/HW-Fragment. Diese Großfeatures stehen in der Roadmap als **Backlog/Phase 3**, nicht als aktuelle Tranche (siehe Claims „bewusst nicht“).
+
+**Nachtrag 2026-11-06 (H.23 Smoke PASS → C1 Spec):** 1-Gerät Privacy/B2/Epoch/Burn (+ Hauptmenü NFT/IOTA-Aktivität) **PASS**. Entscheidung: **C1 Spec gestartet** (2-Geräte-Feldtest bleibt später). SSOT **`docs/MESSENGER-DOUBLE-RATCHET-C1-SPEC.md`**; Codec **C1.1** `morgendrot-ratchet-envelope` (Vitest). **Kein** Default-Ratchet im Composer. B2-P4 starkes Gate weiter nach 2-Geräte.
+
+**Nachtrag 2026-11-06 (B2-P5 Spec — öffentlicher Vault + NFT-Timelock):** W1 = Ciphertexte; Lesen nur mit NFT/Lease-Gate; Leihe an W2; **permissionless `reclaim`**; **`cancel_reclaim`** / **`return_early`**. SSOT **`docs/NFT-SCHLUESSELKARTE-PUBLIC-VAULT-TIMELOCK.md`**.
+
+**Nachtrag 2026-11-06 (B2-P5 Ist + Ciphertext-Klarstellung):** P5a/b **Ist** (Move Upgrade + Panel). **NFT = Gate, nicht Textarchiv** — W2 holt Ciphertexte optional über **On-Chain/NFT** (Object-ID oder Besitzer=W1), dann Decrypt. Optional Backlog **P5d** (Fremdmailbox-Scan). 2-Geräte weiter verschoben.
+
+**Nachtrag 2026-11-06 (MeshSleepyChannel — bewusst Backlog):** Bilateraler State-Channel mit Collateral/Justice für Meshtastic/LoRa (ohne Watchtower) **bewertet**: Produktfit ja, Entwurf unreif (Payload/Justice/Close), **nicht** jetzt bauen. Phase **C / Backlog**; Stub **`docs/MESH-SLEEPY-CHANNEL-SPEC.md`**. **Nicht** parallel zu Privacy/Zeitkapsel.
+
+**Nachtrag 2026-11-06 (P4a-dual — Wallet + NFT):** Option: Enc nur wenn **Signer = festgelegte Adresse und NFT-Leserecht** (Owner/Leihe). App-Gate + Capsule an beide Felder; Adresse ≠ Geheimnis → Pubkey-Wrap = **P4a2** Backlog. Klartext danach kopierbar (Claims). Parallel zur Zeitkapsel ok; nicht mit Mesh-Payments. Spec **`docs/NFT-SCHLUESSELKARTE-MODI.md` §6a**; Composer-Checkbox **Ist**.
+
+**Nachtrag 2026-11-06 (NFT-Guarded Spend — Spec Backlog):** **Nur Token** (kein Klartext). Produkt: **Modus A Guarded Purse** = 2FA-Schlüsselkarte; `spend` nur Signer=X ∧ NFT bei X. Modus B später. **Lose Coins außerhalb Purse = ungeschützt** (Claims/UI). SSOT **`docs/NFT-GUARDED-SPEND-SPEC.md`**. Move = B2-S1 Backlog; nicht MeshSleepy / nicht Leserecht.
 
 **Nachtrag 2026-05-20 (Strategie — korrigiert):** **IOTA bleibt gekoppelt**; **Funk-Default** im Helfer-UI (`TRANSPORT_PROFILE=mesh-first`). **Delayed LoRa → IOTA**, **Offline-TX/Outbox** und **Pfad 4** bleiben — siehe **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**. Keine volle IOTA-TX im LoRa-Frame (**§ H.3m**). **Keine neuen Move-Publishes** in Tranche A; Fokus Runtime + Simple Mode.
 
@@ -1594,7 +1608,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 **Ist heute:** Pairwise **ECDH** über **`/handshake`**, Keys in Shared-Mailbox-`HsKey` / Vault — siehe **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** Leitplanken. **Session:** `restorePeerMapFromHandshakeCache` nach Vault-Laden (API-Start, `/vault-load`, UI-Entsperren) — ersetzt **nicht** H.23-B, nur UX bis zur Architektur-Entscheid.
 
-**Lieferreihenfolge:** (1) ~~Architektur-Entscheid~~ **erledigt 2026-06-16** (Option A). (2) ~~**Modus-A-Feldtest**~~ **PASS 2026-07-03** (`docs/FELDTEST-BOSS-BEI-0.md`). (3) **Session Keys+ A1–A4** **erledigt 2026-06-16**; **Nest-Listener v2** **2026-07-03**. (4) **B1 Team-Key** **Ist 2026-11-06**. (5) **B2 NFT-Schlüsselkarte P0–P3** **Ist 2026-11-06** (`docs/NFT-SCHLUESSELKARTE-B2.md`, Anleitung `docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`). Double Ratchet = **C1 / Phase 3** (Backlog). **Nächste Privacy-Arbeit:** 1-Gerät-Smoke Anleitung §0 → dann 2-Geräte-Feldtest **oder** C1 Spec (Entscheidung nach Smoke).
+**Lieferreihenfolge:** (1) ~~Architektur-Entscheid~~ **erledigt 2026-06-16** (Option A). (2) ~~**Modus-A-Feldtest**~~ **PASS 2026-07-03** (`docs/FELDTEST-BOSS-BEI-0.md`). (3) **Session Keys+ A1–A4** **erledigt 2026-06-16**; **Nest-Listener v2** **2026-07-03**. (4) **B1 Team-Key** **Ist 2026-11-06**. (5) **B2 NFT-Schlüsselkarte P0–P3** **Ist 2026-11-06** (`docs/NFT-SCHLUESSELKARTE-B2.md`, Anleitung `docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`). (6) ~~1-Gerät-Smoke~~ **PASS 2026-11-06**. (7) **C1 Double Ratchet** — Spec + C1.1–C1.5 **Ist** (`docs/MESSENGER-DOUBLE-RATCHET-C1-SPEC.md`); **kein** Produktiv-Default. (8) **B2-P4a** + **P4a-dual** **Ist**; P4a2/P4b Backlog. (9) **B2-P5a/b** Zeitkapsel **Ist**; optional P5d. (10) **B2-S0** Guarded-Purse Spec **Ist** → **Als Nächstes B2-S1** Move. (11) **MeshSleepyChannel** Phase-C. **2-Geräte verschoben**.
 
 **Verknüpfung:** **§ H.22** (Gruppen-E2EE **M2c**), **`docs/VAULT-EINRICHTEN.md`**, **`docs/MESSAGING-MAILBOX-SSOT-SPEC.md`**, **§ H.15** (Direct-IOTA verschlüsselt).
 

@@ -31,11 +31,19 @@ describe('resolvePassphraseForProtectSend', () => {
     window.localStorage.clear()
   })
 
-  it('ohne Reuse: frische Passphrase, nicht persistiert als Default', () => {
+  it('ohne Reuse: Feld/Default gilt; ohne Session kein Auto-Würfeln', () => {
+    writePassphraseReuseEnabled(false)
+    const a = resolvePassphraseForProtectSend(() => 'fresh-pass-aaaa')
+    expect(a).toEqual({ passphrase: '', reused: false })
+    expect(getDefaultPassphraseMessagePassphrase()).toBeNull()
+  })
+
+  it('ohne Reuse mit Vault: erzeugt Default (Neu-würfeln-Feld)', async () => {
+    await unlockPassphraseMessageVault('vault-pass-99')
     writePassphraseReuseEnabled(false)
     const a = resolvePassphraseForProtectSend(() => 'fresh-pass-aaaa')
     expect(a).toEqual({ passphrase: 'fresh-pass-aaaa', reused: false })
-    expect(getDefaultPassphraseMessagePassphrase()).toBeNull()
+    expect(getDefaultPassphraseMessagePassphrase()).toBe('fresh-pass-aaaa')
   })
 
   it('mit Reuse: behält Geräte-Standard', async () => {

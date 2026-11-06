@@ -8,31 +8,47 @@ import {
   PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT,
   readPassphraseNftKeycardBindObjectId,
   readPassphraseNftKeycardBindSlotId,
+  readPassphraseNftDualWalletGateEnabled,
+  readPassphraseNftRequiredWallet,
+  readPassphraseNftStrongGateEnabled,
   readPassphraseProtectEnabled,
   readPassphraseRememberOnDeviceEnabled,
   readPassphraseReuseEnabled,
   setDefaultPassphraseMessagePassphrase,
+  writePassphraseNftDualWalletGateEnabled,
   writePassphraseNftKeycardBindObjectId,
   writePassphraseNftKeycardBindSlotId,
+  writePassphraseNftRequiredWallet,
+  writePassphraseNftStrongGateEnabled,
   writePassphraseProtectEnabled,
   writePassphraseRememberOnDeviceEnabled,
   writePassphraseReuseEnabled,
 } from '@/frontend/lib/passphrase-message-local-store'
 import { listNftKeycards } from '@/frontend/lib/nft-keycard-local-store'
-import { isPrivacySoftLocked } from '@/frontend/lib/privacy-soft-lock'
+import { getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
+import {
+  isPrivacySoftLocked,
+  PRIVACY_SOFT_LOCK_CHANGED_EVENT,
+} from '@/frontend/lib/privacy-soft-lock'
 import { hasVaultPasswordSession } from '@/frontend/lib/vault-password-session'
 
 /** Composer: Passphrase-Nachricht ohne Handshake (Ciphertext on-chain, Key teilen). */
 export function PassphraseProtectComposerToggle(p: {
   encrypted: boolean
   onEncryptedChange?: (encrypted: boolean) => void
+  /** Öffnet Dialog „Session-Signer laden“ (Vault-Passwort). */
+  onRequestVaultSession?: () => void
 }) {
   const [on, setOn] = useState(false)
-  const [reuse, setReuse] = useState(false)
+  const [reuse, setReuse] = useState(() => readPassphraseReuseEnabled())
   const [sharedPass, setSharedPass] = useState('')
   const [bindOid, setBindOid] = useState('')
   const [bindSlot, setBindSlot] = useState('default')
+  const [strongGate, setStrongGate] = useState(false)
+  const [dualWallet, setDualWallet] = useState(false)
+  const [requiredWallet, setRequiredWallet] = useState('')
   const [rememberOnDevice, setRememberOnDevice] = useState(true)
+  const [vaultSessionOpen, setVaultSessionOpen] = useState(() => hasVaultPasswordSession())
   const [cards, setCards] = useState<{ objectId: string; label?: string; slotIds: string[] }[]>([])
 
   useEffect(() => {
@@ -40,9 +56,13 @@ export function PassphraseProtectComposerToggle(p: {
       setOn(readPassphraseProtectEnabled())
       setReuse(readPassphraseReuseEnabled())
       setRememberOnDevice(readPassphraseRememberOnDeviceEnabled())
+      setVaultSessionOpen(hasVaultPasswordSession())
       setSharedPass(getDefaultPassphraseMessagePassphrase() ?? '')
       setBindOid(readPassphraseNftKeycardBindObjectId() ?? '')
       setBindSlot(readPassphraseNftKeycardBindSlotId())
+      setStrongGate(readPassphraseNftStrongGateEnabled())
+      setDualWallet(readPassphraseNftDualWalletGateEnabled())
+      setRequiredWallet(readPassphraseNftRequiredWallet() ?? '')
       setCards(
         listNftKeycards().map(({ objectId, entry }) => ({
           objectId,
@@ -53,7 +73,11 @@ export function PassphraseProtectComposerToggle(p: {
     }
     sync()
     window.addEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, sync)
-    return () => window.removeEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, sync)
+    window.addEventListener(PRIVACY_SOFT_LOCK_CHANGED_EVENT, sync)
+    return () => {
+      window.removeEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, sync)
+      window.removeEventListener(PRIVACY_SOFT_LOCK_CHANGED_EVENT, sync)
+    }
   }, [])
 
   useEffect(() => {
@@ -92,7 +116,7 @@ export function PassphraseProtectComposerToggle(p: {
             setOn(next)
             writePassphraseProtectEnabled(next)
             if (next && p.encrypted) p.onEncryptedChange?.(false)
-            if (next && reuse) ensureSharedPass()
+            if (next) ensureSharedPass()
           }}
         />
         <span>
@@ -124,29 +148,34 @@ export function PassphraseProtectComposerToggle(p: {
               bis du die Passphrase manuell eingibst (auch wenn „Wiederverwenden“ an ist).
             </span>
           </label>
+          {rememberOnDevice && !vaultSessionOpen ? (
+            <p className="text-[11px] text-amber-800 dark:text-amber-200">
+              Vault-Sitzung fehlt — oben rechts Badge{' '}
+              <span className="font-semibold text-foreground">„Vault: Passwort“</span> tippen, Passwort
+              eingeben, dann „Signer laden“. Ohne das ist Senden mit Merken blockiert.
+              {p.onRequestVaultSession ? (
+                <>
+                  {' '}
+                  <button
+                    type="button"
+                    className="font-semibold text-foreground underline hover:no-underline"
+                    onClick={() => p.onRequestVaultSession?.()}
+                  >
+                    Jetzt Passwort eingeben
+                  </button>
+                </>
+              ) : null}
+            </p>
+          ) : null}
 
-          <label className="flex flex-wrap items-start gap-2">
-            <input
-              type="checkbox"
-              className="mt-0.5"
-              checked={reuse}
-              onChange={(e) => {
-                const next = e.target.checked
-                setReuse(next)
-                writePassphraseReuseEnabled(next)
-                if (next) ensureSharedPass()
-              }}
-            />
-            <span>
-              <span className="font-medium text-foreground">Passphrase wiederverwenden</span>
+          <div className="space-y-1.5">
+            <p className="text-[11px] text-muted-foreground">
+              <span className="font-medium text-foreground">Passphrase für den nächsten Send</span>
               {' — '}
-              dieselbe Passphrase fürs Senden (Feld unten), bleibt nach Unlock erhalten bis{' '}
-              <span className="text-foreground/90">Neu würfeln</span>. Entschlüsselt Posteingang nicht
-              automatisch.
-            </span>
-          </label>
-
-          {reuse ? (
+              {reuse
+                ? 'bleibt gleich, bis du neu würfelst.'
+                : 'nach dem Send wird automatisch neu gewürfelt (oder selbst ändern).'}
+            </p>
             <div className="flex flex-wrap items-center gap-2">
               <input
                 type="text"
@@ -184,13 +213,35 @@ export function PassphraseProtectComposerToggle(p: {
                 Kopieren
               </button>
             </div>
-          ) : null}
+          </div>
+
+          <label className="flex flex-wrap items-start gap-2">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={reuse}
+              onChange={(e) => {
+                const next = e.target.checked
+                setReuse(next)
+                writePassphraseReuseEnabled(next)
+                ensureSharedPass()
+              }}
+            />
+            <span>
+              <span className="font-medium text-foreground">Passphrase wiederverwenden</span>
+              {' — '}
+              An: Feld bleibt nach jedem Send. Aus: nach Send automatisch neu würfeln. Entschlüsselt
+              Posteingang nicht automatisch.
+            </span>
+          </label>
 
           {cards.length > 0 ? (
             <div className="flex flex-col gap-1.5">
               <span className="font-medium text-foreground">Key an NFT-Schlüsselkarte binden (optional)</span>
               <span className="text-[11px] text-muted-foreground">
-                Zusätzlich zur Passphrase — nicht Alltags-Chat. Karte unter On-Chain / NFT anlegen.
+                Beim Senden wird diese Nachricht (Wire-Fingerprint) an die Karte gehängt — keine Object-ID der
+                Nachricht nötig. Beliebig viele PWMSG an dieselbe Karte. Später auch in der Bubble nachbinden.
+                Auto-Lesen nur bei Karten-Besitz; Passphrase bleibt der Crypto-Key (kein starkes Gate).
               </span>
               <select
                 className="rounded border border-border bg-background px-2 py-1.5 text-[11px] text-foreground"
@@ -215,21 +266,88 @@ export function PassphraseProtectComposerToggle(p: {
                 ))}
               </select>
               {bindOid ? (
-                <select
-                  className="rounded border border-border bg-background px-2 py-1.5 text-[11px] text-foreground"
-                  value={bindSlot}
-                  onChange={(e) => {
-                    const v = e.target.value
-                    setBindSlot(v)
-                    writePassphraseNftKeycardBindSlotId(v)
-                  }}
-                >
-                  {(cards.find((c) => c.objectId === bindOid)?.slotIds || ['default']).map((sid) => (
-                    <option key={sid} value={sid}>
-                      Slot: {sid}
-                    </option>
-                  ))}
-                </select>
+                <>
+                  <select
+                    className="rounded border border-border bg-background px-2 py-1.5 text-[11px] text-foreground"
+                    value={bindSlot}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setBindSlot(v)
+                      writePassphraseNftKeycardBindSlotId(v)
+                    }}
+                  >
+                    {(cards.find((c) => c.objectId === bindOid)?.slotIds || ['default']).map((sid) => (
+                      <option key={sid} value={sid}>
+                        Slot: {sid}
+                      </option>
+                    ))}
+                  </select>
+                  <label className="flex flex-wrap items-start gap-2">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5"
+                      checked={strongGate}
+                      onChange={(e) => {
+                        const next = e.target.checked
+                        setStrongGate(next)
+                        writePassphraseNftStrongGateEnabled(next)
+                        if (next) {
+                          setRememberOnDevice(false)
+                          writePassphraseRememberOnDeviceEnabled(false)
+                        } else {
+                          setDualWallet(false)
+                          writePassphraseNftDualWalletGateEnabled(false)
+                        }
+                      }}
+                    />
+                    <span>
+                      <span className="font-medium text-foreground">Starkes NFT-Besitz-Gate (P4a)</span>
+                      {' — '}
+                      Zufalls-DEK + Capsule; Lesen nur bei Karten-Besitz/Leihe (App-Check). Kein Blank-DEK
+                      im Vault. Einmal Klartext = kopierbar. Ohne Seal: nur ehrliche App.
+                    </span>
+                  </label>
+                  {strongGate ? (
+                    <div className="ml-1 space-y-1.5 border-l border-border/60 pl-2">
+                      <label className="flex flex-wrap items-start gap-2">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5"
+                          checked={dualWallet}
+                          onChange={(e) => {
+                            const next = e.target.checked
+                            setDualWallet(next)
+                            writePassphraseNftDualWalletGateEnabled(next)
+                            if (next && !requiredWallet) {
+                              const me = getDirectIotaSessionSignerAddress()?.trim() || ''
+                              if (me) {
+                                setRequiredWallet(me)
+                                writePassphraseNftRequiredWallet(me)
+                              }
+                            }
+                          }}
+                        />
+                        <span>
+                          <span className="font-medium text-foreground">Wallet + NFT (Dual)</span>
+                          {' — '}
+                          Lesen nur wenn Signer = festgelegte Adresse <em>und</em> NFT-Leserecht. Capsule
+                          an beide Felder gebunden; Adresse allein ist kein Geheimnis (Pubkey-Wrap = später).
+                        </span>
+                      </label>
+                      {dualWallet ? (
+                        <input
+                          className="w-full rounded border border-border bg-background px-2 py-1 font-mono text-[11px] text-foreground"
+                          value={requiredWallet}
+                          placeholder="0x… erlaubte Wallet"
+                          onChange={(e) => {
+                            setRequiredWallet(e.target.value)
+                            writePassphraseNftRequiredWallet(e.target.value || null)
+                          }}
+                        />
+                      ) : null}
+                    </div>
+                  ) : null}
+                </>
               ) : null}
             </div>
           ) : null}

@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   NFT_KEYCARD_ENC_LS_KEY,
   bindObjectToNftKeycard,
+  bindWireToNftKeycard,
+  findNftKeycardBindingForWireFingerprint,
   flushNftKeycardVaultPersist,
   getNftKeycard,
   hasEncryptedNftKeycardVault,
@@ -9,6 +11,8 @@ import {
   lookupPassphraseForNftKeycard,
   purgeNftKeycardVault,
   removeNftKeycardSlot,
+  unbindObjectFromNftKeycard,
+  unbindWireFromNftKeycard,
   unlockNftKeycardVault,
   upsertNftKeycardSlot,
 } from '@/frontend/lib/nft-keycard-local-store'
@@ -66,5 +70,31 @@ describe('nft-keycard vault (H.23 B2 P0)', () => {
     expect(removeNftKeycardSlot({ objectId: OID, slotId: 'img' }).ok).toBe(true)
     expect(lookupPassphraseForNftKeycard({ objectId: IMG })).toBeNull()
     expect(getNftKeycard(OID)?.slots).toHaveLength(1)
+  })
+
+  it('unbind Object / Wire einzeln', () => {
+    expect(upsertNftKeycardSlot({ objectId: OID, passphrase: 'slot-default-1' }).ok).toBe(true)
+    expect(bindObjectToNftKeycard({ cardObjectId: OID, boundObjectId: IMG, slotId: 'default' }).ok).toBe(
+      true
+    )
+    expect(bindWireToNftKeycard({ objectId: OID, wireFingerprint: 'fnv:1:abc', slotId: 'default' }).ok).toBe(
+      true
+    )
+    expect(unbindObjectFromNftKeycard({ cardObjectId: OID, boundObjectId: IMG }).ok).toBe(true)
+    expect(lookupPassphraseForNftKeycard({ objectId: IMG })).toBeNull()
+    expect(unbindWireFromNftKeycard({ objectId: OID, wireFingerprint: 'fnv:1:abc' }).ok).toBe(true)
+    expect(getNftKeycard(OID)?.boundWires).toBeUndefined()
+  })
+
+  it('findNftKeycardBindingForWireFingerprint', () => {
+    expect(upsertNftKeycardSlot({ objectId: OID, passphrase: 'slot-default-1' }).ok).toBe(true)
+    expect(bindWireToNftKeycard({ objectId: OID, wireFingerprint: 'fnv:9:zz', slotId: 'default' }).ok).toBe(
+      true
+    )
+    expect(findNftKeycardBindingForWireFingerprint('fnv:9:zz')).toEqual({
+      cardObjectId: OID,
+      slotId: 'default',
+    })
+    expect(findNftKeycardBindingForWireFingerprint('missing')).toBeNull()
   })
 })

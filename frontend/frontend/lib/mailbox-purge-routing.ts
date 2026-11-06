@@ -55,6 +55,9 @@ export function resolveMailboxPurgeTarget(msg: Message, myAddress: string): Mail
   const from = msg.from.trim()
   const to = (msg.recipient ?? '').trim()
   if (!HEX64.test(me) || !HEX64.test(from)) return null
+  const mailboxFromMsg = (msg.chainMailboxObjectId ?? '').trim().toLowerCase()
+  const mailboxObjectId = HEX64.test(mailboxFromMsg) ? mailboxFromMsg : undefined
+
   if (from.toLowerCase() === me.toLowerCase()) {
     if (!HEX64.test(to)) return null
     return {
@@ -63,6 +66,7 @@ export function resolveMailboxPurgeTarget(msg: Message, myAddress: string): Mail
       peerSender: me.toLowerCase(),
       nonce,
       variant: msg.encrypted === false ? 'plaintext' : 'encrypted',
+      ...(mailboxObjectId ? { mailboxObjectId } : {}),
     }
   }
   return {
@@ -71,6 +75,7 @@ export function resolveMailboxPurgeTarget(msg: Message, myAddress: string): Mail
     peerSender: from.toLowerCase(),
     nonce,
     variant: msg.encrypted === false ? 'plaintext' : 'encrypted',
+    ...(mailboxObjectId ? { mailboxObjectId } : {}),
   }
 }
 

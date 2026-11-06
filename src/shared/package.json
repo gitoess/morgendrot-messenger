@@ -14,6 +14,8 @@
     "./morgendrot-crypto": "./morgendrot-crypto.ts",
     "./morgendrot-crypto-session": "./morgendrot-crypto-session.ts",
     "./morgendrot-crypto-session-wire": "./morgendrot-crypto-session-wire.ts",
+    "./morgendrot-ratchet-envelope": "./morgendrot-ratchet-envelope.ts",
+    "./morgendrot-ratchet-session": "./morgendrot-ratchet-session.ts",
     "./morgendrot-session-keys-archive": "./morgendrot-session-keys-archive.ts",
     "./morg-team-wire-signature": "./morg-team-wire-signature.ts",
     "./morgendrot-team-broadcast-crypto": "./morgendrot-team-broadcast-crypto.ts",

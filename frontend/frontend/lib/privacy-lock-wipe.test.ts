@@ -52,10 +52,10 @@ describe('wipeLocalPassphraseStoresOnLock', () => {
     expect(lookupPassphraseMessagePassphrase(wire)).toBe('test-pass-34')
     expect(lookupEvidencePassphrase({ objectId: '0x' + 'ab'.repeat(32) })).toBe('test-pass-12')
 
-    // Nach erneutem Remember ohne Flush: Tab wieder befüllt, dann Lock.
-    rememberPassphraseMessagePassphrase(wire, 'test-pass-34')
+    // Nach erneutem Remember ohne manuellen Flush: wipe muss selbst flushen, dann RAM leeren.
+    rememberPassphraseMessagePassphrase(wire, 'test-pass-99xx')
     expect(window.sessionStorage.getItem('morgendrot.passphraseMsg.tab.v1')).toBeTruthy()
-    wipeLocalPassphraseStoresOnLock()
+    await wipeLocalPassphraseStoresOnLock()
 
     expect(lookupPassphraseMessagePassphrase(wire)).toBeNull()
     expect(lookupEvidencePassphrase({ objectId: '0x' + 'ab'.repeat(32) })).toBeNull()
@@ -63,5 +63,10 @@ describe('wipeLocalPassphraseStoresOnLock', () => {
     expect(window.sessionStorage.getItem('morgendrot.passphraseMsg.tab.v1')).toBeNull()
     expect(window.localStorage.getItem(PASSPHRASE_MESSAGE_ENC_LS_KEY)).toBeTruthy()
     expect(hasEncryptedEvidencePassphraseVault()).toBe(true)
+
+    // Nach Unlock ist der frische Merker wieder da (Flush-vor-Wipe).
+    const again = await unlockPassphraseMessageVault('vault-pass-99')
+    expect(again.ok).toBe(true)
+    expect(lookupPassphraseMessagePassphrase(wire)).toBe('test-pass-99xx')
   })
 })

@@ -1,5 +1,6 @@
 /**
- * Opt-in Burn-on-read: nach dem Lesen Purge von Chain vorschlagen (kein Auto ohne Bestätigung).
+ * Opt-in Burn-on-read: nach dem Lesen Chain-Burn vorschlagen (kein Auto ohne Bestätigung).
+ * UI sagt „Burn“ — technisch weiterhin Mailbox-Purge (`/purge-msg`).
  */
 const LS_KEY = 'morgendrot.inbox.burnOnRead.v1'
 
@@ -25,9 +26,9 @@ export function writeBurnOnReadEnabled(on: boolean): void {
 }
 
 export const BURN_ON_READ_CONFIRM =
-  'Burn-on-read: Mailbox-Eintrag jetzt von der Chain löschen (Purge / Storage-Rebate)?\n\n' +
+  'Mailbox-Eintrag jetzt von der Chain löschen (Burn / Storage-Rebate)?\n\n' +
   'Das Message-Objekt im Postfach verschwindet (Inbox/DF-Scan). Explorer zeigt die alte Send-TX und Events weiter — Ledger-Historie ist unveränderlich.\n\n' +
-  'Nur Mailbox-Nachrichten sind purgebar; reine Events („Nur Wallet-Adresse“) nicht.'
+  'Nur Mailbox-Nachrichten sind burnbar; reine Events („Nur Wallet-Adresse“) nicht.'
 
 /** Kurzer UI-Hinweis wenn Burn an, aber die Zeile ein Event ist. */
 export const BURN_EVENT_NOT_PURGEABLE_HINT =

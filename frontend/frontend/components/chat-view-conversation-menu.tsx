@@ -1,6 +1,7 @@
 'use client'
 
-import { Download, Eraser, Flame, KeyRound, MoreVertical, Settings2, UserCircle, Users } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Download, Eraser, Flame, FlaskConical, KeyRound, MoreVertical, Settings2, UserCircle, Users } from 'lucide-react'
 import { ChatViewEncryptionModeToggle } from '@/frontend/components/chat-view-encryption-mode-toggle'
 import {
   DropdownMenu,
@@ -11,6 +12,11 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
+import {
+  RATCHET_EXPERIMENT_CHANGED,
+  readRatchetExperimentEnabled,
+  writeRatchetExperimentEnabled,
+} from '@/frontend/lib/ratchet-experiment'
 
 export type ChatViewConversationMenuProps = {
   title: string
@@ -42,6 +48,18 @@ export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
   const enc = p.encryptionToggle
   const burn = p.burnOnRead
   const hasGroupActions = Boolean(p.onManageGroup || p.onCreateGroup)
+  const [ratchetExp, setRatchetExp] = useState(false)
+
+  useEffect(() => {
+    setRatchetExp(readRatchetExperimentEnabled())
+    const sync = () => setRatchetExp(readRatchetExperimentEnabled())
+    window.addEventListener(RATCHET_EXPERIMENT_CHANGED, sync)
+    window.addEventListener('storage', sync)
+    return () => {
+      window.removeEventListener(RATCHET_EXPERIMENT_CHANGED, sync)
+      window.removeEventListener('storage', sync)
+    }
+  }, [])
 
   return (
     <div className="flex items-center justify-between gap-2 border-b border-border/60 px-3 py-2.5">
@@ -125,13 +143,29 @@ export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
             disabled={!burn}
             title={
               burn
-                ? 'Bei löschbaren Chain-Nachrichten nach dem Lesen Purge vorschlagen (mit Bestätigung).'
+                ? 'Bei burnbaren Chain-Nachrichten nach dem Lesen Burn vorschlagen (mit Bestätigung).'
                 : 'Burn-on-read hier nicht verfügbar'
             }
             onSelect={() => burn?.onEnabledChange(!burn.enabled)}
           >
             <Flame className={burn?.enabled ? 'mr-2 h-4 w-4 text-orange-600' : 'mr-2 h-4 w-4'} />
             {burn?.enabled ? 'Burn-on-read: an' : 'Burn-on-read: aus'}
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
+            title={
+              ratchetExp
+                ? 'Double-Ratchet-Experiment an — Composer bleibt bei v2; Hook nur bei Session (C1.5).'
+                : 'Opt-in Double Ratchet (H.23 C1). Beide Seiten brauchen Flag + Session. Kein Produktiv-Default.'
+            }
+            onSelect={() => {
+              const next = !ratchetExp
+              writeRatchetExperimentEnabled(next)
+              setRatchetExp(next)
+            }}
+          >
+            <FlaskConical className={ratchetExp ? 'mr-2 h-4 w-4 text-amber-700' : 'mr-2 h-4 w-4'} />
+            {ratchetExp ? 'Double Ratchet: an (Exp.)' : 'Double Ratchet (Experiment)'}
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />

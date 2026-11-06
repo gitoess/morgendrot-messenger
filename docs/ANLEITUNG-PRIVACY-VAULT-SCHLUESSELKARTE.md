@@ -40,13 +40,12 @@ Unter dem Namen (**ich** / Kontakt) auf **Empfänger leeren / ändern** klicken 
 | 2 | Privacy sperren | Chat offen, nur Ciphertext, kein Login-Overlay |
 | 3 | Badge + Passwort | Klartext wieder |
 | 4 | Empfänger leeren | Adressfeld editierbar |
-| 4 | **Erneut sperren** | Passphrase-Bubble | Confirm → Passphrase erneut nötig |
-| 5 | ImageNFT verschlüsselt minten | Posteingang → **On-Chain / NFT** → Mint | Passphrase lokal gemerkt |
-| 6 | NFT als Schlüsselkarte | Galerie → **Als Schlüsselkarte merken** | Vault-Sidecar `nftKeycard.enc.v1` |
-| 7 | Optional Slot / Mint an Slot | Galerie Multi-Slot; Mint → Karte wählen | Slot `img` o. ä.; optional `[morg-keycard]` in Description |
-| 8 | Composer Key binden | Passphrase-Schutz → Karte + Slot | Wire lokal an Karte gebunden |
-| 9 | Schlüssel erneuern | Direktchat-⋮ | `keyEpoch++` (FS ab Rotation, nicht pro Msg) |
-| 10 | Burn-on-read (opt-in) | Direktchat-⋮ | Nur mit Bestätigung; Composer erzwingt Mailbox |
+| 5 | **Im Vault löschen** (Bubble, neben Wire kopieren) | Confirm → Merker weg, Passphrase erneut nötig |
+| 6 | ImageNFT verschlüsselt minten | Posteingang → On-Chain/NFT → Mint; Passphrase lokal gemerkt |
+| 7 | NFT als Schlüsselkarte | Galerie → Als Schlüsselkarte merken → Sidecar `nftKeycard.enc.v1` |
+| 8 | Optional Slot / Mint an Slot | Galerie Multi-Slot; Mint → Karte; optional `[morg-keycard]` |
+| 9 | Composer Key binden | Passphrase-Schutz → Karte + Slot |
+| 10 | Schlüssel erneuern / Burn-on-read | Direktchat-⋮ → Epoch bzw. Burn nur mit Confirm |
 
 **2-Geräte-Feldtest** (Team-Key-Handoff, Erneut-sperren auf Empfängergerät, NFT-Transfer): bewusst **später** — siehe Fahrplan.
 
@@ -84,7 +83,7 @@ Beim Entsperren des Tresors (Vault-Passwort) werden lokale Geheimnisse **entschl
 | **Key an NFT-Schlüsselkarte binden** | Optional: Karte + Slot; Wire-Fingerprint lokal |
 | Absender-Remember | Checkbox **„Auf diesem Gerät merken“** (Default an): nur diese Nachricht auto-Klartext nach Unlock. Aus = nach Lock nur Ciphertext (manuell eingeben). **Wiederverwenden** = Composer-Default bis „Neu würfeln“, entschlüsselt Posteingang **nicht** automatisch |
 | Bubble **Verbergen** | Weich ausblenden |
-| Bubble **Erneut sperren** | Hart: Merker weg, wieder Eingabe |
+| Bubble **Im Vault löschen** | Hart: Merker für diese Nachricht weg (neben Wire kopieren); wieder Eingabe |
 | Posteingang **Wire einfügen** | Paste Wire + Passphrase → lokaler Klartext |
 
 **Nicht:** Forward Secrecy, Ersatz für Alltags-ECDH-Chat, Push der Passphrase an andere Geräte.
@@ -114,6 +113,49 @@ Details Attribute: `docs/EVIDENCE-IMAGE-AND-NFT-ATTRIBUTES.md`.
 ## 4. NFT-Schlüsselkarte (H.23 B2)
 
 **Zusätzlicher Zugriffsmodus** für spezielle Enc-Inhalte — **kein** Ersatz für Passphrase-Komfort und **nicht** für Alltags-Direktchat.
+
+### Slots (`default` vs `img`)
+
+Nur **lokale Namen** im Vault — on-chain steht nichts davon (außer optionaler öffentlicher `[morg-keycard]`-Hinweis).
+
+| Slot | Üblich für |
+|------|------------|
+| `default` | Erste / allgemeine Passphrase der Karte |
+| `img` | Passphrase vom **verschlüsselten ImageNFT-Mint** |
+| `pwmsg` o. ä. | Passphrase für Passphrase-Chat (`MORG_PWMSG`) |
+
+**Als Schlüsselkarte merken** = NFT als Karte anlegen + ersten Slot speichern.  
+**Slot speichern / aktualisieren** = weitere Slot-ID oder Passphrase in bestehendem Slot überschreiben (Karte existiert schon).
+
+### Enc-Mint / „Mint → Slot“
+
+| Begriff | Bedeutung |
+|---------|-----------|
+| **Enc-Mint** | ImageNFT minten mit **On-chain verschlüsseln** → `image_data` = Ciphertext (`MORGIMGE1`); Passphrase nur off-chain |
+| **Mint → Slot** | Nach Enc-Mint: Passphrase zusätzlich in einen Slot der gewählten Schlüsselkarte schreiben (`img` o. ä.) |
+
+### Senden / Vernichten / Aktivität
+
+| Ort | Aktion |
+|-----|--------|
+| Hauptmenü → **NFTs / Evidenz** | Galerie öffnen |
+| Posteingang → **On-Chain / NFT** → Besitzer | gleiche Galerie |
+| **NFT senden** | Besitz on-chain an `0x…`-Adresse |
+| **Vernichten** | `image_nft::burn` (unwiderruflich); lokale Merker weg |
+| **NFT-Aktivität** | Lokales Log: Mint / Gesendet / Empfangen (Galerie-Diff) / Vernichtet + TX-Link |
+
+### Bindungen (lokal, sinnvoll)
+
+| Wann | Was |
+|------|-----|
+| **Vor** Create | Nur Composer-Auswahl einer **bereits existierenden** Schlüsselkarte (Object-ID muss schon da sein) |
+| **Beim** PWMSG-Send | Wire-Fingerprint → Slot (automatisch) |
+| **Beim/nach** Enc-Mint | neues ImageNFT → Slot; oder **Nachträglich binden** in der Galerie |
+| **Paar-Mint** | 2. Enc-NFT gleiche Passphrase → an Partner senden (beide Token, gleicher Key) |
+| **Lösen** | Einzelne Objekt-/Wire-Bindung; Slot entfernen; ganze Karte vergessen |
+| **Löschen NFT** | on-chain **Vernichten** ≠ Bindung lösen (Bindung nur Vault) |
+
+**Wichtig:** Sender/Empfänger brauchen das NFT **nicht** zum Verschlüsseln — nur die Passphrase. NFT-Bindung = Komfort + Soft-Auto bei Besitz. Details: `docs/NFT-SCHLUESSELKARTE-MODI.md`.
 
 | Modus | Klartext wenn |
 |-------|----------------|
@@ -147,13 +189,25 @@ Gruppen-Enc ohne Auto-Fork: Team-Key erzeugen/rotieren, Handoff, Vault-Sidecar. 
 
 ---
 
-## 7. Burn-on-read
+## 7. Burn vs. lokal ausblenden
 
-| Ist | Grenze |
-|-----|--------|
-| Opt-in im Chat-⋮ | Vorschlag + Bestätigung, **kein** Auto-Purge |
-| Aktiv → Composer **Mailbox** | Event-Pfad ist nicht purgebar |
-| Explorer | behält TX/Events |
+| Aktion | Was passiert |
+|--------|----------------|
+| **Lokal ausblenden** | Nur UI/Session — Chain unverändert |
+| **Burn** | Mailbox-Objekt on-chain löschen (Rebate); braucht `chainPurgeable` |
+| **Burn-on-read (Modus)** | Opt-in: Composer erzwingt Mailbox; burnbare Zeilen orange + Badge **Burnbar**; Burn mit Confirm |
+
+Intern heißt der Chain-Call weiter `/purge-msg` — in der UI nur noch **Burn**. „Emergency Purge“ in den Einstellungen ist etwas anderes (Vault/Cache).
+
+**Abort 10 (`E_MSG_MISSING`):** MsgKey fehlt in der angesprochenen Mailbox — oft Shared vs. private. Fix: Posteingang speichert `chainMailboxObjectId`; Burn probiert bekannte Mailboxen.
+
+**Aktivität:** Hauptmenü → **IOTA-Aktivität** (Msg-Burn + NFT Ein/Aus/Burn). **NFT** im IOTA-Wallet (neben Empfangen) öffnet die eigene Galerie (+ Besitzer-Adresse für andere Wallets).
+
+| Grenze |
+|--------|
+| Event-Pfad („Nur Wallet-Adresse“) = **nicht burnbar** — nur lokal ausblendbar |
+| Explorer behält Send-TX / Events (Ledger unveränderlich) |
+| Kein Auto-Burn ohne Bestätigung |
 
 ---
 
@@ -161,7 +215,11 @@ Gruppen-Enc ohne Auto-Fork: Team-Key erzeugen/rotieren, Handoff, Vault-Sidecar. 
 
 | Wunsch | Roadmap-Ort | Status |
 |--------|-------------|--------|
-| Double Ratchet / FS **pro Nachricht** | § H.23 Phase 3 / E2EE **C1** | Backlog — erst nach stabiler Session Keys+ + Feldvalidierung |
+| Double Ratchet / FS **pro Nachricht** | § H.23 Phase 3 / E2EE **C1** | Spec + PoC C1.1/C1.2a; kein Composer-Default |
+| Starkes NFT-Besitz-Gate | B2-P4a | Ist (App-Gate Capsule); optional **Wallet + NFT (Dual)** |
+| Dual Wallet∧NFT | P4a-dual | Composer unter Starkes Gate; Klartext danach kopierbar |
+| NFT-gesichertes Senden (IOTA) | B2-S0 Spec | Backlog — **nur Token**; Purse-2FA (X∧NFT); lose Coins außerhalb = ungeschützt (`docs/NFT-GUARDED-SPEND-SPEC.md`) |
+| Öffentlicher Ciphertext-Vault + NFT-Timelock („Zeitkapsel“) | **B2-P5a/b Ist** | NFT = Gate, Texte = Ciphertext getrennt. Borrower: optional Object-ID / Besitzer=Archiv unter On-Chain/NFT laden, dann lesen. Spec **`docs/NFT-SCHLUESSELKARTE-PUBLIC-VAULT-TIMELOCK.md`** §0a |
 | Rotierende Outboxes / voller Dead-Drop | Claims-Check + Architektur | Nicht gebaut |
 | Handshake mit Decoys | Claims-Check | Nicht gebaut |
 | Hardware-Fragment + Keys nur RAM | Claims-Check | Teilweise Vault-at-rest; kein HW-Fragment |
@@ -174,12 +232,11 @@ Siehe auch Kopf von `docs/ROADMAP-FAHRPLAN.md` (Nachtrag Privacy 2026-11-05): *�
 
 ## 9. Empfohlene Reihenfolge ab hier
 
-1. **Diese Anleitung am PC durchklicken** (Tabelle §0) — Befunde ins `docs/TEST-RUN-LOGBOOK.md`.  
-2. Kleine Fixes aus dem Smoke.  
-3. **Entscheidung:**  
-   - **A)** 2-Geräte-Feldtest (Team-Key + Passphrase + Lock) — validiert Ist, bevor große Krypto-Baustellen.  
-   - **B)** Start **C1 Double-Ratchet Spec + PoC** — großer Aufwand, nur 1:1 IOTA; braucht vorher stabile A4/B1-Feldlage.  
-4. Decoys / rotierende Outboxes / HW-Fragment: **nicht** parallel zu Ratchet oder Feldtest starten.
+1. ~~Anleitung §0 / Epoch+Burn / C1 / P4a / P5a/b / P4a-dual~~ → **Ist** (Logbuch 2026-11-06).  
+2. **Als Nächstes (Code):** **B2-S1** Guarded Purse Move (`docs/NFT-GUARDED-SPEND-SPEC.md`) — nur Token-2FA.  
+3. **Feld:** Zeitkapsel-Panel Leihe + Ciphertext per Object-ID/Besitzer; optional P5d.  
+4. **Später:** P4a2 Pubkey / P4b Seal → **2-Geräte-Feldtest**.  
+5. **Nicht parallel:** MeshSleepyChannel, Decoys, Outboxes, HW-Fragment.
 
 ---
 
@@ -191,6 +248,11 @@ Siehe auch Kopf von `docs/ROADMAP-FAHRPLAN.md` (Nachtrag Privacy 2026-11-05): *�
 | `docs/SECURITY-CLAIMS-CHECK-2026-11.md` | Marketing vs. Ist |
 | `docs/MESSENGER-E2EE-ZIELARCHITEKTUR.md` | A/B/C/D Phasen |
 | `docs/NFT-SCHLUESSELKARTE-B2.md` | B2 Spec |
+| `docs/NFT-SCHLUESSELKARTE-MODI.md` | Komfort vs. stark / Dual / Token-2FA |
+| `docs/NFT-SCHLUESSELKARTE-PUBLIC-VAULT-TIMELOCK.md` | Zeitkapsel / Timelock (P5) |
+| `docs/NFT-GUARDED-SPEND-SPEC.md` | Guarded Purse Token-2FA |
+| `docs/MESSENGER-DOUBLE-RATCHET-C1-SPEC.md` | C1 Double Ratchet |
+| `docs/MESH-SLEEPY-CHANNEL-SPEC.md` | Mesh-Payment Backlog |
 | `docs/MESSENGER-CHAT-HANDBUCH.md` | Chat-Bedienung allgemein |
 | `docs/START-ANLEITUNG.md` | App starten |
 | `docs/TEST-RUN-LOGBOOK.md` | Testergebnisse |

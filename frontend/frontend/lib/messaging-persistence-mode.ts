@@ -39,24 +39,24 @@ export function describeChainPersistenceRoute(
     return {
       label: 'Verschlüsseltes Event',
       detail:
-        'send_encrypted_message — schnell, kein Mailbox-Objekt. Nicht Burn/Purge-fähig (Explorer behält Events).',
+        'send_encrypted_message — schnell, kein Mailbox-Objekt. Nicht burnbar (Explorer behält Events).',
     }
   }
   if (encrypted && mode === 'mailbox') {
     return {
       label: 'Verschlüsselt · Mailbox',
-      detail: 'store_encrypted_message — Postamt-Objekt; TTL/Purge/Burn-on-read möglich.',
+      detail: 'store_encrypted_message — Postamt-Objekt; TTL/Burn-on-read möglich.',
     }
   }
   if (!encrypted && mode === 'event') {
     return {
       label: 'Klartext · Event',
       detail:
-        'send_plaintext_message — schnell, öffentlich, flüchtig. Nicht Burn/Purge-fähig (Ledger-Historie bleibt).',
+        'send_plaintext_message — schnell, öffentlich, flüchtig. Nicht burnbar (Ledger-Historie bleibt).',
     }
   }
   return {
     label: 'Klartext · Mailbox',
-    detail: 'store_plaintext_message — Klartext in der Mailbox; Purge/Burn möglich (Explorer: TX bleibt).',
+    detail: 'store_plaintext_message — Klartext in der Mailbox; Burn möglich (Explorer: TX bleibt).',
   }
 }

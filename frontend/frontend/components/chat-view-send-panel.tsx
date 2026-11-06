@@ -662,6 +662,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
           <PassphraseProtectComposerToggle
             encrypted={encrypted}
             onEncryptedChange={onEncryptedChange ?? encryptionModeToggle?.onEncryptedChange}
+            onRequestVaultSession={onNavigateHomeWhenLocked}
           />
         ) : null}
         {showRecipientRow ? (

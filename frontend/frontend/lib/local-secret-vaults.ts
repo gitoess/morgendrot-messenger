@@ -1,24 +1,37 @@
 /**
  * Ein Unlock/Lock/Purge für alle lokalen Geheimnis-Sidecars (Vault-Passwort):
- * Chat-Passphrasen, ImageNFT-Passphrasen, Team-Keys, NFT-Schlüsselkarte.
+ * Chat-Passphrasen, ImageNFT-Passphrasen, Team-Keys, NFT-Schlüsselkarte, Ratchet (C1.4).
+ *
+ * Unlock ist best-effort: ein kaputter/fremder Sidecar darf die anderen
+ * nicht wieder aus dem RAM werfen (sonst Soft-Unlock „ok“, Merker trotzdem weg).
  */
 
 import {
+  flushEvidencePassphraseVaultPersist,
   lockEvidencePassphraseVault,
   purgeEvidencePassphraseVault,
   unlockEvidencePassphraseVault,
 } from '@/frontend/lib/evidence-passphrase-local-store'
 import {
+  flushNftKeycardVaultPersist,
   lockNftKeycardVault,
   purgeNftKeycardVault,
   unlockNftKeycardVault,
 } from '@/frontend/lib/nft-keycard-local-store'
 import {
+  flushPassphraseMessageVaultPersist,
   lockPassphraseMessageVault,
   purgePassphraseMessageVault,
   unlockPassphraseMessageVault,
 } from '@/frontend/lib/passphrase-message-local-store'
 import {
+  flushRatchetSessionVaultPersist,
+  lockRatchetSessionVault,
+  purgeRatchetSessionVault,
+  unlockRatchetSessionVault,
+} from '@/frontend/lib/ratchet-session-local-store'
+import {
+  flushTeamBroadcastKeyVaultPersist,
   lockTeamBroadcastKeyVault,
   purgeTeamBroadcastKeyVault,
   unlockTeamBroadcastKeyVault,
@@ -29,13 +42,15 @@ import {
 } from '@/frontend/lib/vault-password-session'
 
 export async function unlockLocalSecretVaults(password: string): Promise<{
+  /** True wenn Chat-Passphrasen-Vault geöffnet (primär für Soft-Unlock / Merken). */
   ok: boolean
+  passphraseOk: boolean
   errors: string[]
 }> {
   const pw = password.trim()
   const errors: string[] = []
   if (pw.length < 8) {
-    return { ok: false, errors: ['Vault-Passwort mindestens 8 Zeichen.'] }
+    return { ok: false, passphraseOk: false, errors: ['Vault-Passwort mindestens 8 Zeichen.'] }
   }
   setVaultPasswordSession(pw)
 
@@ -51,16 +66,28 @@ export async function unlockLocalSecretVaults(password: string): Promise<{
   const nft = await unlockNftKeycardVault(pw)
   if (!nft.ok) errors.push(`NFT-Schlüsselkarte: ${nft.error}`)
 
-  if (errors.length > 0) {
-    // Kein halboffenes Vault-Passwort in der Session belassen.
-    lockPassphraseMessageVault()
-    lockEvidencePassphraseVault()
-    lockTeamBroadcastKeyVault()
-    lockNftKeycardVault()
+  const ratchet = await unlockRatchetSessionVault(pw)
+  if (!ratchet.ok) errors.push(`Ratchet: ${ratchet.error}`)
+
+  const passphraseOk = msg.ok
+  const anyOk = msg.ok || ev.ok || team.ok || nft.ok || ratchet.ok
+  if (!anyOk) {
     clearVaultPasswordSession()
-    return { ok: false, errors }
+    return { ok: false, passphraseOk: false, errors }
   }
-  return { ok: true, errors: [] }
+  // Session behalten — Persistenz braucht sie, auch bei Teilfehlern anderer Sidecars.
+  return { ok: passphraseOk, passphraseOk, errors }
+}
+
+/** Debounce-Sidecars sofort schreiben — vor Lock, sonst fehlen frische „merken“-Einträge. */
+export async function flushLocalSecretVaultsPersist(): Promise<void> {
+  await Promise.all([
+    flushPassphraseMessageVaultPersist(),
+    flushEvidencePassphraseVaultPersist(),
+    flushTeamBroadcastKeyVaultPersist(),
+    flushNftKeycardVaultPersist(),
+    flushRatchetSessionVaultPersist(),
+  ])
 }
 
 export function lockLocalSecretVaults(): void {
@@ -68,6 +95,7 @@ export function lockLocalSecretVaults(): void {
   lockEvidencePassphraseVault()
   lockTeamBroadcastKeyVault()
   lockNftKeycardVault()
+  lockRatchetSessionVault()
   clearVaultPasswordSession()
 }
 
@@ -76,5 +104,6 @@ export function purgeLocalSecretVaults(): void {
   purgeEvidencePassphraseVault()
   purgeTeamBroadcastKeyVault()
   purgeNftKeycardVault()
+  purgeRatchetSessionVault()
   clearVaultPasswordSession()
 }

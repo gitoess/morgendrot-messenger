@@ -17,6 +17,10 @@ import {
 } from '@/components/ui/dialog'
 import QRCode from 'qrcode'
 import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
+import {
+  ChatViewEvidenceImageViewerButton,
+  NFT_WALLET_MODES,
+} from '@/frontend/components/chat-view-evidence-image-viewer'
 
 export type DashboardIotaTransferCardProps = {
   compact?: boolean
@@ -126,6 +130,45 @@ export function DashboardIotaTransferCard({
     return <p className="text-[11px] text-muted-foreground">{t('iota.balanceLoading')}</p>
   })()
 
+  const nftButton = (
+    <ChatViewEvidenceImageViewerButton
+      triggerLabel={t('iota.nft')}
+      defaultMode="owner"
+      autoLoadOwnOnOpen
+      allowedModes={NFT_WALLET_MODES}
+      triggerClassName="inline-flex h-auto w-auto items-center justify-center gap-1.5 rounded-md border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted [&>svg]:mr-0 [&>svg]:h-3.5 [&>svg]:w-3.5"
+    />
+  )
+
+  const receiveDialog = (
+    <Dialog open={receiveOpen} onOpenChange={setReceiveOpen}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{t('iota.receiveTitle')}</DialogTitle>
+          <DialogDescription>{t('iota.receiveDescription')}</DialogDescription>
+        </DialogHeader>
+        {receiveQrUrl ? (
+          <img src={receiveQrUrl} alt={t('iota.receiveQrAlt')} className="mx-auto rounded-lg border border-border" />
+        ) : (
+          <p className="text-sm text-muted-foreground">{t('iota.noValidAddress')}</p>
+        )}
+        {addrOk ? (
+          <div className="space-y-2">
+            <p className="break-all font-mono text-[11px] leading-relaxed text-foreground">{myAddress}</p>
+            <button
+              type="button"
+              onClick={() => void copyAddress()}
+              className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
+            >
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? t('iota.copied') : t('iota.copyAddress')}
+            </button>
+          </div>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  )
+
   const transferForm = (
     <>
       {transferStatus !== 'idle' && (
@@ -222,44 +265,49 @@ export function DashboardIotaTransferCard({
               <QrCode className="h-3.5 w-3.5" aria-hidden />
               {t('iota.receive')}
             </button>
+            {nftButton}
           </div>
           {transferOpen ? <div className="mt-3 border-t border-border/60 pt-3">{transferForm}</div> : null}
         </div>
-        <Dialog open={receiveOpen} onOpenChange={setReceiveOpen}>
-          <DialogContent className="max-w-sm">
-            <DialogHeader>
-              <DialogTitle>{t('iota.receiveTitle')}</DialogTitle>
-              <DialogDescription>{t('iota.receiveDescription')}</DialogDescription>
-            </DialogHeader>
-            {receiveQrUrl ? (
-              <img src={receiveQrUrl} alt={t('iota.receiveQrAlt')} className="mx-auto rounded-lg border border-border" />
-            ) : (
-              <p className="text-sm text-muted-foreground">{t('iota.noValidAddress')}</p>
-            )}
-            {addrOk ? (
-              <div className="space-y-2">
-                <p className="break-all font-mono text-[11px] leading-relaxed text-foreground">{myAddress}</p>
-                <button
-                  type="button"
-                  onClick={() => void copyAddress()}
-                  className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
-                >
-                  {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                  {copied ? t('iota.copied') : t('iota.copyAddress')}
-                </button>
-              </div>
-            ) : null}
-          </DialogContent>
-        </Dialog>
+        {receiveDialog}
       </>
     )
   }
 
   return (
-    <div id="dashboard-iota-transfer" className="rounded-xl border border-border bg-card p-4">
-      <h4 className="mb-3 font-semibold text-foreground">{t('cards.iotaTransfer')}</h4>
-      <div className="mb-3 rounded-lg border border-border/80 bg-muted/30 px-3 py-2">{balanceLine}</div>
-      {transferForm}
-    </div>
+    <>
+      <div id="dashboard-iota-transfer" className="rounded-xl border border-border bg-card p-4">
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+          <h4 className="font-semibold text-foreground">{t('cards.iotaWallet')}</h4>
+          {onRefreshStatus ? (
+            <button
+              type="button"
+              onClick={() => void handleRefreshBalance()}
+              disabled={refreshingBalance}
+              className="rounded p-1 text-muted-foreground hover:bg-muted disabled:opacity-50"
+              title={t('iota.refreshBalance')}
+              aria-label={t('iota.refreshBalance')}
+            >
+              <RefreshCw className={cn('h-3.5 w-3.5', refreshingBalance && 'animate-spin')} />
+            </button>
+          ) : null}
+        </div>
+        <div className="mb-3 rounded-lg border border-border/80 bg-muted/30 px-3 py-2">{balanceLine}</div>
+        <div className="mb-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setReceiveOpen(true)}
+            disabled={!addrOk}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-40"
+          >
+            <QrCode className="h-3.5 w-3.5" aria-hidden />
+            {t('iota.receive')}
+          </button>
+          {nftButton}
+        </div>
+        {transferForm}
+      </div>
+      {receiveDialog}
+    </>
   )
 }

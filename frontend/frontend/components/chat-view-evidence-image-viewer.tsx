@@ -21,6 +21,11 @@ import { Label } from '@/components/ui/label'
 import { decryptEvidenceImageBytes } from '@/frontend/lib/evidence-image-crypto'
 import { mintEvidenceImageNft } from '@/frontend/lib/evidence-image-mint'
 import {
+  burnEvidenceImageNft,
+  transferEvidenceImageNft,
+} from '@/frontend/lib/evidence-image-transfer'
+import { NftTimeLeasePanel } from '@/frontend/components/nft-time-lease-panel'
+import {
   EVIDENCE_ATTR_MAX_PAIRS,
   unpackEvidenceDescription,
   type EvidenceAttrPair,
@@ -65,10 +70,17 @@ import {
   lookupPassphraseForNftKeycard,
   normalizeNftKeycardSlotId,
   removeNftKeycardSlot,
+  unbindObjectFromNftKeycard,
+  unbindWireFromNftKeycard,
   upsertNftKeycardSlot,
 } from '@/frontend/lib/nft-keycard-local-store'
 import { unpackNftKeycardDescriptionMarker } from '@/frontend/lib/nft-keycard-description-marker'
 import { checkNftKeycardOwnedBySigner } from '@/frontend/lib/nft-keycard-ownership'
+import {
+  recordNftActivity,
+  syncNftOwnedSnapshotAndDetectReceived,
+} from '@/frontend/lib/nft-activity-local-log'
+import { explorerTxUrlFromDigest } from '@/frontend/lib/iota-tx-explorer-hint'
 
 type Mode = 'object' | 'owner' | 'mint' | 'wire' | 'mailbox'
 
@@ -118,11 +130,29 @@ function revokeAll(urls: string[]) {
   for (const u of urls) revokeIfObjectUrl(u)
 }
 
+const ALL_EVIDENCE_MODES: { id: Mode; label: string }[] = [
+  { id: 'object', label: 'Object-ID' },
+  { id: 'owner', label: 'Besitzer' },
+  { id: 'wire', label: 'Wire' },
+  { id: 'mailbox', label: 'Klartext' },
+  { id: 'mint', label: 'Minten' },
+]
+
+/** Hauptmenü-Wallet: nur NFT-relevante Tabs. */
+export const NFT_WALLET_MODES: Mode[] = ['owner', 'object', 'mint']
+
 export function ChatViewEvidenceImageViewerButton(p?: {
   triggerClassName?: string
   triggerLabel?: string
-  /** Start-Tab beim Öffnen (ohne Auto-Laden). */
+  /** Start-Tab beim Öffnen. */
   defaultMode?: Mode
+  /** Beim Öffnen sofort eigene Wallet-NFTs laden (Besitzer-Tab). */
+  autoLoadOwnOnOpen?: boolean
+  /**
+   * Erlaubte Tabs. Default: alle (Posteingang On-Chain).
+   * Hauptmenü: `NFT_WALLET_MODES` (Besitzer / Object-ID / Minten).
+   */
+  allowedModes?: readonly Mode[]
   /** Lokaler Posteingang — für Tab „Wire/Posteingang“. */
   messages?: readonly {
     id?: string
@@ -134,8 +164,22 @@ export function ChatViewEvidenceImageViewerButton(p?: {
     recipient?: string
   }[]
 }) {
+  const allowed = p?.allowedModes?.length
+    ? p.allowedModes
+        .map((id) => ALL_EVIDENCE_MODES.find((m) => m.id === id))
+        .filter((m): m is { id: Mode; label: string } => Boolean(m))
+    : ALL_EVIDENCE_MODES
+  const nftWalletUi = Boolean(
+    p?.allowedModes &&
+      p.allowedModes.length > 0 &&
+      !p.allowedModes.includes('wire') &&
+      !p.allowedModes.includes('mailbox')
+  )
   const [open, setOpen] = useState(false)
-  const [mode, setMode] = useState<Mode>(p?.defaultMode || 'object')
+  const [mode, setMode] = useState<Mode>(() => {
+    const want = p?.defaultMode || (nftWalletUi ? 'owner' : 'object')
+    return allowed.some((m) => m.id === want) ? want : allowed[0]?.id || 'object'
+  })
   const [query, setQuery] = useState('')
   const [passphrase, setPassphrase] = useState('')
   const [busy, setBusy] = useState(false)
@@ -165,9 +209,14 @@ export function ChatViewEvidenceImageViewerButton(p?: {
   /** P2: Mint-Passphrase an Schlüsselkarte/Slot */
   const [mintKeycardOid, setMintKeycardOid] = useState('')
   const [mintKeycardSlot, setMintKeycardSlot] = useState('img')
+  /** Zweites Enc-NFT minten und an Partner senden (gleiche Passphrase — Komfort-Paar). */
+  const [mintPairTo, setMintPairTo] = useState('')
   const [gallerySlotId, setGallerySlotId] = useState('default')
   const [galleryNewSlotId, setGalleryNewSlotId] = useState('img')
   const [keycardTick, setKeycardTick] = useState(0)
+  /** Empfänger für ImageNFT-Transfer (Galerie). */
+  const [transferToByOid, setTransferToByOid] = useState<Record<string, string>>({})
+  const [manualBindOid, setManualBindOid] = useState('')
   const [wireCandidates, setWireCandidates] = useState<InboxWireImageCandidate[]>([])
   const [wireRows, setWireRows] = useState<InboxWireImageRow[]>([])
   const [wireOffset, setWireOffset] = useState(0)
@@ -473,6 +522,20 @@ export function ChatViewEvidenceImageViewerButton(p?: {
           mapped.push({ ...it, attrs })
         }
         setOwnerItems((prev) => (opts?.append ? [...prev, ...mapped] : mapped))
+        if (!opts?.append) {
+          const me = getDirectIotaSessionSignerAddress()?.toLowerCase()
+          const owner = (opts?.ownerOverride || query || ownerAddress).trim().toLowerCase()
+          if (me && owner && me === owner) {
+            const labels: Record<string, string> = {}
+            for (const it of mapped) {
+              if (it.name) labels[it.objectId.toLowerCase()] = it.name
+            }
+            const got = syncNftOwnedSnapshotAndDetectReceived(
+              mapped.map((x) => x.objectId),
+              labels
+            )
+          }
+        }
         const totalShown = (opts?.append ? ownerItems.length : 0) + mapped.length
         const urlN = mapped.filter((x) => x.source === 'url').length
         const embN = mapped.filter((x) => x.source === 'embedded' || x.parsed).length
@@ -615,10 +678,51 @@ export function ChatViewEvidenceImageViewerButton(p?: {
           ? ` Verkleinert ${r.originalBytes}→${r.onChainBytes} B (wie Nachrichten).`
           : ''
       const oidNote = r.objectId ? ` Object-ID: ${r.objectId.slice(0, 12)}…` : ''
+      if (r.objectId) {
+        recordNftActivity({
+          kind: 'mint',
+          objectId: r.objectId,
+          digest: r.digest,
+          label: mintName.trim() || undefined,
+        })
+      }
+      let pairNote = ''
+      const pairTo = mintPairTo.trim()
+      if (mintEncrypt && r.passphrase && pairTo && isPlausibleIotaObjectId(pairTo)) {
+        const r2 = await mintEvidenceImageNft({
+          plainBytes: buf,
+          contentType: mintContentType.trim() || mintFile.type || 'image/png',
+          name: `${mintName} (Partner)`,
+          description: mintDesc,
+          classification: mintClassification,
+          attrs: mintAttrs,
+          encrypt: true,
+          passphrase: r.passphrase,
+        })
+        if (r2.ok && r2.objectId) {
+          recordNftActivity({
+            kind: 'mint',
+            objectId: r2.objectId,
+            digest: r2.digest,
+            label: `${mintName.trim() || 'NFT'} (Partner)`,
+          })
+          const sent = await transferEvidenceImageNft({
+            objectId: r2.objectId,
+            recipientAddress: pairTo,
+          })
+          pairNote = sent.ok
+            ? ` Paar: 2. NFT an ${pairTo.slice(0, 10)}… gesendet (gleiche Passphrase — Komfort, kein starkes Gate).`
+            : ` Paar: 2. Mint ok, Transfer fehlgeschlagen: ${sent.error}`
+        } else if (!r2.ok) {
+          pairNote = ` Paar-Mint fehlgeschlagen: ${r2.error}`
+        }
+      } else if (mintEncrypt && pairTo && !isPlausibleIotaObjectId(pairTo)) {
+        pairNote = ' Paar: Partner-Adresse ungültig (0x + 64 Hex) — übersprungen.'
+      }
       if (r.passphrase) {
         setSharePassphrase(r.passphrase)
         setInfo(
-          `Mint OK (${r.onChainBytes} B on-chain).${resizeNote}${oidNote}${keycardNote} Passphrase unten kopieren und separat teilen — für dich auf diesem Gerät im Vault gemerkt.`
+          `Mint OK (${r.onChainBytes} B on-chain).${resizeNote}${oidNote}${keycardNote}${pairNote} Passphrase unten kopieren und separat teilen — für dich auf diesem Gerät im Vault gemerkt.`
         )
       } else {
         setInfo(`Mint OK (Klartext on-chain, ${r.onChainBytes} B).${resizeNote}${oidNote} Digest: ${r.digest}`)
@@ -713,8 +817,20 @@ export function ChatViewEvidenceImageViewerButton(p?: {
           resetAll()
           return
         }
-        /** Nur Tab setzen — keine Galerie laden, bis der Nutzer sucht / „eigene NFT“ drückt. */
-        if (p?.defaultMode) setMode(p.defaultMode)
+        const want = p?.defaultMode || (nftWalletUi ? 'owner' : 'object')
+        const startMode = allowed.some((m) => m.id === want) ? want : allowed[0]?.id || 'object'
+        setMode(startMode)
+        if (p?.autoLoadOwnOnOpen && startMode === 'owner') {
+          const addr = getDirectIotaSessionSignerAddress()
+          if (!addr) {
+            setError('Kein Session-Signer — Tresor entsperren.')
+            return
+          }
+          setQuery(addr)
+          setError('')
+          setInfo('')
+          void onLoadOwnerPage({ append: false, ownerOverride: addr })
+        }
       }}
     >
       <DialogTrigger asChild>
@@ -733,23 +849,16 @@ export function ChatViewEvidenceImageViewerButton(p?: {
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>On-Chain / NFT</DialogTitle>
+          <DialogTitle>{nftWalletUi ? 'NFT' : 'On-Chain / NFT'}</DialogTitle>
           <DialogDescription>
-            ImageNFT (Object/Besitzer/Mint), Wire aus lokalem Posteingang, optional Klartext an bekannter MAILBOX_ID.
-            Mint ~12 KB Ziel, Cap {Math.round(EVIDENCE_IMAGE_MAX_RAW_BYTES / 1024)} KB.
+            {nftWalletUi
+              ? `Eigene NFTs (Besitzer), Object-ID laden oder minten. Cap ${Math.round(EVIDENCE_IMAGE_MAX_RAW_BYTES / 1024)} KB.`
+              : `ImageNFT (Object/Besitzer/Mint), Wire aus lokalem Posteingang, optional Klartext an bekannter MAILBOX_ID. Mint ~12 KB Ziel, Cap ${Math.round(EVIDENCE_IMAGE_MAX_RAW_BYTES / 1024)} KB.`}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
-            {(
-              [
-                ['object', 'Object-ID'],
-                ['owner', 'Besitzer'],
-                ['wire', 'Wire'],
-                ['mailbox', 'Klartext'],
-                ['mint', 'Minten'],
-              ] as const
-            ).map(([id, label]) => (
+            {allowed.map(({ id, label }) => (
               <Button
                 key={id}
                 type="button"
@@ -996,6 +1105,24 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                 />
                 On-chain verschlüsseln (Passphrase nach Mint anzeigen)
               </label>
+              {mintEncrypt ? (
+                <div className="space-y-1.5 rounded-md border border-border/60 bg-muted/10 px-2.5 py-2">
+                  <p className="text-[11px] font-medium text-foreground">Paar für Partner (optional)</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Zweites Enc-NFT mit derselben Passphrase minten und an Adresse senden. Beide haben ein Token —
+                    lesen können sie mit der Passphrase (Komfort). Starkes „nur NFT-Besitz entschlüsselt“ ist noch
+                    nicht gebaut.
+                  </p>
+                  <Input
+                    className="font-mono text-[11px]"
+                    value={mintPairTo}
+                    onChange={(e) => setMintPairTo(e.target.value)}
+                    placeholder="Partner 0x… (leer = kein Paar)"
+                    spellCheck={false}
+                    autoComplete="off"
+                  />
+                </div>
+              ) : null}
               {mintEncrypt && listNftKeycards().length > 0 ? (
                 <div className="space-y-1.5 text-xs">
                   <p className="font-medium text-foreground">Passphrase an Schlüsselkarte-Slot (optional)</p>
@@ -1162,6 +1289,111 @@ export function ChatViewEvidenceImageViewerButton(p?: {
           {info ? <p className="text-xs text-muted-foreground whitespace-pre-wrap">{info}</p> : null}
           {error ? <p className="text-sm text-destructive whitespace-pre-wrap">{error}</p> : null}
 
+          {listNftKeycards().length > 0 ? (
+            <div className="space-y-2 rounded-md border border-border/70 bg-muted/15 p-2.5">
+              <p className="text-xs font-medium text-foreground">Schlüsselkarte — Bindungen</p>
+              <p className="text-[10px] text-muted-foreground">
+                Chat-Nachrichten (PWMSG) haben keine Object-ID — Bindung = Wire-Fingerprint (Composer beim Senden
+                oder in der Bubble „An Schlüsselkarte binden“). Hier „Nachträglich binden“ gilt nur für{' '}
+                <span className="text-foreground">ImageNFT-Object-IDs</span>. Mehrere Nachrichten/Objekte pro Karte
+                möglich. Lösen = nur lokaler Merker.
+              </p>
+              {listNftKeycards().map(({ objectId, entry }) => (
+                <div key={`${objectId}-${keycardTick}`} className="space-y-1 border-t border-border/50 pt-2">
+                  <p className="font-mono text-[10px] break-all text-muted-foreground">
+                    Karte {entry.label ? `${entry.label} · ` : ''}
+                    {objectId.slice(0, 14)}…
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Input
+                      className="h-7 min-w-[10rem] flex-1 font-mono text-[10px]"
+                      value={manualBindOid}
+                      onChange={(e) => setManualBindOid(e.target.value)}
+                      placeholder="Object-ID nachträglich binden"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-[10px]"
+                      disabled={busy}
+                      onClick={() => {
+                        const bound = manualBindOid.trim()
+                        const r = bindObjectToNftKeycard({
+                          cardObjectId: objectId,
+                          boundObjectId: bound,
+                          slotId: gallerySlotId || 'img',
+                        })
+                        if (!r.ok) {
+                          setError(r.error)
+                          return
+                        }
+                        setManualBindOid('')
+                        setKeycardTick((n) => n + 1)
+                        setInfo(`Objekt ${bound.slice(0, 12)}… an Slot „${normalizeNftKeycardSlotId(gallerySlotId || 'img')}“ gebunden.`)
+                      }}
+                    >
+                      Nachträglich binden
+                    </Button>
+                  </div>
+                  {Object.entries(entry.boundObjects || {}).map(([boundOid, slotId]) => (
+                    <div key={boundOid} className="flex flex-wrap items-center gap-2 text-[10px]">
+                      <span className="break-all text-muted-foreground">
+                        Objekt {boundOid.slice(0, 12)}… → Slot {slotId}
+                      </span>
+                      <button
+                        type="button"
+                        className="text-destructive underline"
+                        onClick={() => {
+                          const r = unbindObjectFromNftKeycard({
+                            cardObjectId: objectId,
+                            boundObjectId: boundOid,
+                          })
+                          if (!r.ok) {
+                            setError(r.error)
+                            return
+                          }
+                          setKeycardTick((n) => n + 1)
+                          setInfo('Objekt-Bindung gelöst.')
+                        }}
+                      >
+                        Lösen
+                      </button>
+                    </div>
+                  ))}
+                  {Object.entries(entry.boundWires || {}).map(([fp, slotId]) => (
+                    <div key={fp} className="flex flex-wrap items-center gap-2 text-[10px]">
+                      <span className="break-all text-muted-foreground">
+                        Wire {fp.slice(0, 18)}… → Slot {slotId}
+                      </span>
+                      <button
+                        type="button"
+                        className="text-destructive underline"
+                        onClick={() => {
+                          const r = unbindWireFromNftKeycard({
+                            objectId,
+                            wireFingerprint: fp,
+                          })
+                          if (!r.ok) {
+                            setError(r.error)
+                            return
+                          }
+                          setKeycardTick((n) => n + 1)
+                          setInfo('Wire-Bindung gelöst.')
+                        }}
+                      >
+                        Lösen
+                      </button>
+                    </div>
+                  ))}
+                  {!entry.boundObjects && !entry.boundWires ? (
+                    <p className="text-[10px] text-muted-foreground">Noch keine Bindungen.</p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : null}
+
           {meta && previewUrl ? (
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground break-all">
@@ -1259,6 +1491,94 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                         >
                           Object-ID kopieren
                         </Button>
+                        {it.source !== 'url' ? (
+                          <div className="flex w-full flex-wrap items-center gap-2">
+                            <Input
+                              className="h-7 min-w-[12rem] flex-1 font-mono text-[10px]"
+                              value={transferToByOid[it.objectId] || ''}
+                              onChange={(e) =>
+                                setTransferToByOid((m) => ({ ...m, [it.objectId]: e.target.value }))
+                              }
+                              placeholder="Empfänger 0x… (NFT senden)"
+                              autoComplete="off"
+                              spellCheck={false}
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-[11px]"
+                              disabled={busy}
+                              onClick={() => {
+                                void (async () => {
+                                  const to = (transferToByOid[it.objectId] || '').trim()
+                                  if (!/^0x[a-fA-F0-9]{64}$/i.test(to)) {
+                                    setError('Empfänger: volle 0x…-Adresse (64 Hex).')
+                                    return
+                                  }
+                                  if (
+                                    !window.confirm(
+                                      `ImageNFT an ${to.slice(0, 12)}… senden? Besitz wechselt on-chain. Lokale Merker für dieses Objekt werden gelöscht.`
+                                    )
+                                  ) {
+                                    return
+                                  }
+                                  setBusy(true)
+                                  setError('')
+                                  try {
+                                    const r = await transferEvidenceImageNft({
+                                      objectId: it.objectId,
+                                      recipientAddress: to,
+                                    })
+                                    if (!r.ok) {
+                                      setError(r.error)
+                                      return
+                                    }
+                                    setOwnerItems((prev) => prev.filter((x) => x.objectId !== it.objectId))
+                                    setInfo(`NFT gesendet · TX ${r.digest.slice(0, 16)}…`)
+                                  } finally {
+                                    setBusy(false)
+                                  }
+                                })()
+                              }}
+                            >
+                              NFT senden
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-[11px] text-destructive"
+                              disabled={busy}
+                              onClick={() => {
+                                void (async () => {
+                                  if (
+                                    !window.confirm(
+                                      'ImageNFT unwiderruflich vernichten (burn)? Storage-Rebate kommt zurück. Lokale Merker weg.'
+                                    )
+                                  ) {
+                                    return
+                                  }
+                                  setBusy(true)
+                                  setError('')
+                                  try {
+                                    const r = await burnEvidenceImageNft({ objectId: it.objectId })
+                                    if (!r.ok) {
+                                      setError(r.error)
+                                      return
+                                    }
+                                    setOwnerItems((prev) => prev.filter((x) => x.objectId !== it.objectId))
+                                    setInfo(`NFT vernichtet · TX ${r.digest.slice(0, 16)}…`)
+                                  } finally {
+                                    setBusy(false)
+                                  }
+                                })()
+                              }}
+                            >
+                              Vernichten
+                            </Button>
+                          </div>
+                        ) : null}
                         {storedPass ? (
                           <Button
                             type="button"
@@ -1398,6 +1718,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                           />
                         )}
                       </div>
+                      <NftTimeLeasePanel nftObjectId={it.objectId} disabled={busy} />
                       {storedPass ? (
                         <p className="text-[10px] text-muted-foreground">
                           Teilen: Object-ID + Passphrase separat (nicht on-chain). Empfänger: Object-ID-Tab → laden →

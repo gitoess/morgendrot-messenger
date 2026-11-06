@@ -72,6 +72,9 @@ export function mergeMessageByDedup(prev: Message[], msg: Message): Message[] {
     content: pickMergedInboxContent(cc, mc),
     encrypted: Boolean(msg.encrypted || cur.encrypted),
     pinnwandPost: cur.pinnwandPost === true || msg.pinnwandPost === true ? true : undefined,
+    chainMailboxObjectId: msg.chainMailboxObjectId || cur.chainMailboxObjectId,
+    chainNonce: msg.chainNonce || cur.chainNonce,
+    chainPurgeable: msg.chainPurgeable === true || cur.chainPurgeable === true ? true : msg.chainPurgeable ?? cur.chainPurgeable,
   }
   if (
     merged.source === 'telegram' &&

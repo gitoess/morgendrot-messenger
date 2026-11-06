@@ -1,11 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { buildMintImageNftTransaction } from '@/frontend/lib/evidence-image-nft-txb'
+import {
+  buildBurnImageNftTransaction,
+  buildMintImageNftTransaction,
+  buildTransferImageNftTransaction,
+} from '@/frontend/lib/evidence-image-nft-txb'
 import { KNOWN_IMAGE_NFT_PACKAGE_IDS } from '@/frontend/lib/evidence-onchain-image'
+
+const ADDR = `0x${'ab'.repeat(32)}`
+const OID = `0x${'cd'.repeat(32)}`
 
 describe('buildMintImageNftTransaction', () => {
   it('baut PTB mit bekanntem Package', () => {
     const txb = buildMintImageNftTransaction({
-      senderAddress: `0x${'ab'.repeat(32)}`,
+      senderAddress: ADDR,
       name: 'Test',
       description: 'Desc',
       imageData: new Uint8Array([1, 2, 3]),
@@ -21,5 +28,24 @@ describe('buildMintImageNftTransaction', () => {
       : null
     const blob = JSON.stringify(data ?? { ok: true, pkg: KNOWN_IMAGE_NFT_PACKAGE_IDS[0] })
     expect(blob.length).toBeGreaterThan(10)
+  })
+})
+
+describe('ImageNFT transfer/burn PTB', () => {
+  it('baut TransferObjects-PTB', () => {
+    const txb = buildTransferImageNftTransaction({
+      senderAddress: ADDR,
+      objectId: OID,
+      recipientAddress: `0x${'11'.repeat(32)}`,
+    })
+    expect(txb).toBeTruthy()
+  })
+
+  it('baut burn-MoveCall-PTB', () => {
+    const txb = buildBurnImageNftTransaction({
+      senderAddress: ADDR,
+      objectId: OID,
+    })
+    expect(txb).toBeTruthy()
   })
 })

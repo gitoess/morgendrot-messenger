@@ -34,6 +34,8 @@ export interface Message {
   chainNonce?: string
   /** true: Nachricht liegt im Rebased-Mailbox-Objekt und kann on-chain gepurgt werden */
   chainPurgeable?: boolean
+  /** Mailbox-Objekt, in dem der MsgKey/PlainMsgKey liegt — Pflicht für Burn (sonst oft Abort 10). */
+  chainMailboxObjectId?: string
   /** Optional: IOTA-TX-Digest (Tangle-Inventar, API oder Manifest). */
   chainTxDigest?: string
   /** pairwise = 1:1 MsgKey; team-broadcast = TeamPlainBroadcastKey */

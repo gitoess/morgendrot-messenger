@@ -201,7 +201,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     const prev = prevLockedRef.current
     prevLockedRef.current = locked
     if (locked && !prev) {
-      wipeLocalPassphraseStoresOnLock()
+      void wipeLocalPassphraseStoresOnLock()
       restoredDashboardViewRef.current = false
       setUnlockError('')
       setSignerImport('')
@@ -898,7 +898,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     if (stayInView) {
       clearDirectIotaSessionSignerOnLock()
       clearDirectChatEcdhKeyMaterial()
-      wipeLocalPassphraseStoresOnLock()
+      await wipeLocalPassphraseStoresOnLock()
       setPrivacySoftLocked(true)
       setMainnetSignerHint(null)
       window.dispatchEvent(new Event(DIRECT_IOTA_UI_CHANGED))
@@ -907,7 +907,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     if (isStandaloneMessengerWithoutBasis()) {
       clearDirectIotaSessionSignerOnLock()
       clearDirectChatEcdhKeyMaterial()
-      wipeLocalPassphraseStoresOnLock()
+      await wipeLocalPassphraseStoresOnLock()
       setPrivacySoftLocked(false)
       setLocked(resolveStandaloneDeviceLocked())
       navigateTo(null)
@@ -918,7 +918,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     if (r.ok) {
       clearDirectIotaSessionSignerOnLock()
       clearDirectChatEcdhKeyMaterial()
-      wipeLocalPassphraseStoresOnLock()
+      await wipeLocalPassphraseStoresOnLock()
       setPrivacySoftLocked(false)
       setMainnetSignerHint(null)
       await checkStatus()
@@ -982,8 +982,17 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     }
     setMainnetSignerHint(null)
     const secrets = await unlockLocalSecretVaults(vaultPw)
-    if (!secrets.ok) {
-      console.warn('[vault] lokale Secret-Vaults nach Signer-Sync:', secrets.errors.join('; '))
+    if (!secrets.passphraseOk) {
+      setSessionSignerSyncBusy(false)
+      setSessionSignerSyncError(
+        secrets.errors.find((e) => e.startsWith('Chat-Passphrasen')) ||
+          secrets.errors.join('\n') ||
+          'Chat-Passphrasen-Vault konnte nicht geöffnet werden. Passwort prüfen.'
+      )
+      return
+    }
+    if (secrets.errors.length > 0) {
+      console.warn('[vault] lokale Secret-Vaults (Teilfehler):', secrets.errors.join('; '))
     }
     setPrivacySoftLocked(false)
     setPassword('')
