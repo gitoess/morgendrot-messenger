@@ -46,6 +46,8 @@ export const PASSPHRASE_MESSAGE_LS_KEY = LS_KEY_LEGACY
 export const PASSPHRASE_MESSAGE_DEFAULT_LS_KEY = LS_DEFAULT_LEGACY
 export const PASSPHRASE_PROTECT_LS_KEY = 'morgendrot.composer.passphraseProtect'
 export const PASSPHRASE_REUSE_LS_KEY = 'morgendrot.composer.passphraseReuse'
+/** Optional: Object-ID einer NFT-Schlüsselkarte für PWMSG-Bindung (H.23 B2). */
+export const PASSPHRASE_NFT_KEYCARD_BIND_LS_KEY = 'morgendrot.composer.nftKeycardBind.v1'
 
 /** FNV-1a über vollständigen Wire — stabiler als Prefix/Suffix. */
 export function fingerprintPassphraseMessageWire(wire: string): string {
@@ -406,6 +408,31 @@ export function writePassphraseReuseEnabled(on: boolean): void {
   if (typeof window === 'undefined') return
   try {
     window.localStorage.setItem(PASSPHRASE_REUSE_LS_KEY, on ? '1' : '0')
+  } catch {
+    /* ignore */
+  }
+}
+
+export function readPassphraseNftKeycardBindObjectId(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const v = window.localStorage.getItem(PASSPHRASE_NFT_KEYCARD_BIND_LS_KEY)?.trim().toLowerCase()
+    return v && /^0x[a-f0-9]{64}$/.test(v) ? v : null
+  } catch {
+    return null
+  }
+}
+
+export function writePassphraseNftKeycardBindObjectId(objectId: string | null): void {
+  if (typeof window === 'undefined') return
+  try {
+    if (!objectId?.trim()) {
+      window.localStorage.removeItem(PASSPHRASE_NFT_KEYCARD_BIND_LS_KEY)
+      return
+    }
+    const v = objectId.trim().toLowerCase()
+    if (!/^0x[a-f0-9]{64}$/.test(v)) return
+    window.localStorage.setItem(PASSPHRASE_NFT_KEYCARD_BIND_LS_KEY, v)
   } catch {
     /* ignore */
   }

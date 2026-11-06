@@ -16,10 +16,13 @@ import {
   generatePassphraseMessageSharePassphrase,
 } from '@/frontend/lib/passphrase-message-crypto'
 import {
+  fingerprintPassphraseMessageWire,
+  readPassphraseNftKeycardBindObjectId,
   readPassphraseProtectEnabled,
   resolvePassphraseForProtectSend,
   rememberPassphraseMessagePassphrase,
 } from '@/frontend/lib/passphrase-message-local-store'
+import { bindWireToNftKeycard, getNftKeycard } from '@/frontend/lib/nft-keycard-local-store'
 import { takeEncryptedSendKeyEpochRenewHint } from '@/frontend/lib/session-epoch-renew-hint'
 import { buildTxtFileWireParts } from '@/frontend/features/send/chat-view-txt-split'
 import {
@@ -715,13 +718,20 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           }
           const { wire, passphrase } = await encryptPassphraseMessage(snap, batchPass)
           rememberPassphraseMessagePassphrase(wire, passphrase)
+          const cardOid = readPassphraseNftKeycardBindObjectId()
+          if (cardOid && getNftKeycard(cardOid)) {
+            bindWireToNftKeycard({
+              objectId: cardOid,
+              wireFingerprint: fingerprintPassphraseMessageWire(wire),
+            })
+          }
           wrapped.push(wire)
         }
         textSnaps = wrapped
         if (batchPass) {
           sharedPassphraseNote = reused
-            ? ` Passphrase (wiederverwendet): ${batchPass}`
-            : ` Passphrase zum Teilen: ${batchPass}`
+            ? ` Passphrase (wiederverwendet, für dich auf diesem Gerät gemerkt): ${batchPass}`
+            : ` Passphrase zum Teilen (für dich auf diesem Gerät gemerkt): ${batchPass}`
         }
       } catch (e) {
         applyValidationError(

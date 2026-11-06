@@ -5,12 +5,15 @@ import { generatePassphraseMessageSharePassphrase } from '@/frontend/lib/passphr
 import {
   clearDefaultPassphraseMessagePassphrase,
   getDefaultPassphraseMessagePassphrase,
+  readPassphraseNftKeycardBindObjectId,
   readPassphraseProtectEnabled,
   readPassphraseReuseEnabled,
   setDefaultPassphraseMessagePassphrase,
+  writePassphraseNftKeycardBindObjectId,
   writePassphraseProtectEnabled,
   writePassphraseReuseEnabled,
 } from '@/frontend/lib/passphrase-message-local-store'
+import { listNftKeycards } from '@/frontend/lib/nft-keycard-local-store'
 
 /** Composer: Passphrase-Nachricht ohne Handshake (Ciphertext on-chain, Key teilen). */
 export function PassphraseProtectComposerToggle(p: {
@@ -20,11 +23,20 @@ export function PassphraseProtectComposerToggle(p: {
   const [on, setOn] = useState(false)
   const [reuse, setReuse] = useState(false)
   const [sharedPass, setSharedPass] = useState('')
+  const [bindOid, setBindOid] = useState('')
+  const [cards, setCards] = useState<{ objectId: string; label?: string }[]>([])
 
   useEffect(() => {
     setOn(readPassphraseProtectEnabled())
     setReuse(readPassphraseReuseEnabled())
     setSharedPass(getDefaultPassphraseMessagePassphrase() ?? '')
+    setBindOid(readPassphraseNftKeycardBindObjectId() ?? '')
+    setCards(
+      listNftKeycards().map(({ objectId, entry }) => ({
+        objectId,
+        label: entry.label,
+      }))
+    )
   }, [])
 
   useEffect(() => {
@@ -64,9 +76,10 @@ export function PassphraseProtectComposerToggle(p: {
         <span>
           <span className="font-medium text-foreground">Passphrase-Schutz</span>
           {' — '}
-          einzelnes Nachrichten-Passwort (nicht das Gruppen-Geheimnis). Ciphertext on-chain, Passphrase
-          separat. Lokal vault-geschützt; nach dem Senden in der Statuszeile — bei Wiederverwenden unten
-          kopierbar.
+          einzelnes Nachrichten-Passwort (nicht Gruppen-Geheimnis). Ciphertext on-chain; Passphrase zum
+          Teilen separat. <span className="text-foreground/90">Für dich auf diesem Gerät</span> landet
+          sie automatisch im Vault (entsperrt → Klartext wieder da; gesperrt → nur Ciphertext). Bei
+          Wiederverwenden unten kopierbar.
         </span>
       </label>
 
@@ -130,6 +143,31 @@ export function PassphraseProtectComposerToggle(p: {
                 Kopieren
               </button>
             </div>
+          ) : null}
+
+          {cards.length > 0 ? (
+            <label className="flex flex-col gap-1">
+              <span className="font-medium text-foreground">Key an NFT-Schlüsselkarte binden (optional)</span>
+              <span className="text-[11px] text-muted-foreground">
+                Zusätzlich zur Passphrase — nicht Alltags-Chat. Karte unter On-Chain / NFT anlegen.
+              </span>
+              <select
+                className="rounded border border-border bg-background px-2 py-1.5 text-[11px] text-foreground"
+                value={bindOid}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setBindOid(v)
+                  writePassphraseNftKeycardBindObjectId(v || null)
+                }}
+              >
+                <option value="">— keine Bindung —</option>
+                {cards.map((c) => (
+                  <option key={c.objectId} value={c.objectId}>
+                    {(c.label || 'Karte') + ' · ' + c.objectId.slice(0, 12) + '…'}
+                  </option>
+                ))}
+              </select>
+            </label>
           ) : null}
         </div>
       ) : null}

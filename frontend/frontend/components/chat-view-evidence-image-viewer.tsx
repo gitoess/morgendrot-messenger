@@ -58,6 +58,11 @@ import {
   lookupEvidencePassphrase,
   rememberEvidencePassphrase,
 } from '@/frontend/lib/evidence-passphrase-local-store'
+import {
+  getNftKeycard,
+  upsertNftKeycardSlot,
+} from '@/frontend/lib/nft-keycard-local-store'
+import { checkNftKeycardOwnedBySigner } from '@/frontend/lib/nft-keycard-ownership'
 
 type Mode = 'object' | 'owner' | 'mint' | 'wire' | 'mailbox'
 
@@ -569,7 +574,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
       if (r.passphrase) {
         setSharePassphrase(r.passphrase)
         setInfo(
-          `Mint OK (${r.onChainBytes} B on-chain).${resizeNote}${oidNote} Passphrase unten kopieren und separat teilen — lokal gemerkt.`
+          `Mint OK (${r.onChainBytes} B on-chain).${resizeNote}${oidNote} Passphrase unten kopieren und separat teilen — für dich auf diesem Gerät im Vault gemerkt.`
         )
       } else {
         setInfo(`Mint OK (Klartext on-chain, ${r.onChainBytes} B).${resizeNote}${oidNote} Digest: ${r.digest}`)
@@ -1165,6 +1170,61 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                             Passphrase kopieren (teilen)
                           </Button>
                         ) : null}
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[11px]"
+                          disabled={busy}
+                          title="Passphrase lokal an diese Object-ID als Schlüsselkarte binden (Vault)"
+                          onClick={() => {
+                            void (async () => {
+                              const pass =
+                                (storedPass || passphrase.trim() || getDefaultEvidencePassphrase() || '').trim()
+                              if (pass.length < 8) {
+                                setError(
+                                  'Schlüsselkarte: Passphrase oben eingeben (≥8) oder NFT zuerst entsperren.'
+                                )
+                                return
+                              }
+                              setBusy(true)
+                              setError('')
+                              try {
+                                const me = getDirectIotaSessionSignerAddress()
+                                if (me) {
+                                  const own = await checkNftKeycardOwnedBySigner(it.objectId, me)
+                                  if (own.ok && !own.owned) {
+                                    setError(
+                                      'Schlüsselkarte: dieses NFT gehört nicht zur aktuellen Signer-Adresse — trotzdem lokal speichern? Abbruch. Besitz prüfen oder anderes Gerät.'
+                                    )
+                                    return
+                                  }
+                                  if (!own.ok) {
+                                    setInfo(`Besitz-Check: ${own.error} — speichere lokal ohne Chain-Check.`)
+                                  }
+                                }
+                                const r = upsertNftKeycardSlot({
+                                  objectId: it.objectId,
+                                  label: it.name || undefined,
+                                  passphrase: pass,
+                                  note: it.source === 'url' ? 'URL-NFT' : 'ImageNFT',
+                                })
+                                if (!r.ok) {
+                                  setError(r.error)
+                                  return
+                                }
+                                rememberEvidencePassphrase({ objectId: it.objectId, passphrase: pass })
+                                setInfo(
+                                  `Als Schlüsselkarte gemerkt (${it.objectId.slice(0, 12)}…) — für dich auf diesem Gerät im Vault.`
+                                )
+                              } finally {
+                                setBusy(false)
+                              }
+                            })()
+                          }}
+                        >
+                          {getNftKeycard(it.objectId) ? 'Schlüsselkarte aktualisieren' : 'Als Schlüsselkarte merken'}
+                        </Button>
                       </div>
                       {storedPass ? (
                         <p className="text-[10px] text-muted-foreground">
