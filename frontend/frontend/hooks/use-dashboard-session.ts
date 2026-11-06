@@ -720,8 +720,13 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     setUnlocking(false)
     if (res.ok) {
       const vaultPw = password
-      /** create + import: Seed im lokalen Tresor halten, sonst nach Restart wieder Seed nötig. */
-      if (unlockMode === 'create' || unlockMode === 'import') {
+      /**
+       * Seed im lokalen Tresor halten, sonst nach API-Restart (`npm run dm`) wieder Seed nötig.
+       * Nicht nur create/import: auch „Tresor öffnen“ + Mnemonic ergänzen (unlockMode=open + sdkExtra).
+       */
+      const persistSignerInVault =
+        unlockMode === 'create' || unlockMode === 'import' || Boolean(sdkExtra?.trim())
+      if (persistSignerInVault) {
         for (let i = 0; i < 12; i++) {
           await new Promise((r) => setTimeout(r, 250))
           const snap = await fetchStatus()
@@ -732,7 +737,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
           setUnlocking(false)
           setUnlockError(
             `${save.error || save.message || 'Tresor konnte nicht gespeichert werden.'}\n\n` +
-              'Profil-Sitzung kann trotzdem aktiv sein — später unter Einstellungen → Tresor lokal sichern.'
+              'Profil-Sitzung kann trotzdem aktiv sein — später unter Einstellungen → Tresor lokal sichern (Signer-Import mit speichern).'
           )
           return
         }
