@@ -1,13 +1,15 @@
 /**
- * H.23 B2-P4a / P4a-dual — NFT-Gate (+ optional festgelegte Wallet).
+ * H.23 B2-P4a / P4a-dual / P4a2 — NFT-Gate (+ optional Wallet / Pubkey-Wrap).
  *
- * DEK = random 32 B; Capsule = Wrap(DEK) mit HKDF gebunden an nftId[+ requiredWallet].
- * Vault: kein Blank-DEK. Unwrap in der App nur nach Gate-Checks.
+ * P4a: DEK via HKDF(nftId) — App-Gate ehrlich.
+ * Dual: HKDF(nftId|wallet) + Signer-Check.
+ * P4a2: DEK via ECDH(ephemeral → recipientPub) gebunden an nft+wallet —
+ *        Wire allein reicht nicht; Privatkey der requiredWallet nötig.
  *
- * Ehrlichkeit: Adresse ist öffentlich — ohne Pubkey-Wrap/Seal bleibt das App-Gate
- * („stark nur mit ehrlicher App“). Einmal Klartext = kopierbar.
  * Spec: docs/NFT-SCHLUESSELKARTE-MODI.md §6a
  */
+
+import { deriveSharedSecret, generateKeyPair } from '@morgendrot/shared/morgendrot-crypto'
 
 const PREFIX = 'MORG_NFTGATE_V1:'
 const MAGIC = 'MORGNFTG1'
@@ -16,19 +18,22 @@ const WRAP_INFO = new TextEncoder().encode('morgendrot-nftgate-wrap-v1')
 const SALT_BYTES = 16
 const IV_BYTES = 12
 const DEK_BYTES = 32
+const P256_RAW_PUB_LEN = 65
 const HEX64 = /^0x[a-f0-9]{64}$/
 
 export const NFT_GATE_WIRE_PREFIX = PREFIX
 export const NFT_GATE_SCHEMA = SCHEMA
 
-export type NftGateMode = 'nft_owner_p4a' | 'nft_and_wallet_p4a'
+export type NftGateMode = 'nft_owner_p4a' | 'nft_and_wallet_p4a' | 'nft_and_wallet_pubkey_p4a2'
 
 export type NftGateMetaV1 = {
   schema: typeof SCHEMA
   gate: NftGateMode
   nftObjectId: string
-  /** Nur bei nft_and_wallet_p4a — Signer muss diese Adresse sein. */
+  /** Dual / P4a2 — Signer muss diese Adresse sein. */
   requiredWallet?: string
+  /** P4a2: ephemeral P-256 uncompressed pub (65 B) base64. */
+  ephemeralPubRawB64?: string
   algo: 'AES-256-GCM'
   bodyIvB64: string
   wrapSaltB64: string
@@ -59,22 +64,52 @@ function getSubtle(): SubtleCrypto {
   return s
 }
 
-async function deriveWrapKey(
+function buf(u: Uint8Array): Parameters<SubtleCrypto['importKey']>[1] {
+  return u as Parameters<SubtleCrypto['importKey']>[1]
+}
+
+function gateInfoTail(nftObjectId: string, requiredWallet?: string | null): Uint8Array {
+  const nft = normHex(nftObjectId)
+  return requiredWallet
+    ? new TextEncoder().encode(`${nft}|w|${normHex(requiredWallet)}`)
+    : new TextEncoder().encode(nft)
+}
+
+/** P4a / Dual: Wrap-Key nur aus Salt + öffentlichen IDs (kein Geheimnis). */
+async function deriveHkdfWrapKey(
   wrapSalt: Uint8Array,
   nftObjectId: string,
   requiredWallet?: string | null
 ): Promise<CryptoKey> {
   const subtle = getSubtle()
-  const nft = normHex(nftObjectId)
-  // P4a (ohne Wallet): unverändert WRAP_INFO || nftId — alte Wires bleiben lesbar.
-  // Dual: WRAP_INFO || "nftId|w|wallet" — Capsule an beide Meta-Felder gebunden.
-  const tail = requiredWallet
-    ? new TextEncoder().encode(`${nft}|w|${normHex(requiredWallet)}`)
-    : new TextEncoder().encode(nft)
+  const tail = gateInfoTail(nftObjectId, requiredWallet)
   const info = new Uint8Array(WRAP_INFO.length + tail.length)
   info.set(WRAP_INFO, 0)
   info.set(tail, WRAP_INFO.length)
-  const ikm = await subtle.importKey('raw', wrapSalt as BufferSource, 'HKDF', false, ['deriveKey'])
+  const ikm = await subtle.importKey('raw', buf(wrapSalt), 'HKDF', false, ['deriveKey'])
+  return subtle.deriveKey(
+    { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(32), info },
+    ikm,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  )
+}
+
+/** P4a2: Wrap-Key aus ECDH-Shared + nft|wallet + salt. */
+async function deriveEcdhWrapKey(
+  sharedSecret: Uint8Array,
+  wrapSalt: Uint8Array,
+  nftObjectId: string,
+  requiredWallet: string
+): Promise<CryptoKey> {
+  const subtle = getSubtle()
+  const tail = gateInfoTail(nftObjectId, requiredWallet)
+  const info = new Uint8Array(WRAP_INFO.length + tail.length + wrapSalt.length)
+  info.set(WRAP_INFO, 0)
+  info.set(tail, WRAP_INFO.length)
+  info.set(wrapSalt, WRAP_INFO.length + tail.length)
+  const ikm = await subtle.importKey('raw', buf(sharedSecret), 'HKDF', false, ['deriveKey'])
   return subtle.deriveKey(
     { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(32), info },
     ikm,
@@ -107,14 +142,13 @@ export function peekNftGateMeta(content: string): NftGateMetaV1 | null {
 /** App-Vorcheck: NFT-Leserecht + ggf. Wallet-Bindung. */
 export function evaluateNftGateAccess(opts: {
   meta: Pick<NftGateMetaV1, 'gate' | 'requiredWallet'>
-  /** AddressOwner oder Lease-Borrower (Zeitkapsel) */
   nftAccessOk: boolean
   signerAddress: string | null | undefined
 }): { ok: true } | { ok: false; error: string } {
   if (!opts.nftAccessOk) {
     return { ok: false, error: 'Kein NFT-Besitz / keine aktive Leihe — Klartext gesperrt (P4a).' }
   }
-  if (opts.meta.gate === 'nft_and_wallet_p4a') {
+  if (opts.meta.gate === 'nft_and_wallet_p4a' || opts.meta.gate === 'nft_and_wallet_pubkey_p4a2') {
     const need = opts.meta.requiredWallet ? normHex(opts.meta.requiredWallet) : ''
     const me = opts.signerAddress ? normHex(opts.signerAddress) : ''
     if (!HEX64.test(need)) {
@@ -145,18 +179,31 @@ function parseNftGateBlob(content: string): { meta: NftGateMetaV1; body: Uint8Ar
   if (metaEnd > blob.length) throw new Error('Ciphertext beschädigt.')
   const meta = JSON.parse(new TextDecoder().decode(blob.slice(metaStart, metaEnd))) as NftGateMetaV1
   if (meta.schema !== SCHEMA) throw new Error('Unbekanntes NFT-Gate-Schema.')
-  if (meta.gate !== 'nft_owner_p4a' && meta.gate !== 'nft_and_wallet_p4a') {
+  if (
+    meta.gate !== 'nft_owner_p4a' &&
+    meta.gate !== 'nft_and_wallet_p4a' &&
+    meta.gate !== 'nft_and_wallet_pubkey_p4a2'
+  ) {
     throw new Error('Unbekannter Gate-Modus.')
   }
   const nftObjectId = normHex(meta.nftObjectId)
   if (!HEX64.test(nftObjectId)) throw new Error('nftObjectId ungültig.')
   let requiredWallet: string | undefined
-  if (meta.gate === 'nft_and_wallet_p4a') {
+  if (meta.gate === 'nft_and_wallet_p4a' || meta.gate === 'nft_and_wallet_pubkey_p4a2') {
     requiredWallet = meta.requiredWallet ? normHex(meta.requiredWallet) : ''
     if (!HEX64.test(requiredWallet)) throw new Error('requiredWallet ungültig.')
   }
+  if (meta.gate === 'nft_and_wallet_pubkey_p4a2') {
+    if (!meta.ephemeralPubRawB64) throw new Error('P4a2: ephemeralPubRawB64 fehlt.')
+    const eph = b64ToBytes(meta.ephemeralPubRawB64)
+    if (eph.length !== P256_RAW_PUB_LEN) throw new Error('P4a2: ephemeral Pub ungültig.')
+  }
   return {
-    meta: { ...meta, nftObjectId, ...(requiredWallet ? { requiredWallet } : {}) },
+    meta: {
+      ...meta,
+      nftObjectId,
+      ...(requiredWallet ? { requiredWallet } : {}),
+    },
     body: blob.slice(metaEnd),
   }
 }
@@ -164,8 +211,13 @@ function parseNftGateBlob(content: string): { meta: NftGateMetaV1; body: Uint8Ar
 export async function encryptNftGateMessage(opts: {
   plainUtf8: string
   nftObjectId: string
-  /** Wenn gesetzt → Gate nft_and_wallet_p4a (Wallet + NFT). */
+  /** Dual / Basis für P4a2. */
   requiredWallet?: string | null
+  /**
+   * P4a2: uncompressed P-256 Pub (65 B) der requiredWallet.
+   * Wenn gesetzt → Gate nft_and_wallet_pubkey_p4a2.
+   */
+  recipientEcdhPubRaw?: Uint8Array | null
 }): Promise<{ wire: string; nftObjectId: string; gate: NftGateMode }> {
   const nftObjectId = normHex(opts.nftObjectId)
   if (!HEX64.test(nftObjectId)) throw new Error('NFT Object-ID: 0x + 64 Hex nötig.')
@@ -175,14 +227,39 @@ export async function encryptNftGateMessage(opts: {
   if (requiredWallet && !HEX64.test(requiredWallet)) {
     throw new Error('requiredWallet: 0x + 64 Hex nötig.')
   }
-  const gate: NftGateMode = requiredWallet ? 'nft_and_wallet_p4a' : 'nft_owner_p4a'
+
+  const pubRaw = opts.recipientEcdhPubRaw
+  const useP4a2 = Boolean(pubRaw && pubRaw.length === P256_RAW_PUB_LEN)
+  if (opts.recipientEcdhPubRaw && !useP4a2) {
+    throw new Error('recipientEcdhPubRaw: 65-Byte P-256 uncompressed nötig.')
+  }
+  if (useP4a2 && !requiredWallet) {
+    throw new Error('P4a2 braucht requiredWallet.')
+  }
+
+  const gate: NftGateMode = useP4a2
+    ? 'nft_and_wallet_pubkey_p4a2'
+    : requiredWallet
+      ? 'nft_and_wallet_p4a'
+      : 'nft_owner_p4a'
 
   const dek = crypto.getRandomValues(new Uint8Array(DEK_BYTES))
   const wrapSalt = crypto.getRandomValues(new Uint8Array(SALT_BYTES))
   const wrapIv = crypto.getRandomValues(new Uint8Array(IV_BYTES))
   const bodyIv = crypto.getRandomValues(new Uint8Array(IV_BYTES))
 
-  const wrapKey = await deriveWrapKey(wrapSalt, nftObjectId, requiredWallet)
+  let wrapKey: CryptoKey
+  let ephemeralPubRawB64: string | undefined
+  if (useP4a2 && requiredWallet && pubRaw) {
+    const eph = await generateKeyPair(true)
+    const shared = await deriveSharedSecret(eph.privateKey, pubRaw)
+    wrapKey = await deriveEcdhWrapKey(shared, wrapSalt, nftObjectId, requiredWallet)
+    ephemeralPubRawB64 = bytesToB64(eph.pubRaw)
+    shared.fill(0)
+  } else {
+    wrapKey = await deriveHkdfWrapKey(wrapSalt, nftObjectId, requiredWallet)
+  }
+
   const wrappedDek = new Uint8Array(
     await getSubtle().encrypt({ name: 'AES-GCM', iv: wrapIv }, wrapKey, dek)
   )
@@ -202,6 +279,7 @@ export async function encryptNftGateMessage(opts: {
     gate,
     nftObjectId,
     ...(requiredWallet ? { requiredWallet } : {}),
+    ...(ephemeralPubRawB64 ? { ephemeralPubRawB64 } : {}),
     algo: 'AES-256-GCM',
     bodyIvB64: bytesToB64(bodyIv),
     wrapSaltB64: bytesToB64(wrapSalt),
@@ -220,12 +298,16 @@ export async function encryptNftGateMessage(opts: {
 }
 
 /**
- * `nftAccessOk` = Owner- oder Lease-Borrower-Check (Caller).
- * Bei Dual-Gate zusätzlich `signerAddress === requiredWallet`.
+ * Bei Dual/P4a2: `signerAddress === requiredWallet`.
+ * Bei P4a2 zusätzlich `ecdhPrivateKey` der requiredWallet (Chat-ECDH).
  */
 export async function decryptNftGateMessageWire(
   content: string,
-  opts: { nftAccessOk: boolean; signerAddress?: string | null }
+  opts: {
+    nftAccessOk: boolean
+    signerAddress?: string | null
+    ecdhPrivateKey?: CryptoKey | null
+  }
 ): Promise<string> {
   const { meta, body } = parseNftGateBlob(content)
   const access = evaluateNftGateAccess({
@@ -235,11 +317,31 @@ export async function decryptNftGateMessageWire(
   })
   if (!access.ok) throw new Error(access.error)
 
-  const wrapKey = await deriveWrapKey(
-    b64ToBytes(meta.wrapSaltB64),
-    meta.nftObjectId,
-    meta.requiredWallet
-  )
+  let wrapKey: CryptoKey
+  if (meta.gate === 'nft_and_wallet_pubkey_p4a2') {
+    if (!opts.ecdhPrivateKey) {
+      throw new Error('P4a2: Chat-ECDH-Privatkey fehlt — Vault entsperren.')
+    }
+    if (!meta.ephemeralPubRawB64 || !meta.requiredWallet) {
+      throw new Error('P4a2-Wire unvollständig.')
+    }
+    const ephPub = b64ToBytes(meta.ephemeralPubRawB64)
+    const shared = await deriveSharedSecret(opts.ecdhPrivateKey, ephPub)
+    wrapKey = await deriveEcdhWrapKey(
+      shared,
+      b64ToBytes(meta.wrapSaltB64),
+      meta.nftObjectId,
+      meta.requiredWallet
+    )
+    shared.fill(0)
+  } else {
+    wrapKey = await deriveHkdfWrapKey(
+      b64ToBytes(meta.wrapSaltB64),
+      meta.nftObjectId,
+      meta.requiredWallet
+    )
+  }
+
   let dek: Uint8Array
   try {
     dek = new Uint8Array(
@@ -250,7 +352,11 @@ export async function decryptNftGateMessageWire(
       )
     )
   } catch {
-    throw new Error('Capsule ungültig oder beschädigt.')
+    throw new Error(
+      meta.gate === 'nft_and_wallet_pubkey_p4a2'
+        ? 'P4a2-Capsule: falscher Privatkey oder beschädigt.'
+        : 'Capsule ungültig oder beschädigt.'
+    )
   }
   try {
     const dekKey = await getSubtle().importKey('raw', dek, { name: 'AES-GCM' }, false, ['decrypt'])

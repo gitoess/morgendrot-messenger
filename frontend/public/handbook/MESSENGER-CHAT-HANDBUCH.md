@@ -6,7 +6,7 @@
 
 **Verwandt:** `docs/PWA-HANDBUCH-OFFLINE.md`, `docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`, `docs/MESSENGER-CAPABILITIES-OVERVIEW.md`, `docs/GRUPPENCHAT-ZIELBILD.md`, `docs/EXPORT-ASSISTENT-REFERENZ.md`.  
 **Privacy / Vault / NFT-Schlüsselkarte (alle Ist-Funktionen + 1-Gerät-Test):** → **`docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`**.  
-**Privacy / NFT (Ist + Backlog):** P4a/P4a-dual Gate + Zeitkapsel P5a/b → **`docs/NFT-SCHLUESSELKARTE-PUBLIC-VAULT-TIMELOCK.md`**, Modi **`docs/NFT-SCHLUESSELKARTE-MODI.md`**. Token-2FA Guarded Purse S1+S2 → **`docs/NFT-GUARDED-SPEND-SPEC.md`**. MeshSleepy → **`docs/MESH-SLEEPY-CHANNEL-SPEC.md`**.
+**Privacy / NFT (Ist + Backlog):** P4a/dual/P4a2 Gate + Zeitkapsel P5a/b → **`docs/NFT-SCHLUESSELKARTE-PUBLIC-VAULT-TIMELOCK.md`**, Modi **`docs/NFT-SCHLUESSELKARTE-MODI.md`**. Token-2FA Purse+Bearer S0–S3 → **`docs/NFT-GUARDED-SPEND-SPEC.md`**. MeshSleepy → **`docs/MESH-SLEEPY-CHANNEL-SPEC.md`**.
 
 ---
 

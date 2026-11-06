@@ -203,9 +203,10 @@ struct NftTimeLease has key {
 | **B2-P5b** | Messenger-UI Zeitkapsel-Panel + Badges + PTB — **Ist**; Chain nach Package-Publish | P5a ✅ |
 | **B2-P5c** / **P4b** | Seal/Policy — marketingfest | optional später |
 | **B2-P5d** | Optional: W2-UX „Ciphertext von W1 holen“ (Object-ID / Besitzer-Galerie + Gate-Hinweis) | P5b ✅; Mailbox-Fremdscan später |
-| **P4a-dual** | Wallet+NFT-Gate parallel zur Leihe (`requiredWallet` = W2) | **Ist** (App); Pubkey-Wrap = P4a2 |
+| **P4a-dual** | Wallet+NFT-Gate parallel zur Leihe (`requiredWallet` = W2) | **Ist** (App) |
+| **P4a2** | Pubkey-Wrap | **Ist** |
 
-**Reihenfolge gesamt:** … → **P4a ✅** → **P4a-dual ✅** → **P5a/b ✅** → P5d optional → 2-Geräte → P4a2/P4b.
+**Reihenfolge gesamt:** … → **P4a ✅** → **P4a-dual ✅** → **P5a/b ✅** → **P4a2 ✅** → P5d optional → 2-Geräte → P4b.
 
 **Nicht hier:** MeshSleepyChannel / Offline-Zahlungen — Phase C (`docs/MESH-SLEEPY-CHANNEL-SPEC.md`).
 

@@ -9,10 +9,10 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 ### Privacy / NFT (2026-11-06)
 
 - **H.23 C1** Double Ratchet PoC C1.1–C1.5 (Envelope, Symmetric/DH, Vault-Sidecar, Opt-in Experiment) — Spec `docs/MESSENGER-DOUBLE-RATCHET-C1-SPEC.md`; kein Composer-Default.
-- **B2-P4a / P4a-dual:** `MORG_NFTGATE_V1` DEK-Capsule; optional Wallet∧NFT-Gate; Claims: Klartext kopierbar; App-Gate ehrlich.
-- **B2-P5a/b Zeitkapsel:** Move `nft_time_lease` + Upgrade Testnet (Lease-Package `0x42b10c99…`, später `0x0c94e888…`); Panel; Ciphertext ≠ NFT (§0a Spec).
-- **B2-S0–S2 Guarded Spend:** Spec + Move `nft_guarded_purse` + NFT-Galerie-Panel (create/deposit/spend/destroy); Upgrade `0x0c94e888…`; PTB+Vitest; Pflichttext lose Coins ungeschützt — `docs/NFT-GUARDED-SPEND-SPEC.md`.
-- **Backlog bewusst:** MeshSleepyChannel `docs/MESH-SLEEPY-CHANNEL-SPEC.md`; 2-Geräte-Feldtest verschoben.
+- **B2-P4a / P4a-dual / P4a2:** `MORG_NFTGATE_V1` DEK-Capsule; Dual Wallet∧NFT; P4a2 ECDH-Pubkey-Wrap (`nft_and_wallet_pubkey_p4a2`); Claims: Klartext kopierbar; App-Gate ehrlich (Seal = P4b).
+- **B2-P5a/b Zeitkapsel:** Move `nft_time_lease` + Upgrade Testnet (Lease-Package `0x42b10c99…` → aktuell Modules `0x10b16597…`); Panel; Ciphertext ≠ NFT (§0a Spec).
+- **B2-S0–S3 Guarded Spend:** Guarded Purse + Bearer Treasury (`nft_bearer_treasury` create/deposit/withdraw/freeze/reclaim); Upgrade `0x10b16597…`; Panels unter NFT; Pflichttext lose Coins — `docs/NFT-GUARDED-SPEND-SPEC.md`.
+- **Backlog bewusst:** MeshSleepyChannel `docs/MESH-SLEEPY-CHANNEL-SPEC.md`; P4b Seal; 2-Geräte-Feldtest verschoben.
 
 ### Sicherheit / Sendepfad
 

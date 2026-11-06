@@ -21,6 +21,7 @@ import {
   readPassphraseNftDualWalletGateEnabled,
   readPassphraseNftKeycardBindObjectId,
   readPassphraseNftKeycardBindSlotId,
+  readPassphraseNftPubkeyWrapP4a2Enabled,
   readPassphraseNftRequiredWallet,
   readPassphraseNftStrongGateEnabled,
   readPassphraseProtectEnabled,
@@ -725,13 +726,28 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         )
 
         if (strongGate) {
-          // B2-P4a / dual: DEK-Capsule, kein Blank-DEK / keine Passphrase im Vault.
+          // B2-P4a / dual / P4a2: DEK-Capsule, kein Blank-DEK / keine Passphrase im Vault.
           const dual = readPassphraseNftDualWalletGateEnabled()
+          const p4a2 = dual && readPassphraseNftPubkeyWrapP4a2Enabled()
           const requiredWallet = dual ? readPassphraseNftRequiredWallet() : null
           if (dual && !requiredWallet) {
             throw new Error(
               'Dual-Gate: erlaubte Wallet-Adresse setzen (0x…), oder „Wallet + NFT“ aus.'
             )
+          }
+          let recipientEcdhPubRaw: Uint8Array | null = null
+          if (p4a2 && requiredWallet) {
+            const { base64ToUint8 } = await import('@morgendrot/shared/bytes-base64')
+            const { getDirectChatEcdhPeerPubBase64 } = await import(
+              '@/frontend/lib/direct-chat-ecdh-session'
+            )
+            const peerB64 = getDirectChatEcdhPeerPubBase64(requiredWallet)
+            if (!peerB64) {
+              throw new Error(
+                'P4a2: ECDH-Pubkey der erlaubten Wallet fehlt — zuerst Handshake/Connect für diese 0x-Adresse.'
+              )
+            }
+            recipientEcdhPubRaw = base64ToUint8(peerB64)
           }
           for (const snap of textSnaps) {
             if (!snap.trim()) {
@@ -742,6 +758,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
               plainUtf8: snap,
               nftObjectId: cardOid!,
               requiredWallet,
+              recipientEcdhPubRaw,
             })
             bindWireToNftKeycard({
               objectId: nftObjectId,
@@ -753,9 +770,11 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           }
           textSnaps = wrapped
           await flushNftKeycardVaultPersist()
-          sharedPassphraseNote = dual
-            ? ` Starkes Dual-Gate (Wallet+NFT): nur Adresse ${requiredWallet!.slice(0, 10)}… mit NFT-Leserecht. Klartext danach kopierbar. Kein Blank-DEK im Vault.`
-            : ' Starkes NFT-Gate (P4a): Lesen nur mit Besitz/Leihe der Schlüsselkarte — kein Passphrase-Teilen, kein Blank-DEK im Vault. Klartext danach kopierbar.'
+          sharedPassphraseNote = p4a2
+            ? ` Starkes P4a2 (Wallet+NFT+Pubkey): nur ${requiredWallet!.slice(0, 10)}… mit NFT + ECDH-Privatkey. Klartext danach kopierbar.`
+            : dual
+              ? ` Starkes Dual-Gate (Wallet+NFT): nur Adresse ${requiredWallet!.slice(0, 10)}… mit NFT-Leserecht. Klartext danach kopierbar. Kein Blank-DEK im Vault.`
+              : ' Starkes NFT-Gate (P4a): Lesen nur mit Besitz/Leihe der Schlüsselkarte — kein Passphrase-Teilen, kein Blank-DEK im Vault. Klartext danach kopierbar.'
         } else {
           const { passphrase: batchPass, reused } = resolvePassphraseForProtectSend(
             generatePassphraseMessageSharePassphrase

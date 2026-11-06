@@ -218,6 +218,8 @@ Intern heißt der Chain-Call weiter `/purge-msg` — in der UI nur noch **Burn**
 | Double Ratchet / FS **pro Nachricht** | § H.23 Phase 3 / E2EE **C1** | Spec + PoC C1.1/C1.2a; kein Composer-Default |
 | Starkes NFT-Besitz-Gate | B2-P4a | Ist (App-Gate Capsule); optional **Wallet + NFT (Dual)** |
 | Dual Wallet∧NFT | P4a-dual | Composer unter Starkes Gate; Klartext danach kopierbar |
+| Pubkey-Wrap | P4a2 | Checkbox unter Dual; ECDH-Peer-Pub der erlaubten Wallet nötig |
+| Bearer Treasury | B2-S3 | Panel unter NFT; wer NFT hat, darf abheben |
 | NFT-gesichertes Senden (IOTA) | B2-S0 Spec | Backlog — **nur Token**; Purse-2FA (X∧NFT); lose Coins außerhalb = ungeschützt (`docs/NFT-GUARDED-SPEND-SPEC.md`) |
 | Öffentlicher Ciphertext-Vault + NFT-Timelock („Zeitkapsel“) | **B2-P5a/b Ist** | NFT = Gate, Texte = Ciphertext getrennt. Borrower: optional Object-ID / Besitzer=Archiv unter On-Chain/NFT laden, dann lesen. Spec **`docs/NFT-SCHLUESSELKARTE-PUBLIC-VAULT-TIMELOCK.md`** §0a |
 | Rotierende Outboxes / voller Dead-Drop | Claims-Check + Architektur | Nicht gebaut |
@@ -233,9 +235,9 @@ Siehe auch Kopf von `docs/ROADMAP-FAHRPLAN.md` (Nachtrag Privacy 2026-11-05): *�
 ## 9. Empfohlene Reihenfolge ab hier
 
 1. ~~Anleitung §0 / Epoch+Burn / C1 / P4a / P5a/b / P4a-dual~~ → **Ist** (Logbuch 2026-11-06).  
-2. **Als Nächstes (optional):** B2-S3 Bearer Treasury / P4a2 / 2-Geräte-Feldtest; Guarded Purse S1+S2 Ist (`0x0c94e888…`, Panel unter NFT).  
+2. **Als Nächstes (optional):** P4b Seal / 2-Geräte-Feldtest; S3 Bearer + P4a2 Ist (`0x10b16597…`).  
 3. **Feld:** Zeitkapsel-Panel Leihe + Ciphertext per Object-ID/Besitzer; optional P5d.  
-4. **Später:** P4a2 Pubkey / P4b Seal → **2-Geräte-Feldtest**.  
+4. **Später:** **2-Geräte-Feldtest**.  
 5. **Nicht parallel:** MeshSleepyChannel, Decoys, Outboxes, HW-Fragment.
 
 ---

@@ -65,7 +65,7 @@ Nutzen: beide haben ein sichtbares Token + denselben Slot-Inhalt — **kein** st
 |-------|--------|
 | **P4a** App-Gate + Capsule (`MORG_NFTGATE_V1`, NFT-Besitz/Leihe) | **Ist** — ehrlich: stark nur mit ehrlicher App |
 | **P4a-dual** Wallet **und** NFT | **Ist** — Composer „Wallet + NFT“; Capsule an `nftId`+`requiredWallet`; App prüft Signer=Adresse **und** NFT-Leserecht |
-| **P4a2** Pubkey-Wrap an `requiredWallet` | Backlog — Adresse allein ist öffentlich; echtes „nur diese Keys“ braucht Empfänger-Pubkey |
+| **P4a2** Pubkey-Wrap an `requiredWallet` | **Ist** — Gate `nft_and_wallet_pubkey_p4a2`; DEK via ECDH an Peer-Pub; Composer-Checkbox unter Dual |
 | **P4b** Seal/Policy Move | Backlog — erst dann Marketing „auch unter Zwang“ |
 
 Ohne P4b bleibt Marketing „auch unter Zwang unmöglich“ eine **Produktlüge**.  
@@ -78,7 +78,7 @@ Ohne P4b bleibt Marketing „auch unter Zwang unmöglich“ eine **Produktlüge*
 | Variante | Stärke | Ist |
 |----------|--------|-----|
 | **App-Dual (P4a-dual)** | Beide Checks in der App; Capsule-HKDF an nft+wallet gebunden (Meta nicht umetikettierbar) | **Ist** |
-| **Pubkey-Dual (P4a2)** | DEK zusätzlich an Empfänger-Pubkey gewrappt | Backlog |
+| **Pubkey-Dual (P4a2)** | DEK via ECDH an Empfänger-Pubkey (+ nft/wallet-Bindung); Wire allein unzureichend | **Ist** |
 | **Seal (P4b)** | Chain erzwingt Policy | Backlog |
 
 **Zeitkapsel:** parallel denkbar — `requiredWallet` = W2; während Leihe zählt Lease-Borrower als NFT-Leserecht, Signer muss trotzdem = `requiredWallet`.  
@@ -86,12 +86,12 @@ Ohne P4b bleibt Marketing „auch unter Zwang unmöglich“ eine **Produktlüge*
 
 UI: Passphrase-Schutz → Karte binden → Starkes Gate → optional **Wallet + NFT (Dual)** + Adressfeld.
 
-### 6b. Token-2FA: Guarded Purse (S1+S2 Ist)
+### 6b. Token-2FA: Guarded Purse + Bearer Treasury (S0–S3 Ist)
 
 **Scope:** nur **IOTA/Token**, nicht Klartext.  
-**v1:** **Modus A** — Coins in Purse bei X; `spend` nur Signer=X **und** X besitzt NFT (= 2FA-Schlüsselkarte). Move **`nft_guarded_purse`** + Panel Ist (`0x0c94e888…`).  
-**Später:** Modus B / S3 optional.  
-**Pflichttext:** Lose Coins außerhalb der Purse = **ungeschützt**.  
+**Modus A:** Purse bei X; `spend` nur X∧NFT — Panel Ist.  
+**Modus B:** Shared Treasury; `withdraw` wer NFT hat — Panel Ist (`0x10b16597…`).  
+**Pflichttext:** Lose Coins außerhalb Purse/Treasury = **ungeschützt**.  
 SSOT **`docs/NFT-GUARDED-SPEND-SPEC.md`**. Nicht Leserecht/Zeitkapsel/MeshSleepy.
 
 ## 7. Optional: Öffentlicher Vault + NFT-Timelock (B2-P5)

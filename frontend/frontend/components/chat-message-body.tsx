@@ -97,14 +97,21 @@ function NftGateMessageBody(p: {
       const addressOwned = own.ok && own.owned
       const nftAccessOk = Boolean(addressOwned || borrowerOk)
       setOwned(nftAccessOk ? true : own.ok ? false : null)
+      const { getDirectChatEcdhPrivateKey } = await import(
+        '@/frontend/lib/direct-chat-ecdh-session'
+      )
       const t = await decryptNftGateMessageWire(p.content, {
         nftAccessOk,
         signerAddress: me,
+        ecdhPrivateKey:
+          meta?.gate === 'nft_and_wallet_pubkey_p4a2' ? getDirectChatEcdhPrivateKey() : null,
       })
-      if (meta?.gate === 'nft_and_wallet_p4a') {
-        setLeaseBadge((prev) =>
-          [prev, `Dual-Gate: Wallet ${meta.requiredWallet?.slice(0, 12) ?? '—'}… + NFT`].filter(Boolean).join(' · ')
-        )
+      if (meta?.gate === 'nft_and_wallet_p4a' || meta?.gate === 'nft_and_wallet_pubkey_p4a2') {
+        const label =
+          meta.gate === 'nft_and_wallet_pubkey_p4a2'
+            ? `P4a2: Wallet ${meta.requiredWallet?.slice(0, 12) ?? '—'}… + NFT + Pubkey`
+            : `Dual-Gate: Wallet ${meta.requiredWallet?.slice(0, 12) ?? '—'}… + NFT`
+        setLeaseBadge((prev) => [prev, label].filter(Boolean).join(' · '))
       }
       setPlain(t)
       setHidden(false)

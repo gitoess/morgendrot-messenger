@@ -61,6 +61,8 @@ export const PASSPHRASE_NFT_STRONG_GATE_LS_KEY = 'morgendrot.composer.nftStrongG
 /** P4a-dual: zusätzlich festgelegte Wallet (AND mit NFT-Leserecht). */
 export const PASSPHRASE_NFT_DUAL_WALLET_GATE_LS_KEY = 'morgendrot.composer.nftDualWalletGate.v1'
 export const PASSPHRASE_NFT_REQUIRED_WALLET_LS_KEY = 'morgendrot.composer.nftRequiredWallet.v1'
+/** P4a2: Dual + ECDH-Pubkey-Wrap der DEK an Peer-Pub der requiredWallet. */
+export const PASSPHRASE_NFT_PUBKEY_WRAP_P4A2_LS_KEY = 'morgendrot.composer.nftPubkeyWrapP4a2.v1'
 
 /** FNV-1a über normalisierten Wire — Send und Inbox treffen denselben Fingerprint. */
 export function fingerprintPassphraseMessageWire(wire: string): string {
@@ -578,6 +580,27 @@ export function writePassphraseNftRequiredWallet(address: string | null): void {
     const v = address.trim().toLowerCase()
     if (!/^0x[a-f0-9]{64}$/.test(v)) return
     window.localStorage.setItem(PASSPHRASE_NFT_REQUIRED_WALLET_LS_KEY, v)
+  } catch {
+    /* ignore */
+  }
+}
+
+export function readPassphraseNftPubkeyWrapP4a2Enabled(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return (
+      readPassphraseNftDualWalletGateEnabled() &&
+      window.localStorage.getItem(PASSPHRASE_NFT_PUBKEY_WRAP_P4A2_LS_KEY) === '1'
+    )
+  } catch {
+    return false
+  }
+}
+
+export function writePassphraseNftPubkeyWrapP4a2Enabled(on: boolean): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(PASSPHRASE_NFT_PUBKEY_WRAP_P4A2_LS_KEY, on ? '1' : '0')
   } catch {
     /* ignore */
   }

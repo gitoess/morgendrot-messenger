@@ -9,6 +9,7 @@ import {
   readPassphraseNftKeycardBindObjectId,
   readPassphraseNftKeycardBindSlotId,
   readPassphraseNftDualWalletGateEnabled,
+  readPassphraseNftPubkeyWrapP4a2Enabled,
   readPassphraseNftRequiredWallet,
   readPassphraseNftStrongGateEnabled,
   readPassphraseProtectEnabled,
@@ -18,6 +19,7 @@ import {
   writePassphraseNftDualWalletGateEnabled,
   writePassphraseNftKeycardBindObjectId,
   writePassphraseNftKeycardBindSlotId,
+  writePassphraseNftPubkeyWrapP4a2Enabled,
   writePassphraseNftRequiredWallet,
   writePassphraseNftStrongGateEnabled,
   writePassphraseProtectEnabled,
@@ -46,6 +48,7 @@ export function PassphraseProtectComposerToggle(p: {
   const [bindSlot, setBindSlot] = useState('default')
   const [strongGate, setStrongGate] = useState(false)
   const [dualWallet, setDualWallet] = useState(false)
+  const [pubkeyWrapP4a2, setPubkeyWrapP4a2] = useState(false)
   const [requiredWallet, setRequiredWallet] = useState('')
   const [rememberOnDevice, setRememberOnDevice] = useState(true)
   const [vaultSessionOpen, setVaultSessionOpen] = useState(() => hasVaultPasswordSession())
@@ -62,6 +65,7 @@ export function PassphraseProtectComposerToggle(p: {
       setBindSlot(readPassphraseNftKeycardBindSlotId())
       setStrongGate(readPassphraseNftStrongGateEnabled())
       setDualWallet(readPassphraseNftDualWalletGateEnabled())
+      setPubkeyWrapP4a2(readPassphraseNftPubkeyWrapP4a2Enabled())
       setRequiredWallet(readPassphraseNftRequiredWallet() ?? '')
       setCards(
         listNftKeycards().map(({ objectId, entry }) => ({
@@ -331,19 +335,39 @@ export function PassphraseProtectComposerToggle(p: {
                           <span className="font-medium text-foreground">Wallet + NFT (Dual)</span>
                           {' — '}
                           Lesen nur wenn Signer = festgelegte Adresse <em>und</em> NFT-Leserecht. Capsule
-                          an beide Felder gebunden; Adresse allein ist kein Geheimnis (Pubkey-Wrap = später).
+                          an beide Felder gebunden; Adresse allein ist kein Geheimnis — dafür P4a2.
                         </span>
                       </label>
                       {dualWallet ? (
-                        <input
-                          className="w-full rounded border border-border bg-background px-2 py-1 font-mono text-[11px] text-foreground"
-                          value={requiredWallet}
-                          placeholder="0x… erlaubte Wallet"
-                          onChange={(e) => {
-                            setRequiredWallet(e.target.value)
-                            writePassphraseNftRequiredWallet(e.target.value || null)
-                          }}
-                        />
+                        <>
+                          <input
+                            className="w-full rounded border border-border bg-background px-2 py-1 font-mono text-[11px] text-foreground"
+                            value={requiredWallet}
+                            placeholder="0x… erlaubte Wallet"
+                            onChange={(e) => {
+                              setRequiredWallet(e.target.value)
+                              writePassphraseNftRequiredWallet(e.target.value || null)
+                            }}
+                          />
+                          <label className="flex flex-wrap items-start gap-2">
+                            <input
+                              type="checkbox"
+                              className="mt-0.5"
+                              checked={pubkeyWrapP4a2}
+                              onChange={(e) => {
+                                const next = e.target.checked
+                                setPubkeyWrapP4a2(next)
+                                writePassphraseNftPubkeyWrapP4a2Enabled(next)
+                              }}
+                            />
+                            <span>
+                              <span className="font-medium text-foreground">Pubkey-Wrap (P4a2)</span>
+                              {' — '}
+                              DEK zusätzlich an ECDH-Pubkey der erlaubten Wallet; Wire allein entschlüsselt
+                              nicht. Braucht Peer-Pub (Handshake) für diese Adresse.
+                            </span>
+                          </label>
+                        </>
                       ) : null}
                     </div>
                   ) : null}

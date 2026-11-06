@@ -1,9 +1,9 @@
 # NFT-gesichertes Ausgeben (Guarded Spend) — Spec / Backlog
 
 **Stand:** 2026-11-06  
-**Status:** **B2-S1+S2 Ist** — Modus A `messaging::nft_guarded_purse` on-chain (`0x0c94e888…`; Stamm `0x06e099…`). PTB + Panel unter NFT-Galerie (create/deposit/spend/destroy) + Pflichttext lose Coins. Modus B / S3 später.  
-**Scope:** **nur Token/Coins (IOTA)** — **kein** Klartext, kein Chat-Leserecht (das bleibt P4a/P5).  
-**Verwandt:** Leserecht P4a-dual (`docs/NFT-SCHLUESSELKARTE-MODI.md` §6a) · Zeitkapsel P5 · **nicht** MeshSleepyChannel.
+**Status:** **B2-S0–S3 Ist** — Modus A Guarded Purse + Modus B Bearer Treasury (`nft_bearer_treasury`) on-chain (`0x10b16597…`; Stamm `0x06e099…`). Panels unter NFT-Galerie.  
+**Scope:** **nur Token/Coins (IOTA)** — **kein** Klartext, kein Chat-Leserecht (das bleibt P4a/P5/P4a2).  
+**Verwandt:** Leserecht P4a-dual/P4a2 (`docs/NFT-SCHLUESSELKARTE-MODI.md` §6a) · Zeitkapsel P5 · **nicht** MeshSleepyChannel.
 
 > **UI-Name:** „2FA-Schlüsselkarte für Token“ / „NFT-gesicherte Purse“  
 > Coins und NFT bleiben **getrennte** Objekte. Das NFT enthält **keine** Coins und **keinen** Klartext.
@@ -26,13 +26,13 @@
 | | Entscheidung |
 |--|----------------|
 | **v1** | **Nur Modus A — Guarded Purse** = 2FA-Schlüsselkarte **für Token** |
-| **Später** | Modus B Bearer Treasury (optional) |
+| **v1b** | Modus B Bearer Treasury — **Ist** (S3) |
 | **Nicht** | Klartext/Chat-Gate; Mesh-Payments; „NFT allein bewegt fremde Coins“ |
 
 | Modus | Wer signiert? | Wo liegen die Coins? | NFT weg von X → |
 |-------|---------------|----------------------|-----------------|
 | **A — Guarded Purse (Ist-Ziel)** | immer Wallet X | nur in `GuardedPurse` owned by X | `spend` aus Purse **blockiert**, bis NFT zurück bei X |
-| **B — Bearer Treasury (später)** | NFT-Owner | Shared-Vault | Senderecht wandert mit NFT |
+| **B — Bearer Treasury (Ist)** | NFT-Owner | Shared-Vault | Senderecht wandert mit NFT |
 
 **Pflicht-Kommunikation:** Lose / freie Coins **außerhalb** der Purse sind **ungeschützt** — normales Wallet-Senden bleibt möglich. Geschützt ist **nur** das Guthaben in der Purse.
 
@@ -111,9 +111,9 @@ Passt zu „NFT = Capability, wandert unabhängig“. **Nicht** dasselbe wie A.
 | **B2-S0** | Dieses Spec + Roadmap/Claims | — **Ist** |
 | **B2-S1** | Move Modus A `GuardedPurse` + Vitest/PTB | Messaging-Package Upgrade — **Ist** (`0x0c94e888…`) |
 | **B2-S2** | Messenger-UI Deposit/Spend + Badge | S1 — **Ist** (Panel unter NFT-Galerie) |
-| **B2-S3** | Optional Modus B Bearer Treasury | nach S1 Feld |
+| **B2-S3** | Modus B Bearer Treasury Move+UI | S1 — **Ist** (`0x10b16597…`) |
 
-### On-Chain (S1)
+### On-Chain (S1 Guarded Purse)
 
 | | |
 |--|--|
@@ -121,7 +121,15 @@ Passt zu „NFT = Capability, wandert unabhängig“. **Nicht** dasselbe wie A.
 | Entries | `create_purse` · `deposit` · `spend` · `destroy_empty` |
 | Checks `spend` | `sender == owner` ∧ `object::id(nft) == required_nft_id` (NFT-Arg = Besitz) |
 | Coin | generisch `Coin<C>` / Default App `0x2::iota::IOTA` |
-| Package | Upgrade `0x0c94e888…` (Cap unverändert); Mailbox-Stamm `0x06e099…` |
+
+### On-Chain (S3 Bearer Treasury)
+
+| | |
+|--|--|
+| Modul | `messaging::nft_bearer_treasury` |
+| Entries | `create_treasury` · `deposit` · `withdraw` · `admin_set_frozen` · `admin_reclaim` · `destroy_empty` |
+| Checks `withdraw` | `object::id(nft) == required_nft_id` (kein `sender==admin`) |
+| Package | Upgrade `0x10b16597…` (Cap unverändert); Mailbox-Stamm `0x06e099…` |
 
 ---
 
@@ -130,4 +138,5 @@ Passt zu „NFT = Capability, wandert unabhängig“. **Nicht** dasselbe wie A.
 > **Nur Token, kein Klartext.** Coins und NFT getrennt.  
 > **Guarded Purse:** X deponiert IOTA in der Purse; on-chain `spend` nur wenn `sender == X` **und** X besitzt das gebundene NFT (= 2FA-Schlüsselkarte). NFT transferiert weg → kein Purse-Spend.  
 > **Lose Coins außerhalb der Purse = ungeschützt** (UI/Claims Pflichttext).  
-> Modus B (Bearer) später; nicht mit Leserecht/Zeitkapsel/MeshSleepy vermischen.
+> **Bearer Treasury:** Shared Vault; wer NFT hat, darf abheben (Admin freeze/reclaim).  
+> Nicht mit Leserecht/Zeitkapsel/MeshSleepy vermischen.
