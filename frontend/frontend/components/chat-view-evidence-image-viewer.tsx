@@ -61,6 +61,12 @@ import {
 
 type Mode = 'object' | 'owner' | 'mint' | 'wire' | 'mailbox'
 
+type OwnerGalleryItem = EvidenceOwnerListItem & {
+  previewUrl?: string
+  attrs?: EvidenceAttrPair[]
+  rememberedPass?: string
+}
+
 type PreviewMeta = {
   mime: string
   bytes: number
@@ -130,15 +136,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
   const [pendingMatch, setPendingMatch] = useState<EvidenceObjectTypeMatch | undefined>()
   const [pendingName, setPendingName] = useState<string | undefined>()
   const [pendingObjectId, setPendingObjectId] = useState<string | undefined>()
-  const [ownerItems, setOwnerItems] = useState<
-    Array<
-      EvidenceOwnerListItem & {
-        previewUrl?: string
-        attrs?: EvidenceAttrPair[]
-        rememberedPass?: string
-      }
-    >
-  >([])
+  const [ownerItems, setOwnerItems] = useState<OwnerGalleryItem[]>([])
   const [ownerCursor, setOwnerCursor] = useState<string | null>(null)
   const [ownerHasNext, setOwnerHasNext] = useState(false)
   const [ownerAddress, setOwnerAddress] = useState('')
@@ -405,7 +403,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
         setOwnerCursor(r.nextCursor)
         setOwnerHasNext(r.hasNextPage)
         let unlocked = 0
-        const mapped = []
+        const mapped: OwnerGalleryItem[] = []
         for (const it of r.items) {
           const attrs = metaFromDescription(it.description).attrs
           if (it.parsed) {

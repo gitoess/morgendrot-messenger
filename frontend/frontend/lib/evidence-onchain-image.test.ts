@@ -110,8 +110,9 @@ describe('evidence-onchain-image', () => {
     expect(r.ok).toBe(true)
     if (r.ok) {
       expect(r.match.isKnownPackage).toBe(true)
-      expect(r.parsed.mime).toBe('image/jpeg')
-      expect(r.parsed.encryptedFlag).toBe(true)
+      expect(r.parsed).toBeDefined()
+      expect(r.parsed?.mime).toBe('image/jpeg')
+      expect(r.parsed?.encryptedFlag).toBe(true)
       expect(r.name).toBe('Test')
     }
   })
@@ -173,8 +174,15 @@ describe('evidence-onchain-image', () => {
     const seen: string[] = []
     const client = {
       getObject: async () => ({ data: null }),
-      getOwnedObjects: async (input: { filter?: { StructType?: string } }) => {
-        const st = input.filter?.StructType || ''
+      getOwnedObjects: async (input: {
+        owner: string
+        cursor?: string | null
+        limit?: number
+        filter?: { StructType?: string } | { MatchAny: Array<{ StructType: string }> }
+        options?: { showContent?: boolean; showType?: boolean }
+      }) => {
+        const st =
+          input.filter && 'StructType' in input.filter ? input.filter.StructType || '' : ''
         seen.push(st)
         // Move-Struct-Namen sind case-sensitiv — kein toLowerCase auf SimpleNFT.
         if (st.endsWith('::nft::SimpleNFT')) {
