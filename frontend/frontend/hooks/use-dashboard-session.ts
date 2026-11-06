@@ -678,7 +678,10 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       setUnlocking(false)
       if (unlockResult.ok) {
         if (vaultPassword.length >= 8) {
-          await unlockLocalSecretVaults(vaultPassword)
+          const secrets = await unlockLocalSecretVaults(vaultPassword)
+          if (!secrets.ok) {
+            console.warn('[vault] lokale Secret-Vaults:', secrets.errors.join('; '))
+          }
         }
         vaultUnlockRequestedRef.current = false
         sessionUnlockedStableRef.current = true
@@ -726,7 +729,10 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     if (res.ok) {
       const vaultPw = password
       if (vaultPw.trim().length >= 8) {
-        await unlockLocalSecretVaults(vaultPw)
+        const secrets = await unlockLocalSecretVaults(vaultPw)
+        if (!secrets.ok) {
+          console.warn('[vault] lokale Secret-Vaults:', secrets.errors.join('; '))
+        }
       }
       /**
        * Seed im lokalen Tresor halten, sonst nach API-Restart (`npm run dm`) wieder Seed nötig.
@@ -808,7 +814,10 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     } else if (VAULT_ALREADY_UNLOCKED_RE.test(res.error || '')) {
       const vaultPw = password
       if (vaultPw.trim().length >= 8) {
-        await unlockLocalSecretVaults(vaultPw)
+        const secrets = await unlockLocalSecretVaults(vaultPw)
+        if (!secrets.ok) {
+          console.warn('[vault] lokale Secret-Vaults:', secrets.errors.join('; '))
+        }
       }
       const vaultKeysLoaded = await ensureBackendVaultKeysInSession(vaultPw)
       if (vaultKeysLoaded) {

@@ -305,7 +305,7 @@ export async function unlockPassphraseMessageVault(password: string): Promise<
   return { ok: true, migratedLegacy }
 }
 
-/** Sitzung sperren: Klartext aus RAM, Ciphertext bleibt. (Vault-Passwort: local-secret-vaults) */
+/** Sitzung sperren: Klartext aus RAM + Tab-Backup; Ciphertext-Sidecar bleibt. */
 export function lockPassphraseMessageVault(): void {
   if (persistTimer) {
     clearTimeout(persistTimer)
@@ -313,6 +313,7 @@ export function lockPassphraseMessageVault(): void {
   }
   memoryByWire = {}
   memoryDefault = null
+  clearTabBackup()
   emitChanged()
 }
 

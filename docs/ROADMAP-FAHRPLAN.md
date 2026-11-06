@@ -23,9 +23,11 @@
 
 **Nachtrag 2026-11-05 (On-Chain / NFT UI):** Posteingang-Menü **Werkzeuge** entfernt — alles unter **On-Chain / NFT** (Object/Besitzer/Wire/Mint + Tab **Klartext-MB**: bekannte `MAILBOX_ID` → nur `PlainMsgKey`). Details **`docs/EVIDENCE-IMAGE-AND-NFT-ATTRIBUTES.md`**.
 
-**Nachtrag 2026-11-05 (Privacy / H.23 UX, Claims):** Vault-Lock leert lokale Passphrase-Stores; Chat-⋮ **Schlüssel erneuern** (Epoch) + Hinweis nach Enc-Send; Opt-in **Burn-on-read** (Purge mit Bestätigung). Claims ehrlich: **`docs/SECURITY-CLAIMS-CHECK-2026-11.md`**. **Kein** Double-Ratchet / Decoys / Outboxes in dieser Tranche. **Empfohlene nächste Arbeit:** Feldtest ImageNFT-Mint + Passphrase-Nachricht + Lock-Wipe + Epoch-Renew (2 Geräte) — **vor** neuer Architektur (§ H.23 Ratchet).
+**Nachtrag 2026-11-05 (Privacy / H.23 UX, Claims):** Vault-Lock leert lokale Passphrase-Stores; Chat-⋮ **Schlüssel erneuern** (Epoch) + Hinweis nach Enc-Send; Opt-in **Burn-on-read** (Purge mit Bestätigung). Claims ehrlich: **`docs/SECURITY-CLAIMS-CHECK-2026-11.md`**. **Kein** Double-Ratchet / Decoys / Outboxes in dieser Tranche.
 
 **Nachtrag 2026-11-06 (Passphrase UX + Secret-Vaults):** Passphrase-Bubble: Auto-Decrypt nach Unlock; **Verbergen** (weich) / **Erneut sperren** (hart, Confirm → wieder Passphrase nötig). Chat- + ImageNFT-Passphrasen + **Team-Keys** at rest AES-GCM (`passphraseMsg.enc.v1`, `evidenceImage…enc.v1`, `teamKeys.enc.v1`); gemeinsames Unlock/Lock/Purge. Legacy Klartext wird migriert. **H.23 B1 Vault `.team-keys.enc`:** Browser-Ist = `teamKeys.enc.v1` (Nest-Datei später optional).
+
+**Nachtrag 2026-11-06 (Priorität PC vor Handy; 2-Geräte-Feldtest hinten):** **Schreibtisch/PC zuerst** — H.23 Vault/B1 härten, dann **H.23 B2 P0** NFT-Schlüsselkarte (Spec + Enc-Store). **2-Geräte-Feldtest** (ImageNFT + Passphrase + Lock-Wipe + Team-Key/Handoff) und Standalone **4e/4f** bewusst **später** (aktuell nur 1 Handy). Handy-APK-Abnahme **nach** stabiler PC-Version.
 
 **Nachtrag 2026-11-06 (Passphrase-Msg Vault-Sidecar):** Chat-Passphrasen nicht mehr Klartext-`localStorage` — AES-GCM Sidecar `morgendrot.passphraseMsg.enc.v1` mit Vault-Passwort; Unlock hydriert RAM; Lock leert RAM (Ciphertext bleibt); Purge/Einsatz-Ende löschen Sidecar. Legacy Klartext wird beim Unlock migriert.
 
@@ -33,9 +35,7 @@
 
 **Nachtrag 2026-11-05 (Wire einfügen):** Posteingang-Button **Wire einfügen** — Paste `MORG_PWMSG_V1` + Passphrase → lokaler Klartext (≠ Toolbar **Entschlüsseln** = Einsatzbericht-.json). ECDH-Wires weiter nur mit Handshake.
 
-**Nachtrag 2026-11-05 (Backlog — NFT-Schlüsselkarte):** Später: NFT als Besitz-gebundene **Schlüsselkarte** — optional mehrere Passphrasen / Ableitungen; beim Senden **„Key an NFT binden“**; App prüft Besitz (`getOwnedObjects` / Owner) und entschlüsselt. **Nicht** Ersatz für Handshake/Team-Key; Meta on-chain sichtbar; Kopieren von Klartext bleibt möglich. Spec wenn B1 Vault + Feldtest grün. Auffindbarkeit Gruppe: Sidebar **Gruppe verwalten** + ⋮ auch im Direktchat.
-
-**Nachtrag 2026-11-05 (Backlog — NFT-Schlüsselkarte):** Idee **nach** H.23 B1/Vault: spezielles NFT als „Schlüsselkarte“ — kann **mehrere** Passphrases / Ableitungen tragen; beim Erstellen einer Nachricht optional **„Key an NFT binden“**; App prüft Besitz (`getOwnedObjects` / Owner) und entschlüsselt. **Nicht** Ersatz für Team-Key/Handshake (Besitz on-chain öffentlich; Transfer = Leserecht weitergeben; Klartext kopierbar). Spez später unter Evidence/NFT + Messaging; zuerst Team-Key-Vault + Gruppen-UX.
+**Nachtrag 2026-11-06 (H.23 B2 NFT-Schlüsselkarte — aktiv):** Spec **`docs/NFT-SCHLUESSELKARTE-B2.md`**. **P0:** Enc-Sidecar `nftKeycard.enc.v1` + Unlock über `local-secret-vaults` (ohne UI-Bindung). **P1+** Galerie/Composer später. **Nicht** Ersatz für Handshake/Team-Key. **2-Geräte-Feldtest** blockiert B2-P0 nicht.
 
 **Nachtrag 2026-05-20 (Strategie — korrigiert):** **IOTA bleibt gekoppelt**; **Funk-Default** im Helfer-UI (`TRANSPORT_PROFILE=mesh-first`). **Delayed LoRa → IOTA**, **Offline-TX/Outbox** und **Pfad 4** bleiben — siehe **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**. Keine volle IOTA-TX im LoRa-Frame (**§ H.3m**). **Keine neuen Move-Publishes** in Tranche A; Fokus Runtime + Simple Mode.
 

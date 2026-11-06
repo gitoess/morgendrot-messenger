@@ -45,7 +45,6 @@ import { ChatViewContactDetailDialog } from '@/frontend/components/chat-view-con
 import { ChatViewMessengerSearch } from '@/frontend/components/chat-view-messenger-search'
 import { resolveContactSidebarDisplayName } from '@/frontend/lib/conversation-sidebar-items'
 import { readMessengerGroups } from '@/frontend/lib/messenger-group-store'
-import { hydrateTeamBroadcastKeysFromArchiveSidecar } from '@/frontend/lib/team-broadcast-key-store'
 import { fetchTelegramIntegration } from '@/frontend/lib/api/telegram-integrations'
 import { resolveTelegramAlarmGroupPartnerKey } from '@/frontend/lib/telegram-einsatz-group-target'
 import {
@@ -202,10 +201,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   useEffect(() => {
     if (phonebookOpen) refreshContactDirectory()
   }, [phonebookOpen, refreshContactDirectory])
-
-  useEffect(() => {
-    hydrateTeamBroadcastKeysFromArchiveSidecar()
-  }, [])
 
   useEffect(() => {
     if (phonebookNavRequest != null && phonebookNavRequest > 0) setPhonebookOpen(true)

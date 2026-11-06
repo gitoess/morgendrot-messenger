@@ -214,6 +214,7 @@ export function lockEvidencePassphraseVault(): void {
   }
   memoryById = {}
   memoryDefault = null
+  clearTabBackup()
   emitChanged()
 }
 

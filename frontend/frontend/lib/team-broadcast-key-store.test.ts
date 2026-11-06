@@ -77,7 +77,7 @@ describe('team-broadcast-key-store (H.23 B1)', () => {
     expect(hasTeamBroadcastKey(MB)).toBe(true)
   })
 
-  it('Legacy-Archiv hydratisiert vor Unlock', () => {
+  it('Legacy-Archiv wird ohne Vault-Session nicht in RAM geladen', () => {
     const raw = generateTeamBroadcastKeyRaw()
     window.localStorage.setItem(
       'morgendrot.teamKeysArchive.v1',
@@ -86,8 +86,18 @@ describe('team-broadcast-key-store (H.23 B1)', () => {
         keys: { [MB]: { keyBase64: teamBroadcastKeyToBase64(raw), keyEpoch: 1 } },
       })
     )
-    expect(hydrateTeamBroadcastKeysFromArchiveSidecar()).toBeGreaterThanOrEqual(1)
-    expect(hasTeamBroadcastKey(MB)).toBe(true)
+    expect(hydrateTeamBroadcastKeysFromArchiveSidecar()).toBe(0)
+    expect(hasTeamBroadcastKey(MB)).toBe(false)
+  })
+
+  it('Lock entfernt Tab-Backup (kein Klartext nach Sperre)', async () => {
+    setVaultPasswordSession('vault-pass-99')
+    await unlockTeamBroadcastKeyVault('vault-pass-99')
+    createTeamBroadcastKey(MB)
+    expect(window.sessionStorage.getItem('morgendrot.teamKeys.tab.v1')).toBeTruthy()
+    lockTeamBroadcastKeyVault()
+    expect(window.sessionStorage.getItem('morgendrot.teamKeys.tab.v1')).toBeNull()
+    expect(hasTeamBroadcastKey(MB)).toBe(false)
   })
 })
 

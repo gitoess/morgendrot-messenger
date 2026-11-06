@@ -1,5 +1,6 @@
 /**
- * Ein Unlock/Lock/Purge für alle lokalen Geheimnis-Sidecars (Vault-Passwort).
+ * Ein Unlock/Lock/Purge für alle lokalen Geheimnis-Sidecars (Vault-Passwort):
+ * Chat-Passphrasen, ImageNFT-Passphrasen, Team-Keys, NFT-Schlüsselkarte.
  */
 
 import {
@@ -7,6 +8,11 @@ import {
   purgeEvidencePassphraseVault,
   unlockEvidencePassphraseVault,
 } from '@/frontend/lib/evidence-passphrase-local-store'
+import {
+  lockNftKeycardVault,
+  purgeNftKeycardVault,
+  unlockNftKeycardVault,
+} from '@/frontend/lib/nft-keycard-local-store'
 import {
   lockPassphraseMessageVault,
   purgePassphraseMessageVault,
@@ -42,17 +48,26 @@ export async function unlockLocalSecretVaults(password: string): Promise<{
   const team = await unlockTeamBroadcastKeyVault(pw)
   if (!team.ok) errors.push(`Team-Keys: ${team.error}`)
 
-  if (errors.length === 3) {
+  const nft = await unlockNftKeycardVault(pw)
+  if (!nft.ok) errors.push(`NFT-Schlüsselkarte: ${nft.error}`)
+
+  if (errors.length > 0) {
+    // Kein halboffenes Vault-Passwort in der Session belassen.
+    lockPassphraseMessageVault()
+    lockEvidencePassphraseVault()
+    lockTeamBroadcastKeyVault()
+    lockNftKeycardVault()
     clearVaultPasswordSession()
     return { ok: false, errors }
   }
-  return { ok: errors.length === 0, errors }
+  return { ok: true, errors: [] }
 }
 
 export function lockLocalSecretVaults(): void {
   lockPassphraseMessageVault()
   lockEvidencePassphraseVault()
   lockTeamBroadcastKeyVault()
+  lockNftKeycardVault()
   clearVaultPasswordSession()
 }
 
@@ -60,5 +75,6 @@ export function purgeLocalSecretVaults(): void {
   purgePassphraseMessageVault()
   purgeEvidencePassphraseVault()
   purgeTeamBroadcastKeyVault()
+  purgeNftKeycardVault()
   clearVaultPasswordSession()
 }

@@ -56,6 +56,7 @@ export const EINSATZ_END_LOCAL_STORAGE_KEYS = [
   'morgendrot.composer.passphraseReuse',
   'morgendrot.teamKeysArchive.v1',
   'morgendrot.teamKeys.enc.v1',
+  'morgendrot.nftKeycard.enc.v1',
   'morgendrot.inbox.burnOnRead.v1',
 ] as const
 
@@ -70,6 +71,10 @@ export const EINSATZ_END_SESSION_STORAGE_KEYS = [
   'morg.pinnwand.pinned.ids.v1',
   INBOX_PARTNER_MEMORY_LS,
   INBOX_PARTNER_MEMORY_BLOCKED_LS,
+  'morgendrot.passphraseMsg.tab.v1',
+  'morgendrot.evidenceImage.passphrases.tab.v1',
+  'morgendrot.teamKeys.tab.v1',
+  'morgendrot.nftKeycard.tab.v1',
 ] as const
 
 export type EinsatzEndCacheWipeOptions = {

@@ -229,6 +229,7 @@ export function lockTeamBroadcastKeyVault(): void {
   }
   memoryKeys = {}
   sessionHydrated = false
+  clearTabBackup()
   emitChanged()
 }
 
@@ -247,30 +248,15 @@ export function purgeTeamBroadcastKeyVault(): void {
 
 export function hasTeamBroadcastKey(teamMailboxObjectId: string): boolean {
   const id = normMb(teamMailboxObjectId)
-  if (memoryKeys[id]?.keyBase64) return true
-  if (typeof window === 'undefined') return false
-  try {
-    return Boolean(window.localStorage.getItem(LS_KEY_PREFIX + id)?.trim())
-  } catch {
-    return false
-  }
+  return Boolean(memoryKeys[id]?.keyBase64)
 }
 
 export function readTeamBroadcastKeyRaw(teamMailboxObjectId: string): Uint8Array | null {
   const id = normMb(teamMailboxObjectId)
   const mem = memoryKeys[id]
-  if (mem?.keyBase64) {
-    try {
-      return teamBroadcastKeyFromBase64(mem.keyBase64)
-    } catch {
-      return null
-    }
-  }
-  if (typeof window === 'undefined') return null
+  if (!mem?.keyBase64) return null
   try {
-    const b64 = window.localStorage.getItem(LS_KEY_PREFIX + id)?.trim()
-    if (!b64) return null
-    return teamBroadcastKeyFromBase64(b64)
+    return teamBroadcastKeyFromBase64(mem.keyBase64)
   } catch {
     return null
   }
@@ -292,31 +278,17 @@ export function writeTeamBroadcastKeyEpoch(teamMailboxObjectId: string, epoch: n
   const id = normMb(teamMailboxObjectId)
   const n = Number.isFinite(epoch) && epoch >= 1 ? Math.floor(epoch) : DEFAULT_TEAM_BROADCAST_KEY_EPOCH
   const prev = memoryKeys[id]
-  if (prev?.keyBase64) {
-    memoryKeys[id] = { ...prev, keyEpoch: n }
-    schedulePersist()
-    emitChanged()
-    return
-  }
-  if (typeof window === 'undefined') return
-  try {
-    window.localStorage.setItem(LS_EPOCH_PREFIX + id, String(n))
-  } catch {
-    /* ignore */
-  }
+  if (!prev?.keyBase64) return
+  memoryKeys[id] = { ...prev, keyEpoch: n }
+  schedulePersist()
+  emitChanged()
 }
 
 export function readTeamBroadcastKeyEpoch(teamMailboxObjectId: string): number {
   const id = normMb(teamMailboxObjectId)
   const mem = memoryKeys[id]
   if (mem && mem.keyEpoch >= 1) return mem.keyEpoch
-  if (typeof window === 'undefined') return DEFAULT_TEAM_BROADCAST_KEY_EPOCH
-  try {
-    const n = Number(window.localStorage.getItem(LS_EPOCH_PREFIX + id) || '')
-    return Number.isFinite(n) && n >= 1 ? Math.floor(n) : DEFAULT_TEAM_BROADCAST_KEY_EPOCH
-  } catch {
-    return DEFAULT_TEAM_BROADCAST_KEY_EPOCH
-  }
+  return DEFAULT_TEAM_BROADCAST_KEY_EPOCH
 }
 
 /**
@@ -385,22 +357,12 @@ export function importTeamBroadcastKeysSnapshot(snap: TeamBroadcastKeysSnapshot 
   return n
 }
 
-/** Beim Start: Legacy-Archiv → Memory (wenn noch kein Vault-Unlock). */
+/**
+ * Legacy-Klartext nur noch beim Vault-Unlock migrieren — kein RAM-Hydrate ohne Session.
+ * @deprecated No-op; Migration in unlockTeamBroadcastKeyVault.
+ */
 export function hydrateTeamBroadcastKeysFromArchiveSidecar(): number {
-  if (typeof window === 'undefined') return 0
-  if (sessionHydrated && Object.keys(memoryKeys).length > 0) return 0
-  try {
-    const raw = window.localStorage.getItem(LS_ARCHIVE_LEGACY)?.trim()
-    if (!raw) return readLegacyPlainIntoMemory()
-    const n = applySnapshotToMemory(JSON.parse(raw) as TeamBroadcastKeysSnapshot)
-    if (n > 0) {
-      sessionHydrated = true
-      emitChanged()
-    }
-    return n || readLegacyPlainIntoMemory()
-  } catch {
-    return readLegacyPlainIntoMemory()
-  }
+  return 0
 }
 
 export async function flushTeamBroadcastKeyVaultPersist(): Promise<void> {

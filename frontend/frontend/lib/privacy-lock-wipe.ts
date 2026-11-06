@@ -1,6 +1,6 @@
 /**
- * Beim Vault-/Session-Lock: Chat- + ImageNFT-Passphrasen aus RAM.
- * Ciphertext-Sidecars bleiben — nach Unlock wieder verfügbar.
+ * Beim Vault-/Session-Lock: Chat-/ImageNFT-Passphrasen, Team-Keys und
+ * NFT-Schlüsselkarte aus RAM (+ Tab-Backups). Enc-Sidecars bleiben.
  * ECDH-Material: clearDirectChatEcdhKeyMaterial separat.
  */
 import { lockLocalSecretVaults } from '@/frontend/lib/local-secret-vaults'

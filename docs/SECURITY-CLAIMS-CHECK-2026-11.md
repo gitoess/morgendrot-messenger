@@ -24,7 +24,7 @@
 | **Vault-/Session-Lock:** Chat- + ImageNFT-Passphrasen + Team-Keys aus RAM; Enc-Sidecars bleiben; Purge/Einsatz-Ende löscht Sidecars | Weniger Klartext-Reste; Keys nach Unlock wieder da | Nest-Datei `.team-keys.enc` optional später; Browser = `teamKeys.enc.v1` |
 | **H.23 A4 UX:** ⋮ → Schlüssel erneuern (Epoch-Anzeige) + Hinweis nach Enc-Send | Rotation auffindbar | Kein Auto-Ratchet |
 | **Burn-on-read Opt-in** (Chat-⋮) | Purge nach Lesen vorschlagen; bei aktiv → Composer erzwingt Mailbox (Event nicht purgebar) | Mit Bestätigung; nur Mailbox-Objekte; Explorer behält TX/Events |
-| **H.23 B1 Team-Key** | Enc Team-Broadcast + Handoff; UI erzeugen/rotieren; Enc-Send ohne Auto-Fork | Keys noch localStorage (kein `.team-keys.enc`); 2-Geräte-Feldtest offen |
+| **H.23 B1 Team-Key** | Enc Team-Broadcast + Handoff; UI erzeugen/rotieren; Enc-Send ohne Auto-Fork; Browser-Sidecar `teamKeys.enc.v1` (Nest `.team-keys.enc` optional später) | Legacy-Klartext wird beim Unlock migriert/gelöscht; 2-Geräte-Feldtest bewusst später |
 
 ## Bewusst **nicht** in dieser Runde
 
