@@ -62,6 +62,8 @@ export const EINSATZ_END_LOCAL_STORAGE_KEYS = [
   'morgendrot.composer.nftRequiredWallet.v1',
   'morgendrot.nftTimeLease.v1',
   'morgendrot.nftTimeLease.messagingPackageId.v1',
+  'morgendrot.nftGuardedPurse.v1',
+  'morgendrot.nftGuardedPurse.messagingPackageId.v1',
   'morgendrot.teamKeysArchive.v1',
   'morgendrot.teamKeys.enc.v1',
   'morgendrot.nftKeycard.enc.v1',

@@ -24,6 +24,7 @@ import {
   burnEvidenceImageNft,
   transferEvidenceImageNft,
 } from '@/frontend/lib/evidence-image-transfer'
+import { NftGuardedPursePanel } from '@/frontend/components/nft-guarded-purse-panel'
 import { NftTimeLeasePanel } from '@/frontend/components/nft-time-lease-panel'
 import {
   EVIDENCE_ATTR_MAX_PAIRS,
@@ -1718,6 +1719,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                           />
                         )}
                       </div>
+                      <NftGuardedPursePanel nftObjectId={it.objectId} disabled={busy} />
                       <NftTimeLeasePanel nftObjectId={it.objectId} disabled={busy} />
                       {storedPass ? (
                         <p className="text-[10px] text-muted-foreground">

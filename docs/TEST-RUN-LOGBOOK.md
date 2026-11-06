@@ -12,7 +12,8 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
-| **2026-11-06** | PC (Windows), **B2-S1 Guarded Purse Move** | `nft_guarded_purse` + Upgrade → Package `0x0c94e888…` (Stamm `0x06e099…`). PTB Vitest 3/3; RPC exposed `create_purse`/`spend`/…. UI = S2. | **PASS (Move+Vitest+on-chain)** |
+| **2026-11-06** | PC (Windows), **B2-S2 Guarded Purse UI** | Panel unter NFT-Galerie; Actions+Local-Store; Vitest store+txb; Pflichttext lose Coins; Cache-Wipe Keys. | **PASS (Code)** — Chain-Feldspend manuell offen. |
+| **2026-11-06** | PC (Windows), **B2-S1 Guarded Purse Move** | `nft_guarded_purse` + Upgrade → Package `0x0c94e888…` (Stamm `0x06e099…`). PTB Vitest 3/3; RPC exposed `create_purse`/`spend`/…. | **PASS (Move+Vitest+on-chain)** |
 | **2026-11-06** | PC (Windows), **Guarded-Spend Spec** | Roh „sender==X ∧ NFT“ gehärtet → Purse (A) vs Bearer Treasury (B). `docs/NFT-GUARDED-SPEND-SPEC.md` B2-S0. Kein Move. | **Doku PASS** |
 | **2026-11-06** | PC (Windows), **P4a-dual Wallet+NFT** | Gate `nft_and_wallet_p4a`; Capsule an nft+wallet; Composer Dual-Option; Klartext-kopierbar Claims. Vitest. | **PASS (Code)** |
 | **2026-11-06** | PC (Windows), **Zeitkapsel Ciphertext-Doku** | §0a Spec: NFT=Gate; W2 optional Object-ID/Besitzer-W1 unter On-Chain/NFT. MeshSleepyChannel → Phase-C Backlog. Panel-Hinweis. | **Doku PASS** |

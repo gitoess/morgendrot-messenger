@@ -233,7 +233,7 @@ Siehe auch Kopf von `docs/ROADMAP-FAHRPLAN.md` (Nachtrag Privacy 2026-11-05): *�
 ## 9. Empfohlene Reihenfolge ab hier
 
 1. ~~Anleitung §0 / Epoch+Burn / C1 / P4a / P5a/b / P4a-dual~~ → **Ist** (Logbuch 2026-11-06).  
-2. **Als Nächstes (Code):** **B2-S2** Guarded Purse UI (`docs/NFT-GUARDED-SPEND-SPEC.md`) — Deposit/Spend; Move S1 Ist (`0x0c94e888…`).  
+2. **Als Nächstes (optional):** B2-S3 Bearer Treasury / P4a2 / 2-Geräte-Feldtest; Guarded Purse S1+S2 Ist (`0x0c94e888…`, Panel unter NFT).  
 3. **Feld:** Zeitkapsel-Panel Leihe + Ciphertext per Object-ID/Besitzer; optional P5d.  
 4. **Später:** P4a2 Pubkey / P4b Seal → **2-Geräte-Feldtest**.  
 5. **Nicht parallel:** MeshSleepyChannel, Decoys, Outboxes, HW-Fragment.

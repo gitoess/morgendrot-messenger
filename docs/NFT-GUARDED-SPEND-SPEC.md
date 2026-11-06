@@ -1,7 +1,7 @@
 # NFT-gesichertes Ausgeben (Guarded Spend) — Spec / Backlog
 
 **Stand:** 2026-11-06  
-**Status:** **B2-S1 Move Ist** — Modus A `messaging::nft_guarded_purse` on-chain (Upgrade-Package `0x0c94e888…`; Stamm-Chat `0x06e099…`). PTB `nft-guarded-purse-txb.ts` + Vitest. **B2-S2** UI offen. Modus B später.  
+**Status:** **B2-S1+S2 Ist** — Modus A `messaging::nft_guarded_purse` on-chain (`0x0c94e888…`; Stamm `0x06e099…`). PTB + Panel unter NFT-Galerie (create/deposit/spend/destroy) + Pflichttext lose Coins. Modus B / S3 später.  
 **Scope:** **nur Token/Coins (IOTA)** — **kein** Klartext, kein Chat-Leserecht (das bleibt P4a/P5).  
 **Verwandt:** Leserecht P4a-dual (`docs/NFT-SCHLUESSELKARTE-MODI.md` §6a) · Zeitkapsel P5 · **nicht** MeshSleepyChannel.
 
@@ -110,7 +110,7 @@ Passt zu „NFT = Capability, wandert unabhängig“. **Nicht** dasselbe wie A.
 |----|--------|--------------|
 | **B2-S0** | Dieses Spec + Roadmap/Claims | — **Ist** |
 | **B2-S1** | Move Modus A `GuardedPurse` + Vitest/PTB | Messaging-Package Upgrade — **Ist** (`0x0c94e888…`) |
-| **B2-S2** | Messenger-UI Deposit/Spend + Badge | S1 — **Als Nächstes** |
+| **B2-S2** | Messenger-UI Deposit/Spend + Badge | S1 — **Ist** (Panel unter NFT-Galerie) |
 | **B2-S3** | Optional Modus B Bearer Treasury | nach S1 Feld |
 
 ### On-Chain (S1)
