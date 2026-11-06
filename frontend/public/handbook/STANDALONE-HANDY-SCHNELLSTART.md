@@ -2,7 +2,8 @@
 
 **Ziel:** Morgendrot-Messenger **ohne PC-Server** auf dem Android-Handy — Handoff + Seed + Direct-IOTA-Chat.
 
-**APK:** `frontend/android/app/build/outputs/apk/debug/app-debug.apk` (Build: `cd frontend && npm run apk:debug:build`)
+**APK:** `frontend/android/app/build/outputs/apk/debug/app-debug.apk` (Build: `cd frontend && npm run apk:debug:build`)  
+**Vollständige Standalone-Doku:** [`docs/STANDALONE-APK.md`](STANDALONE-APK.md)
 
 ---
 

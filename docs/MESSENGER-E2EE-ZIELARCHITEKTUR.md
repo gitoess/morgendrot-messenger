@@ -331,8 +331,8 @@ Partner müssen **beide** PQ-fähig sein; Fallback auf `cs=1`.
 | **A3** | Vault `.session-keys.enc` + Migration | Nein | **Ist 2026-06-16** (`vault-local`, `morgendrot-session-keys-archive`, Browser-LS) |
 | **A4** | UI Rotation (ersetzt Peer-Pub-Löschung) | Nein | **Ist 2026-06-16** (`peer-key-renewal.ts`, `/rotate-session-epoch`) |
 | **B1** | Team-Key Gruppen-Broadcast | **Ja** (`store_team_*_broadcast`) | **Teil-Ist 2026-11-05:** Enc-Send/Decrypt/Handoff + kein Auto-Fork + Gruppen-UI + LS-Archiv-Sidecar; Nest Vault `.team-keys.enc` noch offen |
-| **B2** | NFT-Schlüsselkarte | Optional | **P0 Ist:** Spec + Enc-Store `nftKeycard.enc.v1` in `local-secret-vaults`; P1+ UI/Bindung später; nicht Chat-E2EE-Ersatz |
-| **C1** | Double Ratchet Spec + PoC | Nein (Wire in ciphertext) |
+| **B2** | NFT-Schlüsselkarte | Optional | **P0–P3 Ist 2026-11-06:** Enc-Store + Multi-Slot + Composer/Mint-Bindung + `[morg-keycard]`; Anleitung `docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`; nicht Chat-E2EE-Ersatz |
+| **C1** | Double Ratchet Spec + PoC | Nein (Wire in ciphertext) | **Backlog** — Gate: B1/B2 1-Gerät-Smoke + ideal 2-Geräte-Feldtest |
 | **D1** | PQ hybrid `cs=3` | Nein |
 
 **Parallel erlaubt:** A1–A4 ohne Blockade durch Klartext/Pinnwand/Gruppen-Klartext-MVP.

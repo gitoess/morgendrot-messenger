@@ -1,5 +1,8 @@
 # So startest du die App
 
+**Privacy / Vault / NFT-Schlüsselkarte (Funktionen + 1-Gerät-Test):** → **`docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`**  
+**Gesamtfahrplan:** → **`docs/ROADMAP-FAHRPLAN.md`**
+
 ## Ein Befehl zum Starten (Backend + Streams)
 
 ```bash

@@ -4,7 +4,8 @@
 
 **Stand:** 2026-07-03 — Telegram-ähnliche Chat-Oberfläche (Seitenleiste, Inbox vor Composer), Sendepfad + **SOS im Kopf**, Gruppe verwalten als Sheet, Peering-QR unter **Ich**; § *IOTA vs. Server* (Threat Model).
 
-**Verwandt:** `docs/PWA-HANDBUCH-OFFLINE.md`, `docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`, `docs/MESSENGER-CAPABILITIES-OVERVIEW.md`, `docs/GRUPPENCHAT-ZIELBILD.md`, `docs/EXPORT-ASSISTENT-REFERENZ.md`.
+**Verwandt:** `docs/PWA-HANDBUCH-OFFLINE.md`, `docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`, `docs/MESSENGER-CAPABILITIES-OVERVIEW.md`, `docs/GRUPPENCHAT-ZIELBILD.md`, `docs/EXPORT-ASSISTENT-REFERENZ.md`.  
+**Privacy / Vault / NFT-Schlüsselkarte (alle Ist-Funktionen + 1-Gerät-Test):** → **`docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`**.
 
 ---
 
@@ -24,7 +25,7 @@
 
 ## Verschlüsselung und Partner-Key
 
-**Verschlüsselt:** Nachrichten sind **nur mit dem Partner-Schlüssel** sinnvoll lesbar. Die **Entschlüsselung** erfolgt auf **diesem Node** (Backend), wenn der **Tresor entsperrt** ist. Das ist **kein** Signal-artiges Perfect Forward Secrecy (PFS): wer Langzeit-Schlüssel und gespeicherte Ciphertexte hat, kann bei späterem Zugriff mitentschlüsseln — Threat Model bewusst mitdenken.
+**Verschlüsselt:** Nachrichten sind **nur mit dem Partner-Schlüssel** sinnvoll lesbar. Die **Entschlüsselung** erfolgt auf **diesem Node** (Backend), wenn der **Tresor entsperrt** ist. Das ist **kein** Signal-artiges Perfect Forward Secrecy (PFS): wer Langzeit-Schlüssel und gespeicherte Ciphertexte hat, kann bei späterem Zugriff mitentschlüsseln — Threat Model bewusst mitdenken. **Teil-FS** gibt es über **Schlüssel erneuern** (`keyEpoch`). Passphrase-Kanal, Vault-Sidecars, Burn-on-read (Opt-in) und NFT-Schlüsselkarte: **`docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`**.
 
 **Unverschlüsselt · online:** Klartext erscheint in der Chain (`/send-plain`); Modus **Nur Event** vs. **Mailbox** steuert die Speicherlogik (siehe `MESSAGING-MAILBOX-SSOT-SPEC.md`).
 
@@ -415,10 +416,13 @@ Zielbild: `docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`
 
 ### Gruppe einrichten und verwalten
 
-Kanal **Gruppe** wählen (Sendepfad im Kopf oder Sidebar) → **Gruppe verwalten**:
+In der Chat-**Sidebar** Abschnitt **Gruppen**:
 
-- **⋮** (Konversations-Menü) → **Gruppe verwalten…**, oder
-- **Doppelklick** auf die Gruppe in der **Sidebar**
+- Button **Verwalten** (auch ohne bestehende Gruppe) → Sheet „Gruppe verwalten“
+- Zahnrad an der Gruppenzeile (Handy-tauglich; Doppelklick weiterhin)
+- Im Gruppenkanal zusätzlich Chat-⋮ → **Gruppe verwalten…**
+
+Dort: Name, Mitglieder, **Team-Postfach**, **Team-Key** erzeugen/rotieren (Enc-Broadcast).
 
 Im Sheet **Gruppe verwalten** (blockiert den Nachrichtenfluss nicht):
 

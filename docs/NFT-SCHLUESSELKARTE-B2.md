@@ -2,6 +2,7 @@
 
 **Stand:** 2026-11-06  
 **Status:** **P0–P3 Ist** (Store + Multi-Slot + Composer-Bindung + Mint an Slot + öffentlicher `[morg-keycard]`-Marker; kein Move).  
+**Nutzer-Anleitung (alle Funktionen + Smoke):** **`docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`**.  
 **Voraussetzung:** H.23 B1 Vault-Sidecars Ist (`teamKeys.enc.v1`, Chat-/ImageNFT-Passphrasen).  
 **2-Geräte-Feldtest (Team-Key / Erneut sperren):** bewusst **später** — blockiert B2-P0 nicht.
 

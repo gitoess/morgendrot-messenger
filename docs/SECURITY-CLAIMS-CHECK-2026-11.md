@@ -1,7 +1,8 @@
 # Security-Claims-Check (Ist vs. Marketing-Text)
 
-**Stand:** 2026-11-06 (Passphrase-Msg-Keys vault-passwortverschlüsselt + Lock/Purge)  
-**Kontext:** ImageNFT-Passphrase + Passphrase-Nachrichtenkanal + Session-Epoch.
+**Stand:** 2026-11-06 (Vault-Sidecars + H.23 B2 NFT-Schlüsselkarte P0–P3 + Lock/Purge)  
+**Kontext:** ImageNFT-/Chat-Passphrase + Session-Epoch + Team-Key + NFT-Schlüsselkarte.  
+**Nutzer-Anleitung:** `docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`
 
 | Claim | Morgendrot Ist | Urteil |
 |-------|----------------|--------|
@@ -25,10 +26,19 @@
 | **H.23 A4 UX:** ⋮ → Schlüssel erneuern (Epoch-Anzeige) + Hinweis nach Enc-Send | Rotation auffindbar | Kein Auto-Ratchet |
 | **Burn-on-read Opt-in** (Chat-⋮) | Purge nach Lesen vorschlagen; bei aktiv → Composer erzwingt Mailbox (Event nicht purgebar) | Mit Bestätigung; nur Mailbox-Objekte; Explorer behält TX/Events |
 | **H.23 B1 Team-Key** | Enc Team-Broadcast + Handoff; UI erzeugen/rotieren; Enc-Send ohne Auto-Fork; Browser-Sidecar `teamKeys.enc.v1` (Nest `.team-keys.enc` optional später) | Legacy-Klartext wird beim Unlock migriert/gelöscht; 2-Geräte-Feldtest bewusst später |
+| **H.23 B2 NFT-Schlüsselkarte** | Enc-Store + Galerie Multi-Slot + Composer-Bindung + Mint→Slot + Besitz-Check + öffentlicher `[morg-keycard]`-Marker | Zusätzlicher Zugriffsmodus; **kein** Alltags-Chat-Ersatz; Secrets bleiben off-chain |
 
-## Bewusst **nicht** in dieser Runde
+## Bewusst **nicht** in dieser Runde (weiterhin Backlog)
 
-Double Ratchet, Decoys, rotierende Outboxes, HW-Fragment — großer Architekturaufwand (**§ H.23** Option A zuerst; A4 UX jetzt sichtbarer).
+| Thema | Roadmap | Hinweis |
+|-------|---------|---------|
+| Double Ratchet / FS pro Nachricht | § H.23 Phase 3 / E2EE **C1** | Erst nach Session Keys+ Feldlage |
+| Decoys im Handshake | Claims / Architektur | Nicht spezifiziert als nächste Scheibe |
+| Rotierende Outboxes / voller Dead-Drop | Claims / M4-Erweiterung | Feste Mailbox-IDs Ist |
+| HW-Fragment + Keys nur RAM | Claims | Vault-at-rest Enc; kein Secure Element |
+| Auto Burn-on-read | Claims | Nur Opt-in + Confirm |
+
+Double Ratchet, Decoys, rotierende Outboxes, HW-Fragment — großer Architekturaufwand (**§ H.23** Option A + B1/B2 Ist; C1 erst nach 1-Gerät-Smoke und idealerweise 2-Geräte-Feldtest).
 
 ## Kurzfassung
 
