@@ -27,7 +27,7 @@ describe('TresorSessionBadge (§ H.1a)', () => {
     expect(screen.getByText(/Tresor: gesperrt/)).toBeInTheDocument()
 
     rerender(<TresorSessionBadge sessionLocked={false} hasKeys={false} />)
-    expect(screen.getByText(/Tresor: Keys fehlen/)).toBeInTheDocument()
+    expect(screen.getByText(/Signer: PW tippen/)).toBeInTheDocument()
 
     rerender(<TresorSessionBadge sessionLocked={false} hasKeys />)
     expect(screen.getByText(/Tresor: bereit/)).toBeInTheDocument()

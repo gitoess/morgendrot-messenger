@@ -136,7 +136,7 @@ export async function unlockNftVaultIndexVault(
     if (hasVaultEncSidecar(NFT_VAULT_INDEX_ENC_LS_KEY)) {
       const r = await readVaultEncSidecar(NFT_VAULT_INDEX_ENC_LS_KEY, NFT_VAULT_INDEX_ENC_SCHEMA, pw)
       if (!r.ok) return { ok: false, error: r.error }
-      const plain = JSON.parse(r.plaintext) as StorePlainV1
+      const plain = JSON.parse(r.plainUtf8) as StorePlainV1
       if (plain?.v === 1) hydrateIntoLocal(plain)
     } else {
       // Erstes Unlock: aktuelle LS-Indexe in Sidecar übernehmen

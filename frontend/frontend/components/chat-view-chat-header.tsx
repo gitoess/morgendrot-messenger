@@ -113,7 +113,7 @@ export function TresorSessionBadge({
         ? 'Privacy gesperrt — Passphrasen/Signer aus RAM; Chat lesbar. Tippen zum Entsperren.'
         : 'Tresor gesperrt — Entsperr-Dialog öffnen.'
       : ui === 'no-keys'
-        ? 'Schlüssel fehlen in der Sitzung — erneut entsperren oder Tresor → Datei laden.'
+        ? 'API kann entsperrt sein — Browser-Signer fehlt. Tippen → Vault-Passwort (lädt Signer in diese Sitzung).'
         : 'Schlüssel geladen — Signieren und Mailbox senden möglich.'
   const activeTitle = needsVaultPassword
     ? 'Vault-Passwort eingeben (Session-Signer + Passphrasen-Vault).'
@@ -122,7 +122,7 @@ export function TresorSessionBadge({
         ? 'Privacy entsperren (Passwort → Signer + Vault-Sidecars).'
         : 'Dialog „Tresor entsperren“ öffnen.'
       : ui === 'no-keys'
-        ? 'Tresor erneut entsperren (lädt Keys in die Sitzung).'
+        ? 'Vault-Passwort eingeben — lädt den Signer in den Browser (auch wenn der API-Tresor schon offen ist).'
         : 'Privacy sperren — Signer/Passphrasen aus dem RAM; Chat bleibt offen (kein Login-Fenster).'
 
   const icon =
@@ -140,7 +140,7 @@ export function TresorSessionBadge({
             ? 'Privacy: gesperrt'
             : 'Tresor: gesperrt'
           : ui === 'no-keys'
-            ? 'Tresor: Keys fehlen'
+            ? 'Signer: PW tippen'
             : 'Tresor: bereit'}
     </span>
   )
