@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   listNftBearerTreasuriesLocal,
   NFT_BEARER_TREASURY_CHANGED,
@@ -23,6 +24,7 @@ import {
   formatLocalMistHintAsIota,
   mistToIotaDecimal,
 } from '@/frontend/lib/nft-vault-balance'
+import { recoverNftVaultFromDigest } from '@/frontend/lib/nft-vault-recover-from-tx'
 import { cn } from '@/lib/utils'
 
 const BACKFILL_LS = 'morgendrot.nftVault.activityBackfill.v1'
@@ -78,6 +80,9 @@ export function DashboardNftSecuredBalances({ compact = false }: { compact?: boo
   const [rows, setRows] = useState<Row[]>([])
   const [sumIota, setSumIota] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [digestIn, setDigestIn] = useState('')
+  const [recoverMsg, setRecoverMsg] = useState('')
+  const [recoverBusy, setRecoverBusy] = useState(false)
 
   const rebuild = useCallback(async () => {
     const purses = listNftGuardedPursesLocal().filter((p) => p.status === 'active')
@@ -154,12 +159,65 @@ export function DashboardNftSecuredBalances({ compact = false }: { compact?: boo
     }
   }, [rebuild])
 
+  const recoverBox = (
+    <div className={cn('space-y-1', compact ? 'mt-1.5' : 'mt-2')}>
+      <p className="text-[10px] text-muted-foreground">
+        TX schon on-chain, aber hier leer? Digest einfügen → lokal nachtragen (Explorer-TX).
+      </p>
+      <div className="flex gap-1.5">
+        <Input
+          className="h-7 flex-1 font-mono text-[10px]"
+          value={digestIn}
+          disabled={recoverBusy}
+          onChange={(e) => setDigestIn(e.target.value)}
+          placeholder="TX-Digest (z. B. ERp1RA…)"
+          spellCheck={false}
+        />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-7 shrink-0 text-[10px]"
+          disabled={recoverBusy || !digestIn.trim()}
+          onClick={() => {
+            void (async () => {
+              setRecoverBusy(true)
+              setRecoverMsg('')
+              try {
+                const r = await recoverNftVaultFromDigest(digestIn.trim())
+                if (!r.ok) {
+                  setRecoverMsg(r.error)
+                  return
+                }
+                setRecoverMsg(
+                  r.vault.kind === 'bearer'
+                    ? `Bearer-Treasury ${r.vault.treasuryObjectId.slice(0, 12)}… nachgetragen.`
+                    : `Guarded-Purse ${r.vault.purseObjectId.slice(0, 12)}… nachgetragen.`
+                )
+                setDigestIn('')
+                await rebuild()
+              } finally {
+                setRecoverBusy(false)
+              }
+            })()
+          }}
+        >
+          Nachtragen
+        </Button>
+      </div>
+      {recoverMsg ? <p className="text-[10px] text-foreground">{recoverMsg}</p> : null}
+    </div>
+  )
+
   if (rows.length === 0) {
     return (
-      <p className={cn('text-[10px] text-muted-foreground', compact ? 'mt-1' : 'mt-2')}>
-        Kein gesichertes Purse-/Treasury-Guthaben auf diesem Gerät. Anlegen unter NFT → Tab Guthaben.
-        (Freie Wallet-Balance enthält das nicht.)
-      </p>
+      <div className={cn(compact ? 'mt-1' : 'mt-2')}>
+        <p className="text-[10px] text-muted-foreground">
+          Kein gesichertes Purse-/Treasury-Guthaben auf diesem Gerät. Anlegen unter NFT → Tab Guthaben.
+          (Freie Wallet-Balance enthält das nicht.)
+        </p>
+        {recoverBox}
+      </div>
     )
   }
 
@@ -212,6 +270,7 @@ export function DashboardNftSecuredBalances({ compact = false }: { compact?: boo
           </li>
         ))}
       </ul>
+      {recoverBox}
     </div>
   )
 }

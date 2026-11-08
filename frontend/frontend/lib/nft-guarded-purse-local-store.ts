@@ -15,6 +15,8 @@ export type NftGuardedPurseLocalEntry = {
   status: 'active' | 'destroyed'
   /** Optionales Anzeigenamen-Label (NFT/Schlüsselkarte). */
   displayLabel?: string
+  /** Move-Package der Purse (wichtig bei älteren Upgrades). */
+  messagingPackageId?: string
   updatedAtMs: number
 }
 
@@ -69,7 +71,9 @@ export function findNftGuardedPurseById(purseObjectId: string): NftGuardedPurseL
 
 export function patchNftGuardedPurseLocal(
   purseObjectId: string,
-  patch: Partial<Pick<NftGuardedPurseLocalEntry, 'balanceMistHint' | 'status' | 'displayLabel'>>
+  patch: Partial<
+    Pick<NftGuardedPurseLocalEntry, 'balanceMistHint' | 'status' | 'displayLabel' | 'messagingPackageId'>
+  >
 ): void {
   const s = readStore()
   const id = norm(purseObjectId)

@@ -59,7 +59,11 @@ async function prepare(): Promise<
   return { ok: true, client: createDirectIotaClient({ rpcUrl: rpc }), signer, sender }
 }
 
-function pickCreatedTreasuryId(effects: unknown, events: unknown): string | undefined {
+function pickCreatedTreasuryId(
+  effects: unknown,
+  events: unknown,
+  objectChanges?: unknown
+): string | undefined {
   try {
     const evs = (events as Array<{ type?: string; parsedJson?: { treasury_id?: string } }>) || []
     for (const ev of evs) {
@@ -67,6 +71,21 @@ function pickCreatedTreasuryId(effects: unknown, events: unknown): string | unde
         const id = String(ev.parsedJson.treasury_id).trim().toLowerCase()
         if (HEX64.test(id)) return id
       }
+    }
+  } catch {
+    /* ignore */
+  }
+  try {
+    const changes = (Array.isArray(objectChanges) ? objectChanges : []) as Array<{
+      type?: string
+      objectType?: string
+      objectId?: string
+    }>
+    for (const c of changes) {
+      if (c.type !== 'created') continue
+      if (!(c.objectType || '').includes('::nft_bearer_treasury::NftGuardedTreasury')) continue
+      const id = c.objectId?.trim().toLowerCase()
+      if (id && HEX64.test(id)) return id
     }
   } catch {
     /* ignore */
@@ -112,11 +131,26 @@ export async function createNftBearerTreasury(input: {
     try {
       const tx = await client.getTransactionBlock({
         digest: out.digest,
-        options: { showEffects: true, showEvents: true },
+        options: { showEffects: true, showEvents: true, showObjectChanges: true },
       })
-      treasuryObjectId = pickCreatedTreasuryId(tx.effects, (tx as { events?: unknown }).events)
+      treasuryObjectId = pickCreatedTreasuryId(
+        tx.effects,
+        (tx as { events?: unknown }).events,
+        (tx as { objectChanges?: unknown }).objectChanges
+      )
     } catch {
-      /* manuell */
+      /* manuell / recover */
+    }
+    if (!treasuryObjectId) {
+      try {
+        const { recoverNftVaultFromDigest } = await import('@/frontend/lib/nft-vault-recover-from-tx')
+        const rec = await recoverNftVaultFromDigest(out.digest)
+        if (rec.ok && rec.vault.kind === 'bearer') {
+          return { ok: true, digest: out.digest, treasuryObjectId: rec.vault.treasuryObjectId }
+        }
+      } catch {
+        /* unten Activity ohne ID */
+      }
     }
     const label = getNftKeycard(input.nftObjectId)?.label
     if (treasuryObjectId) {
@@ -127,6 +161,7 @@ export async function createNftBearerTreasury(input: {
         balanceMistHint: input.amountMist.toString(),
         frozen: false,
         status: 'active',
+        messagingPackageId: input.messagingPackageId.trim().toLowerCase(),
         ...(label ? { displayLabel: label } : {}),
       })
     }

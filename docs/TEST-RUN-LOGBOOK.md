@@ -12,6 +12,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-11-08** | PC (Windows), **Treasury lokal nachtragen** | create_treasury TX `ERp1RA…` on-chain (S3 pkg `0x10b1…`, Treasury `0x1500…`, NFT `0x5ab1…`) ohne lokalen Index. Fix: TX-Nachtragen + objectChanges-Pick + Package am Vault. | **Fix Code** — User: Digest nachtragen. |
 | **2026-11-08** | PC (Windows), **Guthaben sichtbar (Wallet+Aktivität)** | Frei vs. Gesichert in Wallet-Karte; Aktivität Purse/Treasury; optional Anzeigename; Backfill lokal erkannter Vaults; Docs/Anleitung/Roadmap. | **PASS (Code)** — Joint ab Checkliste. |
 | **2026-11-08** | PC (Windows), **Guthaben-UX Klarheit** | Live-Balance RPC; Guarded/Bearer Hybrid-Labels; Vault-ID kopierbar; Package „Messaging-Module“ read-only unter Erweitert; Zeitkapsel gleich. Vitest vault-balance+mode. | **PASS (Code)** — Joint-Checkliste unten. |
 | **2026-11-06** | PC (Windows), **Solo Auto vor Joint-Feldtest** | Vitest Privacy 19+2 PASS; `iota move build` OK; RPC Modules `0x1fb0e9b7…` (seal/bearer/purse/lease/messaging); API-Restart; HTTP Seal status/wrap OK, unwrap 403 (deny); `scripts/smoke-nft-gate-seal.mjs` ALL PASS. | **PASS (Solo)** — Joint ab Checkliste #1. |

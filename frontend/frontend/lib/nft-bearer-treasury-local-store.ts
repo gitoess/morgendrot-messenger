@@ -14,6 +14,8 @@ export type NftBearerTreasuryLocalEntry = {
   status: 'active' | 'destroyed'
   /** Optionales Anzeigenamen-Label (NFT/Schlüsselkarte). */
   displayLabel?: string
+  /** Move-Package der Treasury (wichtig bei älteren Upgrades). */
+  messagingPackageId?: string
   updatedAtMs: number
 }
 
@@ -70,7 +72,12 @@ export function findNftBearerTreasuryById(
 
 export function patchNftBearerTreasuryLocal(
   treasuryObjectId: string,
-  patch: Partial<Pick<NftBearerTreasuryLocalEntry, 'balanceMistHint' | 'frozen' | 'status' | 'displayLabel'>>
+  patch: Partial<
+    Pick<
+      NftBearerTreasuryLocalEntry,
+      'balanceMistHint' | 'frozen' | 'status' | 'displayLabel' | 'messagingPackageId'
+    >
+  >
 ): void {
   const s = readStore()
   const id = norm(treasuryObjectId)

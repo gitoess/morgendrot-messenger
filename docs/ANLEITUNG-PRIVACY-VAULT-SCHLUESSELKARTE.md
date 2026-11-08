@@ -248,7 +248,8 @@ Siehe auch Kopf von `docs/ROADMAP-FAHRPLAN.md` (Nachtrag Privacy 2026-11-05): *�
 2. Modus **Guarded** oder **Bearer** → Betrag → **Guthaben anlegen**.  
 3. Im Hauptmenü-Wallet: **Frei** = lose Coins; **Gesichert** = Summe Purse/Treasury + NFT-Bindung.  
 4. **IOTA-Aktivität** listet Anlegen/Einzahlen/Auszahlen (lokal auf diesem Gerät).  
-5. Optional **Anzeigename** am Vault (nur lokal, nicht on-chain).
+5. Optional **Anzeigename** am Vault (nur lokal, nicht on-chain).  
+6. Wenn Explorer eine Create-TX zeigt, die App aber leer ist: unter **Gesichert** den **TX-Digest nachtragen**.
 
 ---
 

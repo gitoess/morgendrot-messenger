@@ -59,7 +59,11 @@ async function prepare(): Promise<
   return { ok: true, client: createDirectIotaClient({ rpcUrl: rpc }), signer, sender }
 }
 
-function pickCreatedPurseId(effects: unknown, events: unknown): string | undefined {
+function pickCreatedPurseId(
+  effects: unknown,
+  events: unknown,
+  objectChanges?: unknown
+): string | undefined {
   try {
     const evs = (events as Array<{ type?: string; parsedJson?: { purse_id?: string } }>) || []
     for (const ev of evs) {
@@ -67,6 +71,21 @@ function pickCreatedPurseId(effects: unknown, events: unknown): string | undefin
         const id = String(ev.parsedJson.purse_id).trim().toLowerCase()
         if (HEX64.test(id)) return id
       }
+    }
+  } catch {
+    /* ignore */
+  }
+  try {
+    const changes = (Array.isArray(objectChanges) ? objectChanges : []) as Array<{
+      type?: string
+      objectType?: string
+      objectId?: string
+    }>
+    for (const c of changes) {
+      if (c.type !== 'created') continue
+      if (!(c.objectType || '').includes('::nft_guarded_purse::GuardedPurse')) continue
+      const id = c.objectId?.trim().toLowerCase()
+      if (id && HEX64.test(id)) return id
     }
   } catch {
     /* ignore */
@@ -118,11 +137,26 @@ export async function createNftGuardedPurse(input: {
     try {
       const tx = await client.getTransactionBlock({
         digest: out.digest,
-        options: { showEffects: true, showEvents: true },
+        options: { showEffects: true, showEvents: true, showObjectChanges: true },
       })
-      purseObjectId = pickCreatedPurseId(tx.effects, (tx as { events?: unknown }).events)
+      purseObjectId = pickCreatedPurseId(
+        tx.effects,
+        (tx as { events?: unknown }).events,
+        (tx as { objectChanges?: unknown }).objectChanges
+      )
     } catch {
-      /* manuell nachtragen */
+      /* manuell / recover */
+    }
+    if (!purseObjectId) {
+      try {
+        const { recoverNftVaultFromDigest } = await import('@/frontend/lib/nft-vault-recover-from-tx')
+        const rec = await recoverNftVaultFromDigest(out.digest)
+        if (rec.ok && rec.vault.kind === 'guarded') {
+          return { ok: true, digest: out.digest, purseObjectId: rec.vault.purseObjectId }
+        }
+      } catch {
+        /* unten Activity ohne ID */
+      }
     }
     const label = getNftKeycard(input.nftObjectId)?.label
     if (purseObjectId) {
@@ -132,6 +166,7 @@ export async function createNftGuardedPurse(input: {
         owner: sender,
         balanceMistHint: input.amountMist.toString(),
         status: 'active',
+        messagingPackageId: input.messagingPackageId.trim().toLowerCase(),
         ...(label ? { displayLabel: label } : {}),
       })
     }

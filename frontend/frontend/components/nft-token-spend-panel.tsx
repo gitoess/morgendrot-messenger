@@ -128,6 +128,9 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
       : treasury?.treasuryObjectId || manualId.trim()
   const hasVault = Boolean(activeId)
   const vaultKindLabel = mode === 'guarded' ? 'Guarded-Purse' : 'Bearer-Treasury'
+  const vaultPkg =
+    (mode === 'guarded' ? purse?.messagingPackageId : treasury?.messagingPackageId)?.trim() ||
+    msgPkg
 
   const refreshBalance = useCallback(async (vaultId: string) => {
     if (!vaultId.trim()) {
@@ -382,13 +385,13 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
             void run(async () => {
               if (mode === 'guarded') {
                 return createNftGuardedPurse({
-                  messagingPackageId: msgPkg,
+                  messagingPackageId: vaultPkg,
                   nftObjectId: p.nftObjectId,
                   amountMist: mist,
                 })
               }
               return createNftBearerTreasury({
-                messagingPackageId: msgPkg,
+                messagingPackageId: vaultPkg,
                 nftObjectId: p.nftObjectId,
                 amountMist: mist,
               })
@@ -411,13 +414,13 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
               void run(async () => {
                 if (mode === 'guarded') {
                   return depositNftGuardedPurse({
-                    messagingPackageId: msgPkg,
+                    messagingPackageId: vaultPkg,
                     purseObjectId: activeId,
                     amountMist: mist,
                   })
                 }
                 return depositNftBearerTreasury({
-                  messagingPackageId: msgPkg,
+                  messagingPackageId: vaultPkg,
                   treasuryObjectId: activeId,
                   amountMist: mist,
                 })
@@ -483,7 +486,7 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
               void run(async () => {
                 if (mode === 'guarded') {
                   return spendNftGuardedPurse({
-                    messagingPackageId: msgPkg,
+                    messagingPackageId: vaultPkg,
                     purseObjectId: activeId,
                     nftObjectId: p.nftObjectId,
                     amountMist: mist,
@@ -491,7 +494,7 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
                   })
                 }
                 return withdrawNftBearerTreasury({
-                  messagingPackageId: msgPkg,
+                  messagingPackageId: vaultPkg,
                   treasuryObjectId: activeId,
                   nftObjectId: p.nftObjectId,
                   amountMist: mist,
@@ -595,7 +598,7 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
               onClick={() =>
                 void run(() =>
                   destroyEmptyNftGuardedPurse({
-                    messagingPackageId: msgPkg,
+                    messagingPackageId: vaultPkg,
                     purseObjectId: activeId,
                   })
                 )
@@ -615,7 +618,7 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
                 onClick={() =>
                   void run(() =>
                     adminSetFrozenNftBearerTreasury({
-                      messagingPackageId: msgPkg,
+                      messagingPackageId: vaultPkg,
                       treasuryObjectId: activeId,
                       frozen: !treasury?.frozen,
                     })
@@ -633,7 +636,7 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
                 onClick={() =>
                   void run(() =>
                     adminReclaimNftBearerTreasury({
-                      messagingPackageId: msgPkg,
+                      messagingPackageId: vaultPkg,
                       treasuryObjectId: activeId,
                     })
                   )
