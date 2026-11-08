@@ -146,7 +146,6 @@ function NftGateMessageBody(p: {
     const sync = () => void tryUnlock()
     window.addEventListener(NFT_TIME_LEASE_CHANGED, sync)
     return () => window.removeEventListener(NFT_TIME_LEASE_CHANGED, sync)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- Wire + Lease-Events
   }, [p.content])
 
   return (

@@ -29,7 +29,6 @@ import {
   encodeNftVaultHandoff,
   nftVaultTransferHint,
 } from '@/frontend/lib/nft-vault-handoff'
-import { getNftKeycard } from '@/frontend/lib/nft-keycard-local-store'
 import { NftCardToolsSection } from '@/frontend/components/nft-card-tools-section'
 import {
   EVIDENCE_ATTR_MAX_PAIRS,
@@ -838,7 +837,6 @@ export function ChatViewEvidenceImageViewerButton(p?: {
       setInfo('')
       void onLoadOwnerPage({ append: false, ownerOverride: addr })
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- openNonce is the only intentional trigger
   }, [p?.openNonce])
 
   return (
