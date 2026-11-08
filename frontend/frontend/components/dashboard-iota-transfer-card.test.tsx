@@ -11,6 +11,7 @@ vi.mock('@/frontend/components/chat-view-evidence-image-viewer', () => ({
   ChatViewEvidenceImageViewerButton: (p: { triggerLabel?: string }) => (
     <button type="button">{p.triggerLabel ?? 'NFT'}</button>
   ),
+  NFT_WALLET_MODES: ['owner', 'object', 'mint', 'guthaben', 'zeitkapsel'],
 }))
 
 describe('DashboardIotaTransferCard', () => {
