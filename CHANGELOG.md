@@ -6,6 +6,10 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+### Privacy / NFT (2026-11-08)
+
+- **Guthaben sichtbar:** Live-Balance; Wallet **Frei vs. Gesichert (Purse/Treasury)**; IOTA-Aktivität loggt Vault-TXs; optional Anzeigename; NFT-Object-ID am Panel; Tabs Galerie/Guthaben/Zeitkapsel getrennt.
+
 ### Privacy / NFT (2026-11-06)
 
 - **H.23 C1** Double Ratchet PoC C1.1–C1.5 (Envelope, Symmetric/DH, Vault-Sidecar, Opt-in Experiment) — Spec `docs/MESSENGER-DOUBLE-RATCHET-C1-SPEC.md`; kein Composer-Default.

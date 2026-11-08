@@ -21,6 +21,7 @@ import {
   ChatViewEvidenceImageViewerButton,
   NFT_WALLET_MODES,
 } from '@/frontend/components/chat-view-evidence-image-viewer'
+import { DashboardNftSecuredBalances } from '@/frontend/components/dashboard-nft-secured-balances'
 
 export type DashboardIotaTransferCardProps = {
   compact?: boolean
@@ -233,7 +234,10 @@ export function DashboardIotaTransferCard({
           <div className="mb-2 flex items-start justify-between gap-2">
             <div>
               <h4 className="text-sm font-semibold text-foreground">{t('cards.iotaWallet')}</h4>
-              <div className="mt-0.5 flex flex-wrap items-center gap-2">{balanceLine}</div>
+              <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                <span className="text-[10px] text-muted-foreground">Frei:</span>
+                {balanceLine}
+              </div>
             </div>
             {onRefreshStatus ? (
               <button
@@ -248,7 +252,8 @@ export function DashboardIotaTransferCard({
               </button>
             ) : null}
           </div>
-          <div className="flex flex-wrap gap-2">
+          <DashboardNftSecuredBalances compact />
+          <div className="mt-2 flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => setTransferOpen((v) => !v)}
@@ -292,8 +297,12 @@ export function DashboardIotaTransferCard({
             </button>
           ) : null}
         </div>
-        <div className="mb-3 rounded-lg border border-border/80 bg-muted/30 px-3 py-2">{balanceLine}</div>
-        <div className="mb-3 flex flex-wrap gap-2">
+        <div className="mb-2 rounded-lg border border-border/80 bg-muted/30 px-3 py-2">
+          <p className="mb-0.5 text-[10px] text-muted-foreground">Frei (Wallet)</p>
+          {balanceLine}
+        </div>
+        <DashboardNftSecuredBalances />
+        <div className="mb-3 mt-3 flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => setReceiveOpen(true)}

@@ -33,7 +33,7 @@
 | **Guarded Purse** | immer Wallet X | `GuardedPurse` owned by X | `spend` blockiert, bis NFT zurück |
 | **Bearer Treasury** | NFT-Owner | Shared Treasury | Senderecht wandert mit NFT |
 
-**UI:** `NftTokenSpendPanel` — Radio Bearer | Guarded, dann das passende Panel. Default = Guarded.  
+**UI:** `NftTokenSpendPanel` — Dropdown Guarded (NFT+Wallet) | Bearer (nur NFT); Live-Balance + Vault-ID; Empfänger erst beim Auszahlen; Messaging-Module-Package unter Erweitert („bereits gesetzt“). Default = Guarded.  
 **Nicht:** Klartext/Chat-Gate; Mesh-Payments; „NFT allein bewegt fremde lose Coins“.
 
 **Pflicht-Kommunikation:** Lose / freie Coins **außerhalb** Purse/Treasury sind **ungeschützt**.
@@ -99,10 +99,12 @@ Passt zu „NFT = Capability, wandert unabhängig“. **Nicht** dasselbe wie A.
 
 ## 5. UI / Claims
 
-- Badge: **„NFT-gesichertes Guthaben (Guarded Purse)“** bzw. **„Treasury: wer NFT hat, darf senden“**.  
+- Badge / Wallet: **Frei** (native Balance) vs. **Gesichert (Purse/Treasury)** mit Live-Balance + NFT-Bindung.  
+- IOTA-Aktivität: create/deposit/spend/withdraw lokal protokollieren.  
 - Klar: NFT enthält **keine** Coins; Transfer des NFT ≠ Coin-Transfer.  
 - Frei liegende Coins außerhalb der Purse = **nicht** geschützt.  
-- Kein Marketing „ohne NFT unmöglich“ für Coins, die nie in die Purse kamen.
+- Kein Marketing „ohne NFT unmöglich“ für Coins, die nie in die Purse kamen.  
+- Optionaler lokaler Anzeigename am Vault (nicht on-chain).
 
 ---
 

@@ -28,6 +28,7 @@ import {
   writePassphraseRememberOnDeviceEnabled,
   writePassphraseReuseEnabled,
 } from '@/frontend/lib/passphrase-message-local-store'
+import { NftKeycardImagePreview } from '@/frontend/components/nft-keycard-image-preview'
 import { listNftKeycards } from '@/frontend/lib/nft-keycard-local-store'
 import { getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
 import {
@@ -275,6 +276,7 @@ export function PassphraseProtectComposerToggle(p: {
               </select>
               {bindOid ? (
                 <>
+                  <NftKeycardImagePreview objectId={bindOid} compact />
                   <select
                     className="rounded border border-border bg-background px-2 py-1.5 text-[11px] text-foreground"
                     value={bindSlot}
@@ -337,7 +339,7 @@ export function PassphraseProtectComposerToggle(p: {
                           {' — '}
                           DEK nur mit Broker-Key nach NFT-AddressOwner. Wire allein reicht nicht.
                           Einzelner API-Broker, kein Mysten-Seal. „Unter Zwang“ nur wenn Broker remote/unabhängig.
-                          Token-Spend (Bearer/Guarded) ist getrennt und optional.
+                          Gesichertes Guthaben (Tab „Guthaben“) ist getrennt und optional.
                         </span>
                       </label>
                       <label className="flex flex-wrap items-start gap-2">

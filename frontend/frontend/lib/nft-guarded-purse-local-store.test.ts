@@ -10,7 +10,7 @@ describe('nft-guarded-purse-local-store', () => {
     expect(() => iotaDecimalToMist('abc')).toThrow()
   })
 
-  it('badge erwähnt ungeschützte lose Coins', () => {
+  it('badge nennt Guarded und Purse-ID', () => {
     const t = nftGuardedPurseBadgeText({
       purseObjectId: '0x' + '11'.repeat(32),
       nftObjectId: '0x' + '22'.repeat(32),
@@ -19,7 +19,7 @@ describe('nft-guarded-purse-local-store', () => {
       status: 'active',
       updatedAtMs: 1,
     })
-    expect(t).toMatch(/ungeschützt/i)
-    expect(t).toMatch(/NFT-gesichertes Guthaben/)
+    expect(t).toMatch(/Guarded/i)
+    expect(t).toMatch(/Purse/)
   })
 })

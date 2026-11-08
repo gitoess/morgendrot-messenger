@@ -167,6 +167,71 @@ export function recordMsgBurnActivity(input: {
   })
 }
 
+export type NftVaultActivityOp =
+  | 'purse_create'
+  | 'purse_deposit'
+  | 'purse_spend'
+  | 'purse_destroy'
+  | 'treasury_create'
+  | 'treasury_deposit'
+  | 'treasury_withdraw'
+  | 'treasury_freeze'
+  | 'treasury_reclaim'
+  | 'vault_indexed'
+
+/** Gesichertes Guthaben → IOTA-Aktivität (frei → Vault oder Vault → Empfänger). */
+export function recordNftVaultActivity(input: {
+  op: NftVaultActivityOp
+  /** Purse- oder Treasury-Object-ID */
+  vaultObjectId?: string
+  nftObjectId?: string
+  /** Betrag in MIST, wenn bekannt */
+  amountMist?: bigint | string | number
+  digest?: string
+  recipient?: string
+  nftLabel?: string
+}): IotaActivityEntry {
+  const mistRaw = input.amountMist
+  let iotaPart = ''
+  if (mistRaw != null && mistRaw !== '') {
+    try {
+      const mist = typeof mistRaw === 'bigint' ? mistRaw : BigInt(mistRaw)
+      const whole = mist / 1_000_000_000n
+      const frac = mist % 1_000_000_000n
+      const fracStr = frac.toString().padStart(9, '0').replace(/0+$/, '')
+      iotaPart = ` · ${fracStr ? `${whole}.${fracStr}` : whole.toString()} IOTA`
+    } catch {
+      /* ignore */
+    }
+  }
+  const nftBit = input.nftObjectId
+    ? ` · NFT ${input.nftObjectId.slice(0, 10)}…${input.nftLabel ? ` (${input.nftLabel.slice(0, 24)})` : ''}`
+    : ''
+  const titles: Record<NftVaultActivityOp, { kind: IotaActivityKind; summary: string }> = {
+    purse_create: { kind: 'coin_out', summary: `Guarded-Purse angelegt${iotaPart}${nftBit}` },
+    purse_deposit: { kind: 'coin_out', summary: `Guarded-Purse Einzahlung${iotaPart}${nftBit}` },
+    purse_spend: { kind: 'coin_out', summary: `Guarded-Purse Auszahlung${iotaPart}${nftBit}` },
+    purse_destroy: { kind: 'coin_out', summary: `Guarded-Purse gelöscht${nftBit}` },
+    treasury_create: { kind: 'coin_out', summary: `Bearer-Treasury angelegt${iotaPart}${nftBit}` },
+    treasury_deposit: { kind: 'coin_out', summary: `Bearer-Treasury Einzahlung${iotaPart}${nftBit}` },
+    treasury_withdraw: { kind: 'coin_out', summary: `Bearer-Treasury Auszahlung${iotaPart}${nftBit}` },
+    treasury_freeze: { kind: 'coin_out', summary: `Bearer-Treasury Freeze/Thaw${nftBit}` },
+    treasury_reclaim: { kind: 'coin_in', summary: `Bearer-Treasury Admin-Reclaim${iotaPart}${nftBit}` },
+    vault_indexed: {
+      kind: 'coin_out',
+      summary: `Gesichertes Guthaben (lokal erkannt)${iotaPart}${nftBit}`,
+    },
+  }
+  const t = titles[input.op]
+  return recordIotaActivity({
+    kind: t.kind,
+    summary: t.summary,
+    digest: input.digest,
+    objectId: input.vaultObjectId || input.nftObjectId,
+    counterparty: input.recipient,
+  })
+}
+
 export function clearIotaActivityLocal(): void {
   if (typeof window === 'undefined') return
   try {
@@ -195,7 +260,7 @@ export function iotaActivityKindLabel(kind: IotaActivityKind): string {
     case 'coin_in':
       return 'Coin ←'
     case 'coin_out':
-      return 'Coin →'
+      return 'Guthaben'
     default:
       return kind
   }

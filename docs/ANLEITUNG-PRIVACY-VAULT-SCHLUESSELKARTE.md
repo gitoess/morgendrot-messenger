@@ -220,8 +220,9 @@ Intern heißt der Chain-Call weiter `/purge-msg` — in der UI nur noch **Burn**
 | Dual Wallet∧NFT | P4a-dual | Composer unter Starkes Gate; Klartext danach kopierbar |
 | Pubkey-Wrap | P4a2 | Checkbox unter Dual; ECDH-Peer-Pub der erlaubten Wallet nötig |
 | Seal / Key-Broker | P4b | Checkbox unter Starkes Gate; **ein API-Broker ≠ Mysten-Seal**; remote nötig für „unter Zwang“ |
-| Token-Spend | S0–S3 | Radio: **Nur NFT (Bearer)** oder **NFT+Wallet (Guarded)** — wählbar |
-| NFT-gesichertes Senden (IOTA) | B2-S0 Spec | Backlog — **nur Token**; Purse-2FA (X∧NFT); lose Coins außerhalb = ungeschützt (`docs/NFT-GUARDED-SPEND-SPEC.md`) |
+| Gesichertes Guthaben | S0–S3 | Tab **Guthaben**; Guarded/Bearer; Live-Balance; Vault-ID; optional Anzeigename; **Wallet: Frei vs. Gesichert**; Aktivität loggt Purse/Treasury |
+| Zeitkapsel | P5 | Eigener Tab **Zeitkapsel** (nicht in der Galerie-Karte) |
+| NFT-gesichertes Senden (IOTA) | B2-S0–S3 Ist | **nur Token**; Purse ≠ freie Wallet-Balance; lose Coins außerhalb = ungeschützt (`docs/NFT-GUARDED-SPEND-SPEC.md`) |
 | Öffentlicher Ciphertext-Vault + NFT-Timelock („Zeitkapsel“) | **B2-P5a/b Ist** | NFT = Gate, Texte = Ciphertext getrennt. Borrower: optional Object-ID / Besitzer=Archiv unter On-Chain/NFT laden, dann lesen. Spec **`docs/NFT-SCHLUESSELKARTE-PUBLIC-VAULT-TIMELOCK.md`** §0a |
 | Rotierende Outboxes / voller Dead-Drop | Claims-Check + Architektur | Nicht gebaut |
 | Handshake mit Decoys | Claims-Check | Nicht gebaut |
@@ -235,11 +236,19 @@ Siehe auch Kopf von `docs/ROADMAP-FAHRPLAN.md` (Nachtrag Privacy 2026-11-05): *�
 
 ## 9. Empfohlene Reihenfolge ab hier
 
-1. ~~Anleitung §0 / Epoch+Burn / C1 / P4a / P5a/b / P4a-dual~~ → **Ist** (Logbuch 2026-11-06).  
-2. **Als Nächstes (optional):** 2-Geräte-Feldtest; P4b Seal PoC Ist (`0x1fb0e9b7…`, Spec `docs/NFT-GATE-SEAL-P4B-SPEC.md`).  
-3. **Feld:** Zeitkapsel-Panel Leihe + Ciphertext per Object-ID/Besitzer; optional P5d.  
+1. ~~Anleitung §0 / Epoch+Burn / C1 / P4a / P5a/b / P4a-dual / S0–S3~~ → **Ist**.  
+2. **Jetzt Joint-Feldtest:** Wallet NFT → Guthaben (Balance/Aktivität) → Zeitkapsel → optional P4a2/P4b.  
+3. **Als Nächstes (optional):** 2-Geräte-Feldtest.  
 4. **Später:** MeshSleepyChannel (Phase C).  
 5. **Nicht parallel:** Decoys, Outboxes, HW-Fragment.
+
+### Kurz: Gesichertes Guthaben (Nutzer)
+
+1. NFT-Dialog → Tab **Guthaben** → Schlüsselkarte wählen (Bild optional).  
+2. Modus **Guarded** oder **Bearer** → Betrag → **Guthaben anlegen**.  
+3. Im Hauptmenü-Wallet: **Frei** = lose Coins; **Gesichert** = Summe Purse/Treasury + NFT-Bindung.  
+4. **IOTA-Aktivität** listet Anlegen/Einzahlen/Auszahlen (lokal auf diesem Gerät).  
+5. Optional **Anzeigename** am Vault (nur lokal, nicht on-chain).
 
 ---
 

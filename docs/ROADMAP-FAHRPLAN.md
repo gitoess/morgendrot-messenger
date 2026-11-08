@@ -65,6 +65,8 @@
 
 **Nachtrag 2026-11-06 (Token-Spend wählbar):** UI-Radio **Nur NFT (Bearer)** vs **NFT+Wallet (Guarded)** unter NFT-Galerie (`NftTokenSpendPanel`). Beide Move-Pfade Ist; nicht fest verdrahtet. Orthogonal zu P4b.
 
+**Nachtrag 2026-11-08 (Guthaben sichtbar + Tabs):** Tabs **Galerie / Guthaben / Zeitkapsel**; Live-Balance; Wallet **Frei vs. Gesichert**; IOTA-Aktivität loggt Purse/Treasury; optional Anzeigename; Package-IDs benannt unter Erweitert. **Joint-Feldtest** als Nächstes (Checkliste Logbuch).
+
 **Nachtrag 2026-05-20 (Strategie — korrigiert):** **IOTA bleibt gekoppelt**; **Funk-Default** im Helfer-UI (`TRANSPORT_PROFILE=mesh-first`). **Delayed LoRa → IOTA**, **Offline-TX/Outbox** und **Pfad 4** bleiben — siehe **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**. Keine volle IOTA-TX im LoRa-Frame (**§ H.3m**). **Keine neuen Move-Publishes** in Tranche A; Fokus Runtime + Simple Mode.
 
 **Nachtrag 2026-06-16 (§ H.36 — Team-Member-Update & Einstiegs-Wizard):** Spec **`docs/TEAM-MEMBER-UPDATE-WIZARD-SPEC.md`**: geführter linearer Wizard (Boss/Helfer/Wanderer) orchestriert Handoff/Seed/Funk **ohne** zweiten Export-Assistenten; spontaner **Join-Request**; Wire `MORG_TEAM_MEMBER_UPDATE_V1` + Empfänger **Ja/Nein**; Transport **IOTA = Persistenz**, **LAN = Zustellung** (Boss-Relay Ist via § H.16), Funk nur Ping. **P0** Wizard-Skelett → **P1** Wire+LAN+IOTA → **P2** Join-Queue.

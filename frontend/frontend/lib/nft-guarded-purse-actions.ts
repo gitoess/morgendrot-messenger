@@ -21,7 +21,10 @@ import {
   buildDestroyEmptyGuardedPurseTransaction,
   buildSpendGuardedPurseTransaction,
 } from '@/frontend/lib/nft-guarded-purse-txb'
+import { recordNftVaultActivity } from '@/frontend/lib/iota-activity-local-log'
+import { getNftKeycard } from '@/frontend/lib/nft-keycard-local-store'
 import {
+  findNftGuardedPurseById,
   patchNftGuardedPurseLocal,
   removeNftGuardedPurseLocal,
   upsertNftGuardedPurseLocal,
@@ -121,6 +124,7 @@ export async function createNftGuardedPurse(input: {
     } catch {
       /* manuell nachtragen */
     }
+    const label = getNftKeycard(input.nftObjectId)?.label
     if (purseObjectId) {
       upsertNftGuardedPurseLocal({
         purseObjectId,
@@ -128,8 +132,17 @@ export async function createNftGuardedPurse(input: {
         owner: sender,
         balanceMistHint: input.amountMist.toString(),
         status: 'active',
+        ...(label ? { displayLabel: label } : {}),
       })
     }
+    recordNftVaultActivity({
+      op: 'purse_create',
+      vaultObjectId: purseObjectId,
+      nftObjectId: input.nftObjectId,
+      amountMist: input.amountMist,
+      digest: out.digest,
+      nftLabel: label,
+    })
     return { ok: true, digest: out.digest, purseObjectId }
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }
@@ -161,6 +174,15 @@ export async function depositNftGuardedPurse(input: {
     }
     patchNftGuardedPurseLocal(input.purseObjectId, {
       balanceMistHint: `+${input.amountMist.toString()} (nach Deposit)`,
+    })
+    const local = findNftGuardedPurseById(input.purseObjectId)
+    recordNftVaultActivity({
+      op: 'purse_deposit',
+      vaultObjectId: input.purseObjectId,
+      nftObjectId: local?.nftObjectId,
+      amountMist: input.amountMist,
+      digest: out.digest,
+      nftLabel: local?.displayLabel || (local ? getNftKeycard(local.nftObjectId)?.label : undefined),
     })
     return { ok: true, digest: out.digest, purseObjectId: input.purseObjectId }
   } catch (e) {
@@ -200,6 +222,15 @@ export async function spendNftGuardedPurse(input: {
     patchNftGuardedPurseLocal(input.purseObjectId, {
       balanceMistHint: `−${input.amountMist.toString()} (nach Spend)`,
     })
+    recordNftVaultActivity({
+      op: 'purse_spend',
+      vaultObjectId: input.purseObjectId,
+      nftObjectId: input.nftObjectId,
+      amountMist: input.amountMist,
+      digest: out.digest,
+      recipient: input.recipientAddress,
+      nftLabel: getNftKeycard(input.nftObjectId)?.label,
+    })
     return { ok: true, digest: out.digest, purseObjectId: input.purseObjectId }
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }
@@ -227,7 +258,15 @@ export async function destroyEmptyNftGuardedPurse(input: {
         error: `destroy_empty fehlgeschlagen${out.errorDetail ? ` — ${out.errorDetail}` : ''}.`,
       }
     }
+    const local = findNftGuardedPurseById(input.purseObjectId)
     removeNftGuardedPurseLocal(input.purseObjectId)
+    recordNftVaultActivity({
+      op: 'purse_destroy',
+      vaultObjectId: input.purseObjectId,
+      nftObjectId: local?.nftObjectId,
+      digest: out.digest,
+      nftLabel: local?.displayLabel,
+    })
     return { ok: true, digest: out.digest, purseObjectId: input.purseObjectId }
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }

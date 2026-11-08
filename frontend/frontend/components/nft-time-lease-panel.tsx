@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * B2-P5b — Zeitkapsel-UI: Leihe anlegen / cancel / return / reclaim + Badges.
- * Braucht Messaging-Package mit Modul `nft_time_lease` (nach Publish).
+ * B2-P5b — Zeitkapsel-UI: Leihe anlegen / cancel / return / reclaim.
+ * Package-ID unter Erweitert, benannt (Messaging-Module, nicht Chat-Stamm).
  */
 
 import { useEffect, useState } from 'react'
@@ -26,15 +26,14 @@ import {
 import { MESSAGING_MODULES_PACKAGE_ID } from '@/frontend/lib/messaging-modules-package'
 
 const LS_MSG_PKG = 'morgendrot.nftTimeLease.messagingPackageId.v1'
-/** Testnet — nft_time_lease (Stamm-Chat weiter PACKAGE_ID 0x06e099…). */
 export const NFT_TIME_LEASE_PACKAGE_ID_TESTNET = MESSAGING_MODULES_PACKAGE_ID
 
 function readMsgPkg(): string {
-  if (typeof window === 'undefined') return ''
+  if (typeof window === 'undefined') return MESSAGING_MODULES_PACKAGE_ID
   try {
-    return window.localStorage.getItem(LS_MSG_PKG)?.trim() || ''
+    return window.localStorage.getItem(LS_MSG_PKG)?.trim() || MESSAGING_MODULES_PACKAGE_ID
   } catch {
-    return ''
+    return MESSAGING_MODULES_PACKAGE_ID
   }
 }
 
@@ -48,11 +47,18 @@ function writeMsgPkg(v: string): void {
   }
 }
 
+function shortId(id: string): string {
+  const t = id.trim()
+  if (t.length < 14) return t
+  return `${t.slice(0, 10)}…${t.slice(-4)}`
+}
+
 export function NftTimeLeasePanel(p: {
   nftObjectId: string
   disabled?: boolean
 }) {
-  const [msgPkg, setMsgPkg] = useState('')
+  const [msgPkg, setMsgPkg] = useState(MESSAGING_MODULES_PACKAGE_ID)
+  const [editPkg, setEditPkg] = useState(false)
   const [borrower, setBorrower] = useState('')
   const [durationHours, setDurationHours] = useState('24')
   const [leaseIdManual, setLeaseIdManual] = useState('')
@@ -63,12 +69,7 @@ export function NftTimeLeasePanel(p: {
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
-    const stored = readMsgPkg()
-    if (stored) setMsgPkg(stored)
-    else {
-      setMsgPkg(NFT_TIME_LEASE_PACKAGE_ID_TESTNET)
-      writeMsgPkg(NFT_TIME_LEASE_PACKAGE_ID_TESTNET)
-    }
+    setMsgPkg(readMsgPkg())
     const sync = () => {
       setLease(findNftTimeLeaseByNft(p.nftObjectId))
       setTick((n) => n + 1)
@@ -104,41 +105,43 @@ export function NftTimeLeasePanel(p: {
   const activeLeaseId = lease?.leaseObjectId || leaseIdManual.trim()
 
   return (
-    <div className="mt-2 space-y-2 rounded border border-border/70 bg-muted/15 px-2.5 py-2 text-[11px] text-muted-foreground">
-      <p className="font-medium text-foreground">Zeitkapsel / NFT-Leserecht (B2-P5)</p>
+    <div className="space-y-2 text-[11px] text-muted-foreground">
       <p>
-        NFT = <span className="text-foreground">Leserecht</span>, nicht der Textspeicher. Ciphertexte liegen getrennt
-        (Mailbox an Archiv / Enc-ImageNFT). Leihe: Escrow + Borrower; kein stiller Cron — nach Datum permissionless{' '}
-        <code className="text-[10px]">reclaim</code>. Lease-Package vorausgefüllt (Testnet-Upgrade).
+        NFT = <span className="text-foreground">Leserecht auf Zeit</span>, nicht der Textspeicher. Leihe an eine
+        andere Wallet; nach Ablauf zurückholbar. Texte liegen weiter getrennt (Chat/Mailbox).
       </p>
-      <p className="text-[10px]">
-        Borrower liest so: unter <span className="text-foreground">On-Chain / NFT</span> Object-ID oder Besitzer =
-        Archiv-Adresse laden, dann mit Gate entschlüsseln — NFT allein bringt keine Texte mit.
-      </p>
-      <label className="flex flex-col gap-0.5">
-        <span>Messaging PACKAGE_ID</span>
-        <Input
-          className="h-7 font-mono text-[10px]"
-          value={msgPkg}
-          disabled={p.disabled || busy}
-          onChange={(e) => {
-            setMsgPkg(e.target.value)
-            writeMsgPkg(e.target.value)
-          }}
-          placeholder="0x… (nach Publish)"
-        />
-      </label>
 
       {lease ? (
-        <p className="rounded border border-amber-800/30 bg-amber-950/15 px-2 py-1 text-amber-100/90" key={tick}>
-          {nftTimeLeaseBadgeText(lease)}
-        </p>
+        <div
+          className="space-y-1.5 rounded border border-amber-800/30 bg-amber-950/15 px-2.5 py-2"
+          key={tick}
+        >
+          <p className="text-amber-100/90">{nftTimeLeaseBadgeText(lease)}</p>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[10px] text-foreground/90">
+              Lease-Object-ID: <span className="font-mono">{shortId(lease.leaseObjectId)}</span>
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-6 px-1.5 text-[10px]"
+              disabled={busy}
+              onClick={() => {
+                void navigator.clipboard.writeText(lease.leaseObjectId)
+                setInfo('Lease-ID kopiert.')
+              }}
+            >
+              Kopieren
+            </Button>
+          </div>
+        </div>
       ) : null}
 
       <label className="flex flex-col gap-0.5">
-        <span>Borrower (W2) Adresse</span>
+        <span>An wen verleihen? (Wallet-Adresse)</span>
         <Input
-          className="h-7 font-mono text-[10px]"
+          className="h-8 font-mono text-[11px]"
           value={borrower}
           disabled={p.disabled || busy}
           onChange={(e) => setBorrower(e.target.value)}
@@ -146,7 +149,7 @@ export function NftTimeLeasePanel(p: {
         />
       </label>
       <label className="flex flex-col gap-0.5">
-        <span>Dauer (Stunden bis Reclaim erlaubt)</span>
+        <span>Dauer (Stunden)</span>
         <Input
           className="h-7 font-mono text-[10px]"
           value={durationHours}
@@ -159,7 +162,7 @@ export function NftTimeLeasePanel(p: {
         <Button
           type="button"
           size="sm"
-          className="h-7 text-[10px]"
+          className="h-8 text-[11px]"
           disabled={p.disabled || busy || !msgPkg || !borrower}
           onClick={() =>
             void run(() =>
@@ -172,30 +175,13 @@ export function NftTimeLeasePanel(p: {
             )
           }
         >
-          Leihe starten (create_lease)
+          Leihe starten
         </Button>
         <Button
           type="button"
           size="sm"
           variant="outline"
-          className="h-7 text-[10px]"
-          disabled={p.disabled || busy || !msgPkg || !activeLeaseId}
-          onClick={() =>
-            void run(() =>
-              cancelNftTimeLeaseReclaim({
-                messagingPackageId: msgPkg,
-                leaseObjectId: activeLeaseId,
-              })
-            )
-          }
-        >
-          Timelock widerrufen
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-7 text-[10px]"
+          className="h-8 text-[11px]"
           disabled={p.disabled || busy || !msgPkg || !activeLeaseId}
           onClick={() =>
             void run(() =>
@@ -212,7 +198,7 @@ export function NftTimeLeasePanel(p: {
           type="button"
           size="sm"
           variant="secondary"
-          className="h-7 text-[10px]"
+          className="h-8 text-[11px]"
           disabled={p.disabled || busy || !msgPkg || !activeLeaseId}
           onClick={() =>
             void run(() =>
@@ -223,48 +209,100 @@ export function NftTimeLeasePanel(p: {
             )
           }
         >
-          Reclaim (nach Datum)
+          Nach Ablauf zurückholen
         </Button>
       </div>
 
-      <label className="flex flex-col gap-0.5">
-        <span>Lease Object-ID (falls nicht auto erkannt / manuell)</span>
-        <Input
-          className="h-7 font-mono text-[10px]"
-          value={leaseIdManual}
-          disabled={p.disabled || busy}
-          onChange={(e) => setLeaseIdManual(e.target.value)}
-          placeholder="0x…"
-        />
-      </label>
-      {leaseIdManual.trim() && borrower.trim() ? (
-        <Button
-          type="button"
-          size="sm"
-          variant="ghost"
-          className="h-7 text-[10px]"
-          disabled={busy}
-          onClick={() => {
-            upsertNftTimeLeaseLocal({
-              leaseObjectId: leaseIdManual,
-              nftObjectId: p.nftObjectId,
-              lender: '0x' + '00'.repeat(32),
-              borrower,
-              unlockMs: Date.now() + durationMs,
-              reclaimCancelled: false,
-              status: 'active',
-            })
-            setLease(findNftTimeLeaseByNft(p.nftObjectId))
-            setInfo('Lokaler Lease-Index gesetzt (Chain prüfen).')
-          }}
-        >
-          Lokal merken
-        </Button>
-      ) : null}
-
-      {listNftTimeLeasesLocal().length > 1 ? (
-        <p className="text-[10px]">{listNftTimeLeasesLocal().length} Leases lokal gemerkt.</p>
-      ) : null}
+      <details className="rounded border border-border/40 px-2 py-1">
+        <summary className="cursor-pointer text-[10px] text-muted-foreground">Erweitert</summary>
+        <div className="mt-2 space-y-2">
+          <div className="space-y-1">
+            <p className="text-[10px] text-foreground/90">
+              Messaging-Module-Package (Zeitkapsel / Guthaben / Seal) — nicht der Chat-Stamm
+            </p>
+            {!editPkg ? (
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="font-mono text-[10px]">bereits gesetzt · {shortId(msgPkg)}</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 px-1.5 text-[10px]"
+                  disabled={p.disabled || busy}
+                  onClick={() => setEditPkg(true)}
+                >
+                  Ändern
+                </Button>
+              </div>
+            ) : (
+              <Input
+                className="h-7 font-mono text-[10px]"
+                value={msgPkg}
+                disabled={p.disabled || busy}
+                onChange={(e) => {
+                  setMsgPkg(e.target.value)
+                  writeMsgPkg(e.target.value)
+                }}
+                onBlur={() => setEditPkg(false)}
+              />
+            )}
+          </div>
+          <label className="flex flex-col gap-0.5">
+            <span>Lease-Object-ID manuell (nur wenn Auto-Erkennung fehlt)</span>
+            <Input
+              className="h-7 font-mono text-[10px]"
+              value={leaseIdManual}
+              disabled={p.disabled || busy}
+              onChange={(e) => setLeaseIdManual(e.target.value)}
+              placeholder="0x…"
+            />
+          </label>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-7 text-[10px]"
+            disabled={p.disabled || busy || !msgPkg || !activeLeaseId}
+            onClick={() =>
+              void run(() =>
+                cancelNftTimeLeaseReclaim({
+                  messagingPackageId: msgPkg,
+                  leaseObjectId: activeLeaseId,
+                })
+              )
+            }
+          >
+            Timelock widerrufen
+          </Button>
+          {leaseIdManual.trim() && borrower.trim() ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 text-[10px]"
+              disabled={busy}
+              onClick={() => {
+                upsertNftTimeLeaseLocal({
+                  leaseObjectId: leaseIdManual,
+                  nftObjectId: p.nftObjectId,
+                  lender: '0x' + '00'.repeat(32),
+                  borrower,
+                  unlockMs: Date.now() + durationMs,
+                  reclaimCancelled: false,
+                  status: 'active',
+                })
+                setLease(findNftTimeLeaseByNft(p.nftObjectId))
+                setInfo('Lokaler Lease-Index gesetzt (Chain prüfen).')
+              }}
+            >
+              Lokal merken
+            </Button>
+          ) : null}
+          {listNftTimeLeasesLocal().length > 1 ? (
+            <p className="text-[10px]">{listNftTimeLeasesLocal().length} Leases lokal gemerkt.</p>
+          ) : null}
+        </div>
+      </details>
       {err ? <p className="text-destructive">{err}</p> : null}
       {info ? <p className="text-foreground">{info}</p> : null}
     </div>

@@ -13,6 +13,8 @@ export type NftGuardedPurseLocalEntry = {
   /** Letzter bekannter Balance-Hinweis in MIST (UI; Chain ist Wahrheit). */
   balanceMistHint: string
   status: 'active' | 'destroyed'
+  /** Optionales Anzeigenamen-Label (NFT/Schlüsselkarte). */
+  displayLabel?: string
   updatedAtMs: number
 }
 
@@ -60,9 +62,14 @@ export function upsertNftGuardedPurseLocal(
   writeStore(s)
 }
 
+export function findNftGuardedPurseById(purseObjectId: string): NftGuardedPurseLocalEntry | null {
+  const id = norm(purseObjectId)
+  return listNftGuardedPursesLocal().find((p) => p.purseObjectId === id) || null
+}
+
 export function patchNftGuardedPurseLocal(
   purseObjectId: string,
-  patch: Partial<Pick<NftGuardedPurseLocalEntry, 'balanceMistHint' | 'status'>>
+  patch: Partial<Pick<NftGuardedPurseLocalEntry, 'balanceMistHint' | 'status' | 'displayLabel'>>
 ): void {
   const s = readStore()
   const id = norm(purseObjectId)
@@ -93,7 +100,7 @@ export function findNftGuardedPurseByNft(nftObjectId: string): NftGuardedPurseLo
 export function nftGuardedPurseBadgeText(e: NftGuardedPurseLocalEntry): string {
   if (e.status === 'destroyed') return 'Guarded Purse zerstört (lokal)'
   const mist = e.balanceMistHint || '?'
-  return `NFT-gesichertes Guthaben · Purse ${e.purseObjectId.slice(0, 10)}… · ~${mist} MIST (lose Coins ungeschützt)`
+  return `Guarded (NFT + Wallet) · Purse ${e.purseObjectId.slice(0, 10)}… · Hinweis ${mist}`
 }
 
 /** IOTA-Dezimalstring → MIST (9 Nachkommastellen). */

@@ -22,7 +22,10 @@ import {
   buildDepositBearerTreasuryTransaction,
   buildWithdrawBearerTreasuryTransaction,
 } from '@/frontend/lib/nft-bearer-treasury-txb'
+import { recordNftVaultActivity } from '@/frontend/lib/iota-activity-local-log'
+import { getNftKeycard } from '@/frontend/lib/nft-keycard-local-store'
 import {
+  findNftBearerTreasuryById,
   patchNftBearerTreasuryLocal,
   upsertNftBearerTreasuryLocal,
 } from '@/frontend/lib/nft-bearer-treasury-local-store'
@@ -115,6 +118,7 @@ export async function createNftBearerTreasury(input: {
     } catch {
       /* manuell */
     }
+    const label = getNftKeycard(input.nftObjectId)?.label
     if (treasuryObjectId) {
       upsertNftBearerTreasuryLocal({
         treasuryObjectId,
@@ -123,8 +127,17 @@ export async function createNftBearerTreasury(input: {
         balanceMistHint: input.amountMist.toString(),
         frozen: false,
         status: 'active',
+        ...(label ? { displayLabel: label } : {}),
       })
     }
+    recordNftVaultActivity({
+      op: 'treasury_create',
+      vaultObjectId: treasuryObjectId,
+      nftObjectId: input.nftObjectId,
+      amountMist: input.amountMist,
+      digest: out.digest,
+      nftLabel: label,
+    })
     return { ok: true, digest: out.digest, treasuryObjectId }
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }
@@ -156,6 +169,15 @@ export async function depositNftBearerTreasury(input: {
     }
     patchNftBearerTreasuryLocal(input.treasuryObjectId, {
       balanceMistHint: `+${input.amountMist.toString()} (nach Deposit)`,
+    })
+    const local = findNftBearerTreasuryById(input.treasuryObjectId)
+    recordNftVaultActivity({
+      op: 'treasury_deposit',
+      vaultObjectId: input.treasuryObjectId,
+      nftObjectId: local?.nftObjectId,
+      amountMist: input.amountMist,
+      digest: out.digest,
+      nftLabel: local?.displayLabel || (local ? getNftKeycard(local.nftObjectId)?.label : undefined),
     })
     return { ok: true, digest: out.digest, treasuryObjectId: input.treasuryObjectId }
   } catch (e) {
@@ -195,6 +217,15 @@ export async function withdrawNftBearerTreasury(input: {
     patchNftBearerTreasuryLocal(input.treasuryObjectId, {
       balanceMistHint: `−${input.amountMist.toString()} (nach Withdraw)`,
     })
+    recordNftVaultActivity({
+      op: 'treasury_withdraw',
+      vaultObjectId: input.treasuryObjectId,
+      nftObjectId: input.nftObjectId,
+      amountMist: input.amountMist,
+      digest: out.digest,
+      recipient: input.recipientAddress,
+      nftLabel: getNftKeycard(input.nftObjectId)?.label,
+    })
     return { ok: true, digest: out.digest, treasuryObjectId: input.treasuryObjectId }
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }
@@ -225,6 +256,14 @@ export async function adminSetFrozenNftBearerTreasury(input: {
       }
     }
     patchNftBearerTreasuryLocal(input.treasuryObjectId, { frozen: input.frozen })
+    const local = findNftBearerTreasuryById(input.treasuryObjectId)
+    recordNftVaultActivity({
+      op: 'treasury_freeze',
+      vaultObjectId: input.treasuryObjectId,
+      nftObjectId: local?.nftObjectId,
+      digest: out.digest,
+      nftLabel: local?.displayLabel,
+    })
     return { ok: true, digest: out.digest, treasuryObjectId: input.treasuryObjectId }
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }
@@ -253,6 +292,14 @@ export async function adminReclaimNftBearerTreasury(input: {
       }
     }
     patchNftBearerTreasuryLocal(input.treasuryObjectId, { balanceMistHint: '0 (reclaimed)' })
+    const local = findNftBearerTreasuryById(input.treasuryObjectId)
+    recordNftVaultActivity({
+      op: 'treasury_reclaim',
+      vaultObjectId: input.treasuryObjectId,
+      nftObjectId: local?.nftObjectId,
+      digest: out.digest,
+      nftLabel: local?.displayLabel,
+    })
     return { ok: true, digest: out.digest, treasuryObjectId: input.treasuryObjectId }
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }

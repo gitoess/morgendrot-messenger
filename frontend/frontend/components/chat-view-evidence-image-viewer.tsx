@@ -24,8 +24,7 @@ import {
   burnEvidenceImageNft,
   transferEvidenceImageNft,
 } from '@/frontend/lib/evidence-image-transfer'
-import { NftTimeLeasePanel } from '@/frontend/components/nft-time-lease-panel'
-import { NftTokenSpendPanel } from '@/frontend/components/nft-token-spend-panel'
+import { NftCardToolsSection } from '@/frontend/components/nft-card-tools-section'
 import {
   EVIDENCE_ATTR_MAX_PAIRS,
   unpackEvidenceDescription,
@@ -83,7 +82,7 @@ import {
 } from '@/frontend/lib/nft-activity-local-log'
 import { explorerTxUrlFromDigest } from '@/frontend/lib/iota-tx-explorer-hint'
 
-type Mode = 'object' | 'owner' | 'mint' | 'wire' | 'mailbox'
+type Mode = 'object' | 'owner' | 'mint' | 'wire' | 'mailbox' | 'guthaben' | 'zeitkapsel'
 
 type OwnerGalleryItem = EvidenceOwnerListItem & {
   previewUrl?: string
@@ -132,15 +131,17 @@ function revokeAll(urls: string[]) {
 }
 
 const ALL_EVIDENCE_MODES: { id: Mode; label: string }[] = [
+  { id: 'owner', label: 'Galerie' },
   { id: 'object', label: 'Object-ID' },
-  { id: 'owner', label: 'Besitzer' },
+  { id: 'mint', label: 'Minten' },
+  { id: 'guthaben', label: 'Guthaben' },
+  { id: 'zeitkapsel', label: 'Zeitkapsel' },
   { id: 'wire', label: 'Wire' },
   { id: 'mailbox', label: 'Klartext' },
-  { id: 'mint', label: 'Minten' },
 ]
 
-/** Hauptmenü-Wallet: nur NFT-relevante Tabs. */
-export const NFT_WALLET_MODES: Mode[] = ['owner', 'object', 'mint']
+/** Hauptmenü-Wallet: Galerie + getrennte Karten-Werkzeuge. */
+export const NFT_WALLET_MODES: Mode[] = ['owner', 'object', 'mint', 'guthaben', 'zeitkapsel']
 
 export function ChatViewEvidenceImageViewerButton(p?: {
   triggerClassName?: string
@@ -850,11 +851,11 @@ export function ChatViewEvidenceImageViewerButton(p?: {
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{nftWalletUi ? 'NFT' : 'On-Chain / NFT'}</DialogTitle>
+          <DialogTitle>{nftWalletUi ? 'NFT & Schlüsselkarte' : 'On-Chain / NFT'}</DialogTitle>
           <DialogDescription>
             {nftWalletUi
-              ? `Eigene NFTs (Besitzer), Object-ID laden oder minten. Cap ${Math.round(EVIDENCE_IMAGE_MAX_RAW_BYTES / 1024)} KB.`
-              : `ImageNFT (Object/Besitzer/Mint), Wire aus lokalem Posteingang, optional Klartext an bekannter MAILBOX_ID. Mint ~12 KB Ziel, Cap ${Math.round(EVIDENCE_IMAGE_MAX_RAW_BYTES / 1024)} KB.`}
+              ? `Galerie, Minten, Guthaben und Zeitkapsel — jeweils eigener Tab. Cap ${Math.round(EVIDENCE_IMAGE_MAX_RAW_BYTES / 1024)} KB.`
+              : `ImageNFT (Galerie/Object/Mint), Guthaben & Zeitkapsel getrennt, Wire/Klartext optional. Cap ${Math.round(EVIDENCE_IMAGE_MAX_RAW_BYTES / 1024)} KB.`}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -870,7 +871,10 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                   setError('')
                   setInfo('')
                   clearSinglePreview()
-                  clearOwnerGallery()
+                  /* Galerie behalten, wenn man zu Guthaben/Zeitkapsel wechselt (Auswahlhilfe). */
+                  if (id !== 'guthaben' && id !== 'zeitkapsel') {
+                    clearOwnerGallery()
+                  }
                   setWireRows([])
                   setWireCandidates([])
                   setWireOffset(0)
@@ -882,7 +886,17 @@ export function ChatViewEvidenceImageViewerButton(p?: {
             ))}
           </div>
 
-          {mode === 'wire' ? (
+          {mode === 'guthaben' || mode === 'zeitkapsel' ? (
+            <NftCardToolsSection
+              tool={mode}
+              disabled={busy}
+              extraOptions={ownerItems.map((it) => ({
+                objectId: it.objectId,
+                label: `${it.name || 'NFT'} · ${it.objectId.slice(0, 10)}…`,
+                previewUrl: it.previewUrl,
+              }))}
+            />
+          ) : mode === 'wire' ? (
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">
                 Zeigt MORG_COMPACT_IMG aus dem <strong className="text-foreground">aktuell geladenen</strong>{' '}
@@ -1193,7 +1207,10 @@ export function ChatViewEvidenceImageViewerButton(p?: {
             </div>
           )}
 
-          {(pendingCipher || ownerItems.some((x) => x.needsPassphrase)) && mode !== 'mint' ? (
+          {(pendingCipher || ownerItems.some((x) => x.needsPassphrase)) &&
+          mode !== 'mint' &&
+          mode !== 'guthaben' &&
+          mode !== 'zeitkapsel' ? (
             <div className="space-y-2 rounded-md border border-amber-600/40 bg-amber-500/10 p-3">
               <Label htmlFor="evidence-pass">Passphrase</Label>
               <Input
@@ -1272,7 +1289,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
             </div>
           ) : null}
 
-          {sharePassphrase && mode !== 'mint' ? (
+          {sharePassphrase && mode !== 'mint' && mode !== 'guthaben' && mode !== 'zeitkapsel' ? (
             <div className="space-y-2 rounded-md border border-amber-600/40 bg-amber-500/10 p-3">
               <p className="text-xs font-medium">Gemerkte / eingegebene Passphrase</p>
               <Input readOnly value={sharePassphrase} className="font-mono text-xs" />
@@ -1290,7 +1307,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
           {info ? <p className="text-xs text-muted-foreground whitespace-pre-wrap">{info}</p> : null}
           {error ? <p className="text-sm text-destructive whitespace-pre-wrap">{error}</p> : null}
 
-          {listNftKeycards().length > 0 ? (
+          {listNftKeycards().length > 0 && mode !== 'guthaben' && mode !== 'zeitkapsel' ? (
             <div className="space-y-2 rounded-md border border-border/70 bg-muted/15 p-2.5">
               <p className="text-xs font-medium text-foreground">Schlüsselkarte — Bindungen</p>
               <p className="text-[10px] text-muted-foreground">
@@ -1719,8 +1736,6 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                           />
                         )}
                       </div>
-                      <NftTokenSpendPanel nftObjectId={it.objectId} disabled={busy} />
-                      <NftTimeLeasePanel nftObjectId={it.objectId} disabled={busy} />
                       {storedPass ? (
                         <p className="text-[10px] text-muted-foreground">
                           Teilen: Object-ID + Passphrase separat (nicht on-chain). Empfänger: Object-ID-Tab → laden →

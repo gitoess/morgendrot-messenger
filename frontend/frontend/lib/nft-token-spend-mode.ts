@@ -1,10 +1,9 @@
 /**
- * Token-Spend-Modus (optional wählbar) — orthogonal zu P4b Seal (Leserecht).
+ * Token-Spend-Modus — orthogonal zu P4b Seal (Leserecht).
  * Spec: docs/NFT-GUARDED-SPEND-SPEC.md
  *
- * Produkt-UI:
+ *   guarded = NFT + Wallet (Guarded Purse)
  *   bearer  = nur NFT reicht (Bearer Treasury)
- *   guarded = NFT und Wallet X müssen zusammenpassen (Guarded Purse)
  */
 
 export type NftTokenSpendMode = 'bearer' | 'guarded'
@@ -33,8 +32,15 @@ export function writeNftTokenSpendMode(mode: NftTokenSpendMode): void {
   }
 }
 
+/** Hybrid-Label: Fachname + Alltagssprache. */
 export function nftTokenSpendModeLabel(mode: NftTokenSpendMode): string {
   return mode === 'bearer'
-    ? 'Nur NFT (Bearer) — wer die Karte hat, darf aus der Treasury'
-    : 'NFT + Wallet (Guarded) — nur Wallet X mit Karte aus der Purse'
+    ? 'Bearer (nur NFT reicht) — wer die Karte hat, darf auszahlen'
+    : 'Guarded (NFT + Wallet) — nur du, Karte muss bei dir liegen'
+}
+
+export function nftTokenSpendModeOptionLabel(mode: NftTokenSpendMode): string {
+  return mode === 'bearer'
+    ? 'Bearer (nur NFT reicht) — Recht wandert mit der Karte'
+    : 'Guarded (NFT + Wallet) — nur du mit Karte bei dir'
 }

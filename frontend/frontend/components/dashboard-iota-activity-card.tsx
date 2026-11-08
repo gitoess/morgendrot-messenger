@@ -46,7 +46,8 @@ export function DashboardIotaActivityCard({ compact = false }: { compact?: boole
         </h3>
       </div>
       <p className="mb-2 text-[10px] text-muted-foreground">
-        Chain-Ereignisse dieses Geräts: Burn, NFT Ein/Aus. Coin folgt. Explorer behält die TXs.
+        Dieses Gerät: Burn, NFT Ein/Aus, gesichertes Guthaben (Purse/Treasury). Freie Coins-Transfers
+        noch nicht. Explorer behält alle TXs.
       </p>
       {rows.length === 0 ? (
         <p className="text-xs text-muted-foreground">Noch keine Einträge.</p>

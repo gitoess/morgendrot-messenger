@@ -12,15 +12,20 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-11-08** | PC (Windows), **Guthaben sichtbar (Wallet+Aktivität)** | Frei vs. Gesichert in Wallet-Karte; Aktivität Purse/Treasury; optional Anzeigename; Backfill lokal erkannter Vaults; Docs/Anleitung/Roadmap. | **PASS (Code)** — Joint ab Checkliste. |
+| **2026-11-08** | PC (Windows), **Guthaben-UX Klarheit** | Live-Balance RPC; Guarded/Bearer Hybrid-Labels; Vault-ID kopierbar; Package „Messaging-Module“ read-only unter Erweitert; Zeitkapsel gleich. Vitest vault-balance+mode. | **PASS (Code)** — Joint-Checkliste unten. |
+| **2026-11-06** | PC (Windows), **Solo Auto vor Joint-Feldtest** | Vitest Privacy 19+2 PASS; `iota move build` OK; RPC Modules `0x1fb0e9b7…` (seal/bearer/purse/lease/messaging); API-Restart; HTTP Seal status/wrap OK, unwrap 403 (deny); `scripts/smoke-nft-gate-seal.mjs` ALL PASS. | **PASS (Solo)** — Joint ab Checkliste #1. |
 | **2026-11-06** | PC (Windows), **Token-Spend wählbar + Doku** | `NftTokenSpendPanel` Radio Bearer\|Guarded; P4b Claims „einzelner Broker / remote“. Vitest 18/18 (spend/gate/purse/bearer/lease/seal). | **PASS (Vitest)** — manuelle Chain-Checkliste unten. |
 
-### Manuelle Checkliste (nächster Feldtest — letzte Tranchen)
+### Manuelle Checkliste (Joint-Feldtest — ab hier zusammen)
 
-1. **Guarded Spend:** NFT-Galerie → Token-Spend → Radio **Guarded** → Purse anlegen/spend mit NFT bei Signer.  
-2. **Bearer Spend:** Radio **Nur NFT** → Treasury anlegen; mit NFT-Besitz withdraw (ggf. 2. Wallet).  
-3. **P4a2:** Starkes Gate + Dual + Pubkey-Wrap; Handshake für requiredWallet; Enc/Dec.  
-4. **P4b:** Seal-Checkbox; Enc; Dec ohne NFT → Broker deny; mit Owner → Klartext. Claims: einzelner Broker.  
-5. **Zeitkapsel:** create_lease / return_early (Package `0x1fb0e9b7…`).
+1. **Wallet:** Hauptmenü → **Frei** vs. **Gesichert (Purse/Treasury)** zeigt bestehendes Guthaben + NFT-Bindung; **IOTA-Aktivität** hat Eintrag.  
+2. **Guthaben Guarded:** NFT → Tab **Guthaben** → Live-Balance + Vault-ID + optional Anzeigename.  
+3. **Einzahlen / Auszahlen:** Balance + neuer Aktivitäts-Eintrag; **Auszahlen…** → An mich.  
+4. **Bearer:** Modus wechseln → Hinweis / eigener Vault.  
+5. **Zeitkapsel:** eigener Tab; Lease-ID.  
+6. **P4a2 / P4b** optional.
+
 | **2026-11-06** | PC (Windows), **B2-P4b Seal PoC** | `nft_gate_seal` Upgrade `0x1fb0e9b7…`; Broker `/api/nft-gate-seal/*`; Gate `nft_seal_p4b`; Vitest Capsule+PTB. | **PASS (Move+Vitest+on-chain)** |
 | **2026-11-06** | PC (Windows), **B2-S3 + P4a2** | `nft_bearer_treasury` Upgrade `0x10b16597…`; Panel; P4a2 ECDH-Wrap Vitest; Composer-Checkbox. | **PASS (Move+Vitest+on-chain)** |
 | **2026-11-06** | PC (Windows), **B2-S2 Guarded Purse UI** | Panel unter NFT-Galerie; Actions+Local-Store; Vitest store+txb; Pflichttext lose Coins; Cache-Wipe Keys. | **PASS (Code)** — Chain-Feldspend manuell offen. |

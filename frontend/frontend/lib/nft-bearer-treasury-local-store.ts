@@ -12,6 +12,8 @@ export type NftBearerTreasuryLocalEntry = {
   balanceMistHint: string
   frozen: boolean
   status: 'active' | 'destroyed'
+  /** Optionales Anzeigenamen-Label (NFT/Schlüsselkarte). */
+  displayLabel?: string
   updatedAtMs: number
 }
 
@@ -59,9 +61,16 @@ export function upsertNftBearerTreasuryLocal(
   writeStore(s)
 }
 
+export function findNftBearerTreasuryById(
+  treasuryObjectId: string
+): NftBearerTreasuryLocalEntry | null {
+  const id = norm(treasuryObjectId)
+  return listNftBearerTreasuriesLocal().find((t) => t.treasuryObjectId === id) || null
+}
+
 export function patchNftBearerTreasuryLocal(
   treasuryObjectId: string,
-  patch: Partial<Pick<NftBearerTreasuryLocalEntry, 'balanceMistHint' | 'frozen' | 'status'>>
+  patch: Partial<Pick<NftBearerTreasuryLocalEntry, 'balanceMistHint' | 'frozen' | 'status' | 'displayLabel'>>
 ): void {
   const s = readStore()
   const id = norm(treasuryObjectId)
@@ -91,5 +100,5 @@ export function findNftBearerTreasuryByNft(nftObjectId: string): NftBearerTreasu
 export function nftBearerTreasuryBadgeText(e: NftBearerTreasuryLocalEntry): string {
   if (e.status === 'destroyed') return 'Bearer Treasury zerstört (lokal)'
   const fro = e.frozen ? ' · EINGEFROREN' : ''
-  return `Treasury: wer NFT hat, darf senden · ${e.treasuryObjectId.slice(0, 10)}… · ~${e.balanceMistHint} MIST${fro}`
+  return `Bearer (nur NFT) · ${e.treasuryObjectId.slice(0, 10)}… · Hinweis ${e.balanceMistHint}${fro}`
 }
