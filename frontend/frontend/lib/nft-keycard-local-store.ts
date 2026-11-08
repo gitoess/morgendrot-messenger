@@ -28,6 +28,14 @@ export type NftKeycardSlot = {
   note?: string
 }
 
+/** TBA-ähnlich: Vault-Index an der Schlüsselkarte (lokal / Tresor). */
+export type NftKeycardBoundVault = {
+  kind: 'bearer' | 'guarded'
+  vaultObjectId: string
+  messagingPackageId?: string
+  createDigest?: string
+}
+
 export type NftKeycardEntry = {
   label?: string
   slots: NftKeycardSlot[]
@@ -35,6 +43,8 @@ export type NftKeycardEntry = {
   boundWires?: Record<string, string>
   /** Gebundene ImageNFT-/Objekt-IDs → Slot-ID (P2 Mint an Slot) */
   boundObjects?: Record<string, string>
+  /** Gesichertes Guthaben an dieser Karte (Empfänger braucht das bei NFT-Transfer). */
+  boundVault?: NftKeycardBoundVault
 }
 
 /** Slot-IDs: default, img, pwmsg, … */
@@ -246,8 +256,40 @@ export function upsertNftKeycardSlot(opts: {
       ...(opts.label?.trim() || prev.label ? { label: (opts.label?.trim() || prev.label)! } : {}),
       ...(prev.boundWires ? { boundWires: prev.boundWires } : {}),
       ...(prev.boundObjects ? { boundObjects: prev.boundObjects } : {}),
+      ...(prev.boundVault ? { boundVault: prev.boundVault } : {}),
     },
   })
+  schedulePersist()
+  emitChanged()
+  return { ok: true }
+}
+
+/** Bindet Purse/Treasury an die Schlüsselkarte (für Transfer/Empfänger-Gerät). */
+export function bindVaultToNftKeycard(opts: {
+  objectId: string
+  vault: NftKeycardBoundVault
+}): { ok: true } | { ok: false; error: string } {
+  const oid = normOid(opts.objectId)
+  const card = memoryCards[oid]
+  if (!card) {
+    return {
+      ok: false,
+      error: 'Keine Schlüsselkarte — zuerst „Als Schlüsselkarte merken“, dann Vault gebunden.',
+    }
+  }
+  const vaultObjectId = normOid(opts.vault.vaultObjectId)
+  if (!/^0x[a-f0-9]{64}$/.test(vaultObjectId)) return { ok: false, error: 'Ungültige Vault-Object-ID.' }
+  memoryCards[oid] = {
+    ...card,
+    boundVault: {
+      kind: opts.vault.kind,
+      vaultObjectId,
+      ...(opts.vault.messagingPackageId?.trim()
+        ? { messagingPackageId: opts.vault.messagingPackageId.trim().toLowerCase() }
+        : {}),
+      ...(opts.vault.createDigest?.trim() ? { createDigest: opts.vault.createDigest.trim() } : {}),
+    },
+  }
   schedulePersist()
   emitChanged()
   return { ok: true }

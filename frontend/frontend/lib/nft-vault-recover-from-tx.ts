@@ -13,7 +13,7 @@ import {
   upsertNftGuardedPurseLocal,
   type NftGuardedPurseLocalEntry,
 } from '@/frontend/lib/nft-guarded-purse-local-store'
-import { getNftKeycard } from '@/frontend/lib/nft-keycard-local-store'
+import { bindVaultToNftKeycard, getNftKeycard } from '@/frontend/lib/nft-keycard-local-store'
 
 const HEX64 = /^0x[a-f0-9]{64}$/
 
@@ -155,10 +155,20 @@ export function applyRecoveredVaultLocal(
       balanceMistHint: v.amountMist,
       frozen: false,
       status: 'active',
+      createDigest: v.digest,
       ...(label ? { displayLabel: label } : {}),
       ...(v.messagingPackageId ? { messagingPackageId: v.messagingPackageId } : {}),
     }
     upsertNftBearerTreasuryLocal(entry)
+    bindVaultToNftKeycard({
+      objectId: v.nftObjectId,
+      vault: {
+        kind: 'bearer',
+        vaultObjectId: v.treasuryObjectId,
+        messagingPackageId: v.messagingPackageId,
+        createDigest: v.digest,
+      },
+    })
     recordNftVaultActivity({
       op: 'treasury_create',
       vaultObjectId: v.treasuryObjectId,
@@ -184,10 +194,20 @@ export function applyRecoveredVaultLocal(
     owner: v.owner,
     balanceMistHint: v.amountMist,
     status: 'active',
+    createDigest: v.digest,
     ...(label ? { displayLabel: label } : {}),
     ...(v.messagingPackageId ? { messagingPackageId: v.messagingPackageId } : {}),
   }
   upsertNftGuardedPurseLocal(entry)
+  bindVaultToNftKeycard({
+    objectId: v.nftObjectId,
+    vault: {
+      kind: 'guarded',
+      vaultObjectId: v.purseObjectId,
+      messagingPackageId: v.messagingPackageId,
+      createDigest: v.digest,
+    },
+  })
   recordNftVaultActivity({
     op: 'purse_create',
     vaultObjectId: v.purseObjectId,

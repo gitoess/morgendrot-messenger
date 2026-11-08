@@ -16,6 +16,8 @@ export type NftBearerTreasuryLocalEntry = {
   displayLabel?: string
   /** Move-Package der Treasury (wichtig bei älteren Upgrades). */
   messagingPackageId?: string
+  /** Create-TX Digest (für Nachtragen / Teilen). */
+  createDigest?: string
   updatedAtMs: number
 }
 
@@ -43,6 +45,11 @@ function writeStore(s: StoreV1): void {
   try {
     window.localStorage.setItem(NFT_BEARER_TREASURY_LS_KEY, JSON.stringify(s))
     window.dispatchEvent(new Event(NFT_BEARER_TREASURY_CHANGED))
+  } catch {
+    /* ignore */
+  }
+  try {
+    void import('@/frontend/lib/nft-vault-index-vault').then((m) => m.scheduleNftVaultIndexPersist())
   } catch {
     /* ignore */
   }
@@ -75,7 +82,7 @@ export function patchNftBearerTreasuryLocal(
   patch: Partial<
     Pick<
       NftBearerTreasuryLocalEntry,
-      'balanceMistHint' | 'frozen' | 'status' | 'displayLabel' | 'messagingPackageId'
+      'balanceMistHint' | 'frozen' | 'status' | 'displayLabel' | 'messagingPackageId' | 'createDigest'
     >
   >
 ): void {

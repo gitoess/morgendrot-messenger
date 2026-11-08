@@ -17,6 +17,8 @@ export type NftGuardedPurseLocalEntry = {
   displayLabel?: string
   /** Move-Package der Purse (wichtig bei älteren Upgrades). */
   messagingPackageId?: string
+  /** Create-TX Digest (für Nachtragen / Teilen). */
+  createDigest?: string
   updatedAtMs: number
 }
 
@@ -47,6 +49,12 @@ function writeStore(s: StoreV1): void {
   } catch {
     /* ignore */
   }
+  try {
+    // lazy: avoid circular import at module top
+    void import('@/frontend/lib/nft-vault-index-vault').then((m) => m.scheduleNftVaultIndexPersist())
+  } catch {
+    /* ignore */
+  }
 }
 
 export function upsertNftGuardedPurseLocal(
@@ -72,7 +80,10 @@ export function findNftGuardedPurseById(purseObjectId: string): NftGuardedPurseL
 export function patchNftGuardedPurseLocal(
   purseObjectId: string,
   patch: Partial<
-    Pick<NftGuardedPurseLocalEntry, 'balanceMistHint' | 'status' | 'displayLabel' | 'messagingPackageId'>
+    Pick<
+      NftGuardedPurseLocalEntry,
+      'balanceMistHint' | 'status' | 'displayLabel' | 'messagingPackageId' | 'createDigest'
+    >
   >
 ): void {
   const s = readStore()

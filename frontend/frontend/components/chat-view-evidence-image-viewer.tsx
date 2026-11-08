@@ -24,6 +24,12 @@ import {
   burnEvidenceImageNft,
   transferEvidenceImageNft,
 } from '@/frontend/lib/evidence-image-transfer'
+import {
+  buildNftVaultHandoffFromLocal,
+  encodeNftVaultHandoff,
+  nftVaultTransferHint,
+} from '@/frontend/lib/nft-vault-handoff'
+import { getNftKeycard } from '@/frontend/lib/nft-keycard-local-store'
 import { NftCardToolsSection } from '@/frontend/components/nft-card-tools-section'
 import {
   EVIDENCE_ATTR_MAX_PAIRS,
@@ -155,6 +161,10 @@ export function ChatViewEvidenceImageViewerButton(p?: {
    * Hauptmenü: `NFT_WALLET_MODES` (Besitzer / Object-ID / Minten).
    */
   allowedModes?: readonly Mode[]
+  /** Erhöhen → Dialog öffnen (nutzt defaultMode). */
+  openNonce?: number
+  /** Dialog offen/zu — z. B. Parent setzt defaultMode zurück. */
+  onOpenChange?: (open: boolean) => void
   /** Lokaler Posteingang — für Tab „Wire/Posteingang“. */
   messages?: readonly {
     id?: string
@@ -810,11 +820,33 @@ export function ChatViewEvidenceImageViewerButton(p?: {
     void onLoadOwnerPage({ append: false, ownerOverride: addr })
   }, [onLoadOwnerPage, ownerAddress, clearOwnerGallery, clearSinglePreview])
 
+  useEffect(() => {
+    if (!p?.openNonce || p.openNonce < 1) return
+    const want = p.defaultMode || (nftWalletUi ? 'owner' : 'object')
+    const startMode = allowed.some((m) => m.id === want) ? want : allowed[0]?.id || 'object'
+    setMode(startMode)
+    setOpen(true)
+    p?.onOpenChange?.(true)
+    if (p.autoLoadOwnOnOpen && startMode === 'owner') {
+      const addr = getDirectIotaSessionSignerAddress()
+      if (!addr) {
+        setError('Kein Session-Signer — Tresor entsperren.')
+        return
+      }
+      setQuery(addr)
+      setError('')
+      setInfo('')
+      void onLoadOwnerPage({ append: false, ownerOverride: addr })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- openNonce is the only intentional trigger
+  }, [p?.openNonce])
+
   return (
     <Dialog
       open={open}
       onOpenChange={(v) => {
         setOpen(v)
+        p?.onOpenChange?.(v)
         if (!v) {
           resetAll()
           return
@@ -1510,7 +1542,52 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                           Object-ID kopieren
                         </Button>
                         {it.source !== 'url' ? (
-                          <div className="flex w-full flex-wrap items-center gap-2">
+                          <div className="flex w-full flex-col gap-1.5">
+                            {(() => {
+                              const pack = buildNftVaultHandoffFromLocal(it.objectId)
+                              const kind =
+                                pack?.kind ||
+                                getNftKeycard(it.objectId)?.boundVault?.kind ||
+                                null
+                              return (
+                                <p className="text-[10px] text-muted-foreground">
+                                  {nftVaultTransferHint(kind)}
+                                  {pack ? (
+                                    <>
+                                      {' '}
+                                      <button
+                                        type="button"
+                                        className="text-primary underline underline-offset-2"
+                                        onClick={() => {
+                                          void navigator.clipboard.writeText(encodeNftVaultHandoff(pack))
+                                          setInfo(
+                                            'Übergabe-Paket kopiert — Empfänger: Tab Guthaben → Paket einfügen (zeigt dann den Betrag).'
+                                          )
+                                        }}
+                                      >
+                                        Übergabe-Paket kopieren
+                                      </button>
+                                      {pack.createDigest ? (
+                                        <>
+                                          {' · '}
+                                          <button
+                                            type="button"
+                                            className="text-primary underline underline-offset-2"
+                                            onClick={() => {
+                                              void navigator.clipboard.writeText(pack.createDigest!)
+                                              setInfo('Create-Digest kopiert.')
+                                            }}
+                                          >
+                                            Digest
+                                          </button>
+                                        </>
+                                      ) : null}
+                                    </>
+                                  ) : null}
+                                </p>
+                              )
+                            })()}
+                            <div className="flex w-full flex-wrap items-center gap-2">
                             <Input
                               className="h-7 min-w-[12rem] flex-1 font-mono text-[10px]"
                               value={transferToByOid[it.objectId] || ''}
@@ -1534,9 +1611,13 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                                     setError('Empfänger: volle 0x…-Adresse (64 Hex).')
                                     return
                                   }
+                                  const pack = buildNftVaultHandoffFromLocal(it.objectId)
+                                  const extra = pack
+                                    ? `\n\nGesichertes Guthaben: ${pack.kind}. Zuerst „Übergabe-Paket kopieren“ an den Empfänger schicken — sonst sieht die andere Morgendrot-App den Betrag nicht automatisch.`
+                                    : ''
                                   if (
                                     !window.confirm(
-                                      `ImageNFT an ${to.slice(0, 12)}… senden? Besitz wechselt on-chain. Lokale Merker für dieses Objekt werden gelöscht.`
+                                      `ImageNFT an ${to.slice(0, 12)}… senden? Besitz wechselt on-chain. Lokale Merker für dieses Objekt werden gelöscht.${extra}`
                                     )
                                   ) {
                                     return
@@ -1553,7 +1634,11 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                                       return
                                     }
                                     setOwnerItems((prev) => prev.filter((x) => x.objectId !== it.objectId))
-                                    setInfo(`NFT gesendet · TX ${r.digest.slice(0, 16)}…`)
+                                    setInfo(
+                                      pack
+                                        ? `NFT gesendet · TX ${r.digest.slice(0, 16)}… · Übergabe-Paket vorher teilen!`
+                                        : `NFT gesendet · TX ${r.digest.slice(0, 16)}…`
+                                    )
                                   } finally {
                                     setBusy(false)
                                   }
@@ -1595,6 +1680,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                             >
                               Vernichten
                             </Button>
+                            </div>
                           </div>
                         ) : null}
                         {storedPass ? (

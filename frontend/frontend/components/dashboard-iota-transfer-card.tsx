@@ -2,6 +2,7 @@
 
 /**
  * IOTA-Überweisung über die Wallet-Session — Dashboard (voll oder kompakt für Boss-Start).
+ * Frei | Purse-Guthaben im gleichen Stil rechts neben dem Titel.
  */
 
 import { useCallback, useEffect, useState } from 'react'
@@ -21,7 +22,10 @@ import {
   ChatViewEvidenceImageViewerButton,
   NFT_WALLET_MODES,
 } from '@/frontend/components/chat-view-evidence-image-viewer'
-import { DashboardNftSecuredBalances } from '@/frontend/components/dashboard-nft-secured-balances'
+import {
+  DashboardNftSecuredBalanceAmount,
+  DashboardNftSecuredBalances,
+} from '@/frontend/components/dashboard-nft-secured-balances'
 
 export type DashboardIotaTransferCardProps = {
   compact?: boolean
@@ -53,9 +57,16 @@ export function DashboardIotaTransferCard({
   const [transferStatus, setTransferStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [transferMsg, setTransferMsg] = useState('')
   const [refreshingBalance, setRefreshingBalance] = useState(false)
+  const [nftDefaultMode, setNftDefaultMode] = useState<'owner' | 'guthaben'>('owner')
+  const [nftOpenNonce, setNftOpenNonce] = useState(0)
 
   const myAddress = (myAddressFull || '').trim()
   const addrOk = /^0x[a-fA-F0-9]{64}$/i.test(myAddress)
+
+  const openGuthaben = () => {
+    setNftDefaultMode('guthaben')
+    setNftOpenNonce((n) => n + 1)
+  }
 
   const handleRefreshBalance = async () => {
     if (!onRefreshStatus) return
@@ -114,7 +125,7 @@ export function DashboardIotaTransferCard({
     }
   }
 
-  const balanceLine = (() => {
+  const freeBalanceLine = (() => {
     if (walletNativeIotaBalanceFetchFailed) {
       return <p className="text-xs text-amber-600 dark:text-amber-400">{t('iota.balanceFailed')}</p>
     }
@@ -131,11 +142,48 @@ export function DashboardIotaTransferCard({
     return <p className="text-[11px] text-muted-foreground">{t('iota.balanceLoading')}</p>
   })()
 
+  /** Titel + Frei | Purse Guthaben rechts, gleicher Stil. */
+  const walletHeader = (
+    <div className="mb-2 flex items-start justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        <h4 className={cn('font-semibold text-foreground', compact ? 'text-sm' : '')}>
+          {t('cards.iotaWallet')}
+        </h4>
+        <div className="mt-1 flex flex-wrap items-start gap-x-5 gap-y-1">
+          <div className="min-w-[7rem]">
+            <p className="text-[10px] text-muted-foreground">Frei:</p>
+            {freeBalanceLine}
+          </div>
+          <div className="min-w-[7rem]">
+            <p className="text-[10px] text-muted-foreground">Purse Guthaben:</p>
+            <DashboardNftSecuredBalanceAmount compact={compact} />
+          </div>
+        </div>
+      </div>
+      {onRefreshStatus ? (
+        <button
+          type="button"
+          onClick={() => void handleRefreshBalance()}
+          disabled={refreshingBalance}
+          className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted disabled:opacity-50"
+          title={t('iota.refreshBalance')}
+          aria-label={t('iota.refreshBalance')}
+        >
+          <RefreshCw className={cn('h-3.5 w-3.5', refreshingBalance && 'animate-spin')} />
+        </button>
+      ) : null}
+    </div>
+  )
+
   const nftButton = (
     <ChatViewEvidenceImageViewerButton
       triggerLabel={t('iota.nft')}
-      defaultMode="owner"
-      autoLoadOwnOnOpen
+      defaultMode={nftDefaultMode}
+      openNonce={nftOpenNonce}
+      autoLoadOwnOnOpen={nftDefaultMode === 'owner'}
+      onOpenChange={(v) => {
+        if (!v) setNftDefaultMode('owner')
+      }}
       allowedModes={NFT_WALLET_MODES}
       triggerClassName="inline-flex h-auto w-auto items-center justify-center gap-1.5 rounded-md border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted [&>svg]:mr-0 [&>svg]:h-3.5 [&>svg]:w-3.5"
     />
@@ -221,38 +269,18 @@ export function DashboardIotaTransferCard({
       >
         {transferring ? t('iota.sending') : t('iota.send')}
       </button>
+      <p className="mt-1.5 text-[10px] text-muted-foreground">
+        Oben = freie Coins. Gesichertes Guthaben: „Gesichert auszahlen…“ oder NFT → Tab Guthaben.
+      </p>
     </>
   )
 
   if (compact) {
     return (
       <>
-        <div
-          id="dashboard-iota-transfer"
-          className="rounded-xl border border-border/80 bg-card/60 p-3"
-        >
-          <div className="mb-2 flex items-start justify-between gap-2">
-            <div>
-              <h4 className="text-sm font-semibold text-foreground">{t('cards.iotaWallet')}</h4>
-              <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                <span className="text-[10px] text-muted-foreground">Frei:</span>
-                {balanceLine}
-              </div>
-            </div>
-            {onRefreshStatus ? (
-              <button
-                type="button"
-                onClick={() => void handleRefreshBalance()}
-                disabled={refreshingBalance}
-                className="rounded p-1 text-muted-foreground hover:bg-muted disabled:opacity-50"
-                title={t('iota.refreshBalance')}
-                aria-label={t('iota.refreshBalance')}
-              >
-                <RefreshCw className={cn('h-3.5 w-3.5', refreshingBalance && 'animate-spin')} />
-              </button>
-            ) : null}
-          </div>
-          <DashboardNftSecuredBalances compact />
+        <div id="dashboard-iota-transfer" className="rounded-xl border border-border/80 bg-card/60 p-3">
+          {walletHeader}
+          <DashboardNftSecuredBalances compact onOpenSpend={openGuthaben} />
           <div className="mt-2 flex flex-wrap gap-2">
             <button
               type="button"
@@ -282,26 +310,8 @@ export function DashboardIotaTransferCard({
   return (
     <>
       <div id="dashboard-iota-transfer" className="rounded-xl border border-border bg-card p-4">
-        <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
-          <h4 className="font-semibold text-foreground">{t('cards.iotaWallet')}</h4>
-          {onRefreshStatus ? (
-            <button
-              type="button"
-              onClick={() => void handleRefreshBalance()}
-              disabled={refreshingBalance}
-              className="rounded p-1 text-muted-foreground hover:bg-muted disabled:opacity-50"
-              title={t('iota.refreshBalance')}
-              aria-label={t('iota.refreshBalance')}
-            >
-              <RefreshCw className={cn('h-3.5 w-3.5', refreshingBalance && 'animate-spin')} />
-            </button>
-          ) : null}
-        </div>
-        <div className="mb-2 rounded-lg border border-border/80 bg-muted/30 px-3 py-2">
-          <p className="mb-0.5 text-[10px] text-muted-foreground">Frei (Wallet)</p>
-          {balanceLine}
-        </div>
-        <DashboardNftSecuredBalances />
+        {walletHeader}
+        <DashboardNftSecuredBalances onOpenSpend={openGuthaben} />
         <div className="mb-3 mt-3 flex flex-wrap gap-2">
           <button
             type="button"

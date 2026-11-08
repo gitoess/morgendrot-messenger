@@ -22,7 +22,7 @@ import {
   buildSpendGuardedPurseTransaction,
 } from '@/frontend/lib/nft-guarded-purse-txb'
 import { recordNftVaultActivity } from '@/frontend/lib/iota-activity-local-log'
-import { getNftKeycard } from '@/frontend/lib/nft-keycard-local-store'
+import { bindVaultToNftKeycard, getNftKeycard } from '@/frontend/lib/nft-keycard-local-store'
 import {
   findNftGuardedPurseById,
   patchNftGuardedPurseLocal,
@@ -160,14 +160,25 @@ export async function createNftGuardedPurse(input: {
     }
     const label = getNftKeycard(input.nftObjectId)?.label
     if (purseObjectId) {
+      const pkg = input.messagingPackageId.trim().toLowerCase()
       upsertNftGuardedPurseLocal({
         purseObjectId,
         nftObjectId: input.nftObjectId,
         owner: sender,
         balanceMistHint: input.amountMist.toString(),
         status: 'active',
-        messagingPackageId: input.messagingPackageId.trim().toLowerCase(),
+        messagingPackageId: pkg,
+        createDigest: out.digest,
         ...(label ? { displayLabel: label } : {}),
+      })
+      bindVaultToNftKeycard({
+        objectId: input.nftObjectId,
+        vault: {
+          kind: 'guarded',
+          vaultObjectId: purseObjectId,
+          messagingPackageId: pkg,
+          createDigest: out.digest,
+        },
       })
     }
     recordNftVaultActivity({

@@ -33,7 +33,13 @@
 | **Guarded Purse** | immer Wallet X | `GuardedPurse` owned by X | `spend` blockiert, bis NFT zurück |
 | **Bearer Treasury** | NFT-Owner | Shared Treasury | Senderecht wandert mit NFT |
 
-**UI:** `NftTokenSpendPanel` — Dropdown Guarded (NFT+Wallet) | Bearer (nur NFT); Live-Balance + Vault-ID; Empfänger erst beim Auszahlen; Messaging-Module-Package unter Erweitert („bereits gesetzt“). Default = Guarded.  
+**UI:** `NftTokenSpendPanel` — Dropdown Guarded (NFT+Wallet) | Bearer (nur NFT); Live-Balance + Vault-ID + Create-Digest; Empfänger erst beim Auszahlen; Messaging-Module-Package unter Erweitert. Default = Guarded.  
+
+**Wallet-Karte:** `Frei:` und `Purse Guthaben:` gleiche Typo rechts am Titel; Summe aus lokalem Index + RPC.  
+
+**TBA-ähnlicher Index:** Vault-Object-ID + Digest + Package an Schlüsselkarte (`boundVault`) und optional verschlüsselt im Tresor-Sidecar (`nft-vault-index-vault`). On-chain Balance = Wahrheit; ohne Index sieht ein Empfänger-Gerät den Betrag in der App nicht.  
+
+**NFT-Transfer:** Galerie zeigt Hinweis + **Übergabe-Paket** (`MORG_NFT_VAULT_V1:…`). Bearer: Empfänger importiert Paket → Balance sichtbar. Guarded: Transfer bewegt keine Coins.  
 **Nicht:** Klartext/Chat-Gate; Mesh-Payments; „NFT allein bewegt fremde lose Coins“.
 
 **Pflicht-Kommunikation:** Lose / freie Coins **außerhalb** Purse/Treasury sind **ungeschützt**.

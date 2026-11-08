@@ -8,7 +8,7 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Privacy / NFT (2026-11-08)
 
-- **Guthaben sichtbar:** Live-Balance; Wallet **Frei vs. Gesichert (Purse/Treasury)**; IOTA-Aktivität loggt Vault-TXs; optional Anzeigename; NFT-Object-ID am Panel; Tabs Galerie/Guthaben/Zeitkapsel getrennt.
+- **Guthaben / Purse-Ablauf:** Wallet **Frei:** \| **Purse Guthaben:** gleicher Stil; Auszahlen über Tab Guthaben; Digest + Vault-ID im Index/`boundVault` + Tresor-Sidecar; **Übergabe-Paket** bei NFT-Transfer (Bearer zeigt Betrag erst nach Import); Guarded-Hinweis: Coins bleiben bei der Wallet. Live-Balance; Aktivität; Tabs Galerie/Guthaben/Zeitkapsel getrennt.
 
 ### Privacy / NFT (2026-11-06)
 

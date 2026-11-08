@@ -12,6 +12,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-11-08** | PC (Windows), **Purse-Ablauf / TBA-Index** | Frei\|Purse Guthaben gleicher Stil; Auszahlen→Tab Guthaben; Digest/`boundVault`/Tresor-Sidecar; Übergabe-Paket NFT-Transfer; Vitest handoff. | **PASS (Code)** — Joint: Auszahlen + Empfänger-Import. |
 | **2026-11-08** | PC (Windows), **Treasury lokal nachtragen** | create_treasury TX `ERp1RA…` on-chain (S3 pkg `0x10b1…`, Treasury `0x1500…`, NFT `0x5ab1…`) ohne lokalen Index. Fix: TX-Nachtragen + objectChanges-Pick + Package am Vault. | **Fix Code** — User: Digest nachtragen. |
 | **2026-11-08** | PC (Windows), **Guthaben sichtbar (Wallet+Aktivität)** | Frei vs. Gesichert in Wallet-Karte; Aktivität Purse/Treasury; optional Anzeigename; Backfill lokal erkannter Vaults; Docs/Anleitung/Roadmap. | **PASS (Code)** — Joint ab Checkliste. |
 | **2026-11-08** | PC (Windows), **Guthaben-UX Klarheit** | Live-Balance RPC; Guarded/Bearer Hybrid-Labels; Vault-ID kopierbar; Package „Messaging-Module“ read-only unter Erweitert; Zeitkapsel gleich. Vitest vault-balance+mode. | **PASS (Code)** — Joint-Checkliste unten. |
@@ -20,10 +21,10 @@
 
 ### Manuelle Checkliste (Joint-Feldtest — ab hier zusammen)
 
-1. **Wallet:** Hauptmenü → **Frei** vs. **Gesichert (Purse/Treasury)** zeigt bestehendes Guthaben + NFT-Bindung; **IOTA-Aktivität** hat Eintrag.  
-2. **Guthaben Guarded:** NFT → Tab **Guthaben** → Live-Balance + Vault-ID + optional Anzeigename.  
-3. **Einzahlen / Auszahlen:** Balance + neuer Aktivitäts-Eintrag; **Auszahlen…** → An mich.  
-4. **Bearer:** Modus wechseln → Hinweis / eigener Vault.  
+1. **Wallet:** **Frei:** und **Purse Guthaben:** gleicher Stil; Details/Digest; **IOTA-Aktivität** hat Eintrag.  
+2. **Auszahlen:** „Gesichert auszahlen…“ → Tab Guthaben → Empfänger-Wallet.  
+3. **Guthaben Guarded:** Live-Balance + Vault-ID + Digest speichern.  
+4. **Bearer + NFT-Transfer:** Übergabe-Paket kopieren → anderes Gerät Import → Betrag sichtbar.  
 5. **Zeitkapsel:** eigener Tab; Lease-ID.  
 6. **P4a2 / P4b** optional.
 

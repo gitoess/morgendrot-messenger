@@ -19,6 +19,12 @@ import {
   unlockNftKeycardVault,
 } from '@/frontend/lib/nft-keycard-local-store'
 import {
+  flushNftVaultIndexVaultPersist,
+  lockNftVaultIndexVault,
+  purgeNftVaultIndexVault,
+  unlockNftVaultIndexVault,
+} from '@/frontend/lib/nft-vault-index-vault'
+import {
   flushPassphraseMessageVaultPersist,
   lockPassphraseMessageVault,
   purgePassphraseMessageVault,
@@ -66,11 +72,14 @@ export async function unlockLocalSecretVaults(password: string): Promise<{
   const nft = await unlockNftKeycardVault(pw)
   if (!nft.ok) errors.push(`NFT-Schlüsselkarte: ${nft.error}`)
 
+  const vaultIdx = await unlockNftVaultIndexVault(pw)
+  if (!vaultIdx.ok) errors.push(`Vault-Index (Purse/Treasury): ${vaultIdx.error}`)
+
   const ratchet = await unlockRatchetSessionVault(pw)
   if (!ratchet.ok) errors.push(`Ratchet: ${ratchet.error}`)
 
   const passphraseOk = msg.ok
-  const anyOk = msg.ok || ev.ok || team.ok || nft.ok || ratchet.ok
+  const anyOk = msg.ok || ev.ok || team.ok || nft.ok || vaultIdx.ok || ratchet.ok
   if (!anyOk) {
     clearVaultPasswordSession()
     return { ok: false, passphraseOk: false, errors }
@@ -86,6 +95,7 @@ export async function flushLocalSecretVaultsPersist(): Promise<void> {
     flushEvidencePassphraseVaultPersist(),
     flushTeamBroadcastKeyVaultPersist(),
     flushNftKeycardVaultPersist(),
+    flushNftVaultIndexVaultPersist(),
     flushRatchetSessionVaultPersist(),
   ])
 }
@@ -95,6 +105,7 @@ export function lockLocalSecretVaults(): void {
   lockEvidencePassphraseVault()
   lockTeamBroadcastKeyVault()
   lockNftKeycardVault()
+  lockNftVaultIndexVault()
   lockRatchetSessionVault()
   clearVaultPasswordSession()
 }
@@ -104,6 +115,7 @@ export function purgeLocalSecretVaults(): void {
   purgeEvidencePassphraseVault()
   purgeTeamBroadcastKeyVault()
   purgeNftKeycardVault()
+  purgeNftVaultIndexVault()
   purgeRatchetSessionVault()
   clearVaultPasswordSession()
 }

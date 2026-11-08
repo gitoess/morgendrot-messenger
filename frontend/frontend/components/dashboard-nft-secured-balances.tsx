@@ -1,7 +1,8 @@
 'use client'
 
 /**
- * Wallet-Karte: gesichertes Guthaben (Guarded Purse / Bearer Treasury) — nicht in der freien Balance.
+ * Wallet: gesichertes Guthaben — Summe im gleichen Stil wie „Frei“, Details darunter.
+ * Auszahlen → NFT-Dialog Guthaben; Metadaten im Tresor (Vault-Index).
  */
 
 import { useCallback, useEffect, useState } from 'react'
@@ -60,6 +61,8 @@ type Row = {
   frozen?: boolean
   liveIota: string | null
   fallback: string | null
+  createDigest?: string
+  messagingPackageId?: string
 }
 
 function shortId(id: string): string {
@@ -76,10 +79,21 @@ function labelFor(nftObjectId: string, displayLabel?: string): string {
   )
 }
 
-export function DashboardNftSecuredBalances({ compact = false }: { compact?: boolean }) {
+export function DashboardNftSecuredBalances({
+  compact = false,
+  /** Nur Summenzeile rechts neben Frei (Parent liefert Layout). */
+  summaryOnly = false,
+  onOpenSpend,
+}: {
+  compact?: boolean
+  summaryOnly?: boolean
+  /** Öffnet NFT → Guthaben (Auszahlen). */
+  onOpenSpend?: () => void
+}) {
   const [rows, setRows] = useState<Row[]>([])
   const [sumIota, setSumIota] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const [digestIn, setDigestIn] = useState('')
   const [recoverMsg, setRecoverMsg] = useState('')
   const [recoverBusy, setRecoverBusy] = useState(false)
@@ -95,6 +109,8 @@ export function DashboardNftSecuredBalances({ compact = false }: { compact?: boo
         label: labelFor(p.nftObjectId, p.displayLabel),
         liveIota: null,
         fallback: formatLocalMistHintAsIota(p.balanceMistHint),
+        createDigest: p.createDigest,
+        messagingPackageId: p.messagingPackageId,
       })),
       ...treasuries.map((t: NftBearerTreasuryLocalEntry) => ({
         kind: 'bearer' as const,
@@ -104,6 +120,8 @@ export function DashboardNftSecuredBalances({ compact = false }: { compact?: boo
         frozen: t.frozen,
         liveIota: null,
         fallback: formatLocalMistHintAsIota(t.balanceMistHint),
+        createDigest: t.createDigest,
+        messagingPackageId: t.messagingPackageId,
       })),
     ]
     if (base.length === 0) {
@@ -159,10 +177,22 @@ export function DashboardNftSecuredBalances({ compact = false }: { compact?: boo
     }
   }, [rebuild])
 
+  const sumDisplay = busy && sumIota == null ? '…' : sumIota != null ? sumIota : rows.length ? '—' : '0'
+
+  const summaryLine = (
+    <span className="text-xs text-muted-foreground" title="Nicht in der freien Wallet-Balance">
+      <strong className="text-foreground">{sumDisplay}</strong> IOTA
+    </span>
+  )
+
+  if (summaryOnly) {
+    return summaryLine
+  }
+
   const recoverBox = (
-    <div className={cn('space-y-1', compact ? 'mt-1.5' : 'mt-2')}>
+    <div className="mt-2 space-y-1 border-t border-border/40 pt-2">
       <p className="text-[10px] text-muted-foreground">
-        TX schon on-chain, aber hier leer? Digest einfügen → lokal nachtragen (Explorer-TX).
+        TX on-chain, Index fehlt? Digest nachtragen (landet auch im Tresor bei entsperrtem Vault).
       </p>
       <div className="flex gap-1.5">
         <Input
@@ -170,7 +200,7 @@ export function DashboardNftSecuredBalances({ compact = false }: { compact?: boo
           value={digestIn}
           disabled={recoverBusy}
           onChange={(e) => setDigestIn(e.target.value)}
-          placeholder="TX-Digest (z. B. ERp1RA…)"
+          placeholder="TX-Digest"
           spellCheck={false}
         />
         <Button
@@ -191,8 +221,8 @@ export function DashboardNftSecuredBalances({ compact = false }: { compact?: boo
                 }
                 setRecoverMsg(
                   r.vault.kind === 'bearer'
-                    ? `Bearer-Treasury ${r.vault.treasuryObjectId.slice(0, 12)}… nachgetragen.`
-                    : `Guarded-Purse ${r.vault.purseObjectId.slice(0, 12)}… nachgetragen.`
+                    ? `Bearer ${r.vault.treasuryObjectId.slice(0, 12)}… · im Index/Tresor`
+                    : `Guarded ${r.vault.purseObjectId.slice(0, 12)}… · im Index/Tresor`
                 )
                 setDigestIn('')
                 await rebuild()
@@ -209,38 +239,27 @@ export function DashboardNftSecuredBalances({ compact = false }: { compact?: boo
     </div>
   )
 
-  if (rows.length === 0) {
-    return (
-      <div className={cn(compact ? 'mt-1' : 'mt-2')}>
-        <p className="text-[10px] text-muted-foreground">
-          Kein gesichertes Purse-/Treasury-Guthaben auf diesem Gerät. Anlegen unter NFT → Tab Guthaben.
-          (Freie Wallet-Balance enthält das nicht.)
-        </p>
-        {recoverBox}
-      </div>
-    )
-  }
-
   return (
-    <div
-      className={cn(
-        'rounded-md border border-emerald-800/25 bg-emerald-950/10',
-        compact ? 'mt-2 px-2 py-1.5' : 'mt-2 px-3 py-2'
-      )}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-1.5">
-        <p className="text-[11px] font-medium text-foreground">
-          Gesichert (Purse/Treasury)
-          {sumIota != null ? (
-            <>
-              : <strong>{sumIota}</strong> IOTA
-            </>
-          ) : busy ? (
-            ' …'
-          ) : (
-            ''
-          )}
-        </p>
+    <div className={cn(compact ? 'mt-1' : 'mt-0')}>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          className="text-[10px] text-muted-foreground underline-offset-2 hover:underline"
+          onClick={() => setDetailsOpen((v) => !v)}
+        >
+          {detailsOpen ? 'Details ausblenden' : rows.length ? 'Details / Digest' : 'Digest nachtragen'}
+        </button>
+        {rows.length > 0 && onOpenSpend ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="h-7 text-[10px]"
+            onClick={onOpenSpend}
+          >
+            Gesichert auszahlen…
+          </Button>
+        ) : null}
         <Button
           type="button"
           size="sm"
@@ -252,25 +271,75 @@ export function DashboardNftSecuredBalances({ compact = false }: { compact?: boo
           Aktualisieren
         </Button>
       </div>
-      <ul className={cn('mt-1 space-y-1', compact ? 'max-h-28 overflow-y-auto' : '')}>
-        {rows.map((r) => (
-          <li key={`${r.kind}-${r.vaultId}`} className="text-[10px] text-muted-foreground break-all">
-            <span className="font-medium text-foreground">
-              {r.kind === 'guarded' ? 'Guarded' : 'Bearer'}
-              {r.frozen ? ' · freeze' : ''}
-            </span>
-            {' · '}
-            {r.liveIota != null ? `${r.liveIota} IOTA` : r.fallback || 'Balance ?'}
-            {' · an '}
-            <span className="text-foreground">{r.label}</span>
-            {' · Vault '}
-            <span className="font-mono">{shortId(r.vaultId)}</span>
-            {' · NFT '}
-            <span className="font-mono">{shortId(r.nftObjectId)}</span>
-          </li>
-        ))}
-      </ul>
-      {recoverBox}
+
+      {detailsOpen || rows.length === 0 ? (
+        <div
+          className={cn(
+            'mt-1.5 rounded-md border border-border/70 bg-muted/20',
+            compact ? 'px-2 py-1.5' : 'px-3 py-2'
+          )}
+        >
+          {rows.length === 0 ? (
+            <p className="text-[10px] text-muted-foreground">
+              Noch kein Index. Anlegen: NFT → Tab Guthaben. Oder Digest unten nachtragen.
+            </p>
+          ) : (
+            <>
+              <p className="mb-1 text-[10px] text-muted-foreground">
+                Bearer: wer das NFT hat, darf auszahlen (Vault-ID/Digest mitgeben). Guarded: nur deine Wallet +
+                NFT bei dir — Coins bleiben hier, wenn NFT woanders ist.
+              </p>
+              <ul className={cn('space-y-1.5', compact ? 'max-h-32 overflow-y-auto' : '')}>
+                {rows.map((r) => (
+                  <li
+                    key={`${r.kind}-${r.vaultId}`}
+                    className="rounded border border-border/40 bg-background/40 px-2 py-1 text-[10px] text-muted-foreground break-all"
+                  >
+                    <span className="font-medium text-foreground">
+                      {r.kind === 'guarded' ? 'Guarded-Purse' : 'Bearer-Treasury'}
+                      {r.frozen ? ' · freeze' : ''}
+                    </span>
+                    {' · '}
+                    {r.liveIota != null ? `${r.liveIota} IOTA` : r.fallback || '?'}
+                    {' · '}
+                    {r.label}
+                    <br />
+                    Vault <span className="font-mono text-foreground">{shortId(r.vaultId)}</span>
+                    {' · NFT '}
+                    <span className="font-mono">{shortId(r.nftObjectId)}</span>
+                    {r.createDigest ? (
+                      <>
+                        {' · '}
+                        <button
+                          type="button"
+                          className="text-primary underline underline-offset-2"
+                          onClick={() => void navigator.clipboard.writeText(r.createDigest!)}
+                        >
+                          Digest kopieren
+                        </button>
+                      </>
+                    ) : null}
+                    {' · '}
+                    <button
+                      type="button"
+                      className="text-primary underline underline-offset-2"
+                      onClick={() => void navigator.clipboard.writeText(r.vaultId)}
+                    >
+                      Vault-ID
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {recoverBox}
+        </div>
+      ) : null}
     </div>
   )
+}
+
+/** Summenzeile für Wallet-Header (gleicher Stil wie Frei). */
+export function DashboardNftSecuredBalanceAmount({ compact: _c }: { compact?: boolean }) {
+  return <DashboardNftSecuredBalances summaryOnly />
 }

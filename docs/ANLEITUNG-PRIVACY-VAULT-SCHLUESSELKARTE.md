@@ -220,7 +220,7 @@ Intern heißt der Chain-Call weiter `/purge-msg` — in der UI nur noch **Burn**
 | Dual Wallet∧NFT | P4a-dual | Composer unter Starkes Gate; Klartext danach kopierbar |
 | Pubkey-Wrap | P4a2 | Checkbox unter Dual; ECDH-Peer-Pub der erlaubten Wallet nötig |
 | Seal / Key-Broker | P4b | Checkbox unter Starkes Gate; **ein API-Broker ≠ Mysten-Seal**; remote nötig für „unter Zwang“ |
-| Gesichertes Guthaben | S0–S3 | Tab **Guthaben**; Guarded/Bearer; Live-Balance; Vault-ID; optional Anzeigename; **Wallet: Frei vs. Gesichert**; Aktivität loggt Purse/Treasury |
+| Gesichertes Guthaben | S0–S3 | Tab **Guthaben**; Guarded/Bearer; Live-Balance; Vault-ID; Digest im Index/Tresor-Sidecar; **Wallet: Frei \| Purse Guthaben** gleicher Stil; Übergabe-Paket bei NFT-Transfer; Aktivität loggt Purse/Treasury |
 | Zeitkapsel | P5 | Eigener Tab **Zeitkapsel** (nicht in der Galerie-Karte) |
 | NFT-gesichertes Senden (IOTA) | B2-S0–S3 Ist | **nur Token**; Purse ≠ freie Wallet-Balance; lose Coins außerhalb = ungeschützt (`docs/NFT-GUARDED-SPEND-SPEC.md`) |
 | Öffentlicher Ciphertext-Vault + NFT-Timelock („Zeitkapsel“) | **B2-P5a/b Ist** | NFT = Gate, Texte = Ciphertext getrennt. Borrower: optional Object-ID / Besitzer=Archiv unter On-Chain/NFT laden, dann lesen. Spec **`docs/NFT-SCHLUESSELKARTE-PUBLIC-VAULT-TIMELOCK.md`** §0a |
@@ -245,11 +245,14 @@ Siehe auch Kopf von `docs/ROADMAP-FAHRPLAN.md` (Nachtrag Privacy 2026-11-05): *�
 ### Kurz: Gesichertes Guthaben (Nutzer)
 
 1. NFT-Dialog → Tab **Guthaben** → Schlüsselkarte wählen (Bild optional).  
-2. Modus **Guarded** oder **Bearer** → Betrag → **Guthaben anlegen**.  
-3. Im Hauptmenü-Wallet: **Frei** = lose Coins; **Gesichert** = Summe Purse/Treasury + NFT-Bindung.  
-4. **IOTA-Aktivität** listet Anlegen/Einzahlen/Auszahlen (lokal auf diesem Gerät).  
-5. Optional **Anzeigename** am Vault (nur lokal, nicht on-chain).  
-6. Wenn Explorer eine Create-TX zeigt, die App aber leer ist: unter **Gesichert** den **TX-Digest nachtragen**.
+2. Modus **Guarded** oder **Bearer** → Betrag → **Guthaben anlegen** (Digest + Vault-ID → lokaler Index; bei entsperrtem Tresor → Vault-Sidecar).  
+3. Im Hauptmenü-Wallet rechts neben dem Titel: **Frei:** … IOTA und **Purse Guthaben:** … IOTA (gleicher Stil).  
+4. **Auszahlen:** „Gesichert auszahlen…“ oder Tab Guthaben → Empfänger-**Wallet** (nicht NFT-ID).  
+5. **NFT an anderes Morgendrot:** Zeigt dort den Betrag **nicht automatisch**.  
+   - **Bearer:** Senderecht wandert mit dem NFT — Empfänger braucht **Übergabe-Paket** (oder Digest/Vault-ID) unter Guthaben → Erweitert → Import.  
+   - **Guarded:** Coins bleiben bei der ursprünglichen Wallet; NFT-Transfer allein bewegt kein Guthaben.  
+6. **IOTA-Aktivität** listet Anlegen/Einzahlen/Auszahlen (lokal auf diesem Gerät).  
+7. Digest nachträglich: Wallet-Details / Guthaben → Erweitert → Digest speichern oder TX nachtragen.
 
 ---
 

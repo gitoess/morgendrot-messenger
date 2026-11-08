@@ -23,7 +23,7 @@ import {
   buildWithdrawBearerTreasuryTransaction,
 } from '@/frontend/lib/nft-bearer-treasury-txb'
 import { recordNftVaultActivity } from '@/frontend/lib/iota-activity-local-log'
-import { getNftKeycard } from '@/frontend/lib/nft-keycard-local-store'
+import { bindVaultToNftKeycard, getNftKeycard } from '@/frontend/lib/nft-keycard-local-store'
 import {
   findNftBearerTreasuryById,
   patchNftBearerTreasuryLocal,
@@ -154,6 +154,7 @@ export async function createNftBearerTreasury(input: {
     }
     const label = getNftKeycard(input.nftObjectId)?.label
     if (treasuryObjectId) {
+      const pkg = input.messagingPackageId.trim().toLowerCase()
       upsertNftBearerTreasuryLocal({
         treasuryObjectId,
         nftObjectId: input.nftObjectId,
@@ -161,8 +162,18 @@ export async function createNftBearerTreasury(input: {
         balanceMistHint: input.amountMist.toString(),
         frozen: false,
         status: 'active',
-        messagingPackageId: input.messagingPackageId.trim().toLowerCase(),
+        messagingPackageId: pkg,
+        createDigest: out.digest,
         ...(label ? { displayLabel: label } : {}),
+      })
+      bindVaultToNftKeycard({
+        objectId: input.nftObjectId,
+        vault: {
+          kind: 'bearer',
+          vaultObjectId: treasuryObjectId,
+          messagingPackageId: pkg,
+          createDigest: out.digest,
+        },
       })
     }
     recordNftVaultActivity({
