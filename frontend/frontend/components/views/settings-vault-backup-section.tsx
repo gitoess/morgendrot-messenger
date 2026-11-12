@@ -291,7 +291,7 @@ export function SettingsVaultBackupSection({ vaultLocked = false, onRequestVault
         >
           <Download className="h-8 w-8 text-emerald-400" />
           <span className="font-semibold text-foreground">{processing ? 'Speichere…' : 'Lokal sichern'}</span>
-          <span className="text-xs text-muted-foreground">Überschreibt die Standard-Vault-Datei</span>
+          <span className="text-xs text-muted-foreground">Überschreibt die Standard-Tresor-Datei (.morgendrot-vault)</span>
         </button>
         <button
           type="button"
@@ -311,7 +311,7 @@ export function SettingsVaultBackupSection({ vaultLocked = false, onRequestVault
         >
           <Upload className="h-8 w-8 text-blue-400" />
           <span className="font-semibold text-foreground">{processing ? 'Bitte warten…' : 'Datei wählen & laden'}</span>
-          <span className="text-xs text-muted-foreground">Vault-Datei vom Gerät importieren</span>
+          <span className="text-xs text-muted-foreground">Tresor-Datei vom Gerät importieren</span>
         </button>
         <button
           type="button"

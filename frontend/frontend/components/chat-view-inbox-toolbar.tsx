@@ -442,8 +442,8 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="max-h-[min(70vh,28rem)] w-[min(100vw-2rem,20rem)] overflow-y-auto">
                   <p className="px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
-                    Vollständig: JSON, TXT, verschlüsseltes Passwort-JSON oder ZIP. TXT kurz = ~200 Zeichen pro
-                    Nachricht.
+                    Vollständig: JSON, TXT, Passwort-JSON oder ZIP (inkl. Telegram-Journal + Funk-Zeilen). TXT kurz
+                    = ~200 Zeichen. Leer? Zuerst Aktualisieren — Bot/Telefonbuch nötig für Telegram-Eingang.
                   </p>
                   <DropdownMenuItem
                     disabled={messageCount === 0 || exportBlocked}

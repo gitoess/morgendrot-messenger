@@ -267,6 +267,16 @@ Ganzes Private-Mailbox-Object: **Einstellungen → Meine Mailboxen** → Aufräu
 
 **Offline-Warteschlange:** Bei fehlender Basis werden Sends lokal gequeued; Status-Streifen im Chat.
 
+### Telegram im Posteingang
+
+| Frage | Antwort (Ist) |
+|-------|----------------|
+| **Nachrichtenverlauf** | Export enthält jetzt **Telegram-Journal** (+ Funk). Leer? Aktualisieren; Bot + Chat-ID im Telefonbuch nötig. |
+| **Auf IOTA speichern/verifizieren?** | **Nicht automatisch.** Telegram = Hinweis/Push. Beweis = Online-Pfad → Hash-Tool → optional **Auf Chain verankern**. |
+| **Nur eine Seite Morgendrot?** | Ja für Senden/Empfangen über Bot. Partner sieht nur Telegram-App — keine IOTA-Forensik dort. |
+| **Löschen wie Telegram-App?** | **Nein** — kein `deleteMessage` an Telegram; lokal ausblenden nur in Morgendrot. |
+| **Snapshot hashen** | Einstellungen → Sicherheit → **Hash & Prüfen**; Journal-JSON exportieren und hashen. Chain-Anker = T39. |
+
 ---
 
 ## Kontakte (Import und Export, JSON)
@@ -561,4 +571,4 @@ Drei getrennte Menüs — nicht vermischen:
 
 ---
 
-*Stand: 2026-11-12 — Handshake-Labels „1:1 je Person“ / „Gemeinsames Postfach“; Posteingang Optionen vs On-Chain/NFT vs ⋮; Passphrase-/NFT-Entschlüsselung dokumentiert; Datei-Paket statt „Pakete“.*
+*Stand: 2026-11-12 — Telegram-Export/Journal; Tresor-Landkarte; Hash & Prüfen; Handshake-Labels; Optionen/NFT/⋮.*

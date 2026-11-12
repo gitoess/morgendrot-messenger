@@ -7,6 +7,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react'
 import { fetchAllInboxMessagesForExport, type ContactMeshEntryClient, readBootstrapCachedApiStatus } from '@/frontend/lib/api'
+import { fetchTelegramJournal } from '@/frontend/lib/api/telegram-journal'
+import { mapTelegramJournalToMessages } from '@/frontend/features/inbox/map-telegram-journal-messages'
 import { extractCompletedSlideSequences } from '@/frontend/features/inbox/inbox-slideshow'
 import { buildChatInboxRows, type ChatInboxRow } from '@/frontend/features/inbox/chat-view-inbox-rows'
 import { useChatViewInbox } from '@/frontend/hooks/use-chat-view-inbox'
@@ -179,9 +181,18 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
       role,
     })
     const meshOnly = messages.filter((m) => m.transports?.includes('mesh'))
-    if (meshOnly.length === 0) return fromApi
-    return mergeAllMessages([...fromApi, ...meshOnly])
-  }, [messages, inboxPackageFilter, role])
+    const tgFromUi = messages.filter(
+      (m) => m.source === 'telegram' || m.transports?.includes('telegram')
+    )
+    let tgJournal: Message[] = []
+    if (myAddress.trim()) {
+      const j = await fetchTelegramJournal({ limit: 500 })
+      if (j.ok && j.entries?.length) {
+        tgJournal = mapTelegramJournalToMessages(j.entries, myAddress)
+      }
+    }
+    return mergeAllMessages([...fromApi, ...meshOnly, ...tgFromUi, ...tgJournal])
+  }, [messages, inboxPackageFilter, role, myAddress])
 
   const {
     mirrorQueuePending,

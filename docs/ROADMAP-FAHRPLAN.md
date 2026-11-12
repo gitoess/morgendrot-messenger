@@ -2688,6 +2688,10 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T33 | **Nachrichten-⋮ vs Chat-⋮** | UX/Doku | mit T32 | Wire kopieren in ⋮; Burn-Label vs Handbuch; Passphrase-Aktionen nur bei PWMSG nach Unlock — Angleichen Anleitung |
 | T34 | **Magnet Wii-Feel** | UX | Messenger | Hover Scale+Glow+Hover-Ton; Einstellungen Erscheinungsbild; nur Maus/Trackpad |
 | T35 | **Gruppe 1:1 vs gemeinsames Postfach** | Doku/UI | erledigt 2026-11-12, Retest | Labels + Handbuch-Tabelle; Handshake-Liste nur bei 1:1 |
+| T36 | **Telegram-Verlauf-Export** | Fix 2026-11-12 + Retest | vor T32 | Export mergt Journal; kein Telegram-Löschen wie App; kein Auto-Chain-Beweis — Snapshot-Hash = Hash-Tool + optional IOTA-Anker (T38/T37) |
+| T37 | **Tresor-Landkarte UI** | UX | erledigt 2026-11-12 | Sicherheit: Tresor vs Datei vs Sidecar vs NFT; „Vault“ nur Dateiname |
+| T38 | **Hash & Prüfen (SHA-256)** | Feature | erledigt Basis 2026-11-12 | Sicherheit: Datei/Text hashen + Hash prüfen; On-Chain-Anker weiter Online-Pfad |
+| T39 | **Telegram↔IOTA Beweis** | Produkt | später | Journal-Snapshot hashen + optional „Auf Chain verankern“; nur Morgendrot-Seite kann verifizieren |
 
 **Nicht** parallel zu Session C / Zeitkapsel-Feldtest starten.
 

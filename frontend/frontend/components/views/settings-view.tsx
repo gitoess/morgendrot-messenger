@@ -20,6 +20,8 @@ import { SettingsMyMailboxesSection } from '@/frontend/components/views/settings
 import { SettingsVaultBackupSection } from '@/frontend/components/views/settings-vault-backup-section'
 import { SettingsVaultPasswordSection } from '@/frontend/components/views/settings-vault-password-section'
 import { SettingsEmergencyPurgeSection } from '@/frontend/components/views/settings-emergency-purge-section'
+import { SettingsTresorMapCard } from '@/frontend/components/settings-tresor-map-card'
+import { SettingsContentHashPanel } from '@/frontend/components/settings-content-hash-panel'
 import { SettingsFunkSection } from '@/frontend/components/views/settings-funk-section'
 import { ChatViewShadowSweep } from '@/frontend/components/chat-view-shadow-sweep'
 import { SettingsOnboardingSection } from '@/frontend/components/views/settings-onboarding-section'
@@ -292,6 +294,8 @@ export function SettingsView({
       </SettingsCollapsiblePanel>
 
       <SettingsCollapsiblePanel open={activeCategory === 'security'} title="Sicherheit & Notfall" icon={<Shield className="h-5 w-5" />}>
+        <SettingsTresorMapCard />
+        <SettingsContentHashPanel />
         <SettingsEmergencyPurgeSection />
       </SettingsCollapsiblePanel>
 
