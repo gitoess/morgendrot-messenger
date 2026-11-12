@@ -116,16 +116,12 @@ export function PassphraseProtectComposerToggle(p: {
     }
   }, [p.encrypted, on, zeitkapsel])
 
-  /** Wiederverwenden: bestehende Vault-Default behalten — nie still neu würfeln nach Lock. */
+  /** Bestehende Default behalten; sonst neu würfeln (RAM/Tab — Vault optional für Dauerpersistenz). */
   const ensureSharedPass = () => {
-    const existing = getDefaultPassphraseMessagePassphrase()
-    if (existing) {
+    const existing = getDefaultPassphraseMessagePassphrase()?.trim() || ''
+    if (existing.length >= 8) {
       setSharedPass(existing)
       return existing
-    }
-    if (isPrivacySoftLocked() || !hasVaultPasswordSession()) {
-      setSharedPass('')
-      return ''
     }
     const fresh = generatePassphraseMessageSharePassphrase()
     setDefaultPassphraseMessagePassphrase(fresh)
@@ -367,9 +363,8 @@ export function PassphraseProtectComposerToggle(p: {
           </label>
           {rememberOnDevice && !vaultSessionOpen ? (
             <p className="text-[11px] text-amber-800 dark:text-amber-200">
-              Vault-Sitzung fehlt — oben rechts Badge{' '}
-              <span className="font-semibold text-foreground">„Vault: Passwort“</span> tippen, Passwort
-              eingeben, dann „Signer laden“. Ohne das ist Senden mit Merken blockiert.
+              Vault-Sitzung fehlt — Senden geht trotzdem; Merken erst nach Unlock. Badge{' '}
+              <span className="font-semibold text-foreground">„Vault: Passwort“</span>
               {p.onRequestVaultSession ? (
                 <>
                   {' '}
@@ -378,10 +373,11 @@ export function PassphraseProtectComposerToggle(p: {
                     className="font-semibold text-foreground underline hover:no-underline"
                     onClick={() => p.onRequestVaultSession?.()}
                   >
-                    Jetzt Passwort eingeben
+                    jetzt eingeben
                   </button>
                 </>
               ) : null}
+              . Passphrase unten kopieren.
             </p>
           ) : null}
 

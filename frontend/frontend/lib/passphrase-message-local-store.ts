@@ -702,32 +702,24 @@ export function requestOpenZeitkapselLease(objectId: string): void {
 
 /**
  * Passphrase für den nächsten Send.
- * Feld / Default gilt immer (auch ohne „Wiederverwenden“ — sonst wären Neu würfeln /
- * Kopieren wirkungslos). „Wiederverwenden“ entscheidet nur, ob der Default nach dem
- * Send stehen bleibt (reuse) oder für den nächsten Send neu gewürfelt wird.
+ * Feld / Default gilt immer (auch ohne Vault-Unlock — RAM + Tab-Backup).
+ * „Wiederverwenden“: Default bleibt nach dem Send; sonst neu würfeln für den nächsten.
  */
 export function resolvePassphraseForProtectSend(generateFresh: () => string): {
   passphrase: string
   reused: boolean
 } {
   const reuse = readPassphraseReuseEnabled()
-  const existing = getDefaultPassphraseMessagePassphrase()
-  if (existing) return { passphrase: existing, reused: reuse }
-  if (!isPassphraseMessageVaultSessionOpen()) {
-    return { passphrase: '', reused: reuse }
-  }
+  const existing = getDefaultPassphraseMessagePassphrase()?.trim() || ''
+  if (existing.length >= 8) return { passphrase: existing, reused: reuse }
   const fresh = generateFresh().trim()
   if (fresh.length >= 8) setDefaultPassphraseMessagePassphrase(fresh)
-  return { passphrase: fresh, reused: reuse }
+  return { passphrase: fresh.length >= 8 ? fresh : '', reused: reuse }
 }
 
-/** Nach Send ohne Wiederverwenden: neue Vorschau-Passphrase fürs nächste Mal. */
+/** Nach Send ohne Wiederverwenden: neue Vorschau-Passphrase fürs nächste Mal (auch ohne Vault). */
 export function rollPassphraseAfterOneShotSend(generateFresh: () => string): string | null {
   if (readPassphraseReuseEnabled()) return getDefaultPassphraseMessagePassphrase()
-  if (!isPassphraseMessageVaultSessionOpen()) {
-    clearDefaultPassphraseMessagePassphrase()
-    return null
-  }
   const fresh = generateFresh().trim()
   if (fresh.length >= 8) setDefaultPassphraseMessagePassphrase(fresh)
   else clearDefaultPassphraseMessagePassphrase()

@@ -816,6 +816,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
                 : 'Passphrase mindestens 8 Zeichen (Wiederverwenden: Feld prüfen).'
             )
           }
+          let rememberedAny = false
+          let rememberSkippedNoVault = false
           for (const snap of textSnaps) {
             if (!snap.trim()) {
               wrapped.push(snap)
@@ -824,12 +826,12 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             const { wire, passphrase } = await encryptPassphraseMessage(snap, batchPass)
             const rememberOnDevice = readPassphraseRememberOnDeviceEnabled()
             if (rememberOnDevice) {
-              if (!isPassphraseMessageVaultSessionOpen()) {
-                throw new Error(
-                  '„Auf diesem Gerät merken“ braucht eine offene Vault-Sitzung. Privacy-Badge tippen, Vault-Passwort eingeben, dann erneut senden.'
-                )
+              if (isPassphraseMessageVaultSessionOpen()) {
+                rememberPassphraseMessagePassphrase(wire, passphrase)
+                rememberedAny = true
+              } else {
+                rememberSkippedNoVault = true
               }
-              rememberPassphraseMessagePassphrase(wire, passphrase)
             }
             if (cardOid && getNftKeycard(cardOid)) {
               bindWireToNftKeycard({
@@ -844,20 +846,27 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           if (!reused) {
             rollPassphraseAfterOneShotSend(generatePassphraseMessageSharePassphrase)
           }
-          if (readPassphraseRememberOnDeviceEnabled() || reused || !readPassphraseReuseEnabled()) {
+          if (rememberedAny || reused || !readPassphraseReuseEnabled()) {
             await flushPassphraseMessageVaultPersist()
           }
           if (batchPass) {
-            const remembered = readPassphraseRememberOnDeviceEnabled()
-            sharedPassphraseNote = reused
-              ? remembered
-                ? ` Passphrase (wiederverwendet, für dich auf diesem Gerät gemerkt): ${batchPass}`
-                : ` Passphrase (wiederverwendet, nicht im Vault gemerkt): ${batchPass}`
-              : remembered
-                ? ` Passphrase zum Teilen (für dich auf diesem Gerät gemerkt): ${batchPass}`
-                : ` Passphrase zum Teilen (nicht im Vault gemerkt — nur jetzt kopieren): ${batchPass}`
+            sharedPassphraseNote = rememberedAny
+              ? reused
+                ? ` Passphrase (wiederverwendet, gemerkt): ${batchPass}`
+                : ` Passphrase zum Teilen (gemerkt): ${batchPass}`
+              : reused
+                ? ` Passphrase (wiederverwendet): ${batchPass}`
+                : ` Passphrase zum Teilen (kopieren!): ${batchPass}`
+            if (rememberSkippedNoVault) {
+              sharedPassphraseNote +=
+                ' Merken übersprungen — Vault-Sitzung fehlt (Badge „Vault: Passwort“); Senden trotzdem ok.'
+            }
+            if (!reused) {
+              sharedPassphraseNote +=
+                ' „Wiederverwenden“ war aus → Passphrase für den nächsten Send neu gewürfelt. Anlassen, wenn sie gleich bleiben soll.'
+            }
             sharedPassphraseNote +=
-              ' Im Posteingang: Filter „Ansicht → Alles“, Richtung „Ausgang“ oder „Alle“. PWMSG zählt als geschützt (nicht ECDH). ⋮ → „PWMSG-Wire kopieren“.'
+              ' Posteingang: Ansicht → Alles. ⋮ → PWMSG-Wire kopieren.'
           }
         }
       } catch (e) {

@@ -38,11 +38,11 @@ describe('resolvePassphraseForProtectSend', () => {
     window.localStorage.clear()
   })
 
-  it('ohne Reuse: Feld/Default gilt; ohne Session kein Auto-Würfeln', () => {
+  it('ohne Reuse und ohne Vault: Auto-Würfeln in RAM/Tab', () => {
     writePassphraseReuseEnabled(false)
     const a = resolvePassphraseForProtectSend(() => 'fresh-pass-aaaa')
-    expect(a).toEqual({ passphrase: '', reused: false })
-    expect(getDefaultPassphraseMessagePassphrase()).toBeNull()
+    expect(a).toEqual({ passphrase: 'fresh-pass-aaaa', reused: false })
+    expect(getDefaultPassphraseMessagePassphrase()).toBe('fresh-pass-aaaa')
   })
 
   it('ohne Reuse mit Vault: erzeugt Default (Neu-würfeln-Feld)', async () => {
