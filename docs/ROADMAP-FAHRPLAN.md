@@ -2697,6 +2697,12 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T42 | **IOTA↔Telegram-Brücke Scope** | Produkt-Freeze | vor Feature-Wünschen | Telegram = Hinweis/Inbound/Alarm — **kein** Video/NFT/E2EE über TG. IOTA = Archiv/Beweis |
 | T43 | **Mailbox-Chat ≠ Zahlungs-Objekt** | Doku | Backlog | Chat-Mailbox = Nachrichten-DF; Escrow/DAO/Abo = andere Move-Objekte (Purse/Treasury). Nicht vermischen |
 | T44 | **Mesh + SignPersonalMessage** | Feature | nach Funk-Strategie T6 | Offline Text+Sig verifizieren (Ist teils Team-Wire); Replay/Nonce; optional später Anker — nicht volle Offline-TX |
+| T45 | **Browser-Link (#) Zustellung** | Produkt | nach T32 / Split | Einweg-Paket + Hash on-chain + Empfangs-Klick; **kein** voller Chat-Ersatz; BYOS später |
+| T46 | **Lesebestätigung** | UX | später | Nur wo technisch ehrlich (IOTA/App); Telegram/Funk/Browser ≠ „gelesen wie WhatsApp“ |
+| T47 | **Vorlagen + 4 Schnell-Buttons** | UX | nach Kern-Polish | Foto/Check-in/Freigabe/PDF — Templates Bau/Miete/Familie/Einsatz; Single-Player-Beweis zuerst |
+| T48 | **Make/Zapier** | Integrations | **nicht jetzt** | Erst stabile API (Hash-Event, Seal); kein App-Store-Marketing vor Messenger-Kern |
+| T49 | **Telegram als Gerichts-Tresor** | Recht/Produkt | **vorsichtig / später** | Journal+Hash ja; Webhook-JSON+request_contact = SaaS+DSGVO; kein „Telegram löschen = wir behalten“ als Werbung ohne klare Einwilligung |
+| T50 | **Beweis-Video ohne Pause** | Feature | später | Continuous capture + Dauer↔Hash; Galerie-Import verbieten — schwer fälschungssicher, Erwartung managen |
 
 **Nicht** parallel zu Session C / Zeitkapsel-Feldtest starten.
 
