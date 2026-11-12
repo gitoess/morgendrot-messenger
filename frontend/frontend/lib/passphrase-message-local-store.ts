@@ -76,8 +76,11 @@ export const PASSPHRASE_ZEITKAPSEL_LAST_NFT_LS_KEY = 'morgendrot.composer.zeitka
 export const OPEN_ZEITKAPSEL_LEASE_EVENT = 'morgendrot:open-zeitkapsel-lease'
 
 /** FNV-1a über normalisierten Wire — Send und Inbox treffen denselben Fingerprint. */
+/** Fingerprint nur über den PWMSG-Körper — Prefix/Marker vor `MORG_PWMSG_V1:` ignorieren. */
 export function fingerprintPassphraseMessageWire(wire: string): string {
-  const t = normalizeMessengerWireContent(wire)
+  const raw = normalizeMessengerWireContent(wire)
+  const idx = raw.indexOf('MORG_PWMSG_V1:')
+  const t = idx >= 0 ? raw.slice(idx) : raw
   let h = 2166136261
   for (let i = 0; i < t.length; i++) {
     h ^= t.charCodeAt(i)

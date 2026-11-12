@@ -354,14 +354,15 @@ export function PassphraseProtectComposerToggle(p: {
             <span>
               <span className="font-medium text-foreground">Auf diesem Gerät merken</span>
               {' — '}
-              An: diese Nachricht nach Unlock wieder Klartext. Aus: nach Lock/Unlock nur Ciphertext,
-              bis du die Passphrase manuell eingibst (auch wenn „Wiederverwenden“ an ist).
+              An: Nachrichten-Passphrase lokal merken → Posteingang öffnet Klartext ohne erneutes Tippen.
+              Optional Vault-Unlock = dauerhaft über Neuladen. Aus: nur Ciphertext, Passphrase jedes Mal manuell.
             </span>
           </label>
           {rememberOnDevice && !vaultSessionOpen ? (
             <p className="text-[11px] text-amber-800 dark:text-amber-200">
-              Vault-Sitzung fehlt — Senden geht trotzdem; Merken erst nach Unlock. Badge{' '}
-              <span className="font-semibold text-foreground">„Vault: Passwort“</span>
+              Merken geht auch ohne Vault (dieser Tab). Badge{' '}
+              <span className="font-semibold text-foreground">„Vault: Passwort“</span> ={' '}
+              <em>Tresor</em>-Passwort für Dauer-Speicher — nicht die Nachrichten-Passphrase unten.
               {p.onRequestVaultSession ? (
                 <>
                   {' '}
@@ -370,11 +371,10 @@ export function PassphraseProtectComposerToggle(p: {
                     className="font-semibold text-foreground underline hover:no-underline"
                     onClick={() => p.onRequestVaultSession?.()}
                   >
-                    jetzt eingeben
+                    Tresor entsperren
                   </button>
                 </>
               ) : null}
-              . Passphrase unten kopieren.
             </p>
           ) : null}
 

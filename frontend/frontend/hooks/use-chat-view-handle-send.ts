@@ -819,7 +819,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             )
           }
           let rememberedAny = false
-          let rememberSkippedNoVault = false
+          let rememberOnlyTab = false
           for (const snap of textSnaps) {
             if (!snap.trim()) {
               wrapped.push(snap)
@@ -828,12 +828,10 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             const { wire, passphrase } = await encryptPassphraseMessage(snap, batchPass)
             const rememberOnDevice = readPassphraseRememberOnDeviceEnabled()
             if (rememberOnDevice) {
-              if (isPassphraseMessageVaultSessionOpen()) {
-                rememberPassphraseMessagePassphrase(wire, passphrase)
-                rememberedAny = true
-              } else {
-                rememberSkippedNoVault = true
-              }
+              // Immer merken (RAM + Tab-Backup). Enc-Sidecar nur mit Vault-Sitzung — nicht blockieren.
+              rememberPassphraseMessagePassphrase(wire, passphrase)
+              rememberedAny = true
+              if (!isPassphraseMessageVaultSessionOpen()) rememberOnlyTab = true
             }
             if (cardOid && getNftKeycard(cardOid)) {
               bindWireToNftKeycard({
@@ -859,16 +857,16 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
               : reused
                 ? ` Passphrase (wiederverwendet): ${batchPass}`
                 : ` Passphrase zum Teilen (kopieren!): ${batchPass}`
-            if (rememberSkippedNoVault) {
+            if (rememberOnlyTab) {
               sharedPassphraseNote +=
-                ' Merken übersprungen — Vault-Sitzung fehlt (Badge „Vault: Passwort“); Senden trotzdem ok.'
+                ' Merken aktiv (Tab/RAM). Dauerhaft erst nach Vault-Unlock — das ist das Tresor-Passwort, nicht die Nachrichten-Passphrase.'
             }
             if (!reused) {
               sharedPassphraseNote +=
                 ' „Wiederverwenden“ war aus → Passphrase für den nächsten Send neu gewürfelt. Anlassen, wenn sie gleich bleiben soll.'
             }
             sharedPassphraseNote +=
-              ' Posteingang: Ansicht → Alles. ⋮ → PWMSG-Wire kopieren.'
+              ' Posteingang: Ansicht → Alles — Zeile sollte ohne erneutes Tippen aufgehen.'
           }
         }
       } catch (e) {
