@@ -540,7 +540,7 @@ Drei getrennte Menüs — nicht vermischen:
 
 | Ort | Zweck |
 |-----|--------|
-| **Optionen** (Toolbar) | Wire einfügen, Export-JSON entschlüsseln, Datei-Paket, Nachrichtenverlauf-Export, Experten-Anker |
+| **Optionen** (Toolbar) | Wire einfügen, Datei-Paket, **Export Nachrichtenverlauf** (JSON/TXT/ZIP; unten: Passwort-JSON wieder öffnen), Experten-Anker |
 | **On-Chain / NFT** (Toolbar, nur Online/IOTA) | Bild-NFT: Wire aus geladenem Posteingang, Object-ID laden, Galerie, **Minten**, Schlüsselkarte merken, Guthaben/Zeitkapsel |
 | **Nachrichten-⋮** (pro Zeile) | Wire kopieren, Telefonbuch, Weiterleiten, lokal ausblenden, Burn, .morg-pkg/JSON, Funk-Paket… |
 | **Chat-⋮** (Konversation) | Gruppen-Info, Schlüssel erneuern, Burn-on-read — **nicht** dasselbe wie Nachrichten-⋮ |
