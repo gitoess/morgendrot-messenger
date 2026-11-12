@@ -42,9 +42,9 @@ export function persistSoundFeedbackEnabled(on: boolean): void {
   writeBool(LS_SOUND, on)
 }
 
-/** Hover-/Press-„Widerstand“ (Scale) — Default an. Keine Vibration nötig. */
+/** Hover-/Press-„Widerstand“ (Scale) — Default aus (oft unsichtbar/clipped; optional). */
 export function readMagnetFeedbackEnabled(): boolean {
-  return readBool(LS_MAGNET, true)
+  return readBool(LS_MAGNET, false)
 }
 
 export function persistMagnetFeedbackEnabled(on: boolean): void {

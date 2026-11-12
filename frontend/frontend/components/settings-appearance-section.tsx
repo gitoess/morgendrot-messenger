@@ -185,8 +185,8 @@ export function SettingsAppearanceSection() {
           <h5 className="text-sm font-semibold text-foreground">Klang &amp; Feedback</h5>
         </div>
         <p className="text-[11px] text-muted-foreground">
-          Klick-Ton und Wii-ähnlicher Magnet (größer + Glow) beim Darüberfahren — ohne Vibration.
-          Magnet braucht Maus/Trackpad (kein Touch).
+          Klick-Ton optional. Magnet (Wii-Scale) ist experimentell und oft durch Layout abgeschnitten —
+          Default aus. Besser erkennbar: klare Buttons, Unterstrich-Links, Fokusring.
         </p>
         <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
           <Label htmlFor="ui-sound" className="text-sm text-foreground">

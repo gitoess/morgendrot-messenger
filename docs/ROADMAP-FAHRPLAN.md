@@ -2692,6 +2692,11 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T37 | **Tresor-Landkarte UI** | UX | erledigt 2026-11-12 | Sicherheit: Tresor vs Datei vs Sidecar vs NFT; „Vault“ nur Dateiname |
 | T38 | **Hash & Prüfen (SHA-256)** | Feature | erledigt Basis 2026-11-12 | Sicherheit: Datei/Text hashen + Hash prüfen; On-Chain-Anker weiter Online-Pfad |
 | T39 | **Telegram↔IOTA Beweis** | Produkt | später | Journal-Snapshot hashen + optional „Auf Chain verankern“; nur Morgendrot-Seite kann verifizieren |
+| T40 | **Magnet/Haptik** | Entscheidung 2026-11-12 | erledigt | Default **aus**; optional lassen. Nicht weiter aufblasen — Affordance statt Pseudo-Wii |
+| T41 | **Klickbarkeit ohne Magnet** | UX | mit Messenger-Polish | Fokusring, Button-vs-Text, Hover-Unterstrich, „⋯ / Mehr“ sichtbar — Telegram-ähnlich |
+| T42 | **IOTA↔Telegram-Brücke Scope** | Produkt-Freeze | vor Feature-Wünschen | Telegram = Hinweis/Inbound/Alarm — **kein** Video/NFT/E2EE über TG. IOTA = Archiv/Beweis |
+| T43 | **Mailbox-Chat ≠ Zahlungs-Objekt** | Doku | Backlog | Chat-Mailbox = Nachrichten-DF; Escrow/DAO/Abo = andere Move-Objekte (Purse/Treasury). Nicht vermischen |
+| T44 | **Mesh + SignPersonalMessage** | Feature | nach Funk-Strategie T6 | Offline Text+Sig verifizieren (Ist teils Team-Wire); Replay/Nonce; optional später Anker — nicht volle Offline-TX |
 
 **Nicht** parallel zu Session C / Zeitkapsel-Feldtest starten.
 
