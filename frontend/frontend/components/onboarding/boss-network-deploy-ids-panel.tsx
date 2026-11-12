@@ -21,14 +21,29 @@ export function hasAnyNetworkDeployIds(testnet?: NetworkDeployIds, mainnet?: Net
 }
 
 export function buildBossDeployIdExtrasFromApi(apiStatus?: ApiStatus | null) {
-  const extras: { label: string; value: string; copyKey: string }[] = []
-  const add = (label: string, value: string | undefined, copyKey: string) => {
+  const extras: { label: string; value: string; copyKey: string; hint?: string }[] = []
+  const add = (label: string, value: string | undefined, copyKey: string, hint?: string) => {
     const v = (value || '').trim()
-    if (PKG_RE.test(v)) extras.push({ label, value: v, copyKey })
+    if (PKG_RE.test(v)) extras.push({ label, value: v, copyKey, hint })
   }
-  add('Vault-Registry', apiStatus?.einsatzConfig?.vaultRegistryId, 'vault-reg')
-  add('Command-Registry', apiStatus?.einsatzConfig?.commandRegistryId, 'cmd-reg')
-  add('Upgrade Cap', apiStatus?.einsatzConfig?.upgradeCapId, 'upgrade-cap')
+  add(
+    'Vault-Registry',
+    apiStatus?.einsatzConfig?.vaultRegistryId,
+    'vault-reg',
+    'On-Chain-Objekt für verschlüsselte Vault-Blobs / Notfall-Purge — nicht dasselbe wie Package oder Postfach.'
+  )
+  add(
+    'Command-Registry',
+    apiStatus?.einsatzConfig?.commandRegistryId,
+    'cmd-reg',
+    'On-Chain-Registry für Kommandos — gehört zum gleichen create_globals wie Mailbox.'
+  )
+  add(
+    'Upgrade Cap',
+    apiStatus?.einsatzConfig?.upgradeCapId,
+    'upgrade-cap',
+    'Berechtigung für Package-Upgrades — Boss-.env, selten nötig im Alltag.'
+  )
   return extras
 }
 
@@ -38,6 +53,7 @@ function IdRow(p: {
   copyKey: string
   copied: string | null
   onCopy: (v: string, k: string) => void
+  hint?: string
 }) {
   if (!p.value.trim()) return null
   return (
@@ -56,6 +72,7 @@ function IdRow(p: {
           {p.copied === p.copyKey ? 'Kopiert' : 'Kopieren'}
         </button>
       </div>
+      {p.hint ? <p className="text-[10px] leading-relaxed text-muted-foreground">{p.hint}</p> : null}
     </div>
   )
 }
@@ -96,8 +113,8 @@ function NetworkBlock(p: {
 type Props = {
   testnet?: NetworkDeployIds
   mainnet?: NetworkDeployIds
-  /** Zusätzliche globale IDs (Registries, Upgrade Cap) — nur wenn gesetzt. */
-  extras?: { label: string; value: string; copyKey: string }[]
+  /** Globals aus aktiver Boss-.env (Vault-/Command-Registry, Upgrade Cap) — nicht pro Netzprofil. */
+  extras?: { label: string; value: string; copyKey: string; hint?: string }[]
   className?: string
 }
 
@@ -122,22 +139,37 @@ export function BossNetworkDeployIdsPanel(p: Props) {
           Chain-IDs zum Sichern
         </p>
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Kopiere oder notiere diese IDs (Passwortmanager, Handoff, Support). Sie liegen auch in der Boss-{' '}
-          <span className="font-mono">.env</span> — Testnet und Mainnet haben jeweils eigenes Package.
+          Pro Netz: Package + Postfach (aus „Wo senden?“). Liegen auch in der Boss-<span className="font-mono">.env</span>
+          / Handoff — Testnet und Mainnet getrennt.
         </p>
       </div>
       <NetworkBlock network="testnet" ids={p.testnet || {}} copied={copied} onCopy={copyId} />
       <NetworkBlock network="mainnet" ids={p.mainnet || {}} copied={copied} onCopy={copyId} />
-      {p.extras?.map((row) => (
-        <IdRow
-          key={row.copyKey}
-          label={row.label}
-          value={row.value}
-          copyKey={row.copyKey}
-          copied={copied}
-          onCopy={copyId}
-        />
-      ))}
+      {(p.extras?.length ?? 0) > 0 ? (
+        <details className="rounded-md border border-border/50 bg-background/40 px-2.5 py-2">
+          <summary className="cursor-pointer text-[11px] font-medium text-muted-foreground">
+            Globals (aktive .env) — Vault-Reg, Command-Reg, Upgrade Cap
+          </summary>
+          <div className="mt-2 space-y-2">
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
+              Keine Doppelung von Package/Mailbox. Werte kommen aus der <strong className="font-medium">aktuellen</strong>{' '}
+              Boss-.env (nicht getrennt Testnet/Mainnet in diesem Panel). Vault-Registry = On-Chain-Vault/Purge, nicht
+              der lokale Tresor.
+            </p>
+            {p.extras!.map((row) => (
+              <IdRow
+                key={row.copyKey}
+                label={row.label}
+                value={row.value}
+                copyKey={row.copyKey}
+                copied={copied}
+                onCopy={copyId}
+                hint={row.hint}
+              />
+            ))}
+          </div>
+        </details>
+      ) : null}
     </div>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Check, MessageCircle, Send } from 'lucide-react'
+import { Check, MessageCircle, RefreshCw, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Switch } from '@/components/ui/switch'
 import { Input } from '@/components/ui/input'
@@ -171,11 +171,23 @@ export function SettingsTelegramEinsatzGroup(p: SettingsTelegramEinsatzGroupProp
           <MessageCircle className="h-5 w-5" aria-hidden />
         </div>
         <div className="min-w-0 flex-1 space-y-4">
-          <div>
-            <h4 className="font-semibold text-foreground">Einsatz-Alarmgruppe (B4b)</h4>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Eine Telegram-Gruppe für SOS- und Team-Hinweise — optional im Handoff-Export und per Wire an das Team.
-            </p>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h4 className="font-semibold text-foreground">Einsatz-Alarmgruppe (B4b)</h4>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Eine Telegram-Gruppe für SOS- und Team-Hinweise — optional im Handoff-Export und per Wire an das Team.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={!p.backendOnline || busy === 'load'}
+              onClick={() => void load()}
+              className="inline-flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+              aria-label="Alarmgruppe aktualisieren"
+            >
+              <RefreshCw className={cn('h-3.5 w-3.5', busy === 'load' && 'animate-spin')} />
+              Aktualisieren
+            </button>
           </div>
 
           <div className="flex items-center justify-between gap-4">

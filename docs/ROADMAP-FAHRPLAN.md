@@ -2636,15 +2636,54 @@ UI: **„Im Einsatz-Anker enthalten“** Badge (Modus A/B Rollup); **„On-chain
 
 ## Am Ende des Messenger-Durchgangs — QA anheften (2026-11-12)
 
-Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezielt prüfen:
+Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezielt prüfen.  
+**Regel:** Alles, was wir **gemeinsam** durchgehen oder testen wollen (auch zukünftige Punkte), kommt in die Tabelle **„Gemeinsam testen“** — nicht als Zwischen-Featurebau.
 
 | # | Thema | Was prüfen |
 |---|--------|------------|
 | 1 | **i18n / Sprache** | DE↔EN: alle sichtbaren Settings-/Messenger-Strings vollständig und korrekt? Fehlende Keys, Hardcoded DE, falsche Fallbacks. |
 | 2 | **Einstiegs-Wizard** | Up to date mit Ist-Flows (Boss/Helfer/Privat)? Schritte funktional, überspringbar, Resume/Fertig nur in Einstellungen. |
-| 3 | **§ H.37 Multi-Profil** | Spec/Umsetzung erst **nach** diesem Durchgang — Ziel: Profilwahl beim Unlock, eigener Seed, **nie parallel** (`VAULT-BEGRIFFE` §6). |
+| 3 | **§ H.32b Einsatz beenden** | Manuell nachholen (Settings + Einsatzleitung): Cache/lokale IDs weg, Chain unberührt, danach neues Handoff möglich. **Nicht jetzt** — bewusst später im Durchgang. |
+| 4 | **§ H.37 Multi-Profil** | Spec/Umsetzung erst **nach** diesem Durchgang — Ziel: Profilwahl beim Unlock, eigener Seed, **nie parallel** (`VAULT-BEGRIFFE` §6). |
+| 5 | **Produkt-Split Morgendrot vs IOTA-Messenger** | Entscheiden, was im vollen Morgendrot bleibt und was nur im schlanken IOTA-Messenger (siehe Tabelle unten). Overlay-Ist: `tools/iota-messenger/overlays/product-identity.ts`. |
+
+### Gemeinsam testen / durchgehen (live mit User — Stand 2026-11-12)
+
+Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns X zusammen testen“-Punkte **hier anhängen**.
+
+| # | Thema | Art | Wann | Notiz |
+|---|--------|-----|------|-------|
+| T1 | **Mainnet einrichten** | Feld/UI-Test | **am Schluss** dieses Durchgangs | Deploy / Gas / Schalter Produktion / Signer-Strip — zusammen klicken |
+| T2 | **Passwort ändern** | Durchgang + ggf. Smoke | nach IOTA-Lesepass | Bleibt vorerst unter IOTA; Zielplatz: **Sicherheit** (**nicht** Allgemein) |
+| T3 | **Meine Mailboxen** | Durchgang | nach T2 | Privat/Team vs. Deploy-Mailbox unter „Wo senden?“ |
+| T4 | **Schatten → Main (Sweep)** | Durchgang | nach T3 | Einmal-Werkzeug; Zielplatz: **Sicherheit** |
+| T5 | **§ H.32b Einsatz beenden** | Retest | bewusst später | = QA #3 |
+| T6 | **Funk / Meshtastic** | Strategie-Entscheid | **verschoben** (nach Settings-Durchgang) | Offizielle Meshtastic-App vs. eigene UI — **noch nicht entscheiden**; Ist: Puls/Geräte-Embed |
+| T7 | **Vault-Registry / Chain-Globals** | Durchgang | später | bewusst zurückgestellt |
+| T8 | **Passwort- + Backup-UI → Sicherheit** | UI-Verschiebung | nach T2–T4 gelesen | Mit Tresor/Purge bündeln |
+| T9 | **Schatten → Sicherheit** | UI-Verschiebung | mit T8 | Aus IOTA-Tab raus |
+| T10 | **Aktualisieren-Pattern** | UX-Regel | während Settings-Durchgang | Pro Settings-Karte **oben** „Aktualisieren“; keine verstreuten „Neu laden“. Ausnahme: **Saldo aktualisieren** (IOTA Gas) ok |
+| T11 | **Secrets-Landkarte** | Doku/UI | später | Wo liegt was (Vault vs Runtime-JSON vs localStorage vs .env) — komplett, nicht nur Telegram |
 
 **Nicht** parallel zu Session C / Zeitkapsel-Feldtest starten.
+
+### Entwurf: Was wohin? (Entscheidung am Schluss — Stand 2026-11-12)
+
+| Feature (Allgemein / verwandt) | Morgendrot (Einsatz) | IOTA-Messenger (only) | Notiz |
+|--------------------------------|----------------------|------------------------|-------|
+| Expertenmodus (Package-ID Posteingang) | behalten | optional / aus | Nur Browser-Toggle; ≠ Server-Simple |
+| Aktives Profil (Settings-Zeile) | **entfernt** 2026-11-12 | weg | Badge im Chat-Header reicht |
+| Handoff importieren | behalten (Text gekürzt 2026-11-12) | **weg** (Overlay) | Kurz: ZIP → neu laden → entsperren |
+| Einsatz beenden | behalten (+ Einsatzleitung) | **weg** (Overlay) | Löscht lokale Caches, nicht Wallet — **Retest später** (QA-Tabelle #3) |
+| Hobby-Disclaimer | behalten (kurz) | behalten | Inhalt ok / kürzer als `DISCLAIMER.md` |
+| Erweiterte .env | **nur ganz unten** (Link „Konfiguration öffnen“) | minimal | Nicht in Allgemein; System&Identität bei Boss/Kommandant entfernt 2026-11-12 |
+| System & Identität | **weg** bei Boss/Kommandant | schlank/Helfer | Adresse → Gas/Wallet; Package/RPC → Wo senden; Signer-Strip → unter Wo senden |
+| Funk / Telegram / SOS / Einsatzleitung | Morgendrot | **weg** im IOTA-only | Overlay-Flags bereits |
+| Passwort ändern / Vault-Backup | Ziel: **Sicherheit** (T8) | behalten | **Nicht** Allgemein — Tresor, kein Theme/Sprache |
+| Schatten-Sweep | Ziel: **Sicherheit** (T9) | optional/weg | Jetzt noch unter IOTA — verschieben nach Durchgang |
+| Funk-Tab / Meshtastic-UI | Morgendrot; Strategie **T6** | **weg** | Offizielle App vs. eigene UI — Entscheid später |
+| Einsatz-Alarmgruppe (B4b) | Morgendrot Boss | **weg** | Kein IOTA-Messenger-only; kein Expertenmodus — Einsatz-Feature |
+| Telegram Bot-Token / Chat-IDs | Runtime-JSON (Boss-PC) | optional/weg | **Nicht** im Vault — siehe T11 |
 
 ---
 

@@ -490,27 +490,20 @@ export function HandoffImportPanel(
             <div>
               <h4 className="font-semibold text-foreground">Handoff importieren</h4>
               <p className="mt-1 text-sm text-muted-foreground">
-                Boss-ZIP wählen oder aus dem <strong className="text-foreground">Posteingang</strong> (Menü an der
-                Nachricht) — Klartext oder <span className="font-mono text-xs">handoff.morg.enc</span>.
                 {standaloneHandoffMode ? (
                   <>
-                    {' '}
-                    Auf der <strong className="text-foreground">Standalone-APK ohne PC-Server</strong>: nach der Vorschau{' '}
-                    <strong className="text-foreground">Lokal vormerken (ohne Basis)</strong>, dann Seite neu laden und
-                    Mnemonic im Entsperren-Dialog oder Puls setzen.
+                    Boss-ZIP wählen → <strong className="text-foreground">Lokal vormerken</strong> → neu laden →
+                    Mnemonic setzen.
                   </>
                 ) : (
                   <>
-                    {' '}
-                    Danach <strong className="text-foreground">Seite neu laden</strong> und Tresor entsperren.
+                    Boss-ZIP wählen (oder Posteingang) → neu laden → Tresor entsperren.
                   </>
                 )}
               </p>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">
-              Boss-ZIP wählen — Package, Mailbox und Netzwerk werden übernommen.
-            </p>
+            <p className="text-sm text-muted-foreground">Boss-ZIP wählen — Netzwerk-IDs werden übernommen.</p>
           )}
 
           <input

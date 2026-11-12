@@ -11,7 +11,6 @@ import {
 } from '@/frontend/lib/api'
 import { LazyHandoffImportPanel } from '@/frontend/components/lazy/messenger-scope-b'
 import { EinsatzEndPanel } from '@/frontend/components/einsatz-end-panel'
-import { ActiveProfilePanel } from '@/frontend/components/active-profile-panel'
 import { SettingsTelegramIntegration } from '@/frontend/components/views/settings-telegram-integration'
 import { SettingsTelegramEinsatzGroup } from '@/frontend/components/views/settings-telegram-einsatz-group'
 import { SettingsTelegramAlarmGroupJoin } from '@/frontend/components/views/settings-telegram-alarm-group-join'
@@ -165,7 +164,6 @@ export function SettingsView({
         <SettingsAppearanceSection />
         <DashboardPwaInstallCard compact anchorId="settings-pwa-install" />
         <SettingsExpertModeSection apiStatus={advancedIotaStatus} />
-        <ActiveProfilePanel status={advancedIotaStatus} />
         <CapacitorApiBaseCard />
         <div id="settings-handoff-import">
           <LazyHandoffImportPanel
@@ -191,15 +189,18 @@ export function SettingsView({
             apiStatus={advancedIotaStatus}
             backendOnline={backendOnline}
             onApplied={() => void loadStatus()}
+            vaultLocked={vaultLocked}
+            onRequestVaultUnlock={onRequestVaultUnlock}
           />
-        ) : null}
-        <SettingsSystemIdentitySection
-          apiStatus={advancedIotaStatus}
-          managedNetwork={managedNetwork}
-          vaultLocked={vaultLocked}
-          onRequestVaultUnlock={onRequestVaultUnlock}
-          onApplied={() => void loadStatus()}
-        />
+        ) : (
+          <SettingsSystemIdentitySection
+            apiStatus={advancedIotaStatus}
+            managedNetwork={false}
+            vaultLocked={vaultLocked}
+            onRequestVaultUnlock={onRequestVaultUnlock}
+            onApplied={() => void loadStatus()}
+          />
+        )}
         <SettingsVaultPasswordSection vaultLocked={vaultLocked} />
         <SettingsVaultBackupSection vaultLocked={vaultLocked} onRequestVaultUnlock={onRequestVaultUnlock} />
         <SettingsMyMailboxesSection
@@ -298,7 +299,7 @@ export function SettingsView({
 
       {onOpenConfig ? (
         <p className="text-xs text-muted-foreground">
-          Erweiterte .env:{' '}
+          Erweiterte .env (einmal, ganz unten — nicht in Allgemein):{' '}
           <button type="button" className="text-primary underline" onClick={onOpenConfig}>
             Konfiguration öffnen
           </button>

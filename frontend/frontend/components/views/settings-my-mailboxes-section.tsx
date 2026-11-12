@@ -2,7 +2,6 @@
 
 import { useCallback } from 'react'
 import { Mailbox } from 'lucide-react'
-import Link from 'next/link'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { ChatViewMyMailboxesPanel } from '@/frontend/components/chat-view-my-mailboxes-panel'
 import { TeamMailboxSyncStatus } from '@/frontend/components/team-mailbox-sync-status'
@@ -70,14 +69,11 @@ export function SettingsMyMailboxesSection({
           </div>
           <div>
             <h4 className="font-semibold text-foreground">Meine Mailboxen</h4>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Private und Team-Postfächer — getrennt vom aktiven Package unter „Wo senden?“.
+            </p>
           </div>
         </div>
-        <Link
-          href="/handbook?file=MESSENGER-CHAT-HANDBUCH.md#kanäle-speicher-und-mailboxen"
-          className="text-xs text-primary underline hover:no-underline"
-        >
-          Handbuch
-        </Link>
       </div>
       <div className="space-y-4 p-4">
         {panel}

@@ -27,11 +27,14 @@ import {
 } from '@/frontend/components/onboarding/boss-network-deploy-ids-panel'
 import { postDeployMainnetPackage } from '@/frontend/lib/api/einsatz-config'
 import { DEFAULT_MAINNET_RPC_URL } from '@morgendrot/shared/einsatz-chain-mode'
+import { SessionSignerStatusStrip } from '@/frontend/components/session-signer-status-strip'
 
 type SettingsNetworkProfilesSectionProps = {
     apiStatus?: ApiStatus | null
     backendOnline?: boolean
     onApplied?: () => void | Promise<void>
+    vaultLocked?: boolean
+    onRequestVaultUnlock?: () => void
 }
 
 export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSectionProps) {
@@ -98,6 +101,11 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
     const deployExtras = buildBossDeployIdExtrasFromApi(p.apiStatus)
 
     const pickNetwork = async (target: EinsatzNetworkId) => {
+        if (target === state.active && summarizeNetworkState(state).activeOk) {
+            setMsgTone('success')
+            setMsg(target === 'testnet' ? 'Übung (Testnet) ist bereits aktiv.' : 'Produktion (Mainnet) ist bereits aktiv.')
+            return
+        }
         if (target === 'mainnet' && !summarizeNetworkState({ ...state, active: 'mainnet' }).activeOk) {
             setMainnetSetupOpen(true)
             setMsgTone('error')
@@ -236,46 +244,85 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
         }
     }
 
+    const testnetReady = summarizeNetworkState({ ...state, active: 'testnet' }).activeOk
+    const mainnetReady = summarizeNetworkState({ ...state, active: 'mainnet' }).activeOk
+
     return (
         <div className="rounded-xl border border-border bg-card p-4 space-y-3">
             <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500/15 text-sky-700 dark:text-sky-300">
                     <Globe className="h-5 w-5" aria-hidden />
                 </div>
-                <div>
+                <div className="min-w-0">
                     <h4 className="font-semibold text-foreground">Wo senden?</h4>
-                    <p className={cn('text-sm', summary.activeOk ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-200')}>
+                    <p className="text-xs text-muted-foreground">
+                        Ein aktives Netz — Package, Postfach und RPC für direkten IOTA-Versand.
+                    </p>
+                    <p className={cn('mt-0.5 text-sm', summary.activeOk ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-200')}>
                         {summary.line}
                     </p>
                 </div>
             </div>
 
-            <div className="flex rounded-lg border border-border p-1 bg-muted/30">
+            <div
+                role="tablist"
+                aria-label="Aktives IOTA-Netzwerk"
+                className="relative grid grid-cols-2 gap-1 rounded-xl border border-border bg-muted/40 p-1"
+            >
                 <button
                     type="button"
+                    role="tab"
+                    aria-selected={state.active === 'testnet'}
                     disabled={busy || deploying}
                     className={cn(
-                        'flex-1 rounded-md py-2.5 text-sm font-medium',
-                        state.active === 'testnet' ? 'bg-background shadow-sm' : 'text-muted-foreground'
+                        'rounded-lg px-2 py-3 text-left transition-all duration-200 ease-out',
+                        'active:scale-[0.97]',
+                        state.active === 'testnet'
+                            ? 'z-[1] scale-[1.02] bg-sky-600 text-white shadow-md shadow-sky-900/25 ring-2 ring-sky-300/80 dark:bg-sky-500 dark:ring-sky-200/50'
+                            : 'bg-sky-500/10 text-sky-900/70 hover:bg-sky-500/20 dark:text-sky-200/70'
                     )}
                     onClick={() => void pickNetwork('testnet')}
                 >
-                    Übung (Testnet)
+                    <span className="block text-sm font-semibold">Übung</span>
+                    <span className="block text-[11px] opacity-90">Testnet</span>
+                    <span className="mt-1 block text-[10px] font-medium opacity-95">
+                        {state.active === 'testnet' ? 'aktiv' : testnetReady ? 'bereit' : 'IDs fehlen'}
+                    </span>
                 </button>
                 <button
                     type="button"
+                    role="tab"
+                    aria-selected={state.active === 'mainnet'}
                     disabled={busy || deploying}
                     className={cn(
-                        'flex-1 rounded-md py-2.5 text-sm font-medium',
-                        state.active === 'mainnet' ? 'bg-background shadow-sm' : 'text-muted-foreground'
+                        'rounded-lg px-2 py-3 text-left transition-all duration-200 ease-out',
+                        'active:scale-[0.97]',
+                        state.active === 'mainnet'
+                            ? 'z-[1] scale-[1.02] bg-violet-700 text-white shadow-md shadow-violet-950/30 ring-2 ring-violet-300/80 dark:bg-violet-600 dark:ring-violet-200/50'
+                            : 'bg-violet-500/10 text-violet-950/70 hover:bg-violet-500/20 dark:text-violet-200/70'
                     )}
                     onClick={() => void pickNetwork('mainnet')}
                 >
-                    Produktion (Mainnet)
+                    <span className="block text-sm font-semibold">Produktion</span>
+                    <span className="block text-[11px] opacity-90">Mainnet</span>
+                    <span className="mt-1 block text-[10px] font-medium opacity-95">
+                        {state.active === 'mainnet' ? 'aktiv' : mainnetReady ? 'bereit' : 'einrichten'}
+                    </span>
                 </button>
             </div>
 
             {summary.hint ? <p className="text-xs text-muted-foreground">{summary.hint}</p> : null}
+
+            <SessionSignerStatusStrip
+                locked={p.vaultLocked}
+                myAddress={
+                    p.apiStatus?.myAddressFull?.trim() ||
+                    p.apiStatus?.myAddress?.trim() ||
+                    senderAddress
+                }
+                signerMode={p.apiStatus?.signer}
+                onRequestUnlock={p.onRequestVaultUnlock}
+            />
 
             <div className="space-y-2">
                 <BossWalletGasFundingPanel
