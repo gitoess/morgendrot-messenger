@@ -697,11 +697,6 @@ function MessengerDashboardBody({
           }}
         />
         <StandaloneSoloWizardCard apiSnapshot={s.apiSnapshot} />
-        {!s.locked && !isEinsatzLeadHome && liteMessengerFromApi ? (
-          <div className="mb-6 flex justify-center">
-            <DashboardSosEmergencyButton onOpenMessages={s.openMessengerChatView} />
-          </div>
-        ) : null}
         {!s.locked && isEinsatzLeadHome ? (
           <DashboardMessengerBossHome
             apiSnapshot={s.apiSnapshot}
@@ -816,6 +811,11 @@ function MessengerDashboardBody({
             <MessengerDashboardOfflineHint />
           </div>
         )}
+        {!s.locked && !isEinsatzLeadHome && liteMessengerFromApi ? (
+          <div className="mt-16 flex justify-center pb-1">
+            <DashboardSosEmergencyButton onOpenMessages={s.openMessengerChatView} />
+          </div>
+        ) : null}
       </main>
     </div>
     </DeploymentProfileBackdrop>

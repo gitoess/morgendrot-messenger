@@ -691,6 +691,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     const expectedAddr =
       (apiSnapshot?.myAddressFull || apiSnapshot?.myAddress || myAddress).trim() || undefined
 
+    playUiTone('unlock')
     setUnlocking(true)
     if (isStandaloneMessengerWithoutBasis()) {
       const mnemonic = signerImport.trim()
@@ -845,7 +846,6 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       setSignerImportConfirm('')
       setShowSignerImportOpen(false)
       setLocked(false)
-      playUiTone('unlock')
       await checkStatus()
       if (vaultKeysLoaded) {
         setApiSnapshot((prev) => (prev ? { ...prev, hasKeys: true, locked: false } : prev))
@@ -909,7 +909,6 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       setSignerImportConfirm('')
       setShowSignerImportOpen(false)
       setLocked(false)
-      playUiTone('unlock')
       setUnlockError(hint ?? '')
       await checkStatus()
       if (vaultKeysLoaded) {

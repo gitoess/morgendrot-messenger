@@ -392,6 +392,7 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
               ) : null}
               <Button
                 type="button"
+                data-no-tap-feedback="true"
                 className="h-12 w-full text-base"
                 disabled={p.unlockButtonDisabled || p.unlocking}
                 onClick={p.onUnlock}
@@ -480,6 +481,7 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
               )
             ) : null}
             <Button
+              data-no-tap-feedback="true"
               onClick={() => void p.onUnlock()}
               disabled={p.unlockButtonDisabled}
               className="h-12 w-full bg-emerald-600 text-base font-medium hover:bg-emerald-600/90"
@@ -548,6 +550,7 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
                 />
               </div>
               <Button
+                data-no-tap-feedback="true"
                 onClick={() => void p.onUnlock()}
                 disabled={p.unlockButtonDisabled}
                 variant="secondary"
@@ -652,6 +655,7 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
               <p className="text-xs text-muted-foreground">{t('create.blockedHint')}</p>
             ) : null}
             <Button
+              data-no-tap-feedback="true"
               onClick={() => void p.onUnlock()}
               disabled={p.unlockButtonDisabled}
               variant={createProfileReady ? 'default' : 'secondary'}

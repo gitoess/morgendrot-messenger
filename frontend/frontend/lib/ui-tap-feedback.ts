@@ -88,12 +88,43 @@ function trackOscillator(osc: OscillatorNode): void {
   }
 }
 
+/** Kurzes mechanisches Klack (Rauschen), kein Ton. */
+function playKlack(ctx: AudioContext, volPct: number): void {
+  const dur = 0.03
+  const frames = Math.max(1, Math.floor(ctx.sampleRate * dur))
+  const buffer = ctx.createBuffer(1, frames, ctx.sampleRate)
+  const data = buffer.getChannelData(0)
+  for (let i = 0; i < frames; i++) {
+    const env = (1 - i / frames) ** 3
+    data[i] = (Math.random() * 2 - 1) * env
+  }
+  const src = ctx.createBufferSource()
+  const filter = ctx.createBiquadFilter()
+  const gain = ctx.createGain()
+  filter.type = 'highpass'
+  filter.frequency.value = 1400
+  const now = ctx.currentTime
+  const peak = Math.max(0.02, 0.42 * (volPct / 100))
+  gain.gain.setValueAtTime(peak, now)
+  gain.gain.exponentialRampToValueAtTime(0.001, now + dur)
+  src.buffer = buffer
+  src.connect(filter)
+  filter.connect(gain)
+  gain.connect(ctx.destination)
+  src.start(now)
+  src.stop(now + dur + 0.02)
+}
+
 export function playTapClick(kind: TapFeedbackKind = 'select'): void {
   try {
     if (!readSoundFeedbackEnabled()) return
     const volPct = readSoundFeedbackVolume()
     if (volPct <= 0) return
     whenAudioRunning((ctx) => {
+    if (kind === 'confirm') {
+      playKlack(ctx, volPct)
+      return
+    }
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
     const { freq, durMs, gain: peak } = TONES[kind]

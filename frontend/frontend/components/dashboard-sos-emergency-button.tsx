@@ -18,7 +18,7 @@ export function DashboardSosEmergencyButton(p: {
         title="SOS — Hilferuf (Text), MORG_EMERGENCY_V1. Kein automatischer 112-Ruf."
         onClick={() => setSheetOpen(true)}
         className={cn(
-          'mx-auto w-full max-w-md rounded-xl border-2 border-red-600/70 bg-red-600/95 px-4 py-4 text-base font-bold tracking-tight text-white shadow-md transition-colors hover:bg-red-500 sm:text-lg',
+          'inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium text-muted-foreground/70 underline-offset-2 transition-colors hover:text-red-400/80 hover:underline',
           p.className
         )}
       >

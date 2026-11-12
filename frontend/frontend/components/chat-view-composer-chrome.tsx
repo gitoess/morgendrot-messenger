@@ -16,16 +16,14 @@ export type ChatViewComposerChromeProps = {
   className?: string
 }
 
-/** SOS direkt über dem Composer (Sendepfad im Kopf). */
+/** SOS klein unter dem Composer. */
 export function ChatViewComposerChrome(p: ChatViewComposerChromeProps) {
   const { sosEmergency, className } = p
   if (!sosEmergency?.visible) return null
 
   return (
-    <div className={cn('rounded-xl border border-border/50 bg-card/40 p-3 sm:p-4', className)}>
-      {sosEmergency.visible ? (
-        <ChatViewSosEmergencyButton {...sosEmergency} variant="hero" className="shadow-md" />
-      ) : null}
+    <div className={cn('flex justify-end px-1 pt-1', className)}>
+      <ChatViewSosEmergencyButton {...sosEmergency} variant="compact" />
     </div>
   )
 }
