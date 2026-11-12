@@ -20,6 +20,14 @@ import {
   Settings2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { exportDataDeniedReason } from '@/frontend/lib/messenger-capability-gates'
 import type { MorgPkgExportPartnerOption } from '@/frontend/lib/morg-pkg-export-partners'
@@ -47,9 +55,6 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
@@ -210,6 +215,8 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
 
   const pathTools = pathToolsProp ?? DEFAULT_PATH_TOOLS
   const [wirePasteOpen, setWirePasteOpen] = useState(false)
+  const [exportHistoryOpen, setExportHistoryOpen] = useState(false)
+  const [pkgToolsOpen, setPkgToolsOpen] = useState(false)
   const filterArmedCount =
     (showWireControls ? 1 : 0) +
     (showChannelControls && pathTools.showKanalFilterToggle ? 1 : 0) +
@@ -230,6 +237,16 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     setStatusMsg(exportDenied ?? 'Export nicht erlaubt.')
     setTimeout(() => setStatus('idle'), 6000)
   }
+
+  const runExportAndClose = (run: () => void) => {
+    blockExportAction(() => {
+      run()
+      setExportHistoryOpen(false)
+    })
+  }
+
+  const exportEmpty = messageCount === 0
+  const exportDisabled = exportEmpty || exportBlocked
 
   return (
     <div className="border-b border-border">
@@ -337,204 +354,261 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 </DropdownMenuItem>
               ) : null}
               {pathTools.showPakete || pathTools.showNachrichtenverlauf ? <DropdownMenuSeparator /> : null}
+              {pathTools.showNachrichtenverlauf ? (
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault()
+                    setExportHistoryOpen(true)
+                  }}
+                >
+                  <FileDown className="mr-2 h-4 w-4 opacity-80" aria-hidden />
+                  Export Nachrichtenverlauf…
+                </DropdownMenuItem>
+              ) : null}
               {pathTools.showPakete ? (
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault()
+                    setPkgToolsOpen(true)
+                  }}
+                >
                   <Package className="mr-2 h-4 w-4 opacity-80" aria-hidden />
-                  Datei-Paket
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="min-w-[18rem]">
-                  <p className="px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
-                    Offline-Datei (.morg-pkg) für einen verbundenen Partner — landet im{' '}
-                    <strong className="text-foreground">Archiv</strong>, nicht im Chat-Posteingang.
-                  </p>
-                  {morgPkgExportPartnerOptions.length > 0 && onMorgPkgExportRecipientChange ? (
-                    <div className="space-y-1 border-b border-border px-2 py-2">
-                      <label htmlFor="morg-pkg-export-recipient" className="text-[10px] font-medium text-foreground">
-                        Empfänger für Export
-                      </label>
-                      <select
-                        id="morg-pkg-export-recipient"
-                        value={morgPkgExportRecipient}
-                        onChange={(e) => onMorgPkgExportRecipientChange(e.target.value)}
-                        className="h-9 w-full rounded-md border border-border bg-background px-2 text-xs text-foreground"
-                      >
-                        {morgPkgExportPartnerOptions.length > 1 ? (
-                          <option value="">— Partner wählen —</option>
-                        ) : null}
-                        {morgPkgExportPartnerOptions.map((o) => (
-                          <option key={o.address} value={o.address}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
+                  Datei-Paket…
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Dialog open={exportHistoryOpen} onOpenChange={setExportHistoryOpen}>
+            <DialogContent className="max-h-[min(90vh,36rem)] max-w-md overflow-y-auto sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Nachrichtenverlauf exportieren</DialogTitle>
+                <DialogDescription>
+                  Download auf dieses Gerät. Telegram-Journal und Funk-Zeilen werden mitgemergt (nach Aktualisieren).
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 text-sm">
+                <p className="rounded-md border border-border/70 bg-muted/30 px-2.5 py-2 text-xs text-muted-foreground">
+                  {exportBlocked
+                    ? exportDenied
+                    : exportEmpty
+                      ? 'Keine Nachrichten geladen — zuerst „Aktualisieren“. Telegram braucht Bot + Chat-ID im Telefonbuch.'
+                      : `${messageCount} Nachricht(en) bereit zum Export.`}
+                </p>
+                <div className="grid gap-2">
+                  <Button
+                    type="button"
+                    variant="default"
+                    className="h-auto justify-start whitespace-normal py-2.5 text-left"
+                    disabled={exportDisabled}
+                    onClick={() => runExportAndClose(() => onExportEinsatzberichtJson())}
+                  >
+                    JSON (vollständig, Klartext)
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-auto justify-start whitespace-normal py-2.5 text-left"
+                    disabled={exportDisabled}
+                    onClick={() => runExportAndClose(() => void onExportEinsatzberichtTxtFull())}
+                  >
+                    Text (vollständig, Klartext)
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-auto justify-start whitespace-normal py-2.5 text-left"
+                    disabled={exportDisabled}
+                    onClick={() => runExportAndClose(() => onExportEinsatzberichtTxt())}
+                  >
+                    Text kurz (~200 Zeichen)
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-auto justify-start whitespace-normal py-2.5 text-left"
+                    disabled={exportDisabled}
+                    onClick={() => runExportAndClose(() => void onExportEinsatzberichtEncrypted())}
+                  >
+                    <Lock className="mr-2 h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                    Verschlüsselt (Passwort-JSON)
+                  </Button>
+                </div>
+                <div className="grid gap-2 border-t border-border pt-3">
+                  <p className="text-[11px] font-medium text-muted-foreground">ZIP</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-auto justify-start whitespace-normal py-2 text-left"
+                    disabled={exportDisabled}
+                    onClick={() => runExportAndClose(() => void onExportEinsatzprotokoll())}
+                  >
+                    ZIP + HTML (verschlüsselt)
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-auto justify-start whitespace-normal py-2 text-left"
+                    disabled={exportDisabled}
+                    onClick={() => runExportAndClose(() => void onExportEinsatzprotokollPlainZip())}
+                  >
+                    ZIP Klartext
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-auto justify-start whitespace-normal py-2 text-left"
+                    disabled={protokollMarkedCount === 0 || exportBlocked}
+                    onClick={() => runExportAndClose(() => void onExportEinsatzprotokollMarked())}
+                  >
+                    ZIP nur markiert (★ {protokollMarkedCount})
+                  </Button>
+                </div>
+                {pathTools.showDecryptExport ? (
+                  <div className="border-t border-border pt-3">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="h-auto w-full justify-start whitespace-normal py-2 text-left text-muted-foreground"
+                      onClick={() => {
+                        window.open('/einsatzbericht-decrypt.html', '_blank', 'noopener,noreferrer')
+                      }}
+                    >
+                      <KeyRound className="mr-2 h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                      Vorhandene Passwort-JSON wieder öffnen…
+                    </Button>
+                  </div>
+                ) : null}
+                {showIotaExpertInboxActions && pathTools.showIotaExpertInHistory ? (
+                  <details className="rounded-md border border-border/70 bg-muted/15 p-2">
+                    <summary className="cursor-pointer text-xs font-medium text-foreground">
+                      Experten · Chain / Warteschlange
+                    </summary>
+                    <div className="mt-2 space-y-2">
+                      <LazyChatViewProtokollAnchorButton
+                        messageCount={messageCount}
+                        messages={messages}
+                        myAddress={myAddress}
+                        recipient={recipient}
+                        vaultLocked={vaultLocked}
+                        messagingPersistenceMode={messagingPersistenceMode}
+                        setStatus={setStatus}
+                        setStatusMsg={setStatusMsg}
+                        onOpenPartnerSetup={onOpenPartnerSetup}
+                        triggerClassName="w-full justify-start rounded-md border border-border bg-background px-3 py-2 text-left text-sm hover:bg-muted"
+                        triggerLabel="Auf Chain verankern"
+                      />
+                      <LazyChatViewTangleInventoryButton
+                        inventoryScope="anchored"
+                        messages={messages}
+                        packageId={apiStatus?.packageId?.trim() || undefined}
+                      />
+                      <ChatViewPendingSendsButton
+                        offlineMailboxQueuePending={offlineMailboxQueuePending}
+                        offlineMailboxQueueItems={offlineMailboxQueueItems}
+                        offlineMailboxQueueErrorHint={offlineMailboxQueueErrorHint}
+                        onManualRefresh={onOfflineMailboxQueueRefresh}
+                        onRemoveOfflineMailboxQueueItems={onRemoveOfflineMailboxQueueItems}
+                        showRelayManage={showIotaExpertInboxActions}
+                      />
                     </div>
-                  ) : (
-                    <p className="px-2 py-1.5 text-[10px] text-amber-700 dark:text-amber-200">
-                      Export: zuerst Handshake/Connect — dann Empfänger wählbar.
-                    </p>
-                  )}
+                  </details>
+                ) : null}
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={pkgToolsOpen} onOpenChange={setPkgToolsOpen}>
+            <DialogContent className="max-w-md sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Datei-Paket (.morg-pkg)</DialogTitle>
+                <DialogDescription>
+                  Offline-Datei für einen verbundenen Partner — landet im Archiv, nicht im Chat-Posteingang.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 text-sm">
+                {morgPkgExportPartnerOptions.length > 0 && onMorgPkgExportRecipientChange ? (
+                  <div className="space-y-1.5">
+                    <label htmlFor="morg-pkg-export-recipient" className="text-xs font-medium text-foreground">
+                      Empfänger für Export
+                    </label>
+                    <select
+                      id="morg-pkg-export-recipient"
+                      value={morgPkgExportRecipient}
+                      onChange={(e) => onMorgPkgExportRecipientChange(e.target.value)}
+                      className="h-10 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground"
+                    >
+                      {morgPkgExportPartnerOptions.length > 1 ? (
+                        <option value="">— Partner wählen —</option>
+                      ) : null}
+                      {morgPkgExportPartnerOptions.map((o) => (
+                        <option key={o.address} value={o.address}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <p className="rounded-md border border-amber-600/35 bg-amber-500/10 px-2.5 py-2 text-xs text-amber-950 dark:text-amber-100">
+                    Export: zuerst Handshake/Connect — dann Empfänger wählbar.
+                  </p>
+                )}
+                <div className="grid gap-2">
                   {onOpenMorgPkgArchive ? (
-                    <DropdownMenuItem
-                      onSelect={(e) => {
-                        e.preventDefault()
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="justify-start"
+                      onClick={() => {
                         onOpenMorgPkgArchive()
+                        setPkgToolsOpen(false)
                       }}
                     >
                       Paket-Archiv{morgPkgImportCount > 0 ? ` (${morgPkgImportCount})` : ''}
-                    </DropdownMenuItem>
+                    </Button>
                   ) : null}
-                  <DropdownMenuItem
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-auto justify-start whitespace-normal py-2.5 text-left"
                     disabled={pkgImportDisabled}
                     title={morgPkgImportTitle(apiStatus)}
-                    onSelect={(e) => {
-                      e.preventDefault()
+                    onClick={() => {
                       if (pkgImportDisabled) {
                         setStatus('error')
                         setStatusMsg(morgPkgImportTitle(apiStatus))
                         setTimeout(() => setStatus('idle'), 7000)
                         return
                       }
+                      setPkgToolsOpen(false)
                       triggerHiddenFileInput(morgPkgFileRef)
                     }}
                   >
                     Import: .morg-pkg → Archiv
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="default"
+                    className="h-auto justify-start whitespace-normal py-2.5 text-left"
                     disabled={pkgDeviceDisabled}
                     title={morgPkgDeviceTitle(apiStatus, morgPkgDeviceBusy)}
-                    onSelect={(e) => {
-                      e.preventDefault()
+                    onClick={() => {
                       if (pkgDeviceDisabled) {
                         setStatus('error')
                         setStatusMsg(morgPkgDeviceTitle(apiStatus, morgPkgDeviceBusy))
                         setTimeout(() => setStatus('idle'), 8000)
                         return
                       }
+                      setPkgToolsOpen(false)
                       void onMorgPkgDeviceExportPick()
                     }}
                   >
-                    {morgPkgDeviceBusy ? 'Export: Paket wird gebaut…' : 'Export: Dateien → .morg-pkg Download'}
-                  </DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              ) : null}
-              {pathTools.showNachrichtenverlauf ? (
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger
-                  disabled={exportBlocked}
-                  title={exportDenied ?? undefined}
-                  className={cn(exportBlocked && 'opacity-50')}
-                >
-                  <FileDown className="mr-2 h-4 w-4 opacity-80" aria-hidden />
-                  Export Nachrichtenverlauf
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="max-h-[min(70vh,28rem)] w-[min(100vw-2rem,20rem)] overflow-y-auto">
-                  <p className="px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
-                    Hier exportieren (JSON/TXT/ZIP). Telegram-Journal wird mitgemergt. Leer? Zuerst Aktualisieren —
-                    Bot/Telefonbuch für Telegram-Eingang. Geschützte Datei wieder öffnen = letzter Menüpunkt unten,
-                    nicht „Wire einfügen“.
-                  </p>
-                  <DropdownMenuItem
-                    disabled={messageCount === 0 || exportBlocked}
-                    onSelect={() => blockExportAction(() => onExportEinsatzberichtJson())}
-                  >
-                    Als JSON (vollständig, Klartext)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={messageCount === 0 || exportBlocked}
-                    onSelect={() => blockExportAction(() => void onExportEinsatzberichtTxtFull())}
-                  >
-                    Als Text (vollständig, Klartext)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={messageCount === 0 || exportBlocked}
-                    onSelect={() => blockExportAction(() => onExportEinsatzberichtTxt())}
-                  >
-                    Als Text (kurz, ~200 Zeichen)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={messageCount === 0 || exportBlocked}
-                    onSelect={() => blockExportAction(() => void onExportEinsatzberichtEncrypted())}
-                  >
-                    <Lock className="mr-2 h-4 w-4 opacity-80" aria-hidden />
-                    Verschlüsselt (vollständig, Passwort-JSON)
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    disabled={messageCount === 0 || exportBlocked}
-                    onSelect={() => blockExportAction(() => void onExportEinsatzprotokoll())}
-                  >
-                    ZIP + HTML (verschlüsselt)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={messageCount === 0 || exportBlocked}
-                    onSelect={() => blockExportAction(() => void onExportEinsatzprotokollPlainZip())}
-                  >
-                    ZIP Klartext
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={protokollMarkedCount === 0 || exportBlocked}
-                    onSelect={() => blockExportAction(() => void onExportEinsatzprotokollMarked())}
-                  >
-                    ZIP nur markiert (★ {protokollMarkedCount})
-                  </DropdownMenuItem>
-                  {pathTools.showDecryptExport ? (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onSelect={() => {
-                          window.open('/einsatzbericht-decrypt.html', '_blank', 'noopener,noreferrer')
-                        }}
-                        title="Bereits heruntergeladene Passwort-JSON wieder öffnen — kein neuer Export."
-                      >
-                        <KeyRound className="mr-2 h-4 w-4 opacity-80" aria-hidden />
-                        Passwort-JSON wieder öffnen…
-                      </DropdownMenuItem>
-                    </>
-                  ) : null}
-                  {showIotaExpertInboxActions && pathTools.showIotaExpertInHistory ? (
-                    <>
-                      <DropdownMenuSeparator />
-                      <div className="px-2 py-1">
-                        <LazyChatViewProtokollAnchorButton
-                          messageCount={messageCount}
-                          messages={messages}
-                          myAddress={myAddress}
-                          recipient={recipient}
-                          vaultLocked={vaultLocked}
-                          messagingPersistenceMode={messagingPersistenceMode}
-                          setStatus={setStatus}
-                          setStatusMsg={setStatusMsg}
-                          onOpenPartnerSetup={onOpenPartnerSetup}
-                          triggerClassName="w-full justify-start rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent"
-                          triggerLabel="Auf Chain verankern"
-                        />
-                      </div>
-                      <div className="px-2 py-1">
-                        <LazyChatViewTangleInventoryButton
-                          inventoryScope="anchored"
-                          messages={messages}
-                          packageId={apiStatus?.packageId?.trim() || undefined}
-                        />
-                      </div>
-                      <div className="px-2 py-1">
-                        <ChatViewPendingSendsButton
-                          offlineMailboxQueuePending={offlineMailboxQueuePending}
-                          offlineMailboxQueueItems={offlineMailboxQueueItems}
-                          offlineMailboxQueueErrorHint={offlineMailboxQueueErrorHint}
-                          onManualRefresh={onOfflineMailboxQueueRefresh}
-                          onRemoveOfflineMailboxQueueItems={onRemoveOfflineMailboxQueueItems}
-                          showRelayManage={showIotaExpertInboxActions}
-                        />
-                      </div>
-                    </>
-                  ) : null}
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                    {morgPkgDeviceBusy ? 'Export: Paket wird gebaut…' : 'Export: Dateien → .morg-pkg'}
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
 
           <ChatViewWirePasteImportDialog
             hideTrigger

@@ -271,7 +271,7 @@ Ganzes Private-Mailbox-Object: **Einstellungen → Meine Mailboxen** → Aufräu
 
 | Frage | Antwort (Ist) |
 |-------|----------------|
-| **Nachrichtenverlauf** | Export enthält jetzt **Telegram-Journal** (+ Funk). Leer? Aktualisieren; Bot + Chat-ID im Telefonbuch nötig. |
+| **Export Nachrichtenverlauf** | Optionen → Dialog (kein Untermenü). Enthält Telegram-Journal + Funk. Leer? Aktualisieren; Bot + Chat-ID. |
 | **Auf IOTA speichern/verifizieren?** | **Nicht automatisch.** Telegram = Hinweis/Push. Beweis = Online-Pfad → Hash-Tool → optional **Auf Chain verankern**. |
 | **Nur eine Seite Morgendrot?** | Ja für Senden/Empfangen über Bot. Partner sieht nur Telegram-App — keine IOTA-Forensik dort. |
 | **Löschen wie Telegram-App?** | **Nein** — kein `deleteMessage` an Telegram; lokal ausblenden nur in Morgendrot. |
@@ -540,7 +540,7 @@ Drei getrennte Menüs — nicht vermischen:
 
 | Ort | Zweck |
 |-----|--------|
-| **Optionen** (Toolbar) | Wire einfügen, Datei-Paket, **Export Nachrichtenverlauf** (JSON/TXT/ZIP; unten: Passwort-JSON wieder öffnen), Experten-Anker |
+| **Optionen** (Toolbar) | Wire einfügen; **Export Nachrichtenverlauf…** / **Datei-Paket…** öffnen Dialoge (kein Untermenü). Passwort-JSON wieder öffnen im Export-Dialog. |
 | **On-Chain / NFT** (Toolbar, nur Online/IOTA) | Bild-NFT: Wire aus geladenem Posteingang, Object-ID laden, Galerie, **Minten**, Schlüsselkarte merken, Guthaben/Zeitkapsel |
 | **Nachrichten-⋮** (pro Zeile) | Wire kopieren, Telefonbuch, Weiterleiten, lokal ausblenden, Burn, .morg-pkg/JSON, Funk-Paket… |
 | **Chat-⋮** (Konversation) | Gruppen-Info, Schlüssel erneuern, Burn-on-read — **nicht** dasselbe wie Nachrichten-⋮ |
