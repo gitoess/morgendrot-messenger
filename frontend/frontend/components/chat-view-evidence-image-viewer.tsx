@@ -48,7 +48,10 @@ import { MessengerNftInfoPanel } from '@/frontend/components/messenger-nft-info-
 import { NftCardToolsSection } from '@/frontend/components/nft-card-tools-section'
 import { countOpenNftTimeLeases } from '@/frontend/components/nft-time-lease-reclaim-hub'
 import { requestNftVaultBalanceRefresh } from '@/frontend/components/dashboard-nft-secured-balances'
-import { NFT_TIME_LEASE_CHANGED } from '@/frontend/lib/nft-time-lease-local-store'
+import {
+  listNftTimeLeasesLocal,
+  NFT_TIME_LEASE_CHANGED,
+} from '@/frontend/lib/nft-time-lease-local-store'
 import { OPEN_ZEITKAPSEL_LEASE_EVENT } from '@/frontend/lib/passphrase-message-local-store'
 import {
   EVIDENCE_ATTR_MAX_PAIRS,
@@ -1226,6 +1229,16 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                     'Eigene NFT anzeigen'
                   )}
                 </Button>
+              ) : null}
+              {mode === 'owner' &&
+              (listNftKeycards().length > 0 || listNftTimeLeasesLocal().length > 0) ? (
+                <p className="rounded-md border border-sky-800/35 bg-sky-950/20 px-2.5 py-2 text-[11px] text-sky-100/90">
+                  <span className="font-medium text-foreground">Galerie ≠ Schlüsselkarte/Zeitkapsel.</span>{' '}
+                  Galerie = nur ImageNFTs mit <span className="font-medium">AddressOwner = deine Wallet</span>{' '}
+                  jetzt. Während Leihe/Escrow oder nach Transfer fehlt das NFT hier — lokal gemerkte Karte und
+                  Lease-Zeilen bleiben trotzdem sichtbar. NFT-Gate-Lesen braucht aktuellen Besitz oder aktive
+                  Borrower-Leihe; „schon geclaimt“ ohne Rückgabe an dich = kein Leserecht.
+                </p>
               ) : null}
               <div className="space-y-1.5">
                 <Label htmlFor="evidence-query">{mode === 'object' ? 'Object-ID' : 'Besitzer-Adresse'}</Label>

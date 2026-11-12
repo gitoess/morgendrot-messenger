@@ -97,6 +97,17 @@ function NftGateMessageBody(p: {
       const addressOwned = own.ok && own.owned
       const nftAccessOk = Boolean(addressOwned || borrowerOk)
       setOwned(nftAccessOk ? true : own.ok ? false : null)
+      if (!nftAccessOk && meta?.gate !== 'nft_seal_p4b') {
+        const leaseHint =
+          lease?.status === 'reclaimed' || lease?.status === 'returned'
+            ? ' Lease bereits zurück / geclaimt — NFT muss wieder AddressOwner deiner Wallet sein (Galerie: „Eigene NFT“). Schlüsselkarte/Zeitkapsel-Liste ≠ Besitz.'
+            : lease?.status === 'active' && !borrowerOk
+              ? ' NFT ist noch verliehen (Zeitkapsel) — nur Borrower oder aktueller AddressOwner liest. Galerie zeigt es während Escrow oft nicht bei dir.'
+              : ' Galerie listet nur ImageNFTs mit AddressOwner=deine Wallet. Lokal gemerkte Schlüsselkarte oder Lease-Eintrag allein reicht nicht.'
+        throw new Error(
+          `Kein NFT-Leserecht für ${nftOid.slice(0, 14)}…${leaseHint}`
+        )
+      }
       const { getDirectChatEcdhPrivateKey } = await import(
         '@/frontend/lib/direct-chat-ecdh-session'
       )
