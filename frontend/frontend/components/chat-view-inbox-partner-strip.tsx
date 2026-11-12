@@ -225,14 +225,14 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
         <div className="flex flex-wrap items-center gap-2">
           <span
             className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
-            title="Nur Filter der Liste — nicht der Sendemodus unten im Composer"
+            title="Nur Listen-Filter oben — unabhängig vom Composer unten (ECDH / Passphrase-Schutz)."
           >
-            Ansicht filtern
+            Ansicht (Liste)
           </span>
           {(
             [
               ['all', 'Alles'],
-              ['encrypted', 'Nur verschlüsselt'],
+              ['encrypted', 'Nur geschützt'],
               ['plaintext', 'Nur Klartext'],
             ] as const
           ).map(([id, label]) => (

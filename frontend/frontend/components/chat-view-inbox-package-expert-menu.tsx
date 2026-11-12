@@ -162,33 +162,38 @@ export function ChatViewInboxPackageExpertMenu(p: ChatViewInboxPackageExpertMenu
             Zurück zum aktiven Vertrag
           </DropdownMenuItem>
         ) : null}
-        {packageIdSuggestions.filter((id) => normalizePackageIdHex(id) !== canonical).length > 0 ? (
+        {packageIdSuggestions.length > 0 ? (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground">
-              Weitere bekannte Programm-IDs (ältere Deploys)
+              Bekannte IDs — einmal antippen = temporär laden (kein Doppelklick nötig)
             </DropdownMenuLabel>
-            {packageIdSuggestions
-              .filter((id) => normalizePackageIdHex(id) !== canonical)
-              .slice(0, 8)
-              .map((id) => (
+            {packageIdSuggestions.slice(0, 8).map((id) => {
+              const norm = normalizePackageIdHex(id)
+              const isActive = Boolean(canonical && norm === canonical)
+              return (
                 <DropdownMenuItem
                   key={id}
-                  disabled={packageIdBusy}
+                  disabled={packageIdBusy || (isActive && !tempActive)}
                   onSelect={(e) => {
                     e.preventDefault()
+                    if (isActive && !tempActive) return
                     void onApplyTemporary(id)
                   }}
                 >
-                  <span className="font-mono text-[10px]">{maskPackageIdForUi(id)}</span>
+                  <span className="font-mono text-[10px]">
+                    {maskPackageIdForUi(id)}
+                    {isActive ? ' · aktiv' : ' · antippen'}
+                  </span>
                 </DropdownMenuItem>
-              ))}
+              )
+            })}
           </>
         ) : (
           <>
             <DropdownMenuSeparator />
             <p className="px-2 py-1.5 text-[10px] text-muted-foreground">
-              Keine weiteren Programm-IDs bekannt — Auswahl „nur aktuell“ ist erwartet, kein Fehler.
+              Keine Historie — nur aktuelle ID bekannt. Andere 0x… oben eintippen.
             </p>
           </>
         )}

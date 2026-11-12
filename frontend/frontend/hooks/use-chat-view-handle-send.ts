@@ -856,6 +856,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
               : remembered
                 ? ` Passphrase zum Teilen (für dich auf diesem Gerät gemerkt): ${batchPass}`
                 : ` Passphrase zum Teilen (nicht im Vault gemerkt — nur jetzt kopieren): ${batchPass}`
+            sharedPassphraseNote +=
+              ' Im Posteingang: Filter „Ansicht → Alles“, Richtung „Ausgang“ oder „Alle“. PWMSG zählt als geschützt (nicht ECDH). ⋮ → „PWMSG-Wire kopieren“.'
           }
         }
       } catch (e) {

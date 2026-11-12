@@ -127,8 +127,11 @@ export function NftTimeLeaseReclaimHub(p: {
   if (rows.length === 0 && !q.trim()) {
     return (
       <div className={p.className}>
-        <p className="text-[11px] text-muted-foreground">
-          Keine offenen Zeitkapsel-Leases lokal. Nach „Leihe starten“ erscheinen sie hier zum Zurückholen.
+        <p className="text-[11px] leading-snug text-muted-foreground">
+          Keine offenen Leihen in diesem Browser-Index. Während der Leihe ist das NFT oft{' '}
+          <strong className="text-foreground">nicht</strong> in der Galerie (AddressOwner = Lease/Borrower).
+          Wiederfinden: Explorer (Lease-/NFT-Object-ID), Schlüsselkarte-Merker, oder gestrige TX.
+          Zurückholen = hier „Reclaim“, sobald die Frist abgelaufen ist (oder Borrower gibt früher zurück).
         </p>
       </div>
     )

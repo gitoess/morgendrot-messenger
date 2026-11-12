@@ -21,7 +21,6 @@ import { SettingsVaultBackupSection } from '@/frontend/components/views/settings
 import { SettingsVaultPasswordSection } from '@/frontend/components/views/settings-vault-password-section'
 import { SettingsEmergencyPurgeSection } from '@/frontend/components/views/settings-emergency-purge-section'
 import { SettingsTresorMapCard } from '@/frontend/components/settings-tresor-map-card'
-import { SettingsContentHashPanel } from '@/frontend/components/settings-content-hash-panel'
 import { SettingsFunkSection } from '@/frontend/components/views/settings-funk-section'
 import { ChatViewShadowSweep } from '@/frontend/components/chat-view-shadow-sweep'
 import { SettingsOnboardingSection } from '@/frontend/components/views/settings-onboarding-section'
@@ -295,7 +294,10 @@ export function SettingsView({
 
       <SettingsCollapsiblePanel open={activeCategory === 'security'} title="Sicherheit & Notfall" icon={<Shield className="h-5 w-5" />}>
         <SettingsTresorMapCard />
-        <SettingsContentHashPanel />
+        <p className="rounded-xl border border-border bg-card px-4 py-3 text-[11px] leading-relaxed text-muted-foreground">
+          <span className="font-medium text-foreground">Hash &amp; Prüfen</span> liegt unter Posteingang →{' '}
+          <span className="text-foreground">Optionen → Hash &amp; Prüfen…</span> (nicht doppelt hier).
+        </p>
         <SettingsEmergencyPurgeSection />
       </SettingsCollapsiblePanel>
 
