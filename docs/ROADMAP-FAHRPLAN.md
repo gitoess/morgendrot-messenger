@@ -2693,7 +2693,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T29 | **Klang & Magnet-Prefs** | UX | Messenger-Durchgang | Einstellungen → Erscheinungsbild: Ton an/aus, Hover-Widerstand; Vibration weglassen |
 | T30 | **Kontakt-Info = Mehr** | UX | Messenger-Durchgang | Kein Doppelklick-Zwang; Medien klickbar; IDs hinter „Mehr“; nur Namen in Sidebar |
 | T31 | **Posteingang Filter vs Composer** | UX | Messenger-Durchgang | „Nur verschlüsselt“ = Ansichtsfilter; Sendemodus nur Composer; pkg = Offline-Datei-Archiv; Auswahl ≠ Filter |
-| T32 | **On-Chain/NFT + Optionen + Entschlüsseln** | Gemeinsam testen | Messenger-Durchgang | Dialog-Tabs (Wire/Object/Mint/Keycard); Wire einfügen; Passphrase- vs NFT-Gate- vs ECDH-Zeile; „Nachricht jetzt / NFT später“; Optionen auf Fehler prüfen |
+| T32 | **On-Chain/NFT + Optionen + Entschlüsseln** | Gemeinsam testen | **jetzt** (nach T36–38) | **Sendepfad Online/IOTA** (sonst On-Chain/Wire-Paste ausgeblendet). Checkliste im Chat-Handbuch. Wire-Paste = nur PWMSG (Fix 2026-11-12). Live: Mint/Keycard/PWMSG/NFT-Gate |
 | T33 | **Nachrichten-⋮ vs Chat-⋮** | UX/Doku | mit T32 | Wire kopieren in ⋮; Burn-Label vs Handbuch; Passphrase-Aktionen nur bei PWMSG nach Unlock — Angleichen Anleitung |
 | T34 | **Magnet Wii-Feel** | UX | Messenger | Hover Scale+Glow+Hover-Ton; Einstellungen Erscheinungsbild; nur Maus/Trackpad |
 | T35 | **Gruppe 1:1 vs gemeinsames Postfach** | Doku/UI | erledigt 2026-11-12, Retest | Labels + Handbuch-Tabelle; Handshake-Liste nur bei 1:1 |
