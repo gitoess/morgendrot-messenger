@@ -2703,6 +2703,9 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T48 | **Make/Zapier** | Integrations | **nicht jetzt** | Erst stabile API (Hash-Event, Seal); kein App-Store-Marketing vor Messenger-Kern |
 | T49 | **Telegram als Gerichts-Tresor** | Recht/Produkt | **vorsichtig / später** | Journal+Hash ja; Webhook-JSON+request_contact = SaaS+DSGVO; kein „Telegram löschen = wir behalten“ als Werbung ohne klare Einwilligung |
 | T50 | **Beweis-Video ohne Pause** | Feature | später | Continuous capture + Dauer↔Hash; Galerie-Import verbieten — schwer fälschungssicher, Erwartung managen |
+| T51 | **Abo/Credits (nicht „NFT verkaufen“)** | Produkt/Recht | nach SaaS-Split | Euro-Abo + Server-Kontingent + Gas-Tank; optional Soulbound-Ausweis on-chain — Nutzer sieht „Pro / Restpunkte“, nie Börsen-NFT |
+| T52 | **PlanRadar / Baustellen-API** | Integration | nach T45/T48 | Webhook Ticket→Beweis-Hash oder Export Ticket+Hash; Pro/Enterprise nötig — nicht Kern-Messenger |
+| T53 | **Einstellungen-Lücken vs Telegram** | UX | mit T12 | Benachrichtigungen (Preview an/aus), Stumm pro Chat, Medien-Auto-Download, App-Sperre/Biometrie, Archiv/Pin, Lesebestätigung ehrlich (T46); TG-Tab: nur Bot/Alarm/Notify — keine TG-Privacy-Kopie |
 
 **Nicht** parallel zu Session C / Zeitkapsel-Feldtest starten.
 
