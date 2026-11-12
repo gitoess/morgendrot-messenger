@@ -363,15 +363,36 @@ function MessengerDashboardBody({
             : 'min-h-screen'
         )}
       >
+        {isEinsatzLeadHome ? (
+          <DashboardMessengerBossHeader
+            role={s.role}
+            myAddressFull={s.apiSnapshot?.myAddressFull}
+            onOpenSettings={s.openSettingsView}
+            onLockSession={!s.locked ? onLockSession : undefined}
+            vaultBannerActions={showHomeVaultBadge ? homeVaultActions : undefined}
+            sessionLocked={vaultSessionLocked}
+            hasKeys={browserSignerReady}
+          />
+        ) : null}
         {!(isCapacitorNativePlatform() && s.activeView.type === 'chat') ? (
         <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
-          <div className="flex h-14 items-center gap-4 px-4">
+          <div className="flex h-14 items-center gap-3 px-4">
             <button
+              type="button"
               onClick={s.handleBack}
               className="flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
+              title={t('nav.back')}
             >
               <ChevronLeft className="h-5 w-5" />
               <span className="text-sm font-medium">{t('nav.back')}</span>
+            </button>
+            <button
+              type="button"
+              onClick={s.goHome}
+              className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
+              title={t('nav.home')}
+            >
+              {t('nav.home')}
             </button>
             <div className="h-4 w-px bg-border" />
             <span className="text-sm font-semibold text-foreground">
@@ -383,6 +404,15 @@ function MessengerDashboardBody({
                     ? t('views.einsatzleitung')
                     : featureTitle(s.activeView.type, messengerFeaturesI18n)}
             </span>
+            {!isEinsatzLeadHome && showHomeVaultBadge ? (
+              <div className="ml-auto">
+                <TresorSessionBadge
+                  sessionLocked={vaultSessionLocked}
+                  hasKeys={browserSignerReady}
+                  actions={homeVaultActions}
+                />
+              </div>
+            ) : null}
           </div>
         </header>
         ) : null}

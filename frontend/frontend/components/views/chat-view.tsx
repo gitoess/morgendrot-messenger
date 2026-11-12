@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { isCapacitorNativePlatform } from '@/frontend/lib/capacitor-platform'
 import { forceReleaseNativeBodyLock } from '@/frontend/components/native-modal-shell'
 import {
@@ -110,12 +110,44 @@ function ChatViewLoaded({
   useEffect(() => {
     setChannel(variant === 'pinnwand' ? 'pinnwand' : 'private')
   }, [variant])
+
+  const setChannelWithHistory = useCallback(
+    (c: MessengerChatChannel) => {
+      setChannel(c)
+      if (typeof window === 'undefined') return
+      try {
+        window.history.pushState(
+          {
+            morgView: { type: 'chat', variant: variant === 'pinnwand' ? 'pinnwand' : 'private-chat' },
+            channel: c,
+          },
+          '',
+          window.location.href
+        )
+      } catch {
+        /* ignore */
+      }
+    },
+    [variant]
+  )
+
+  useEffect(() => {
+    const onChannelPop = (e: Event) => {
+      const c = (e as CustomEvent<string>).detail
+      if (c === 'private' || c === 'group' || c === 'pinnwand' || c === 'notes') {
+        setChannel(c)
+      }
+    }
+    window.addEventListener('morgendrot:messenger-channel', onChannelPop)
+    return () => window.removeEventListener('morgendrot:messenger-channel', onChannelPop)
+  }, [])
+
   const core = useChatViewCore({ channelMode: channel, role, myAddress })
   return (
     <ChatViewMainContent
       {...core}
       vaultBannerActions={vaultBannerActions}
-      onChannelModeChange={setChannel}
+      onChannelModeChange={setChannelWithHistory}
       pendingHandshakes={pendingHandshakes}
       onOpenEinsatzleitung={onOpenEinsatzleitung}
       phonebookNavRequest={phonebookNavRequest}

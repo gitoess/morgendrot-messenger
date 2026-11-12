@@ -491,6 +491,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       isPrivate &&
       inboxPartnerFiltersArmed &&
       Boolean(inboxPartnerKey?.trim()),
+    onOpenNotes: onChannelModeChange ? handleSelectSidebarNotes : undefined,
+    notesActive: onNotesTab,
   })
 
   const clearActiveDirectConversation = useCallback(() => {
@@ -674,8 +676,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const handleSelectSidebarNotes = useCallback(() => {
     setTelegramAlarmSelected(false)
-    if (onChannelModeChange) onChannelModeChange('notes')
-  }, [onChannelModeChange])
+    if (!onChannelModeChange) return
+    // Toggle: Notizen ↔ Posteingang
+    onChannelModeChange(channelMode === 'notes' ? 'private' : 'notes')
+  }, [onChannelModeChange, channelMode])
 
   const handleSelectSidebarAll = useCallback(() => {
     setTelegramAlarmSelected(false)
@@ -924,23 +928,21 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       ...chatHeaderProps,
       conversationTitle: chatHeaderContext.title,
       conversationSubtitle: chatHeaderContext.subtitle,
+      onOpenNotes: onChannelModeChange ? handleSelectSidebarNotes : undefined,
     }),
-    [chatHeaderProps, chatHeaderContext]
+    [chatHeaderProps, chatHeaderContext, onChannelModeChange, handleSelectSidebarNotes]
   )
 
   const pinnwandSidebarProps = useMemo(
-    () => ({
-      ...(pinnwandCaps.showChannelTab && activeSendPath === 'internet'
+    () =>
+      pinnwandCaps.showChannelTab && activeSendPath === 'internet'
         ? {
             pinnwandLabel: pinnwandSidebarLabel(role, apiStatus),
             pinnwandUnreadCount: inboxOverviewUnreadCounts?.lagebild ?? 0,
             activePinnwandSelected: onPinnwandTab,
             onSelectPinnwand: handleSelectSidebarPinnwand,
           }
-        : {}),
-      activeNotesSelected: onNotesTab,
-      onSelectNotes: onChannelModeChange ? handleSelectSidebarNotes : undefined,
-    }),
+        : {},
     [
       pinnwandCaps.showChannelTab,
       activeSendPath,
@@ -949,9 +951,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       inboxOverviewUnreadCounts?.lagebild,
       onPinnwandTab,
       handleSelectSidebarPinnwand,
-      onNotesTab,
-      onChannelModeChange,
-      handleSelectSidebarNotes,
     ]
   )
 

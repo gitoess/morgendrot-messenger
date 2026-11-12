@@ -36,6 +36,8 @@ export type ChatViewInboxPanelPropsDeps = {
   showInboxPackageExpertMenu: boolean
   inboxSearchQuery?: string
   conversationMenu?: ChatViewInboxPanelProps['conversationMenu']
+  onOpenNotes?: () => void
+  notesActive?: boolean
 }
 
 export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
@@ -233,6 +235,8 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
     hidePartnerStrip: deps.hidePartnerStrip ?? false,
     hideOverviewChips: deps.hideOverviewChips ?? false,
     pathTools,
+    onOpenNotes: deps.onOpenNotes,
+    notesActive: deps.notesActive,
   } satisfies ChatViewInboxPanelProps
 
   return inboxPanelProps

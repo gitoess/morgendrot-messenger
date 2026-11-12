@@ -6,7 +6,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { BookOpen, Lock, Settings, Unlock } from 'lucide-react'
+import { BookOpen, Lock, Settings, StickyNote, Unlock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { isMessengerSessionKeysReady } from '@/frontend/lib/messenger-session-keys-ready'
@@ -48,6 +48,8 @@ export type ChatViewChatHeaderProps = {
   deviceTimeTrustWarn?: boolean
   sendPath?: ChatViewSendPathCompactProps | null
   onOpenSettings?: () => void
+  /** Tresor-Notizen — rechts neben Einstellungen / Vault. */
+  onOpenNotes?: () => void
   vaultBannerActions?: ChatViewVaultBannerActions
   channelMode?: MessengerChatChannel
   onChannelModeChange?: (c: MessengerChatChannel) => void
@@ -192,19 +194,21 @@ function HeaderToolbarButton(p: {
   href?: string
   label: string
   icon: ReactNode
+  title?: string
 }) {
   const className =
     'inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-xs font-bold text-foreground shadow-sm transition-colors hover:bg-muted'
+  const tip = p.title || p.label
   if (p.href) {
     return (
-      <a href={p.href} className={className} aria-label={p.label} title={p.label}>
+      <a href={p.href} className={className} aria-label={p.label} title={tip}>
         {p.icon}
         <span className="hidden sm:inline">{p.label}</span>
       </a>
     )
   }
   return (
-    <button type="button" onClick={p.onClick} className={className} aria-label={p.label} title={p.label}>
+    <button type="button" onClick={p.onClick} className={className} aria-label={p.label} title={tip}>
       {p.icon}
       <span className="hidden sm:inline">{p.label}</span>
     </button>
@@ -235,6 +239,7 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
     channelMode,
     sendPath,
     onOpenSettings,
+    onOpenNotes,
     basisUnreachable = false,
     statusPollAttempted = true,
     offlineStatus,
@@ -253,7 +258,8 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
 
   const channelSubtitle = conversationSubtitle?.trim() || null
   const showHandbook = channelMode !== 'notes' && !compactNative
-  const showTreasuryBadge = isPrivate && Boolean(apiStatus) && channelMode !== 'pinnwand'
+  /** Auch auf Notizen: Vault-Badge bleibt sichtbar (Tresor entsperren/sperren). */
+  const showTreasuryBadge = Boolean(apiStatus) && channelMode !== 'pinnwand'
   const showSendPathInHeader = sendPath?.visible && !compactNative
 
   const queuePending = offlineStatus?.queuePending ?? 0
@@ -307,9 +313,21 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                   ) : null}
                 </div>
               </div>
-              {(showHandbook || onOpenSettings) ? (
+              {showHandbook || onOpenNotes || onOpenSettings || showTreasuryBadge ? (
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   {showHandbook ? <MessengerHandbookLink /> : null}
+                  {onOpenNotes ? (
+                    <HeaderToolbarButton
+                      label={channelMode === 'notes' ? 'Zu Chats' : 'Notizen'}
+                      icon={<StickyNote className="h-4 w-4 shrink-0" aria-hidden />}
+                      onClick={onOpenNotes}
+                      title={
+                        channelMode === 'notes'
+                          ? 'Zurück zum Posteingang'
+                          : 'Tresor-Notizen und Passwörter'
+                      }
+                    />
+                  ) : null}
                   {onOpenSettings ? (
                     <HeaderToolbarButton
                       label="Einstellungen"

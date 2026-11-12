@@ -10,6 +10,11 @@ import {
     mergeSessionKeysFromHandshakePeers,
     type SessionKeysArchiveFile,
 } from './shared/morgendrot-session-keys-archive.js';
+import {
+    sanitizeVaultNoteAttachments,
+    type VaultNoteAttachment,
+    type VaultNoteAttachmentKind,
+} from './vault-note-attachments.js';
 
 const subtle = crypto.webcrypto.subtle;
 const CURVE = 'P-256';

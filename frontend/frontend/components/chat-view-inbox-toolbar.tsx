@@ -19,6 +19,7 @@ import {
   Package,
   RefreshCw,
   Settings2,
+  StickyNote,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -129,6 +130,9 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   inboxPackageExpertMenu?: ReactNode
   /** Sichtbarkeit der Werkzeuge je Sendepfad. */
   pathTools?: InboxToolbarPathTools
+  /** Tresor-Notizen / Passwort-Safe (rechts neben Optionen). */
+  onOpenNotes?: () => void
+  notesActive?: boolean
 }
 
 function morgPkgImportDisabled(apiStatus: ApiStatus | null): boolean {
@@ -328,6 +332,23 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 triggerClassName="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted"
               />
             </div>
+          ) : null}
+
+          {p.onOpenNotes ? (
+            <button
+              type="button"
+              onClick={() => p.onOpenNotes?.()}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors',
+                p.notesActive
+                  ? 'border-primary/50 bg-primary/15 text-primary'
+                  : 'border-border bg-muted/30 text-foreground hover:bg-muted'
+              )}
+              title="Tresor-Notizen und Passwörter (Vault)"
+            >
+              <StickyNote className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+              Notizen
+            </button>
           ) : null}
 
           <DropdownMenu>

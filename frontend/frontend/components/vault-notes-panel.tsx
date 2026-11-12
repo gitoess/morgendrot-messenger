@@ -134,7 +134,10 @@ export function VaultNotesPanel({ unlocked, notes, onNotesChange }: VaultNotesPa
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <label
+          className="flex items-center gap-1.5 text-sm text-muted-foreground"
+          title="Optionaler Ordnername — Filter „Ungeordnet“ = Notizen ohne Ordnerfeld"
+        >
           <FolderOpen className="h-4 w-4" />
           Ordner
           <select
@@ -143,7 +146,7 @@ export function VaultNotesPanel({ unlocked, notes, onNotesChange }: VaultNotesPa
             className="rounded-lg border border-border bg-input px-2 py-1 text-sm text-foreground"
           >
             <option value="__all__">Alle</option>
-            <option value="__none__">Ohne Ordner</option>
+            <option value="__none__">Ungeordnet (kein Ordner)</option>
             {folders.map((f) => (
               <option key={f} value={f}>
                 {f}

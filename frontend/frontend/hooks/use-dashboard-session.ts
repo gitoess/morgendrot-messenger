@@ -497,16 +497,31 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     }
   }, [checkStatus])
 
-  const navigateTo = useCallback((v: DashboardActiveView | null) => {
-    setActiveView(v)
-    persistDashboardActiveView(v)
-    if (isCapacitorNativePlatform() && v?.type === 'chat') {
-      forceReleaseNativeBodyLock()
-      purgeOrphanRadixOverlays()
-      releaseStuckModalPointerEvents({ force: true })
-      scheduleReleaseStuckModalPointerEvents()
-    }
-  }, [])
+  const navigateTo = useCallback(
+    (v: DashboardActiveView | null, opts?: { replace?: boolean; fromPop?: boolean }) => {
+      setActiveView(v)
+      persistDashboardActiveView(v)
+      if (typeof window !== 'undefined' && !opts?.fromPop) {
+        const state = {
+          morgView: v,
+          ...(v?.type === 'chat' ? { channel: 'private' as const } : {}),
+        }
+        try {
+          if (opts?.replace) window.history.replaceState(state, '', window.location.href)
+          else window.history.pushState(state, '', window.location.href)
+        } catch {
+          /* ignore */
+        }
+      }
+      if (isCapacitorNativePlatform() && v?.type === 'chat') {
+        forceReleaseNativeBodyLock()
+        purgeOrphanRadixOverlays()
+        releaseStuckModalPointerEvents({ force: true })
+        scheduleReleaseStuckModalPointerEvents()
+      }
+    },
+    []
+  )
 
   const openSettingsView = useCallback(() => {
     navigateTo({ type: 'settings' })
@@ -542,6 +557,40 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   const openBossModeView = useCallback(() => {
     navigateTo({ type: 'boss', variant: 'boss-signer' })
   }, [navigateTo])
+
+  /** Immer zur Kachel-Startseite — eigener Button, nicht Browser-Zurück. */
+  const goHome = useCallback(() => {
+    navigateTo(null)
+  }, [navigateTo])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const onPop = (e: PopStateEvent) => {
+      const st = e.state as {
+        morgView?: DashboardActiveView | null
+        channel?: string
+      } | null
+      if (st && 'morgView' in st) {
+        const v = st.morgView ?? null
+        if (v) {
+          const parsed = parseDashboardActiveView(JSON.stringify(v), options.restoreFeatures)
+          navigateTo(parsed, { fromPop: true })
+        } else {
+          navigateTo(null, { fromPop: true })
+        }
+        if (typeof st.channel === 'string') {
+          window.dispatchEvent(
+            new CustomEvent('morgendrot:messenger-channel', { detail: st.channel })
+          )
+        }
+        return
+      }
+      // Kein morg-State → Startseite (Browser-Zurück aus der App)
+      navigateTo(null, { fromPop: true })
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [navigateTo, options.restoreFeatures])
 
   useEffect(() => {
     if (locked || backendReachable !== true) return
@@ -882,6 +931,10 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   )
 
   const handleBack = useCallback(() => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      window.history.back()
+      return
+    }
     navigateTo(null)
   }, [navigateTo])
 
@@ -1150,6 +1203,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     openVaultView,
     openBossModeView,
     handleBack,
+    goHome,
     handleSelectFeature,
     openHelp,
     requestStandaloneWalletUnlock,
