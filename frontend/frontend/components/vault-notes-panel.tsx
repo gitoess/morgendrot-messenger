@@ -10,7 +10,6 @@ import {
   VN_MAX_ATTACHMENTS,
 } from '@/frontend/lib/vault-note-attachment-ingest'
 import {
-  VN_MAX_ATTACH_BYTES_AUDIO,
   VN_MAX_ATTACH_BYTES_IMAGE,
   VN_MAX_ATTACH_BYTES_TXT,
 } from '@/frontend/lib/vault-note-attachment-limits'
