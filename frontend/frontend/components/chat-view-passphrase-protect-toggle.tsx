@@ -36,10 +36,7 @@ import {
 import { NftKeycardImagePreview } from '@/frontend/components/nft-keycard-image-preview'
 import { listNftKeycards } from '@/frontend/lib/nft-keycard-local-store'
 import { getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
-import {
-  isPrivacySoftLocked,
-  PRIVACY_SOFT_LOCK_CHANGED_EVENT,
-} from '@/frontend/lib/privacy-soft-lock'
+import { PRIVACY_SOFT_LOCK_CHANGED_EVENT } from '@/frontend/lib/privacy-soft-lock'
 import { hasVaultPasswordSession } from '@/frontend/lib/vault-password-session'
 
 function shortOid(id: string): string {
