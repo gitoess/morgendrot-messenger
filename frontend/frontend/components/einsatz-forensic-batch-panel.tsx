@@ -201,11 +201,12 @@ export function EinsatzForensicBatchPanel(p: { apiStatus?: ApiStatus | null }) {
           <Layers className="h-5 w-5" aria-hidden />
         </div>
         <div className="min-w-0 space-y-2">
-          <h4 className="font-semibold text-foreground">Volles Archiv (Mainnet)</h4>
+          <h4 className="font-semibold text-foreground">Nachrichten-Archiv (Chain)</h4>
           <p className="text-sm text-muted-foreground">
             Schreibt den <strong className="font-medium text-foreground">kompletten Nachrichtentext</strong> on-chain
-            (bis zu 50 Nachrichten pro Transaktion). Teurer als der Kurz-Beweis unten, dafür im Explorer lesbar.
-            Bereits archiviert: {registryCount} Nachrichten auf diesem Gerät bekannt.
+            (bis 50 pro TX). Sinnvoll vor allem auf <strong className="font-medium text-foreground">Mainnet</strong>{' '}
+            (Testnet-Archiv ist Übung, kein dauerhafter Beweis). Klartext = im Explorer lesbar; Verschlüsselt =
+            Chain-Envelope (nicht NFT-/Chat-Passphrase). Bereits markiert: {registryCount} auf diesem Gerät.
           </p>
         </div>
       </div>
@@ -273,7 +274,7 @@ export function EinsatzForensicBatchPanel(p: { apiStatus?: ApiStatus | null }) {
       <Collapsible open={moreOpen} onOpenChange={setMoreOpen}>
         <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
           <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', moreOpen && 'rotate-180')} aria-hidden />
-          Geräte-Sync (Liste import/export)
+          Archiv-Liste (Geräte abgleichen)
         </CollapsibleTrigger>
         <CollapsibleContent className="pt-2 flex flex-wrap gap-2">
           <Button

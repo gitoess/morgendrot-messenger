@@ -10,7 +10,6 @@ import {
   type ApiStatus,
 } from '@/frontend/lib/api'
 import { LazyHandoffImportPanel } from '@/frontend/components/lazy/messenger-scope-b'
-import { EinsatzEndPanel } from '@/frontend/components/einsatz-end-panel'
 import { SettingsTelegramIntegration } from '@/frontend/components/views/settings-telegram-integration'
 import { SettingsTelegramEinsatzGroup } from '@/frontend/components/views/settings-telegram-einsatz-group'
 import { SettingsTelegramAlarmGroupJoin } from '@/frontend/components/views/settings-telegram-alarm-group-join'
@@ -171,7 +170,6 @@ export function SettingsView({
             bossEinsatzViewer={slimMessengerEinsatz && isBossRole}
           />
         </div>
-        <EinsatzEndPanel apiStatus={advancedIotaStatus} backendOnline={backendOnline} />
         <SettingsProjectDisclaimerSection />
         {canToggleFullTiles && onShowAllTilesChange ? (
           <div className="rounded-xl border border-border bg-card p-4">

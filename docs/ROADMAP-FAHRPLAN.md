@@ -2675,6 +2675,10 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T20 | **Coins aus Composer** | Produkt/Recht | Entscheidung später | Chat+Zahlung mischen oft verwirrend/regulierungsnah — Default: **getrennt** im Wallet; Composer nur wenn klar als optionaler Hinweis |
 | T21 | **PTB / Notarization** | Architektur | Backlog | Chain-Ops (Mailbox, NFT, Manifest) schon oft **PTB**; Chat/Funk/Telegram nicht. IOTA Notarization Framework evaluieren — was es vs. unser Mailbox/Attestation-Pfad bringt |
 | T22 | **Doppelklick-Erkennbarkeit** | UX | mit Aktivität/Kontakte | Überall wo 2×: sichtbares Affordance (Badge „2×“ / Fokusring) — Start in IOTA-Aktivität |
+| T23 | **Move-Upgrade / Chain-Panel → IOTA** | UI-Verschiebung | nach Einsatzleitung-Durchgang | Aus „Erweitert“ entfernt 2026-11-12; gehört zu Einstellungen → IOTA |
+| T24 | **Nachrichten-Archiv UX** | Feature | später | Auswahl/alle archivieren (nicht nur „neu“); Verschlüsselung klar (Chain-Envelope ≠ NFT-PW); Mainnet-only Guard wenn Testnet sinnlos |
+| T25 | **„Team einrichten“ Rename** | UX | mit Einsatzleitung | „Helfer einrichten“ → klarerer Name; Provision-Registry bleibt optional im Export-Flow, nicht parallel unter Mein Team |
+| T26 | **Typo/Farbe überall lesbar** | UX | fortlaufend | Kein Lila als Fließtext; einheitliche foreground/muted — Start Einsatzleitung 2026-11-12 |
 
 **Nicht** parallel zu Session C / Zeitkapsel-Feldtest starten.
 

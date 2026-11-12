@@ -1,5 +1,5 @@
 /**
- * Leichtes Klick-Feedback: kurzer Ton + optional Vibration (Mobil).
+ * Klick-Feedback: deutlicher Ton + Vibration (Mobil) + leichter „Magnet“-Scale an Buttons.
  * Fail-silent — nie UX blockieren.
  */
 
@@ -20,9 +20,9 @@ function getAudioContext(): AudioContext | null {
 export type TapFeedbackKind = 'select' | 'confirm' | 'soft'
 
 const TONES: Record<TapFeedbackKind, { freq: number; durMs: number; gain: number }> = {
-  select: { freq: 420, durMs: 55, gain: 0.04 },
-  confirm: { freq: 560, durMs: 70, gain: 0.045 },
-  soft: { freq: 320, durMs: 40, gain: 0.03 },
+  select: { freq: 480, durMs: 90, gain: 0.09 },
+  confirm: { freq: 620, durMs: 110, gain: 0.1 },
+  soft: { freq: 360, durMs: 70, gain: 0.06 },
 }
 
 export function playTapClick(kind: TapFeedbackKind = 'select'): void {
@@ -34,22 +34,22 @@ export function playTapClick(kind: TapFeedbackKind = 'select'): void {
     const gain = ctx.createGain()
     const { freq, durMs, gain: peak } = TONES[kind]
     const now = ctx.currentTime
-    osc.type = 'sine'
+    osc.type = 'triangle'
     osc.frequency.setValueAtTime(freq, now)
-    osc.frequency.exponentialRampToValueAtTime(freq * 0.85, now + durMs / 1000)
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.75, now + durMs / 1000)
     gain.gain.setValueAtTime(0.0001, now)
-    gain.gain.exponentialRampToValueAtTime(peak, now + 0.008)
+    gain.gain.exponentialRampToValueAtTime(peak, now + 0.012)
     gain.gain.exponentialRampToValueAtTime(0.0001, now + durMs / 1000)
     osc.connect(gain)
     gain.connect(ctx.destination)
     osc.start(now)
-    osc.stop(now + durMs / 1000 + 0.02)
+    osc.stop(now + durMs / 1000 + 0.03)
   } catch {
     // ignore
   }
 }
 
-export function pulseHaptic(pattern: number | number[] = 12): void {
+export function pulseHaptic(pattern: number | number[] = 18): void {
   try {
     if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
       navigator.vibrate(pattern)
@@ -59,15 +59,15 @@ export function pulseHaptic(pattern: number | number[] = 12): void {
   }
 }
 
-/** Klick-Ton + leichter Haptic-Puls (für Segment-Umschalter o. Ä.). */
+/** Klick-Ton + spürbarer Haptic-Puls. */
 export function tapSelectFeedback(): void {
   playTapClick('select')
-  pulseHaptic(10)
+  pulseHaptic([14, 30, 18])
 }
 
 export function tapConfirmFeedback(): void {
   playTapClick('confirm')
-  pulseHaptic([8, 24, 12])
+  pulseHaptic([16, 40, 20, 30, 16])
 }
 
 const TAP_SELECTOR =
@@ -93,7 +93,6 @@ export function ensureUiTapFeedbackInstalled(): void {
       if (!(e instanceof MouseEvent) || e.button !== 0) return
       if (!isInteractiveTapTarget(e.target as Element | null)) return
       const now = Date.now()
-      // Doppelklick feuert zwei clicks — zweiten unterdrücken, dblclick übernimmt.
       if (now - lastClickAt < 280) return
       lastClickAt = now
       tapSelectFeedback()

@@ -33,7 +33,7 @@ export function BossHelferEinrichtenPanel(p: {
   return (
     <section id="helfer-einrichten" className="scroll-mt-4 space-y-4 rounded-xl border border-border bg-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-foreground">Helfer einrichten</p>
+        <p className="text-sm font-semibold text-foreground">Team einrichten</p>
         {step !== 'choose' ? (
           <Button type="button" size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setStep('choose')}>
             <ChevronLeft className="mr-1 h-3.5 w-3.5" aria-hidden />
