@@ -336,17 +336,6 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   Wire einfügen
                 </DropdownMenuItem>
               ) : null}
-              {pathTools.showDecryptExport ? (
-                <DropdownMenuItem
-                  onSelect={() => {
-                    window.open('/einsatzbericht-decrypt.html', '_blank', 'noopener,noreferrer')
-                  }}
-                  title="Passwortgeschützte Nachrichtenverlauf-Exporte (.json) — nicht Wire-Paste."
-                >
-                  <KeyRound className="mr-2 h-4 w-4 opacity-80" aria-hidden />
-                  Entschlüsseln (Export-JSON)
-                </DropdownMenuItem>
-              ) : null}
               {pathTools.showPakete || pathTools.showNachrichtenverlauf ? <DropdownMenuSeparator /> : null}
               {pathTools.showPakete ? (
               <DropdownMenuSub>
@@ -438,12 +427,13 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   className={cn(exportBlocked && 'opacity-50')}
                 >
                   <FileDown className="mr-2 h-4 w-4 opacity-80" aria-hidden />
-                  Nachrichtenverlauf
+                  Export Nachrichtenverlauf
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="max-h-[min(70vh,28rem)] w-[min(100vw-2rem,20rem)] overflow-y-auto">
                   <p className="px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
-                    Vollständig: JSON, TXT, Passwort-JSON oder ZIP (inkl. Telegram-Journal + Funk-Zeilen). TXT kurz
-                    = ~200 Zeichen. Leer? Zuerst Aktualisieren — Bot/Telefonbuch nötig für Telegram-Eingang.
+                    Hier exportieren (JSON/TXT/ZIP). Telegram-Journal wird mitgemergt. Leer? Zuerst Aktualisieren —
+                    Bot/Telefonbuch für Telegram-Eingang. Geschützte Datei wieder öffnen = letzter Menüpunkt unten,
+                    nicht „Wire einfügen“.
                   </p>
                   <DropdownMenuItem
                     disabled={messageCount === 0 || exportBlocked}
@@ -489,6 +479,20 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   >
                     ZIP nur markiert (★ {protokollMarkedCount})
                   </DropdownMenuItem>
+                  {pathTools.showDecryptExport ? (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onSelect={() => {
+                          window.open('/einsatzbericht-decrypt.html', '_blank', 'noopener,noreferrer')
+                        }}
+                        title="Bereits heruntergeladene Passwort-JSON wieder öffnen — kein neuer Export."
+                      >
+                        <KeyRound className="mr-2 h-4 w-4 opacity-80" aria-hidden />
+                        Passwort-JSON wieder öffnen…
+                      </DropdownMenuItem>
+                    </>
+                  ) : null}
                   {showIotaExpertInboxActions && pathTools.showIotaExpertInHistory ? (
                     <>
                       <DropdownMenuSeparator />

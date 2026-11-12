@@ -2653,6 +2653,7 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 2. **Dann:** **T32** (+ T33 Doku) On-Chain/NFT · Optionen · Entschlüsseln  
 3. **Später (nicht blockierend):** T45 Browser-Link · T47 Schnell-Buttons · T51 Abo/Credits · T52 PlanRadar · T53 Settings-Lücken  
 4. **Explizit nicht im Messenger-Durchgang:** Abo-NFT-Verkaufsstory, PlanRadar-App, Zapier-Store, TG-Gerichts-Vollforensik  
+5. **Am Ende des Roadmap-Durchgangs gemeinsam durchgehen:** alle neuen Ideen T39–T54 (Freeze + Backlog) — priorisieren/streichen, nicht parallel zum Kern-Smoke.
 
 **Produkt-Freeze (Sicherheit/Sinn):** Telegram = Klingel (T42); Chat-Mailbox ≠ Zahlungsobjekt (T43); Magnet Default aus (T40); Seed/Passwort = Wiederherstellungs-SPOF (siehe Handbuch Sicherheit).
 
@@ -2697,7 +2698,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T33 | **Nachrichten-⋮ vs Chat-⋮** | UX/Doku | mit T32 | Wire kopieren in ⋮; Burn-Label vs Handbuch; Passphrase-Aktionen nur bei PWMSG nach Unlock — Angleichen Anleitung |
 | T34 | **Magnet Wii-Feel** | UX | Messenger | Hover Scale+Glow+Hover-Ton; Einstellungen Erscheinungsbild; nur Maus/Trackpad |
 | T35 | **Gruppe 1:1 vs gemeinsames Postfach** | Doku/UI | erledigt 2026-11-12, Retest | Labels + Handbuch-Tabelle; Handshake-Liste nur bei 1:1 |
-| T36 | **Telegram-Verlauf-Export** | Fix + Code-Retest 2026-11-12 | **done → live smoke** | Export mergt Journal; UI-Hinweis im Verlauf-Menü; Live: TG-Pfad → Aktualisieren → Export |
+| T36 | **Telegram-Verlauf-Export** | Fix + UX 2026-11-12 | **live smoke** | Optionen → **Export Nachrichtenverlauf** (nicht „Passwort-JSON wieder öffnen“). Decrypt aus Top-Menü raus. Live: Aktualisieren → Als JSON |
 | T37 | **Tresor-Landkarte UI** | UX | **done → live smoke** | Sicherheit-Tab: Tresor vs Datei vs Sidecar vs NFT |
 | T38 | **Hash & Prüfen (SHA-256)** | Feature | **done → live smoke** | Sicherheit: hashen + prüfen; Unit-Test grün |
 | T54 | **Seed / Passwort SPOF** | Sicherheit/Doku | fortlaufend | Mnemonic = Identität/Coins; Vault-PW = Tresor-Inhalt; beides offline sichern; Ordner `.morgendrot-*` / Sidecar / `.env` = Gerät+Backup, nicht „Cloud = sicher“ |
