@@ -25,7 +25,7 @@ function Dialog({
   })
 
   return (
-    <NativeOverlayOpenContext.Provider value={native && isOpen}>
+    <NativeOverlayOpenContext.Provider value={{ useShell: native, open: Boolean(isOpen) }}>
       <DialogPrimitive.Root
         data-slot="dialog"
         open={radixOpen}
@@ -79,7 +79,7 @@ function DialogContent({
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
-  const nativeOpen = React.useContext(NativeOverlayOpenContext)
+  const nativeCtx = React.useContext(NativeOverlayOpenContext)
 
   const panelClassName = cn(
     'bg-background relative grid w-full gap-4 rounded-lg border p-6 shadow-lg duration-200',
@@ -87,9 +87,9 @@ function DialogContent({
     className,
   )
 
-  if (nativeOpen) {
+  if (nativeCtx.useShell) {
     return (
-      <NativeModalShell open enabled panelClassName={panelClassName}>
+      <NativeModalShell open={nativeCtx.open} enabled panelClassName={panelClassName}>
         {children}
         {showCloseButton ? (
           <DialogPrimitive.Close

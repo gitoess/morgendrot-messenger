@@ -626,4 +626,15 @@ Einstellungen → **Sicherheit**: Tresor-Landkarte (Kurz) + Notfall-Löschung. H
 
 ---
 
-*Stand: 2026-11-12 — Seed/PW-SPOF; Durchgangs-Reihenfolge T36–T38→T32; Produkt-Freeze Abo/PlanRadar.*
+## Meine Mailboxen (T3 — Settings → IOTA)
+
+1. Tresor entsperren, Backend online.  
+2. **Einstellungen → IOTA → Meine Mailboxen**.  
+3. **Privat:** eigene Chat-Mailbox anlegen/wählen — nicht dasselbe wie die Deploy-`MAILBOX_ID` unter „Wo senden?“.  
+4. **Team** (Boss/Kommandant): Team-Postfach + Sync-Status; Mitglieder über Telefonbuch.  
+5. Prüfen: aktive Send-Mailbox im Composer („Wo senden?“) vs. Liste hier — klar getrennt halten.  
+6. Optional: Postfach teilen/löschen nur wenn bewusst (Dialoge).
+
+NFT-Mint: unter On-Chain/NFT → **Minten** → **Anzahl** (1–100) für gleiche Bilder als Serie.
+
+*Stand: 2026-11-12 — T3-Anleitung; Seed/PW-SPOF; Produkt-Freeze Abo/PlanRadar.*

@@ -2659,7 +2659,10 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 
 **Produkt-Freeze (Sicherheit/Sinn):** Telegram = Klingel (T42); Chat-Mailbox ≠ Zahlungsobjekt (T43); Magnet Default aus (T40); Seed/Passwort = Wiederherstellungs-SPOF (siehe Handbuch Sicherheit).
 
-### Gemeinsam testen / durchgehen (live mit User — Stand 2026-11-12)
+### Gemeinsam testen / durchgehen („Ritual“ — Stand 2026-11-12)
+
+**Ritual** = die Tabelle unten: Punkte, die wir **live mit dir** durchklicken (nicht stiller Code-Bau).  
+Zusätzlich gibt es das **Merge-Ritual** in `TESTING.md` (tsc/lint/smoke vor Merge) — anderes Thema.
 
 Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns X zusammen testen“-Punkte **hier anhängen**.
 

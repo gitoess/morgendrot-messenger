@@ -25,7 +25,7 @@ function Sheet({
   })
 
   return (
-    <NativeOverlayOpenContext.Provider value={native && isOpen}>
+    <NativeOverlayOpenContext.Provider value={{ useShell: native, open: Boolean(isOpen) }}>
       <SheetPrimitive.Root
         data-slot="sheet"
         open={radixOpen}
@@ -79,7 +79,7 @@ function SheetContent({
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: 'top' | 'right' | 'bottom' | 'left'
 }) {
-  const nativeOpen = React.useContext(NativeOverlayOpenContext)
+  const nativeCtx = React.useContext(NativeOverlayOpenContext)
 
   const panelClassName = cn(
     'bg-background flex flex-col gap-4 border p-4 shadow-lg',
@@ -87,10 +87,10 @@ function SheetContent({
     className,
   )
 
-  if (nativeOpen) {
+  if (nativeCtx.useShell) {
     const placement = side === 'top' ? 'center' : 'bottom'
     return (
-      <NativeModalShell open enabled placement={placement} panelClassName={panelClassName}>
+      <NativeModalShell open={nativeCtx.open} enabled placement={placement} panelClassName={panelClassName}>
         {children}
         <SheetPrimitive.Close className="ring-offset-background focus:ring-ring absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
           <XIcon className="size-4" />
