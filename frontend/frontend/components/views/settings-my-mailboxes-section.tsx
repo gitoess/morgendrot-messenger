@@ -64,7 +64,7 @@ export function SettingsMyMailboxesSection({
     <div className="rounded-xl border border-border bg-card">
       <div className="flex flex-wrap items-start justify-between gap-2 border-b border-border p-4">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-violet-300">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
             <Mailbox className="h-5 w-5" aria-hidden />
           </div>
           <div>

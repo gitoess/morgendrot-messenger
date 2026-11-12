@@ -2667,7 +2667,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 |---|--------|-----|------|-------|
 | T1 | **Mainnet einrichten** | Feld/UI-Test | **am Schluss** dieses Durchgangs | Deploy / Gas / Schalter Produktion / Signer-Strip — zusammen klicken |
 | T2 | **Passwort ändern** | Durchgang + ggf. Smoke | **done 2026-11-12** | Unter **Sicherheit**; Session-PW nach Ändern sync; Header vs. voller Lock erklärt |
-| T3 | **Meine Mailboxen** | Durchgang | nach T2 | Privat/Team vs. Deploy-Mailbox unter „Wo senden?“ |
+| T3 | **Meine Mailboxen** | Durchgang | **jetzt** | Privat/Team vs. Deploy-Mailbox unter „Wo senden?“ — Settings → IOTA |
 | T4 | **Schatten → Main (Sweep)** | Durchgang | nach T3 | Einmal-Werkzeug; Zielplatz: **Sicherheit** |
 | T5 | **§ H.32b Einsatz beenden** | Retest | bewusst später | = QA #3 |
 | T6 | **Funk / Meshtastic** | Strategie-Entscheid | **verschoben** (nach Settings-Durchgang) | Offizielle Meshtastic-App vs. eigene UI — **noch nicht entscheiden**; Ist: Puls/Geräte-Embed |
