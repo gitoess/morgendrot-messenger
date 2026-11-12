@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { fetchStatus, vaultChangePassword, vaultLockCommand } from '@/frontend/lib/api'
 import { wipeLocalPassphraseStoresOnLock } from '@/frontend/lib/privacy-lock-wipe'
 import { setVaultPasswordSession } from '@/frontend/lib/vault-password-session'
+import { UiPasswordInput } from '@/frontend/components/ui-password-input'
 
 type SettingsVaultPasswordSectionProps = {
   vaultLocked?: boolean
@@ -69,7 +70,7 @@ export function SettingsVaultPasswordSection({ vaultLocked = false }: SettingsVa
   const handleVaultLock = async () => {
     const sdkHint =
       signerKind === 'sdk'
-        ? '\n\nBei SIGNER=sdk: Seed/Mnemonic wurde aus dem RAM entfernt — beim Entsperren ggf. erneut eingeben.'
+        ? '\n\nSIGNER=sdk: Seed nur aus dem RAM weg — in der Tresor-Datei bleibt er, wenn er dort gespeichert ist.'
         : ''
     if (
       !window.confirm(
@@ -125,39 +126,30 @@ export function SettingsVaultPasswordSection({ vaultLocked = false }: SettingsVa
         </p>
       ) : null}
       <div className="grid max-w-md gap-3">
-        <label className="block text-sm">
-          <span className="text-muted-foreground">Aktuelles Passwort</span>
-          <input
-            type="password"
-            autoComplete="current-password"
-            value={changePwCurrent}
-            onChange={(e) => setChangePwCurrent(e.target.value)}
-            disabled={!canUseVault}
-            className="mt-1 w-full rounded-lg border border-border bg-input px-3 py-2 disabled:opacity-50"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="text-muted-foreground">Neues Passwort (min. 8 Zeichen)</span>
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={changePwNew}
-            onChange={(e) => setChangePwNew(e.target.value)}
-            disabled={!canUseVault}
-            className="mt-1 w-full rounded-lg border border-border bg-input px-3 py-2 disabled:opacity-50"
-          />
-        </label>
-        <label className="block text-sm">
-          <span className="text-muted-foreground">Neues Passwort wiederholen</span>
-          <input
-            type="password"
-            autoComplete="new-password"
-            value={changePwConfirm}
-            onChange={(e) => setChangePwConfirm(e.target.value)}
-            disabled={!canUseVault}
-            className="mt-1 w-full rounded-lg border border-border bg-input px-3 py-2 disabled:opacity-50"
-          />
-        </label>
+        <UiPasswordInput
+          label="Aktuelles Passwort"
+          value={changePwCurrent}
+          onChange={setChangePwCurrent}
+          disabled={!canUseVault}
+          autoComplete="current-password"
+          inputClassName="w-full rounded-lg border border-border bg-input px-3 py-2 disabled:opacity-50"
+        />
+        <UiPasswordInput
+          label="Neues Passwort (min. 8 Zeichen)"
+          value={changePwNew}
+          onChange={setChangePwNew}
+          disabled={!canUseVault}
+          autoComplete="new-password"
+          inputClassName="w-full rounded-lg border border-border bg-input px-3 py-2 disabled:opacity-50"
+        />
+        <UiPasswordInput
+          label="Neues Passwort wiederholen"
+          value={changePwConfirm}
+          onChange={setChangePwConfirm}
+          disabled={!canUseVault}
+          autoComplete="new-password"
+          inputClassName="w-full rounded-lg border border-border bg-input px-3 py-2 disabled:opacity-50"
+        />
         <button
           type="button"
           disabled={changePwBusy || !canUseVault}

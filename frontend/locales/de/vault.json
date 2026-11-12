@@ -64,7 +64,7 @@
   },
   "sdkMnemonicPref": {
     "label": "Wallet-Seed merken",
-    "hint": "Standard an: verschlüsselt im Vault und Browser — beim nächsten Start reicht das Passwort (Direct-RPC, Posteingang). Abwählbar."
+    "hint": "Beim Entsperren/Sichern den Seed aus der Sitzung in die Tresor-Datei schreiben. Ein schon gespeicherter Seed wird beim normalen „Lokal sichern“ nicht mehr gelöscht."
   },
   "messengerSetup": {
     "link": "oder Messenger einrichten",

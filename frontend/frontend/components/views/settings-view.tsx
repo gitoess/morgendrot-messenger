@@ -35,6 +35,7 @@ import {
 } from '@/frontend/components/settings-collapsible-section'
 import { SETTINGS_ACTIVE_CATEGORY_KEY, type SettingsCategoryId } from '@/frontend/lib/settings-navigation'
 import { SettingsProjectDisclaimerSection } from '@/frontend/components/views/settings-project-disclaimer-section'
+import { UiPasswordInput } from '@/frontend/components/ui-password-input'
 import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
 interface SettingsViewProps {
@@ -229,16 +230,15 @@ export function SettingsView({
               <p className="mb-3 text-sm text-muted-foreground">Keine lokale Tresor-Datei.</p>
             ) : null}
             <div className="space-y-3">
-              <label className="block text-sm">
-                <span className="text-muted-foreground">Tresor-Passwort</span>
-                <input
-                  type="password"
-                  autoComplete="off"
+              <div className="max-w-md">
+                <UiPasswordInput
+                  label="Tresor-Passwort"
                   value={recoveryPw}
-                  onChange={(e) => setRecoveryPw(e.target.value)}
-                  className="mt-1 w-full max-w-md rounded-lg border border-border bg-input px-3 py-2"
+                  onChange={setRecoveryPw}
+                  autoComplete="off"
+                  inputClassName="w-full rounded-lg border border-border bg-input px-3 py-2"
                 />
-              </label>
+              </div>
               {recoveryErr ? <p className="text-sm text-destructive">{recoveryErr}</p> : null}
               <button
                 type="button"

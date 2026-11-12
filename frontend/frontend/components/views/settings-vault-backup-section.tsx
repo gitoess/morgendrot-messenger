@@ -123,8 +123,8 @@ export function SettingsVaultBackupSection({ vaultLocked = false, onRequestVault
     const res = await vaultSave(undefined, undefined, { includeIotaMnemonic: includeSigner })
     const okMsg = res.ok
       ? includeSigner
-        ? 'Lokal gesichert — inkl. Signer-Import.'
-        : 'Daten gesichert!'
+        ? 'Lokal gesichert — inkl. Wallet-Seed.'
+        : 'Lokal gesichert (vorhandener Seed in der Datei bleibt erhalten).'
       : res.error || res.message || 'Fehler beim Speichern'
     showStatus(res.ok, okMsg)
     if (res.ok) toast.success(okMsg)

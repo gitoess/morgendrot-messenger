@@ -73,6 +73,7 @@ import {
 } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 import { syncMainnetKeysAfterBackendUnlock, ensureBackendVaultKeysInSession } from '@/frontend/lib/dashboard-vault-key-sync'
 import { vaultSave } from '@/frontend/lib/api/vault-commands'
+import { playUiTone } from '@/frontend/lib/ui-tap-feedback'
 import {
   getIncludeSdkMnemonicInBackup,
   setIncludeSdkMnemonicInBackup as persistIncludeSdkMnemonicInBackup,
@@ -631,6 +632,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
 
     if (unlockMode === 'create') {
       if (!password.trim() || password !== passwordConfirm) {
+        playUiTone('error')
         setUnlockError('Tresor-/Wallet-Passwort und Wiederholung müssen übereinstimmen.')
         return
       }
@@ -786,11 +788,14 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         }
       }
       /**
-       * Seed im lokalen Tresor halten, sonst nach API-Restart (`npm run dm`) wieder Seed nötig.
-       * Nicht nur create/import: auch „Tresor öffnen“ + Mnemonic ergänzen (unlockMode=open + sdkExtra).
+       * Seed im lokalen Tresor halten, sonst nach API-Restart / Speichern ohne Flag wieder Seed nötig.
+       * Auch nach Passwort-only Unlock (Seed aus Datei → Session), wenn „Wallet-Seed merken“ an ist.
        */
       const persistSignerInVault =
-        unlockMode === 'create' || unlockMode === 'import' || Boolean(sdkExtra?.trim())
+        unlockMode === 'create' ||
+        unlockMode === 'import' ||
+        Boolean(sdkExtra?.trim()) ||
+        (includeSdkMnemonicInBackup && signer === 'sdk')
       if (persistSignerInVault) {
         for (let i = 0; i < 12; i++) {
           await new Promise((r) => setTimeout(r, 250))
@@ -839,6 +844,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       setSignerImportConfirm('')
       setShowSignerImportOpen(false)
       setLocked(false)
+      playUiTone('unlock')
       await checkStatus()
       if (vaultKeysLoaded) {
         setApiSnapshot((prev) => (prev ? { ...prev, hasKeys: true, locked: false } : prev))
@@ -856,13 +862,13 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         setConnected(!!s.connected)
       }
     } else if (res.code === SIGNER_IMPORT_REQUIRED_CODE) {
+      playUiTone('error')
       setUnlockMode('vault')
       setShowSignerImportOpen(true)
       setUnlockError(
         `${res.error || 'Wallet-Seed fehlt in der Tresor-Datei.'}\n\n` +
-          'Darum: Nach vollem Sperren ist der Seed nicht mehr im RAM. Wenn er nicht mitgespeichert wurde („Wallet-Seed merken“), musst du ihn einmal eintragen.\n\n' +
-          '→ Unter „Bestehender Tresor“: „Seed ergänzen“ öffnen, Seed einfügen, Passwort, dann **Entsperren**. Danach wird der Seed (wenn Haken an) wieder im Tresor gespeichert — nächstes Mal reicht oft nur das Passwort.\n\n' +
-          'Oder Karte „Seed importieren“ (neues Tresor-Passwort + Seed).'
+          'Häufige Ursache (jetzt behoben): „Lokal sichern“ ohne Seed-Flag hat den Seed früher aus der Datei gelöscht — trotz Haken beim Entsperren.\n\n' +
+          '→ Einmal Seed unter „Bestehender Tresor → Seed ergänzen“ + Entsperren. Mit Haken „Wallet-Seed merken“ wird er wieder gespeichert; normales Sichern wischt ihn nicht mehr weg.'
       )
     } else if (VAULT_ALREADY_UNLOCKED_RE.test(res.error || '')) {
       const vaultPw = password
@@ -902,18 +908,21 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       setSignerImportConfirm('')
       setShowSignerImportOpen(false)
       setLocked(false)
+      playUiTone('unlock')
       setUnlockError(hint ?? '')
       await checkStatus()
       if (vaultKeysLoaded) {
         setApiSnapshot((prev) => (prev ? { ...prev, hasKeys: true, locked: false } : prev))
       }
     } else {
+      playUiTone('error')
       setUnlockError(res.error || 'Entsperren fehlgeschlagen')
     }
   }, [
     apiSnapshot?.signer,
     unlockMode,
     password,
+    includeSdkMnemonicInBackup,
     passwordConfirm,
     signerImport,
     signerImportConfirm,

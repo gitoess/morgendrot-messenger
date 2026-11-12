@@ -79,6 +79,55 @@ export function tapConfirmFeedback(): void {
   playTapClick('confirm')
 }
 
+export type UiToneKind = 'unlock' | 'success' | 'error'
+
+/** Kurze Semantik-Töne (Login ok / Fehler) — kein Sound-Design-System. */
+export function playUiTone(kind: UiToneKind): void {
+  try {
+    if (!readSoundFeedbackEnabled()) return
+    const volPct = readSoundFeedbackVolume()
+    if (volPct <= 0) return
+    const ctx = getAudioContext()
+    if (!ctx) return
+    void ctx.resume().catch(() => undefined)
+    const vol = volPct / 100
+    const now = ctx.currentTime
+    const notes =
+      kind === 'unlock'
+        ? [
+            { f: 392, t: 0, d: 0.09, g: 0.16 },
+            { f: 523, t: 0.1, d: 0.14, g: 0.18 },
+          ]
+        : kind === 'success'
+          ? [
+              { f: 523, t: 0, d: 0.08, g: 0.14 },
+              { f: 659, t: 0.09, d: 0.12, g: 0.16 },
+            ]
+          : [
+              { f: 220, t: 0, d: 0.12, g: 0.14 },
+              { f: 165, t: 0.1, d: 0.16, g: 0.12 },
+            ]
+    for (const n of notes) {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      const start = now + n.t
+      const end = start + n.d
+      const peak = Math.max(0.001, n.g * vol)
+      osc.type = kind === 'error' ? 'sawtooth' : 'triangle'
+      osc.frequency.setValueAtTime(n.f, start)
+      gain.gain.setValueAtTime(0, start)
+      gain.gain.linearRampToValueAtTime(peak, start + 0.015)
+      gain.gain.linearRampToValueAtTime(0, end)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(start)
+      osc.stop(end + 0.02)
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 const TAP_SELECTOR =
   'button, [role="button"], [data-slot="button"], a[href], summary, [data-tap-feedback], input[type="button"], input[type="submit"], input[type="reset"]'
 

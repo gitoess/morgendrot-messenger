@@ -189,8 +189,7 @@ export function SettingsAppearanceSection() {
           <h5 className="text-sm font-semibold text-foreground">Klang &amp; Feedback</h5>
         </div>
         <p className="text-[11px] text-muted-foreground">
-          Klick-Ton optional. Magnet (Wii-Scale) ist experimentell und oft durch Layout abgeschnitten —
-          Default aus. Besser erkennbar: klare Buttons, Unterstrich-Links, Fokusring.
+          Klick-Ton + kurze Töne bei Entsperren (tata) / Fehler. Magnet (Wii-Scale) optional, Default aus.
         </p>
         <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
           <Label htmlFor="ui-sound" className="text-sm text-foreground">

@@ -64,7 +64,7 @@
   },
   "sdkMnemonicPref": {
     "label": "Remember wallet seed",
-    "hint": "On by default: encrypted in vault and browser — next start needs only your password (Direct-RPC, inbox). Can be turned off."
+    "hint": "On unlock/save, write the session seed into the vault file. A seed already stored is no longer wiped by a normal local save."
   },
   "messengerSetup": {
     "link": "or set up messenger",

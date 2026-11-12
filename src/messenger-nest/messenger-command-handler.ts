@@ -232,13 +232,28 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             vaultStateRef.current?.vaultNotes ??
                             sanitizeVaultNotes([], notesArg);
                         const notes = vaultNotesToLegacyString(vaultNotes);
-                        const phrase = includeIotaMnemonic ? getSessionIotaMnemonic() : undefined;
-                        if (includeIotaMnemonic && !phrase) {
-                            return {
-                                ok: false,
-                                message:
-                                    'Keine Mnemonic in der Sitzung (SIGNER=sdk: nach Entsperren mit Mnemonic erneut versuchen oder Häkchen erst nach erfolgreichem Unlock).',
-                            };
+                        /** Nie vorhandenen Seed löschen: Speichern ohne Flag hat früher iotaSdkSignerImport aus der Datei gewischt. */
+                        let previousPhrase = '';
+                        try {
+                            if (vaultFileExists(savePath)) {
+                                previousPhrase = ((await loadVaultContent(pw, savePath)).iotaSdkSignerImport || '').trim();
+                            }
+                        } catch {
+                            /* falsches PW / beschädigt — Speichern legt ggf. neu an */
+                        }
+                        const sessionPhrase = (getSessionIotaMnemonic() || '').trim();
+                        let phrase: string | undefined;
+                        if (includeIotaMnemonic) {
+                            phrase = sessionPhrase || previousPhrase || undefined;
+                            if (!phrase) {
+                                return {
+                                    ok: false,
+                                    message:
+                                        'Keine Mnemonic in der Sitzung und keiner in der Datei (SIGNER=sdk: mit Seed entsperren, dann erneut sichern).',
+                                };
+                            }
+                        } else {
+                            phrase = previousPhrase || undefined;
                         }
                         const psecrets = vaultStateRef.current?.personalSecrets ?? [];
                         await saveVaultLocal(keys, pw, savePath, notes, phrase, psecrets, vaultNotes);
@@ -252,7 +267,9 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         }
                         if (CFG.PACKAGE_ID) writeVaultPackageId(savePath, CFG.PACKAGE_ID);
                         if (CFG.STREAMS_ANCHOR_ID) await writeVaultAnchorId(savePath, CFG.STREAMS_ANCHOR_ID, pw);
-                        const extra = includeIotaMnemonic ? ' IOTA-Mnemonic liegt verschlüsselt in der Datei (gleiches Vault-Passwort).' : '';
+                        const extra = phrase
+                            ? ' Wallet-Seed bleibt verschlüsselt in der Datei (gleiches Tresor-Passwort).'
+                            : '';
                         return {
                             ok: true,
                             message: 'Vault gespeichert.' + (CFG.STREAMS_ANCHOR_ID ? ' (inkl. Streams Anchor-ID, verschlüsselt)' : '') + extra,
@@ -512,12 +529,30 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             vaultStateRef.current?.vaultNotes ??
                             sanitizeVaultNotes([], notesArgOn);
                         const notes = vaultNotesToLegacyString(vaultNotesOn);
-                        const phraseOnChain = includeMnOnChain ? getSessionIotaMnemonic() : undefined;
-                        if (includeMnOnChain && !phraseOnChain) {
-                            return {
-                                ok: false,
-                                message: 'On-Chain: keine Mnemonic in der Sitzung – erst mit SIGNER=sdk entsperren oder Häkchen aus.',
-                            };
+                        const vaultPathOn = CFG.VAULT_FILE || '.morgendrot-vault';
+                        let previousPhraseOn = '';
+                        try {
+                            if (vaultFileExists(vaultPathOn)) {
+                                previousPhraseOn = (
+                                    (await loadVaultContent(pw, vaultPathOn)).iotaSdkSignerImport || ''
+                                ).trim();
+                            }
+                        } catch {
+                            /* ignore */
+                        }
+                        const sessionPhraseOn = (getSessionIotaMnemonic() || '').trim();
+                        let phraseOnChain: string | undefined;
+                        if (includeMnOnChain) {
+                            phraseOnChain = sessionPhraseOn || previousPhraseOn || undefined;
+                            if (!phraseOnChain) {
+                                return {
+                                    ok: false,
+                                    message:
+                                        'On-Chain: keine Mnemonic in Sitzung/Datei – mit Seed entsperren oder ohne Seed-Flag speichern (dann bleibt nur, was schon in der lokalen Datei war).',
+                                };
+                            }
+                        } else {
+                            phraseOnChain = previousPhraseOn || undefined;
                         }
                         const psecretsOn = vaultStateRef.current?.personalSecrets ?? [];
                         const enc = await encryptVaultPayloadForChain(
