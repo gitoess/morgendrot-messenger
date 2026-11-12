@@ -20,8 +20,10 @@ import {
 import {
   persistMagnetFeedbackEnabled,
   persistSoundFeedbackEnabled,
+  persistSoundFeedbackVolume,
   readMagnetFeedbackEnabled,
   readSoundFeedbackEnabled,
+  readSoundFeedbackVolume,
   UI_FEEDBACK_PREFS_CHANGED,
 } from '@/frontend/lib/ui-feedback-prefs'
 import { playTapClick } from '@/frontend/lib/ui-tap-feedback'
@@ -41,11 +43,13 @@ export function SettingsAppearanceSection() {
   const [customOn, setCustomOn] = useState(() => readCustomAppearanceEnabled())
   const [custom, setCustom] = useState<CustomAppearanceColors>(() => readCustomAppearanceColors())
   const [soundOn, setSoundOn] = useState(() => readSoundFeedbackEnabled())
+  const [soundVolume, setSoundVolume] = useState(() => readSoundFeedbackVolume())
   const [magnetOn, setMagnetOn] = useState(() => readMagnetFeedbackEnabled())
 
   useEffect(() => {
     const sync = () => {
       setSoundOn(readSoundFeedbackEnabled())
+      setSoundVolume(readSoundFeedbackVolume())
       setMagnetOn(readMagnetFeedbackEnabled())
     }
     window.addEventListener(UI_FEEDBACK_PREFS_CHANGED, sync)
@@ -200,6 +204,40 @@ export function SettingsAppearanceSection() {
               persistSoundFeedbackEnabled(on)
               if (on) playTapClick('soft')
             }}
+          />
+        </div>
+        <div
+          className={`space-y-2 rounded-lg border border-border bg-muted/20 px-3 py-2 ${soundOn ? '' : 'opacity-50'}`}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="ui-sound-volume" className="text-sm text-foreground">
+              Lautstärke
+            </Label>
+            <span className="tabular-nums text-xs text-muted-foreground">{soundVolume}%</span>
+          </div>
+          <input
+            id="ui-sound-volume"
+            type="range"
+            min={0}
+            max={100}
+            step={5}
+            value={soundVolume}
+            disabled={!soundOn}
+            onChange={(e) => {
+              const v = Number(e.target.value)
+              setSoundVolume(v)
+              persistSoundFeedbackVolume(v)
+            }}
+            onMouseUp={() => {
+              if (soundOn) playTapClick('soft')
+            }}
+            onTouchEnd={() => {
+              if (soundOn) playTapClick('soft')
+            }}
+            className="w-full accent-[var(--path-online)]"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={soundVolume}
           />
         </div>
         <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">

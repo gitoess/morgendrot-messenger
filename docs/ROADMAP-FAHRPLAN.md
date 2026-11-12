@@ -2649,11 +2649,13 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 
 ### Durchgangs-Reihenfolge (verbindlich — Stand 2026-11-12)
 
-1. **Jetzt:** **T37** Tresor-Landkarte (Sicherheit) — kurz smoke  
-2. **Dann am Ende:** Ideen **T39–T54** priorisieren; T33 + Zeitkapsel nachholen  
-3. **Später (nicht blockierend):** T45 · T47 · T51 · T52 · T53  
-4. **Explizit nicht im Messenger-Durchgang:** Abo-NFT-Verkaufsstory, PlanRadar-App, Zapier-Store, TG-Gerichts-Vollforensik  
-5. **Nachholen:** T33 (⋮-Menüs) · Zeitkapsel-Feldtest (Rest T32)
+1. **Erledigt:** **T37** Landkarte · **T8/T9** Passwort/Backup/Schatten → Sicherheit · Telegram-Wipe-Scope · Klick-Lautstärke  
+2. **Als Nächstes:** **T2** Passwort ändern (live) · **T3** Meine Mailboxen · **T4** Schatten→Main (jetzt unter Sicherheit)  
+3. **Backlog (überdenken, nicht jetzt bauen):** **T56** Komplett-alles-löschen (Wizard inkl. optional NFT)  
+4. **Dann am Ende:** Ideen **T39–T54** priorisieren; T33 + Zeitkapsel nachholen  
+5. **Später (nicht blockierend):** T45 · T47 · T51 · T52 · T53  
+6. **Explizit nicht im Messenger-Durchgang:** Abo-NFT-Verkaufsstory, PlanRadar-App, Zapier-Store, TG-Gerichts-Vollforensik  
+7. **Nachholen:** T33 (⋮-Menüs) · Zeitkapsel-Feldtest (Rest T32)
 
 **Produkt-Freeze (Sicherheit/Sinn):** Telegram = Klingel (T42); Chat-Mailbox ≠ Zahlungsobjekt (T43); Magnet Default aus (T40); Seed/Passwort = Wiederherstellungs-SPOF (siehe Handbuch Sicherheit).
 
@@ -2670,8 +2672,8 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T5 | **§ H.32b Einsatz beenden** | Retest | bewusst später | = QA #3 |
 | T6 | **Funk / Meshtastic** | Strategie-Entscheid | **verschoben** (nach Settings-Durchgang) | Offizielle Meshtastic-App vs. eigene UI — **noch nicht entscheiden**; Ist: Puls/Geräte-Embed |
 | T7 | **Vault-Registry / Chain-Globals** | Durchgang | später | bewusst zurückgestellt |
-| T8 | **Passwort- + Backup-UI → Sicherheit** | UI-Verschiebung | nach T2–T4 gelesen | Mit Tresor/Purge bündeln |
-| T9 | **Schatten → Sicherheit** | UI-Verschiebung | mit T8 | Aus IOTA-Tab raus |
+| T8 | **Passwort- + Backup-UI → Sicherheit** | UI-Verschiebung | **done 2026-11-12** | Mit Tresor-Landkarte / Notfall unter Sicherheit |
+| T9 | **Schatten → Sicherheit** | UI-Verschiebung | **done 2026-11-12** | Mit T8; IOTA nur noch Hinweis-Link |
 | T10 | **Aktualisieren-Pattern** | UX-Regel | während Settings-Durchgang | Pro Settings-Karte **oben** „Aktualisieren“; keine verstreuten „Neu laden“. Ausnahme: **Saldo aktualisieren** (IOTA Gas) ok |
 | T11 | **Secrets-Landkarte** | Doku/UI | später | Wo liegt was (Vault vs Runtime-JSON vs localStorage vs .env) — komplett, nicht nur Telegram |
 | T12 | **Einstellungen radikal kürzen** | UI + Handbuch | **am Schluss** des Durchgangs (früher nur wenn blockierend) | Zu viel Text/Doppelung; Tabs aufräumen, Veraltetes löschen, Labels wie Telegram-Push verständlich halten |
@@ -2691,7 +2693,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T26 | **Typo/Farbe überall lesbar** | UX | fortlaufend | Kein Lila als Fließtext; einheitliche foreground/muted — Start Einsatzleitung 2026-11-12 |
 | T27 | **Telefonbuch entschlacken** | UX | Messenger-Durchgang | Alarmgruppe nicht oben; Team-Roster nicht doppelt; Funk-Backup vs. Telegram-Backup klar; „Aus Team entfernen“ vs. Telefonbuch trennen; Icons/Avatare (Telegram-Inspiration); Notizen am Kontakt |
 | T28 | **Handbuch-Platz** | UX | mit T12/T17 | Nicht am Sendepfad „Online“ — App-Menü/Settings; Chat-Kopf prüfen |
-| T29 | **Klang & Magnet-Prefs** | UX | Messenger-Durchgang | Einstellungen → Erscheinungsbild: Ton an/aus, Hover-Widerstand; Vibration weglassen |
+| T29 | **Klang & Magnet-Prefs** | UX | **done + Lautstärke 2026-11-12** | Ton an/aus + Lautstärke 0–100; Magnet Default aus |
 | T30 | **Kontakt-Info = Mehr** | UX | Messenger-Durchgang | Kein Doppelklick-Zwang; Medien klickbar; IDs hinter „Mehr“; nur Namen in Sidebar |
 | T31 | **Posteingang Filter vs Composer** | UX | Messenger-Durchgang | „Nur verschlüsselt“ = Ansichtsfilter; Sendemodus nur Composer; pkg = Offline-Datei-Archiv; Auswahl ≠ Filter |
 | T32 | **On-Chain/NFT + Optionen + Entschlüsseln** | Gemeinsam testen | **teil-done 2026-11-12** | PWMSG + Vault-Notizen ok. Zeitkapsel-Feldtest **später**. Wire-Paste = nur PWMSG. Next: T33 |
@@ -2699,11 +2701,12 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T34 | **Magnet Wii-Feel** | UX | Messenger | Hover Scale+Glow+Hover-Ton; Einstellungen Erscheinungsbild; nur Maus/Trackpad |
 | T35 | **Gruppe 1:1 vs gemeinsames Postfach** | Doku/UI | erledigt 2026-11-12, Retest | Labels + Handbuch-Tabelle; Handshake-Liste nur bei 1:1 |
 | T36 | **Telegram-Verlauf-Export** | Dialog statt Submenu 2026-11-12 | **live smoke** | Optionen → Export… → Dialog mit JSON/TXT/ZIP. Nested Submenu entfernt (leerer Scroll). T37 gemeinsam am Ende |
-| T37 | **Tresor-Landkarte UI** | UX | **done → live smoke** | Sicherheit-Tab: Landkarte sichtbar; „Sidecar“ = nur Browser-Speicher (kein Menüpunkt). Shortcut-Link unter IOTA → Tresor |
-| T38 | **Hash & Prüfen (SHA-256)** | Feature | **done → live smoke** | Sicherheit: hashen + prüfen; Unit-Test grün |
+| T37 | **Tresor-Landkarte UI** | UX | **done 2026-11-12** | Sicherheit-Kurzkarte + Handbuch `#tresor-landkarte`; Gelb-Affordanz entfernt; Notfall-Scopes ehrlich |
+| T38 | **Hash & Prüfen (SHA-256)** | Feature | **done → live smoke** | Posteingang → Optionen (nicht doppelt unter Sicherheit) |
+| T56 | **Komplett-alles-löschen** | Feature/UX | **Backlog — überdenken** | Ein Wizard: Gerät + Chain-Tresor + Vault-Datei + Telegram + optional NFT/Keys brennen. Ehrliche Grenzen (fremde Kopien, TG-Server, .env). Nicht als ein blinder Knopf ohne Checkliste. Siehe `NOTFALL-PURGE-MESSENGER.md` |
 | T54 | **Seed / Passwort SPOF** | Sicherheit/Doku | fortlaufend | Mnemonic = Identität/Coins; Vault-PW = Tresor-Inhalt; beides offline sichern; Ordner `.morgendrot-*` / Sidecar / `.env` = Gerät+Backup, nicht „Cloud = sicher“ |
 | T39 | **Telegram↔IOTA Beweis** | Produkt | später / gemeinsam am Ende | Export-JSON enthält Journal-Felder (chatId/Richtung); Beweis-Paket = JSON + SHA-256 (+ optional Chain). Kein TG-Vollforensik/Medien. Mit User am Roadmap-Ende priorisieren |
-| T55 | **Optionen-Hub Online** | UX | **done 2026-11-12** | Wire · Hash · Export · Decrypt-JSON · pkg getrennt; Hash auch unter Sicherheit. Notizen-Button 1× (Posteingang) |
+| T55 | **Optionen-Hub Online** | UX | **done 2026-11-12** | Wire · Hash · Export · Decrypt-JSON · pkg getrennt; Hash nur Optionen. Notizen-Button 1× (Posteingang) |
 | T40 | **Magnet/Haptik** | Entscheidung 2026-11-12 | erledigt | Default **aus**; optional lassen. Nicht weiter aufblasen — Affordance statt Pseudo-Wii |
 | T41 | **Klickbarkeit ohne Magnet** | UX | mit Messenger-Polish | Fokusring, Button-vs-Text, Hover-Unterstrich, „⋯ / Mehr“ sichtbar — Telegram-ähnlich |
 | T42 | **IOTA↔Telegram-Brücke Scope** | Produkt-Freeze | vor Feature-Wünschen | Telegram = Hinweis/Inbound/Alarm — **kein** Video/NFT/E2EE über TG. IOTA = Archiv/Beweis |

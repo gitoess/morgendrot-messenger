@@ -297,6 +297,28 @@ export type SaveTelegramIntegrationInput = {
     einsatzGroupAlarmEnabled?: boolean;
 };
 
+/**
+ * Bot-Token, Chat-IDs, Einsatzgruppe und Inbound aus Runtime-Config entfernen (Notfall).
+ * .env-Telegram-Werte bleiben unberührt — nur gespeicherte Runtime-Integration.
+ */
+export function wipeTelegramIntegrationConfig(): {
+    ok: boolean;
+    error?: string;
+    public?: TelegramIntegrationPublic;
+} {
+    const merged = { ...readRuntimeConfigRaw() };
+    const integrations =
+        merged.integrations && typeof merged.integrations === 'object' && !Array.isArray(merged.integrations)
+            ? { ...(merged.integrations as Record<string, unknown>) }
+            : {};
+    delete integrations.telegram;
+    merged.integrations = integrations;
+    const written = writeRuntimeConfigRaw(merged);
+    if (!written.ok) return { ok: false, error: written.error };
+    applyTelegramIntegrationToMonitorWebhook();
+    return { ok: true, public: getTelegramIntegrationPublic() };
+}
+
 export function saveTelegramIntegration(input: SaveTelegramIntegrationInput): {
     ok: boolean;
     error?: string;

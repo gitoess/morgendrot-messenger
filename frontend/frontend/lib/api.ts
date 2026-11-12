@@ -172,6 +172,7 @@ export {
   fetchTelegramIntegration,
   saveTelegramIntegration,
   testTelegramAlarm,
+  wipeTelegramIntegration,
 } from '@/frontend/lib/api/telegram-integrations'
 
 export { notifyTelegramContact, testTelegramNotify } from '@/frontend/lib/api/telegram-notify'

@@ -10,13 +10,14 @@ import {
     sendTelegramEinsatzGroupHint,
     sendTelegramTestAlarm,
     sendTelegramTestNotify,
+    wipeTelegramIntegrationConfig,
     type SaveTelegramIntegrationInput,
     type TelegramEinsatzGroupEventType,
 } from '../../integrations/telegram-integration.js';
 import { resolveContactStorageKey } from '../../contact-labels.js';
 import { ingestTelegramInboundUpdate, normalizeTelegramInboundMode } from '../../integrations/telegram-inbound.js';
 import { restartTelegramInbound } from '../../integrations/telegram-inbound-poll.js';
-import { listTelegramJournalEntries } from '../../integrations/telegram-journal.js';
+import { clearTelegramJournalFile, listTelegramJournalEntries } from '../../integrations/telegram-journal.js';
 import type { SendJsonFn } from './api-route-types.js';
 import { denyTransportRead, denyTransportWrite } from '../../messenger-capability-gates.js';
 
@@ -76,6 +77,32 @@ export async function handleTelegramIntegrationRoutes(
         restartTelegramInbound();
         const pub = getTelegramIntegrationPublic();
         sendJson(res, 200, { ...pub, ok: true, saved: true }, cors);
+        return true;
+    }
+
+    if (url === '/api/integrations/telegram/wipe' && req.method === 'POST') {
+        const result = wipeTelegramIntegrationConfig();
+        if (!result.ok) {
+            sendJson(res, 400, { ok: false, error: result.error }, cors);
+            return true;
+        }
+        const journal = clearTelegramJournalFile();
+        restartTelegramInbound();
+        const pub = getTelegramIntegrationPublic();
+        sendJson(
+            res,
+            200,
+            {
+                ...pub,
+                ok: true,
+                wiped: true,
+                journalCleared: journal.removed,
+                message:
+                    'Telegram-Runtime (Bot-Token, Chat-IDs, Gruppe) geleert' +
+                    (journal.removed ? '; lokales Journal entfernt.' : '; kein Journal-File vorhanden.'),
+            },
+            cors
+        );
         return true;
     }
 

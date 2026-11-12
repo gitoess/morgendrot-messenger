@@ -6,6 +6,7 @@
 import {
   readMagnetFeedbackEnabled,
   readSoundFeedbackEnabled,
+  readSoundFeedbackVolume,
   UI_FEEDBACK_PREFS_CHANGED,
 } from '@/frontend/lib/ui-feedback-prefs'
 
@@ -43,12 +44,14 @@ export function playTapClick(kind: TapFeedbackKind = 'select'): void {
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
     const { freq, durMs, gain: peak } = TONES[kind]
+    const vol = readSoundFeedbackVolume() / 100
+    const scaled = Math.max(0.0001, peak * vol)
     const now = ctx.currentTime
     osc.type = kind === 'hover' ? 'sine' : 'triangle'
     osc.frequency.setValueAtTime(freq, now)
     osc.frequency.exponentialRampToValueAtTime(freq * (kind === 'hover' ? 1.08 : 0.75), now + durMs / 1000)
     gain.gain.setValueAtTime(0.0001, now)
-    gain.gain.exponentialRampToValueAtTime(peak, now + 0.01)
+    gain.gain.exponentialRampToValueAtTime(scaled, now + 0.01)
     gain.gain.exponentialRampToValueAtTime(0.0001, now + durMs / 1000)
     osc.connect(gain)
     gain.connect(ctx.destination)

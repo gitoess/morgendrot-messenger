@@ -2,18 +2,26 @@
 
 import { useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
-import { emergencyPurge, vaultLockCommand, clearLocalHistory, vaultDeleteLocal } from '@/frontend/lib/api'
+import {
+  emergencyPurge,
+  vaultLockCommand,
+  clearLocalHistory,
+  vaultDeleteLocal,
+  wipeTelegramIntegration,
+} from '@/frontend/lib/api'
 import { lockLocalSecretVaults, purgeLocalSecretVaults } from '@/frontend/lib/local-secret-vaults'
 import {
   EINSATZ_END_CACHE_WIPED_EVENT,
   performEinsatzEndCacheWipe,
   wipeAllInboxCacheKeys,
 } from '@/frontend/lib/einsatz-end-cache-wipe'
+import { purgeTelegramBrowserPrefs } from '@/frontend/lib/telegram-browser-purge'
 
 type PurgeScope =
   | 'lock_session'
   | 'messages'
   | 'browser_secrets'
+  | 'telegram'
   | 'device_local'
   | 'full'
   | 'local_vault_file'
@@ -72,6 +80,21 @@ export function SettingsEmergencyPurgeSection() {
         setStatusMsg('Browser-Geheimnisse geleert (Passphrasen, Team-Keys, NFT-Merker). Tresor-Datei unverändert.')
         setConfirmPurge(false)
         setConfirmText('')
+        return
+      }
+
+      if (purgeScope === 'telegram') {
+        const browserN = purgeTelegramBrowserPrefs()
+        const res = await wipeTelegramIntegration()
+        setStatusMsg(
+          res.ok
+            ? `${res.message || 'Telegram-Runtime geleert.'} Browser-Prefs: ${browserN} Keys. .env-Token bleibt ggf. — manuell prüfen.`
+            : res.error || 'Fehler'
+        )
+        if (res.ok) {
+          setConfirmPurge(false)
+          setConfirmText('')
+        }
         return
       }
 
@@ -180,6 +203,22 @@ export function SettingsEmergencyPurgeSection() {
             <strong className="text-foreground">Nur Browser-Geheimnisse</strong>
             <span className="block text-muted-foreground">
               Passphrasen-/Team-/NFT-Merker in diesem Browser — nicht die Tresor-Datei.
+            </span>
+          </span>
+        </label>
+        <label className="flex cursor-pointer items-start gap-2">
+          <input
+            type="radio"
+            name="purge-scope-settings"
+            checked={purgeScope === 'telegram'}
+            onChange={() => setPurgeScope('telegram')}
+            className="mt-1"
+          />
+          <span>
+            <strong className="text-foreground">Telegram lokal löschen</strong>
+            <span className="block text-muted-foreground">
+              Bot-Token/Chat-IDs aus Runtime, Journal-Datei, Browser-Alarm-Prefs. Nicht: Chats in Telegram selbst,
+              nicht zwingend Werte nur in .env.
             </span>
           </span>
         </label>

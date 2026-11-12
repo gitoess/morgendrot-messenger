@@ -598,7 +598,23 @@ Der Seed ist also **SPOF für die Wallet-Identität**, das Passwort **SPOF für 
 
 **Produkt-Freeze (nicht im Kern-Durchgang):** Abo-NFT als Börsenprodukt, PlanRadar, Zapier-Store, Telegram-Vollforensik ohne Einwilligung — siehe Roadmap T45–T53 / T51–T52.
 
-Einstellungen → **Sicherheit**: Tresor-Landkarte + Hash & Prüfen. Ausführlicher: `VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md`.
+Einstellungen → **Sicherheit**: Tresor-Landkarte (Kurz) + Notfall-Löschung. Hash & Prüfen: Posteingang → Optionen. Ausführlicher: `VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md`.
+
+---
+
+## Tresor-Landkarte {#tresor-landkarte}
+
+**Wozu:** Wissen, **wo** Geheimnisse liegen — bevor du Notfall-Löschung nutzt oder Backup machst. In der App: Einstellungen → **Sicherheit** (Kurzkarte + Link hierher).
+
+| # | Ort | Was | Wo in der UI |
+|---|-----|-----|--------------|
+| 1 | **Tresor-Datei** (`.morgendrot-vault`) | Keys, Notizen, Passwörter | Einstellungen → **Sicherheit** → Tresor |
+| 2 | **Tresor on-chain** | Derselbe Blob als Backup | Sicherheit → Auf Chain sichern / laden |
+| 3 | **Notizen & Passwörter** | Anzeige der Vault-Inhalte | Posteingang → **Notizen** |
+| 4 | **Nur-Browser** (früher „Sidecar“) | Encrypted Merker (Passphrasen, NFT-Liste, Team-Keys) | kein Menü — löschen: Sicherheit → Notfall → Browser-Geheimnisse |
+| 5 | **NFT / Schlüsselkarte** | Objekt on-chain + Merkliste im Browser | Posteingang → **On-Chain / NFT** |
+
+**Chat-Nachrichten** liegen **nicht** in der Tresor-Datei (Posteingang / `.inbox.enc` / Chain-Mailbox). Details Notfall-Scopes: `docs/NOTFALL-PURGE-MESSENGER.md`.
 
 ---
 
