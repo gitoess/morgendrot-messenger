@@ -15,6 +15,31 @@ let installed = false
 let lastClickAt = 0
 let lastHoverToneAt = 0
 let hoverTarget: Element | null = null
+const liveOscillators: OscillatorNode[] = []
+
+function stopLiveOscillators(): void {
+  const t = sharedCtx?.currentTime ?? 0
+  while (liveOscillators.length) {
+    const osc = liveOscillators.pop()
+    if (!osc) continue
+    try {
+      osc.stop(t)
+      osc.disconnect()
+    } catch {
+      /* already stopped */
+    }
+  }
+}
+
+/** Im Klick/Tastendruck aufrufen — Resume zählt nur in der User-Geste, nicht nach await. */
+export function primeAudioFromUserGesture(): void {
+  const ctx = getAudioContext()
+  if (!ctx) return
+  if (ctx.state !== 'running') {
+    stopLiveOscillators()
+    void ctx.resume().catch(() => undefined)
+  }
+}
 
 function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null
@@ -36,14 +61,39 @@ const TONES: Record<TapFeedbackKind, { freq: number; durMs: number; gain: number
   hover: { freq: 440, durMs: 45, gain: 0.1 },
 }
 
+function whenAudioRunning(run: (ctx: AudioContext) => void): void {
+  const ctx = getAudioContext()
+  if (!ctx) return
+  if (ctx.state === 'running') {
+    run(ctx)
+    return
+  }
+  // Nicht im suspended-Zustand starten: Chrome lässt den Ton dann oft endlos laufen,
+  // bis die nächste Geste resume() auslöst.
+  void ctx.resume().then(() => {
+    if (ctx.state === 'running') run(ctx)
+  }).catch(() => undefined)
+}
+
+function trackOscillator(osc: OscillatorNode): void {
+  liveOscillators.push(osc)
+  osc.onended = () => {
+    const i = liveOscillators.indexOf(osc)
+    if (i >= 0) liveOscillators.splice(i, 1)
+    try {
+      osc.disconnect()
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 export function playTapClick(kind: TapFeedbackKind = 'select'): void {
   try {
     if (!readSoundFeedbackEnabled()) return
     const volPct = readSoundFeedbackVolume()
     if (volPct <= 0) return
-    const ctx = getAudioContext()
-    if (!ctx) return
-    void ctx.resume().catch(() => undefined)
+    whenAudioRunning((ctx) => {
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
     const { freq, durMs, gain: peak } = TONES[kind]
@@ -60,8 +110,10 @@ export function playTapClick(kind: TapFeedbackKind = 'select'): void {
     gain.gain.linearRampToValueAtTime(0, end)
     osc.connect(gain)
     gain.connect(ctx.destination)
+    trackOscillator(osc)
     osc.start(now)
     osc.stop(end + 0.02)
+    })
   } catch {
     // ignore
   }
@@ -87,9 +139,7 @@ export function playUiTone(kind: UiToneKind): void {
     if (!readSoundFeedbackEnabled()) return
     const volPct = readSoundFeedbackVolume()
     if (volPct <= 0) return
-    const ctx = getAudioContext()
-    if (!ctx) return
-    void ctx.resume().catch(() => undefined)
+    whenAudioRunning((ctx) => {
     const vol = volPct / 100
     const now = ctx.currentTime
     const notes =
@@ -120,9 +170,11 @@ export function playUiTone(kind: UiToneKind): void {
       gain.gain.linearRampToValueAtTime(0, end)
       osc.connect(gain)
       gain.connect(ctx.destination)
+      trackOscillator(osc)
       osc.start(start)
       osc.stop(end + 0.02)
     }
+    })
   } catch {
     /* ignore */
   }
@@ -174,6 +226,9 @@ export function ensureUiTapFeedbackInstalled(): void {
   installed = true
   syncUiMagnetDomFlag()
   window.addEventListener(UI_FEEDBACK_PREFS_CHANGED, () => syncUiMagnetDomFlag())
+  const arm = () => primeAudioFromUserGesture()
+  window.addEventListener('pointerdown', arm, true)
+  window.addEventListener('keydown', arm, true)
 
   window.addEventListener(
     'pointerover',

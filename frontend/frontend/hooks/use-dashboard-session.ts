@@ -73,7 +73,7 @@ import {
 } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 import { syncMainnetKeysAfterBackendUnlock, ensureBackendVaultKeysInSession } from '@/frontend/lib/dashboard-vault-key-sync'
 import { vaultSave } from '@/frontend/lib/api/vault-commands'
-import { playUiTone } from '@/frontend/lib/ui-tap-feedback'
+import { playUiTone, primeAudioFromUserGesture } from '@/frontend/lib/ui-tap-feedback'
 import {
   getIncludeSdkMnemonicInBackup,
   setIncludeSdkMnemonicInBackup as persistIncludeSdkMnemonicInBackup,
@@ -626,6 +626,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   }, [backendReachable, apiSnapshot?.backendRunning])
 
   const handleUnlock = useCallback(async () => {
+    primeAudioFromUserGesture()
     setUnlockError('')
     const signer = apiSnapshot?.signer
     const sdkLike = signer === 'sdk' || (signer == null && unlockMode === 'import')
@@ -984,6 +985,8 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       await wipeLocalPassphraseStoresOnLock()
       setPrivacySoftLocked(false)
       setMainnetSignerHint(null)
+      vaultUnlockRequestedRef.current = true
+      setLocked(true)
       await checkStatus()
       navigateTo(null)
       window.dispatchEvent(new Event(DIRECT_IOTA_UI_CHANGED))

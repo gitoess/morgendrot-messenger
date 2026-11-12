@@ -146,10 +146,12 @@ function MessengerDashboardBody({
   const { t: tv } = useAppTranslation('vault')
 
   const onLockSession = async () => {
-    // Im Chat: weiches Privacy-Lock (kein Auto-Login-Fenster). Sonst voller API-Lock + Home.
-    const stayInView = s.activeView?.type === 'chat'
-    if (!window.confirm(stayInView ? t('lock.confirmSoft') : t('lock.confirmFull'))) return
-    await s.lockSession(stayInView ? { stayInView: true } : undefined)
+    // Abmelden = immer volles Sperren (Login-Dialog). Weich nur über das Tresor-Badge im Chat.
+    if (!window.confirm(t('lock.confirmFull'))) return
+    const r = await s.lockSession()
+    if (r.ok === false) {
+      window.alert(r.error || r.message || 'Abmelden fehlgeschlagen.')
+    }
   }
 
   const vaultSessionLocked = !!(s.locked || s.apiSnapshot?.locked)
