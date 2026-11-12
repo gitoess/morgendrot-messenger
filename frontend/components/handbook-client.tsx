@@ -5,27 +5,32 @@ import { useEffect, useState } from 'react'
 import { BookOpen } from 'lucide-react'
 import { HandbookMarkdown } from '@/components/handbook-markdown'
 
-const DOCS: { file: string; title: string }[] = [
-  { file: 'API-EINSATZ-ROLE-TEMPLATES.md', title: 'API: Einsatz-Rollen-Templates' },
-  { file: 'BOSS-ORIENTIERUNG.md', title: 'Boss-Orientierung' },
-  { file: 'DASHBOARD-ERSTE-SCHRITTE.md', title: 'Dashboard: Erste Schritte' },
-  { file: 'DASHBOARD-PORT-UND-OBERFLAECHE.md', title: 'Dashboard: Ports & Oberflächen' },
-  { file: 'TELEGRAM-INTEGRATION-EINRICHTUNG.md', title: 'Telegram einrichten' },
-  { file: 'ONBOARDING-WALLET-UX-SPEC.md', title: 'Onboarding & Wallet (UX)' },
-  { file: 'RECOVERY-PHRASE-BACKUP.md', title: 'Recovery Phrase / Backup' },
-  { file: 'PWA-HANDBUCH-OFFLINE.md', title: 'PWA & Offline' },
-  { file: 'NOTFALL-PURGE-MESSENGER.md', title: 'Notfall-Purge & lokaler Cache' },
-  { file: 'VAULT-STEGANOGRAPHIE-TRAGERBILD-ZIELBILD.md', title: 'Vault & Bild-Tarnung (Zielbild)' },
-  { file: 'EINSATZ-VAULT-PURGE-PDF-REDUNDANZ-ZIELBILD.md', title: 'Einsatz: Purge, PDF, Redundanz' },
-  { file: 'VAULT-TRAEGERBILD-EINSATZ-ORGANISATION.md', title: 'Trägerbild: Einsatz & Organisation' },
-  { file: 'ROLLENWECHSEL-TEAM-EINSATZ.md', title: 'Rollenwechsel im Team (Einsatz)' },
-  { file: 'MESSENGER-CHAT-HANDBUCH.md', title: 'Messenger (Chat)' },
-  { file: 'VAULT-EINRICHTEN.md', title: 'Tresor einrichten' },
-  { file: 'VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md', title: 'Messenger vs. Tresor' },
+/** Messenger-zuerst; Specs/Zielbilder weiter unten. Default = Chat-Handbuch. */
+const DOCS: { file: string; title: string; group?: string }[] = [
+  { file: 'MESSENGER-CHAT-HANDBUCH.md', title: '1 · Messenger (Chat)', group: 'Messenger' },
+  { file: 'EINSTELLUNGEN-NUTZER-HANDBUCH.md', title: '2 · Einstellungen', group: 'Messenger' },
+  { file: 'TELEGRAM-INTEGRATION-EINRICHTUNG.md', title: 'Telegram einrichten', group: 'Messenger' },
+  { file: 'VAULT-EINRICHTEN.md', title: 'Tresor einrichten', group: 'Messenger' },
+  { file: 'VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md', title: 'Messenger vs. Tresor', group: 'Messenger' },
+  { file: 'DASHBOARD-ERSTE-SCHRITTE.md', title: 'Dashboard: Erste Schritte', group: 'Start' },
+  { file: 'DASHBOARD-PORT-UND-OBERFLAECHE.md', title: 'Dashboard: Ports', group: 'Start' },
+  { file: 'STANDALONE-HANDY-SCHNELLSTART.md', title: 'Standalone Handy', group: 'Start' },
+  { file: 'BOSS-ORIENTIERUNG.md', title: 'Boss-Orientierung', group: 'Einsatz' },
+  { file: 'NOTFALL-PURGE-MESSENGER.md', title: 'Notfall-Purge', group: 'Einsatz' },
+  { file: 'RECOVERY-PHRASE-BACKUP.md', title: 'Recovery Phrase', group: 'Einsatz' },
+  { file: 'PWA-HANDBUCH-OFFLINE.md', title: 'PWA & Offline', group: 'Technik' },
+  { file: 'ONBOARDING-WALLET-UX-SPEC.md', title: 'Onboarding & Wallet (Spec)', group: 'Technik' },
+  { file: 'API-EINSATZ-ROLE-TEMPLATES.md', title: 'API: Rollen-Templates', group: 'Technik' },
+  { file: 'VAULT-STEGANOGRAPHIE-TRAGERBILD-ZIELBILD.md', title: 'Vault Bild-Tarnung (Ziel)', group: 'Zielbilder' },
+  { file: 'EINSATZ-VAULT-PURGE-PDF-REDUNDANZ-ZIELBILD.md', title: 'Purge/PDF/Redundanz (Ziel)', group: 'Zielbilder' },
+  { file: 'VAULT-TRAEGERBILD-EINSATZ-ORGANISATION.md', title: 'Trägerbild Organisation', group: 'Zielbilder' },
+  { file: 'ROLLENWECHSEL-TEAM-EINSATZ.md', title: 'Rollenwechsel', group: 'Zielbilder' },
 ]
 
+const DEFAULT_FILE = 'MESSENGER-CHAT-HANDBUCH.md'
+
 export function HandbookClient() {
-  const [active, setActive] = useState(DOCS[0].file)
+  const [active, setActive] = useState(DEFAULT_FILE)
   const [body, setBody] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -34,8 +39,9 @@ export function HandbookClient() {
     try {
       const f = new URLSearchParams(window.location.search).get('file')
       if (f && DOCS.some((d) => d.file === f)) setActive(f)
+      else setActive(DEFAULT_FILE)
     } catch {
-      /* ignore */
+      setActive(DEFAULT_FILE)
     }
   }, [])
 
@@ -70,6 +76,17 @@ export function HandbookClient() {
     })
   }, [body, loading, active])
 
+  const selectDoc = (file: string) => {
+    setActive(file)
+    try {
+      const u = new URL(window.location.href)
+      u.searchParams.set('file', file)
+      window.history.replaceState({}, '', u.toString())
+    } catch {
+      /* ignore */
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border px-4 py-3">
@@ -85,12 +102,13 @@ export function HandbookClient() {
             <h1 className="text-lg font-semibold">Handbuch</h1>
           </div>
           <p className="w-full text-xs text-muted-foreground sm:ml-auto sm:w-auto">
-            Statische Markdown-Dateien — nach erstem Laden oft offline lesbar (Service Worker).
+            Zwei Einstiege: <strong className="text-foreground">Messenger (Chat)</strong> und{' '}
+            <strong className="text-foreground">Einstellungen</strong>. Links gehen zur Aktion — nicht umgekehrt.
           </p>
         </div>
       </header>
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 md:flex-row">
-        <nav className="shrink-0 md:w-52">
+        <nav className="shrink-0 md:w-56">
           <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Inhalt
           </p>
@@ -99,7 +117,7 @@ export function HandbookClient() {
               <li key={d.file}>
                 <button
                   type="button"
-                  onClick={() => setActive(d.file)}
+                  onClick={() => selectDoc(d.file)}
                   className={
                     'w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ' +
                     (active === d.file
@@ -118,11 +136,11 @@ export function HandbookClient() {
             <p className="text-sm text-muted-foreground">Lade…</p>
           ) : error ? (
             <p className="text-sm text-destructive">
-              {error} — Ist <span className="font-mono">npm run sync:handbook</span> gelaufen und{' '}
-              <span className="font-mono">frontend/public/handbook/</span> vorhanden?
+              Konnte „{active}“ nicht laden ({error}). Datei unter{' '}
+              <span className="font-mono">/handbook/{active}</span> prüfen.
             </p>
           ) : body ? (
-            <HandbookMarkdown text={body} />
+            <HandbookMarkdown source={body} />
           ) : null}
         </article>
       </div>

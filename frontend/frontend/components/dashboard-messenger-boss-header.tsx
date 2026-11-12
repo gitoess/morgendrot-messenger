@@ -55,7 +55,7 @@ export function DashboardMessengerBossHeader(p: {
             </button>
           ) : null}
           <Link
-            href="/handbook"
+            href="/handbook?file=MESSENGER-CHAT-HANDBUCH.md"
             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             title={t('nav.handbook')}
             aria-label={t('nav.handbookOpen')}

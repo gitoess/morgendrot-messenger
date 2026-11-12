@@ -104,9 +104,9 @@ describe('DashboardIotaTransferCard', () => {
     expect(screen.getByText('Gas')).toBeInTheDocument()
   })
 
-  it('öffnet Aus Guthaben senden inline mit Empfängerfeld', () => {
+  it('öffnet Gesichert (NFT) senden inline mit Empfängerfeld', () => {
     render(<DashboardIotaTransferCard />)
-    fireEvent.click(screen.getByRole('button', { name: /^Aus Guthaben senden$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Gesichert \(NFT\) senden$/i }))
     expect(screen.getByText('1. NFT / Schlüsselkarte')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('0x… Empfänger-Adresse')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Jetzt senden|Zuerst Guthaben anlegen/i })).toBeInTheDocument()

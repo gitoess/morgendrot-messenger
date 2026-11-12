@@ -2,7 +2,7 @@
 
 **Zweck:** Ausführliche Hinweise, die früher direkt in der Chat-UI standen — hier gebündelt für Nachlesen (PWA-Handbuch, offline nach erstem Abruf möglich).
 
-**Stand:** 2026-07-03 — Telegram-ähnliche Chat-Oberfläche (Seitenleiste, Inbox vor Composer), Sendepfad + **SOS im Kopf**, Gruppe verwalten als Sheet, Peering-QR unter **Ich**; § *IOTA vs. Server* (Threat Model).
+**Stand:** 2026-11-12 — Settings-Kurzblatt: `EINSTELLUNGEN-NUTZER-HANDBUCH.md`. Chat-UI: Sidebar, Inbox, Sendepfad, SOS, Peering-QR; § *IOTA vs. Server*.
 
 **Verwandt:** `docs/PWA-HANDBUCH-OFFLINE.md`, `docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`, `docs/MESSENGER-CAPABILITIES-OVERVIEW.md`, `docs/GRUPPENCHAT-ZIELBILD.md`, `docs/EXPORT-ASSISTENT-REFERENZ.md`.  
 **Privacy / Vault / NFT-Schlüsselkarte (alle Ist-Funktionen + 1-Gerät-Test):** → **`docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`**.  
@@ -143,38 +143,16 @@ Spezifikation: **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** (**§9** Zivil-SOS).
 
 ## Vertraulichkeit: Klartext-Konfiguration
 
-Wenn das Backend **`ENABLE_PLAINTEXT_CHANNEL`** und/oder **`MAILBOX_STORE_PLAINTEXT`** aktiv hat, können Nachrichteninhalte **zusätzlich oder ausschließlich als Klartext** in der Mailbox bzw. auf der Chain landen. Für maximale Inhaltsvertraulichkeit beide Optionen in der Server-**`.env`** aus und nur den **verschlüsselten** Pfad nutzen. Prüfen in **Einstellungen → System & Identität** / Konfiguration.
+Wenn das Backend **`ENABLE_PLAINTEXT_CHANNEL`** und/oder **`MAILBOX_STORE_PLAINTEXT`** aktiv hat, können Nachrichteninhalte **zusätzlich oder ausschließlich als Klartext** in der Mailbox bzw. auf der Chain landen. Für maximale Inhaltsvertraulichkeit beide Optionen in der Server-**`.env`** aus und nur den **verschlüsselten** Pfad nutzen. Prüfen unter **Einstellungen → .env (unten)** / Konfiguration.
 
 ---
 
-## Einstellungen: System & Identität
+## Einstellungen (Ist)
 
-- **IOTA-RPC (Node):** kleiner Status in der Kopfzeile von „System & Identität“ (Erreichbar / nicht erreichbar) — Check beim Öffnen und über **Aktualisieren**.
-- **Backend & Offline:** Verbindung zur **Basis** siehst du auf der **Startseite** (Karte „Verbindung zur Basis“) — nicht als eigene Liste in den Einstellungen.
-- **Meine Adresse:** vollständige `0x`-Wallet oben in „System & Identität“ (kopierbar) — nicht noch einmal maskiert im Puls-Panel.
-- **Package-ID / RPC_URL:** je ein Bearbeitungsfeld oben; in **Erweiterte Konfiguration (.env)** nicht doppelt.
-- **`.env` vs. Move-Deploy:** Die meisten Keys betreffen nur die laufende Node (Runtime sofort, sonst Neustart). **Neues Move-Deploy** nur bei geändertem Smart-Contract — dann neue **PACKAGE_ID** und ggf. **MAILBOX_ID** nach `create_globals`.
-- **Erweiterte Konfiguration (.env):** Im **Messenger** nur Chat-/Mailbox-/Einsatz-relevante Keys (kein Shop/Tickets, Lock, Monitor, Stripe). Im **Morgendrot Projekt** alle Keys.
-- **PARTNER_ADDRESS** in `.env`: Legacy für Lite-UI **`/connect`** — im Messenger **Telefonbuch + Handshake**, nicht mehr als fester Partner-Button in der Chat-UI.
-- **Streams-Anchor:** nur **Puls/Monitor** (Gerät lebt), nicht der Chat-Posteingang (Mailbox).
+**Kurzhandbuch (Tabs IOTA / Telegram / Sicherheit / Speicherorte):**  
+**`docs/EINSTELLUNGEN-NUTZER-HANDBUCH.md`** (PWA: gleiches File im Handbuch).
 
-### Mailbox · Direkt-RPC · Streams-Puls
-
-**IDs und Status:** Beim Öffnen des Panels liest die App **`/api/status`** und zusätzlich **`/api/current-ids`** (Package, Mailbox, eigene Adresse, Streams-Anchor), sofern die Morgendrot-Basis erreichbar ist. Zum Kopieren stehen die Zeilen im Panel bereit (im Chat auch Package-ID; in den Einstellungen steht Package-ID bereits oben).
-
-**Direkt-IOTA ohne dauernd erreichbare Basis:** Package-ID, Mailbox-ID und Absender-Adresse manuell eintragen und im Browser **`localStorage`** speichern (**Ketten-IDs speichern**). Optional **Optimistische Flags**, wenn `/api/status` zuletzt nicht verfügbar war. Siehe Architektur **§ H.15**.
-
-**Session-Signer (Mainnet-Direkt-Send):** Für Direkt-RPC braucht der Browser einen **Session-Signer** (Mnemonic nur im RAM). Normalerweise wird er beim **Tresor entsperren** geladen. Ist der Tresor auf dem Server schon offen, fehlt aber der Signer im Browser, erscheint ein Banner **„Signer laden“** — Vault-Passwort eingeben (Dialog ist schließbar). Details: Puls-Panel unter **Mailbox · Direkt-RPC · Streams-Puls** (Expert).
-
-**Checkliste Direkt-Pfad** (Einstellungen → System & Identität → „Mailbox · Direkt-RPC · Streams-Puls“):
-
-1. **Fullnode-URL** eintragen und speichern  
-2. **„Direkt-Mailbox-Drain“** einschalten  
-3. **Session-Signer (Mnemonic)** anwenden (nur RAM) — oder **Signer laden** nach Entsperren  
-4. **Package, Mailbox, Absender** speichern (von Basis übernehmen oder manuell)  
-5. Ggf. Basis einmal verbinden für `/api/status`-Flags — oder **Optimistische Flags**
-
-**Partner-Adresse austauschen (QR):** Tauscht Partner-**Wallet** (`0x`) und optional **ECDH-Pub** für **verschlüsselten Online-Chat** — nicht für LoRa/Mesh. Anschließend **Handshake** im Posteingang oder Telefonbuch. Siehe **Peering-QR** unten.
+Boss: Netz unter **IOTA → Wo senden?** — nicht mehr „System & Identität“. Helfer ohne Netz-Schalter behalten vorerst die schlanke System-Karte. Peering-QR: Sidebar **Ich** / Handshake — siehe unten.
 
 ---
 
@@ -186,8 +164,7 @@ Wenn das Backend **`ENABLE_PLAINTEXT_CHANNEL`** und/oder **`MAILBOX_STORE_PLAINT
 
 - Sidebar **Ich** → **Doppelklick** → Dialog **Meine Kontakt-ID** (Peering-QR scannen / anzeigen)
 - **Handshake-Leiste** am Composer, wenn verschlüsseltes Senden noch blockiert ist
-- **Einstellungen → System & Identität** (Expert, Puls-Panel)
-- Legacy: aufklappbar unter **Verschlüsselt** in der Setup-Karte (wenn Expert-UI sichtbar)
+- Legacy/Expert: Puls-Panel unter **Einstellungen → Funk** bzw. IOTA (je nach Rolle)
 
 **Wichtig:** Der QR **ersetzt kein Internet** für IOTA. Handshake, Connect und verschlüsseltes Senden brauchen weiterhin **RPC/Fullnode**. Der QR ist **Setup vor Ort** (zwei Handys, face-to-face), **kein** Offline-Transport.
 

@@ -2664,6 +2664,17 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T9 | **Schatten → Sicherheit** | UI-Verschiebung | mit T8 | Aus IOTA-Tab raus |
 | T10 | **Aktualisieren-Pattern** | UX-Regel | während Settings-Durchgang | Pro Settings-Karte **oben** „Aktualisieren“; keine verstreuten „Neu laden“. Ausnahme: **Saldo aktualisieren** (IOTA Gas) ok |
 | T11 | **Secrets-Landkarte** | Doku/UI | später | Wo liegt was (Vault vs Runtime-JSON vs localStorage vs .env) — komplett, nicht nur Telegram |
+| T12 | **Einstellungen radikal kürzen** | UI + Handbuch | **am Schluss** des Durchgangs (früher nur wenn blockierend) | Zu viel Text/Doppelung; Tabs aufräumen, Veraltetes löschen, Labels wie Telegram-Push verständlich halten |
+| T13 | **Wallet Empfangen** | UI | nach Hauptmenü-Durchgang | Receive-Dialog: neben Wallet-Adresse/QR auch **aktive Mailbox-IDs** (Server/Team/Privat) + kurzer Hinweis „Coins → 0x, Chat → Mailbox“ |
+| T14 | **SOS Hilferuf fertigstellen** | Feature + Produkt-Split | später | Button Ist unvollständig (Sheet/Fan-out Teil-Ist). **IOTA-Messenger:** geplant `hideSos: true` (Einsatz-Feature). Morgendrot behält SOS |
+| T15 | **Wallet-Lücken vs. IOTA-Wallet/Rebased** | Abgleich | Backlog nach Durchgang | Bewusst **nicht** 1:1: kein Staking/Ledger/Multi-Profil-UI. Stärken bei uns: Gesichert/Guthaben, Zeitkapsel-Leihe, Aktivität/Msg-Burn. Lücken notieren, nicht blind nachbauen |
+| T16 | **Eigenes Logo + Start-Sound** | Branding | **ganz am Ende** | Nicht während Messenger-Durchgang |
+| T17 | **Handbuch radikal** | Doku/UX | **am Schluss** (mit T12) | ≥2 Messenger-Einstiege; Links **Handbuch → Aktion**; keine Settings→Handbuch-Pfeile; Zielbilder aus dem Alltagspfad |
+| T18 | **NFT-Bilder in Fremd-Wallets** | Display-Standard | später | ImageNFT oft ohne IOTA-`Display`/`image_url`. Data-URL `data:image/…;base64,…` hilft **nur** wenn öffentlich im Display — Konflikt mit verschlüsselten Evidence-Bildern. Entscheidung: Preview-Thumbnail vs. Privacy |
+| T19 | **Wallet Send UX** | UI | nach Hauptmenü | NFT/Gesichert im Send-Flow klar; Empfänger-Dropdown Telefonbuch (+ optional Favoriten, **nicht** Vault); optional kurze Notiz bei Token-Send |
+| T20 | **Coins aus Composer** | Produkt/Recht | Entscheidung später | Chat+Zahlung mischen oft verwirrend/regulierungsnah — Default: **getrennt** im Wallet; Composer nur wenn klar als optionaler Hinweis |
+| T21 | **PTB / Notarization** | Architektur | Backlog | Chain-Ops (Mailbox, NFT, Manifest) schon oft **PTB**; Chat/Funk/Telegram nicht. IOTA Notarization Framework evaluieren — was es vs. unser Mailbox/Attestation-Pfad bringt |
+| T22 | **Doppelklick-Erkennbarkeit** | UX | mit Aktivität/Kontakte | Überall wo 2×: sichtbares Affordance (Badge „2×“ / Fokusring) — Start in IOTA-Aktivität |
 
 **Nicht** parallel zu Session C / Zeitkapsel-Feldtest starten.
 

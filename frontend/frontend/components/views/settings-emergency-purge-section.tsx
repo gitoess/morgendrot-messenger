@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
-import Link from 'next/link'
 import { emergencyPurge, vaultLockCommand, clearLocalHistory } from '@/frontend/lib/api'
 import { lockLocalSecretVaults, purgeLocalSecretVaults } from '@/frontend/lib/local-secret-vaults'
 
@@ -66,10 +65,7 @@ export function SettingsEmergencyPurgeSection() {
         <div>
           <h4 className="font-semibold text-red-400">Notfall-Löschung</h4>
           <p className="mt-1 text-sm text-muted-foreground">
-            On-Chain-Vault-Purge ist unwiderruflich. Details:{' '}
-            <Link href="/handbook?file=NOTFALL-PURGE-MESSENGER.md" className="text-primary underline">
-              Handbuch
-            </Link>
+            On-Chain-Vault-Purge ist unwiderruflich. Scope wählen, dann mit „LÖSCHEN“ bestätigen.
           </p>
         </div>
       </div>

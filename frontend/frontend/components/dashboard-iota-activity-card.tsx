@@ -64,13 +64,6 @@ export function DashboardIotaActivityCard({ compact = false }: { compact?: boole
           IOTA-Aktivität
         </h3>
       </div>
-      <details className="mb-2 text-[10px] text-muted-foreground">
-        <summary className="cursor-pointer select-none text-foreground/80 hover:underline">Hinweise</summary>
-        <p className="mt-1">
-          Lokale App-Events auf diesem Gerät (Burn, NFT, gesichertes Guthaben) — kein vollständiger
-          Explorer-Feed. Doppelklick öffnet kopierbare IDs.
-        </p>
-      </details>
       {rows.length === 0 ? (
         <p className="text-xs text-muted-foreground">Noch keine Einträge.</p>
       ) : (
@@ -83,14 +76,18 @@ export function DashboardIotaActivityCard({ compact = false }: { compact?: boole
             return (
               <li
                 key={a.id}
-                className="rounded-md border border-border/50 bg-background/50 px-2.5 py-1.5 text-muted-foreground"
+                className={cn(
+                  'rounded-md border bg-background/50 px-2.5 py-1.5 text-muted-foreground',
+                  open ? 'border-primary/40' : 'border-border/50'
+                )}
               >
                 <div
                   role="button"
                   tabIndex={0}
-                  className="flex cursor-pointer items-start justify-between gap-2 break-all text-left"
-                  title="Doppelklick: IDs anzeigen"
+                  className="flex cursor-pointer items-start justify-between gap-2 break-all rounded-sm text-left outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.995]"
+                  title="Doppelklick: IDs anzeigen / kopieren"
                   aria-expanded={open}
+                  aria-label={`${iotaActivityKindLabel(a.kind)}. Doppelklick für IDs.`}
                   onDoubleClick={() => setExpandedId((cur) => (cur === a.id ? null : a.id))}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -101,6 +98,9 @@ export function DashboardIotaActivityCard({ compact = false }: { compact?: boole
                 >
                   <span className="min-w-0 flex-1">
                     <span className="font-semibold text-foreground">{iotaActivityKindLabel(a.kind)}</span>
+                    <span className="ml-1 text-[9px] text-muted-foreground" aria-hidden>
+                      · 2×
+                    </span>
                     {' · '}
                     {when}
                     {' · '}
@@ -116,6 +116,7 @@ export function DashboardIotaActivityCard({ compact = false }: { compact?: boole
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary underline underline-offset-2"
+                        title="Transaktion im Explorer (Ablauf)"
                         onClick={(e) => e.stopPropagation()}
                         onDoubleClick={(e) => e.stopPropagation()}
                       >
@@ -128,6 +129,7 @@ export function DashboardIotaActivityCard({ compact = false }: { compact?: boole
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary underline underline-offset-2"
+                        title="On-Chain-Objekt (NFT/Purse/…) — Netz muss stimmen"
                         onClick={(e) => e.stopPropagation()}
                         onDoubleClick={(e) => e.stopPropagation()}
                       >

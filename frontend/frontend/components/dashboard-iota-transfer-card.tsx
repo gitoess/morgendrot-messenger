@@ -2,7 +2,7 @@
 
 /**
  * IOTA-Überweisung über die Wallet-Session — Dashboard (voll oder kompakt für Boss-Start).
- * Frei | Gesichert im gleichen Stil; „Aus Guthaben senden“ öffnet inline im Send-Bereich.
+ * Frei | Gesichert (NFT) im gleichen Stil; Gesichert öffnet inline im Send-Bereich.
  */
 
 import { useCallback, useEffect, useState } from 'react'
@@ -359,7 +359,7 @@ export function DashboardIotaTransferCard({
               : 'border-border bg-muted/40 text-muted-foreground hover:bg-muted'
           )}
         >
-          Aus Guthaben senden
+          Gesichert (NFT) senden
         </button>
       </div>
       {securedSpendOpen ? (
