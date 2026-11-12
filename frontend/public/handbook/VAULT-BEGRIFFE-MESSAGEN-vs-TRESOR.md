@@ -135,4 +135,16 @@ Details Nutzer: `docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md` §1.
 
 ---
 
-*Stand: Abgleich mit `src/vault-local.ts` (`VAULT_FREETEXT_NOTES_MAX_CHARS`, `sanitizePersonalSecrets`), `src/messenger-nest/messenger-command-handler.ts`, `frontend/.../vault-view.tsx`, `frontend/.../lib/vault-limits.ts`, `docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`, `docs/NOTFALL-PURGE-MESSENGER.md`.*
+## 9. Seed vs. Passwort — SPOF (Stand 2026-11-12)
+
+| | **Seed / Mnemonic** | **Tresor-Passwort** |
+|--|---------------------|---------------------|
+| Schützt | Wallet-Adresse, Signatur, Coins | Vault-Datei / on-chain Vault-Blob |
+| SPOF? | **Ja** für Identität/Signatur | **Ja** für Keys/Notizen/Safe im Tresor |
+| Reicht allein? | **Nein** für Vault-Inhalt (Ist: PW getrennt) | **Nein** für Coins ohne Seed/Signer |
+
+**Ordner:** `.morgendrot-vault`, Sidecars, Runtime-JSON, `.env`, Journal, Inbox-Cache — Sicherheit = Gerät + Rechte + Backups. Roadmap **T54**.
+
+---
+
+*Stand: 2026-11-12 — §9 Seed/PW-SPOF; Abgleich Soft-Lock / Sidecar.*

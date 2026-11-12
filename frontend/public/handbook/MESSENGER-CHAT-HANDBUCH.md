@@ -559,7 +559,37 @@ Drei getrennte Menüs — nicht vermischen:
 
 **Wire kopieren:** in der Passphrase-/NFT-UI **und** im Nachrichten-⋮ (Rohinhalt).
 
-**Flow „Nachricht jetzt, NFT später“:** Zeile bleibt gesperrt → Object-ID/Schlüsselkarte unter On-Chain/NFT laden bzw. besitzen → zurück zur Zeile → Entschlüsseln (Passphrase manuell oder Auto über Keycard-Bindung). Wire einfügen unter Optionen hilft offline für **Passphrase-Wires** (nicht voller NFT-Gate-Import).
+**Flow „Nachricht jetzt, NFT später“:** Zeile bleibt gesperrt → Object-ID/Schlüsselkarte unter On-Chain/NFT laden bzw. besitzen → zurück zur Zeile → Entschlüsseln (Passphrase manuell oder Auto über Keycard-Bindung). **Optionen → Wire einfügen:** nur **Passphrase-Wires** (`MORG_PWMSG`) — kein NFT-Gate, kein ECDH.
+
+**T32 Live-Checkliste:** (1) Optionen öffnen — Wire / Datei-Paket / Verlauf. (2) On-Chain/NFT Tabs Wire·Object·Mint. (3) PWMSG-Zeile entsperren → Passphrase-Aktionen. (4) NFT-Gate-Zeile → Besitz. (5) Wire einfügen nur PWMSG.
+
+---
+
+## Sicherheit: Seed, Passwort, Ordner (SPOF)
+
+**Kurz:** Es gibt **zwei** kritische Geheimnisse — nicht eines.
+
+| Geheimnis | Wofür | Wenn weg |
+|-----------|--------|----------|
+| **Seed / Mnemonic** (Wallet) | Signieren, Adresse, Coins, Chain-Identität | Zugang zu Wallet/Signatur verloren (oder gestohlen = Angreifer steuert) |
+| **Tresor-Passwort** | Entschlüsseln der Vault-Datei (Keys, Notizen, Safe) | Vault-Inhalt **nicht** aus dem Seed allein wiederherstellbar (Ist) |
+
+Der Seed ist also **SPOF für die Wallet-Identität**, das Passwort **SPOF für den Tresor-Inhalt**. Beides **offline** sichern (Papier/Metall/getrenntes Backup) — nicht nur „irgendwo im Projektordner“.
+
+| Speicher | Inhalt | Risiko |
+|----------|--------|--------|
+| `.morgendrot-vault` | Verschlüsselter Tresor | Diebstahl der Datei **ohne** PW = nutzlos; **mit** PW = alles offen |
+| On-Chain-Vault-Backup | Gleicher Blob-Typ | Wie Datei — PW nötig |
+| Browser-Sidecar (`localStorage`) | Passphrasen-Merker, Keycards, Team-Keys | Gerät/Browser-Clear = weg; XSS/Gerätezugriff = Risiko |
+| `.morgendrot-runtime-config.json` / `.env` | Bot-Token, RPC, Package | **Klartext-Ops** — Dateirechte, nicht in Git, nicht in Handoff an Unbekannte |
+| Telegram-Journal | Lokale TG-Zeilen | Kein Chain-Beweis; Gerät sichern |
+| Inbox-Cache / `.inbox.enc` | Nachrichten-Cache | Neben dem Tresor, nicht Ersatz |
+
+**Ordner „sicher“?** Nur so sicher wie Gerät + Passwort + Backups. Kein Cloud-Sync der Vault-Datei ohne eigenes Verschlüsselungskonzept. Handoff-ZIP = vertrauenswürdige Übergabe Boss→Helfer.
+
+**Produkt-Freeze (nicht im Kern-Durchgang):** Abo-NFT als Börsenprodukt, PlanRadar, Zapier-Store, Telegram-Vollforensik ohne Einwilligung — siehe Roadmap T45–T53 / T51–T52.
+
+Einstellungen → **Sicherheit**: Tresor-Landkarte + Hash & Prüfen. Ausführlicher: `VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md`.
 
 ---
 
@@ -571,4 +601,4 @@ Drei getrennte Menüs — nicht vermischen:
 
 ---
 
-*Stand: 2026-11-12 — Telegram-Export/Journal; Tresor-Landkarte; Hash & Prüfen; Handshake-Labels; Optionen/NFT/⋮.*
+*Stand: 2026-11-12 — Seed/PW-SPOF; Durchgangs-Reihenfolge T36–T38→T32; Produkt-Freeze Abo/PlanRadar.*

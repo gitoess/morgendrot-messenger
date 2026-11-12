@@ -2647,6 +2647,15 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 | 4 | **§ H.37 Multi-Profil** | Spec/Umsetzung erst **nach** diesem Durchgang — Ziel: Profilwahl beim Unlock, eigener Seed, **nie parallel** (`VAULT-BEGRIFFE` §6). |
 | 5 | **Produkt-Split Morgendrot vs IOTA-Messenger** | Entscheiden, was im vollen Morgendrot bleibt und was nur im schlanken IOTA-Messenger (siehe Tabelle unten). Overlay-Ist: `tools/iota-messenger/overlays/product-identity.ts`. |
 
+### Durchgangs-Reihenfolge (verbindlich — Stand 2026-11-12)
+
+1. **Jetzt:** Retest **T36 → T37 → T38** (Telegram-Export, Tresor-Karte, Hash & Prüfen)  
+2. **Dann:** **T32** (+ T33 Doku) On-Chain/NFT · Optionen · Entschlüsseln  
+3. **Später (nicht blockierend):** T45 Browser-Link · T47 Schnell-Buttons · T51 Abo/Credits · T52 PlanRadar · T53 Settings-Lücken  
+4. **Explizit nicht im Messenger-Durchgang:** Abo-NFT-Verkaufsstory, PlanRadar-App, Zapier-Store, TG-Gerichts-Vollforensik  
+
+**Produkt-Freeze (Sicherheit/Sinn):** Telegram = Klingel (T42); Chat-Mailbox ≠ Zahlungsobjekt (T43); Magnet Default aus (T40); Seed/Passwort = Wiederherstellungs-SPOF (siehe Handbuch Sicherheit).
+
 ### Gemeinsam testen / durchgehen (live mit User — Stand 2026-11-12)
 
 Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns X zusammen testen“-Punkte **hier anhängen**.
@@ -2688,9 +2697,10 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T33 | **Nachrichten-⋮ vs Chat-⋮** | UX/Doku | mit T32 | Wire kopieren in ⋮; Burn-Label vs Handbuch; Passphrase-Aktionen nur bei PWMSG nach Unlock — Angleichen Anleitung |
 | T34 | **Magnet Wii-Feel** | UX | Messenger | Hover Scale+Glow+Hover-Ton; Einstellungen Erscheinungsbild; nur Maus/Trackpad |
 | T35 | **Gruppe 1:1 vs gemeinsames Postfach** | Doku/UI | erledigt 2026-11-12, Retest | Labels + Handbuch-Tabelle; Handshake-Liste nur bei 1:1 |
-| T36 | **Telegram-Verlauf-Export** | Fix 2026-11-12 + Retest | vor T32 | Export mergt Journal; kein Telegram-Löschen wie App; kein Auto-Chain-Beweis — Snapshot-Hash = Hash-Tool + optional IOTA-Anker (T38/T37) |
-| T37 | **Tresor-Landkarte UI** | UX | erledigt 2026-11-12 | Sicherheit: Tresor vs Datei vs Sidecar vs NFT; „Vault“ nur Dateiname |
-| T38 | **Hash & Prüfen (SHA-256)** | Feature | erledigt Basis 2026-11-12 | Sicherheit: Datei/Text hashen + Hash prüfen; On-Chain-Anker weiter Online-Pfad |
+| T36 | **Telegram-Verlauf-Export** | Fix + Code-Retest 2026-11-12 | **done → live smoke** | Export mergt Journal; UI-Hinweis im Verlauf-Menü; Live: TG-Pfad → Aktualisieren → Export |
+| T37 | **Tresor-Landkarte UI** | UX | **done → live smoke** | Sicherheit-Tab: Tresor vs Datei vs Sidecar vs NFT |
+| T38 | **Hash & Prüfen (SHA-256)** | Feature | **done → live smoke** | Sicherheit: hashen + prüfen; Unit-Test grün |
+| T54 | **Seed / Passwort SPOF** | Sicherheit/Doku | fortlaufend | Mnemonic = Identität/Coins; Vault-PW = Tresor-Inhalt; beides offline sichern; Ordner `.morgendrot-*` / Sidecar / `.env` = Gerät+Backup, nicht „Cloud = sicher“ |
 | T39 | **Telegram↔IOTA Beweis** | Produkt | später | Journal-Snapshot hashen + optional „Auf Chain verankern“; nur Morgendrot-Seite kann verifizieren |
 | T40 | **Magnet/Haptik** | Entscheidung 2026-11-12 | erledigt | Default **aus**; optional lassen. Nicht weiter aufblasen — Affordance statt Pseudo-Wii |
 | T41 | **Klickbarkeit ohne Magnet** | UX | mit Messenger-Polish | Fokusring, Button-vs-Text, Hover-Unterstrich, „⋯ / Mehr“ sichtbar — Telegram-ähnlich |
