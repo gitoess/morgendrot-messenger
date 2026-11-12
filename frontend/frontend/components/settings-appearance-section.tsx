@@ -1,7 +1,7 @@
 'use client'
 
-import { useCallback, useState } from 'react'
-import { Check, Palette } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { Check, Palette, Volume2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -17,6 +17,14 @@ import {
   readCustomAppearanceEnabled,
   readMessengerAppearanceId,
 } from '@/frontend/lib/messenger-appearance-theme'
+import {
+  persistMagnetFeedbackEnabled,
+  persistSoundFeedbackEnabled,
+  readMagnetFeedbackEnabled,
+  readSoundFeedbackEnabled,
+  UI_FEEDBACK_PREFS_CHANGED,
+} from '@/frontend/lib/ui-feedback-prefs'
+import { playTapClick } from '@/frontend/lib/ui-tap-feedback'
 
 const COLOR_FIELDS: { key: keyof CustomAppearanceColors; label: string }[] = [
   { key: 'background', label: 'Hintergrund' },
@@ -32,6 +40,17 @@ export function SettingsAppearanceSection() {
   const [active, setActive] = useState<MessengerAppearanceId>(() => readMessengerAppearanceId())
   const [customOn, setCustomOn] = useState(() => readCustomAppearanceEnabled())
   const [custom, setCustom] = useState<CustomAppearanceColors>(() => readCustomAppearanceColors())
+  const [soundOn, setSoundOn] = useState(() => readSoundFeedbackEnabled())
+  const [magnetOn, setMagnetOn] = useState(() => readMagnetFeedbackEnabled())
+
+  useEffect(() => {
+    const sync = () => {
+      setSoundOn(readSoundFeedbackEnabled())
+      setMagnetOn(readMagnetFeedbackEnabled())
+    }
+    window.addEventListener(UI_FEEDBACK_PREFS_CHANGED, sync)
+    return () => window.removeEventListener(UI_FEEDBACK_PREFS_CHANGED, sync)
+  }, [])
 
   const selectPreset = useCallback((id: MessengerAppearanceId) => {
     setCustomOn(false)
@@ -159,6 +178,43 @@ export function SettingsAppearanceSection() {
           ) : null}
         </div>
       )}
+
+      <div className="mt-5 space-y-3 border-t border-border pt-4">
+        <div className="flex items-center gap-2">
+          <Volume2 className="h-4 w-4 text-primary" aria-hidden />
+          <h5 className="text-sm font-semibold text-foreground">Klang &amp; Feedback</h5>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Klick-Ton und leichter „Widerstand“ beim Darüberfahren — ohne Vibration.
+        </p>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
+          <Label htmlFor="ui-sound" className="text-sm text-foreground">
+            Klick-Ton
+          </Label>
+          <Switch
+            id="ui-sound"
+            checked={soundOn}
+            onCheckedChange={(on) => {
+              setSoundOn(on)
+              persistSoundFeedbackEnabled(on)
+              if (on) playTapClick('soft')
+            }}
+          />
+        </div>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
+          <Label htmlFor="ui-magnet" className="text-sm text-foreground">
+            Magnet / Widerstand (Hover)
+          </Label>
+          <Switch
+            id="ui-magnet"
+            checked={magnetOn}
+            onCheckedChange={(on) => {
+              setMagnetOn(on)
+              persistMagnetFeedbackEnabled(on)
+            }}
+          />
+        </div>
+      </div>
     </div>
   )
 }

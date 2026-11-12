@@ -223,14 +223,17 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
       {showWireSection ? (
       <div className="space-y-1.5">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Posteingang (Inhalt)
+          <span
+            className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+            title="Nur Filter der Liste — nicht der Sendemodus unten im Composer"
+          >
+            Ansicht filtern
           </span>
           {(
             [
               ['all', 'Alles'],
-              ['encrypted', 'Verschlüsselt'],
-              ['plaintext', 'Klartext'],
+              ['encrypted', 'Nur verschlüsselt'],
+              ['plaintext', 'Nur Klartext'],
             ] as const
           ).map(([id, label]) => (
             <button

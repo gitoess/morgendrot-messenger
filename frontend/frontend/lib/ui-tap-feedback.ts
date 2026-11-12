@@ -1,11 +1,18 @@
 /**
- * Klick-Feedback: deutlicher Ton + Vibration (Mobil) + leichter „Magnet“-Scale an Buttons.
+ * Klick-Feedback: optionaler Ton + leichter Hover-/Press-„Magnet“ (Scale).
+ * Vibration bewusst optional/aus — Desktop ohne Vibrate; Widerstand reicht.
  * Fail-silent — nie UX blockieren.
  */
+
+import {
+  readMagnetFeedbackEnabled,
+  readSoundFeedbackEnabled,
+} from '@/frontend/lib/ui-feedback-prefs'
 
 let sharedCtx: AudioContext | null = null
 let installed = false
 let lastClickAt = 0
+let hoverTarget: Element | null = null
 
 function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null
@@ -22,11 +29,12 @@ export type TapFeedbackKind = 'select' | 'confirm' | 'soft'
 const TONES: Record<TapFeedbackKind, { freq: number; durMs: number; gain: number }> = {
   select: { freq: 480, durMs: 90, gain: 0.09 },
   confirm: { freq: 620, durMs: 110, gain: 0.1 },
-  soft: { freq: 360, durMs: 70, gain: 0.06 },
+  soft: { freq: 360, durMs: 55, gain: 0.04 },
 }
 
 export function playTapClick(kind: TapFeedbackKind = 'select'): void {
   try {
+    if (!readSoundFeedbackEnabled()) return
     const ctx = getAudioContext()
     if (!ctx) return
     void ctx.resume().catch(() => undefined)
@@ -49,25 +57,17 @@ export function playTapClick(kind: TapFeedbackKind = 'select'): void {
   }
 }
 
-export function pulseHaptic(pattern: number | number[] = 18): void {
-  try {
-    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
-      navigator.vibrate(pattern)
-    }
-  } catch {
-    // ignore
-  }
+export function pulseHaptic(_pattern: number | number[] = 18): void {
+  // Bewusst kein navigator.vibrate — oft wirkungslos/Desktop; Magnet-Scale ersetzt.
 }
 
-/** Klick-Ton + spürbarer Haptic-Puls. */
+/** Klick-Ton (wenn an). */
 export function tapSelectFeedback(): void {
   playTapClick('select')
-  pulseHaptic([14, 30, 18])
 }
 
 export function tapConfirmFeedback(): void {
   playTapClick('confirm')
-  pulseHaptic([16, 40, 20, 30, 16])
 }
 
 const TAP_SELECTOR =
@@ -82,10 +82,51 @@ function isInteractiveTapTarget(el: Element | null): Element | null {
   return hit
 }
 
-/** Einmalig: Klick + Doppelklick → Ton/Haptik für Buttons und klickbare Controls. */
+function clearHoverMagnet(): void {
+  if (hoverTarget instanceof HTMLElement) {
+    hoverTarget.classList.remove('ui-magnet-hover')
+  }
+  hoverTarget = null
+}
+
+function applyHoverMagnet(el: Element): void {
+  if (!readMagnetFeedbackEnabled()) return
+  if (!(el instanceof HTMLElement)) return
+  if (hoverTarget === el) return
+  clearHoverMagnet()
+  hoverTarget = el
+  el.classList.add('ui-magnet-hover')
+}
+
+/** Einmalig: Hover-Magnet + Klick-Ton für Buttons und klickbare Controls. */
 export function ensureUiTapFeedbackInstalled(): void {
   if (typeof window === 'undefined' || installed) return
   installed = true
+
+  window.addEventListener(
+    'pointerover',
+    (e) => {
+      const hit = isInteractiveTapTarget(e.target as Element | null)
+      if (!hit) {
+        clearHoverMagnet()
+        return
+      }
+      applyHoverMagnet(hit)
+    },
+    true
+  )
+
+  window.addEventListener(
+    'pointerout',
+    (e) => {
+      if (!hoverTarget) return
+      const related = (e as PointerEvent).relatedTarget as Element | null
+      if (related && hoverTarget.contains(related)) return
+      if (related && isInteractiveTapTarget(related) === hoverTarget) return
+      clearHoverMagnet()
+    },
+    true
+  )
 
   window.addEventListener(
     'click',

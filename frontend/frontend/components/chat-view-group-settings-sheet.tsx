@@ -28,7 +28,7 @@ export function ChatViewGroupSettingsSheet(p: ChatViewGroupSettingsSheetProps) {
             Gruppe verwalten
           </SheetTitle>
           <SheetDescription>
-            Mitglieder → Kanal einrichten. Handshake nur bei Verschlüsselung „Pro Mitglied“.
+            Mitglieder → Kanal. „Pro Mitglied“ = einzelner Handshake je Person (nicht Team-Broadcast).
           </SheetDescription>
         </SheetHeader>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">

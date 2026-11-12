@@ -407,9 +407,8 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
       </div>
 
       <p className="text-xs leading-relaxed text-muted-foreground">
-        Kurz: Mitglieder wählen → speichern → „Kanal einrichten“. Das <strong className="text-foreground">Gruppen-Geheimnis</strong>{' '}
-        ist kein Chat-Passwort (Passphrase-Nachricht), sondern der gemeinsame Schlüssel fürs Team-Postfach — Weitergabe nur
-        per Handoff-ZIP.
+        Mitglieder → speichern → „Kanal einrichten“. Geheimnis = Schlüssel fürs Team-Postfach (Handoff), kein
+        Nachrichten-Passwort.
       </p>
 
       {groups.length > 0 ? (
@@ -497,10 +496,9 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
 
       {/* 2 — Team-Kanal */}
       <div className="space-y-2 rounded-lg border border-border bg-background/50 px-3 py-3">
-        <p className="text-xs font-semibold text-foreground">2 · Team-Kanal (Postfach + Geheimnis)</p>
+        <p className="text-xs font-semibold text-foreground">2 · Team-Kanal</p>
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Postfach = gemeinsamer Briefkasten on-chain. Geheimnis = gemeinsamer Schlüssel dafür (nicht die Passphrase
-          einzelner Nachrichten).
+          Ein gemeinsames Postfach + ein gemeinsames Geheimnis für alle.
         </p>
         <button
           type="button"
@@ -617,10 +615,10 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
       {/* 3 — Handshake nur bei Pairwise-Enc */}
       {encrypted && handshake && forcedTransport === 'internet' ? (
         <div className="space-y-2 rounded-lg border border-border bg-background/50 px-3 py-3">
-          <p className="text-xs font-semibold text-foreground">3 · Handshake (nur „Pro Mitglied“)</p>
+          <p className="text-xs font-semibold text-foreground">3 · Handshake je Mitglied</p>
           <p className="text-[11px] leading-relaxed text-muted-foreground">
-            Adressen kommen aus der Mitgliederliste — nichts nochmal eintippen. Für Team-Broadcast (gemeinsames
-            Postfach) brauchst du diesen Schritt nicht.
+            Nur nötig bei „Pro Mitglied“: Session-Schlüssel mit jeder Person einzeln. Team-Broadcast braucht das
+            nicht.
           </p>
           {handshakeMembers.length === 0 ? (
             <p className="text-[11px] text-amber-700 dark:text-amber-300">Noch keine 0x-Mitglieder — Telefonbuch nutzen.</p>

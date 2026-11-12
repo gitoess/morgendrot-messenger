@@ -143,3 +143,25 @@
     -webkit-text-size-adjust: 100%;
   }
 }
+
+/* Hover-/Press-„Widerstand“ (Magnet) — Klasse setzt ui-tap-feedback.ts */
+.ui-magnet-hover {
+  transform: scale(1.045);
+  box-shadow: 0 2px 10px color-mix(in oklab, var(--foreground) 12%, transparent);
+  transition:
+    transform 110ms ease-out,
+    box-shadow 110ms ease-out;
+  will-change: transform;
+}
+.ui-magnet-hover:active {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-magnet-hover,
+  .ui-magnet-hover:active {
+    transform: none;
+    box-shadow: none;
+  }
+}

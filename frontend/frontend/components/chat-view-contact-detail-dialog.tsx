@@ -3,10 +3,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   BarChart3,
+  ChevronDown,
+  ChevronRight,
   FileText,
   Headphones,
   Image as ImageIcon,
   Link2,
+  MessageSquareText,
   Mic,
   Video,
 } from 'lucide-react'
@@ -54,46 +57,88 @@ export type ChatViewContactDetailDialogProps = {
   onSelectForMessenger?: () => void
   /** Aktive Package-ID (Settings / ApiStatus) — nur Anzeige. */
   packageId?: string
+  /** Medienzeile tippen → Nachricht im Posteingang fokussieren. */
+  onFocusMessage?: (messageId: string) => void
 }
 
-function MediaStatRow(p: { icon: React.ReactNode; label: string; count: number }) {
+function MediaStatRow(p: {
+  icon: React.ReactNode
+  label: string
+  count: number
+  onClick?: () => void
+}) {
   if (p.count <= 0) return null
-  return (
-    <div className="flex items-center gap-3 rounded-lg border border-border/60 px-3 py-2.5">
-      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted/50 text-muted-foreground">{p.icon}</span>
+  const inner = (
+    <>
+      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted/50 text-muted-foreground">
+        {p.icon}
+      </span>
       <span className="text-sm text-foreground">
         <strong>{p.count}</strong> {p.label}
       </span>
-    </div>
+    </>
   )
+  if (p.onClick) {
+    return (
+      <button
+        type="button"
+        onClick={p.onClick}
+        className="flex w-full items-center gap-3 rounded-lg border border-border/60 px-3 py-2.5 text-left transition-colors hover:bg-muted/50"
+      >
+        {inner}
+      </button>
+    )
+  }
+  return <div className="flex items-center gap-3 rounded-lg border border-border/60 px-3 py-2.5">{inner}</div>
 }
 
-function MediaStatsPanel({ stats }: { stats: InboxConversationMediaStats }) {
+function MediaStatsPanel(p: {
+  stats: InboxConversationMediaStats
+  textCount: number
+  onFocusText?: () => void
+  onFocusMediaKind?: (kind: keyof InboxConversationMediaStats) => void
+}) {
   const rows = [
-    { icon: <ImageIcon className="h-4 w-4" />, label: 'Fotos', count: stats.photos },
-    { icon: <Video className="h-4 w-4" />, label: 'Videos', count: stats.videos },
-    { icon: <FileText className="h-4 w-4" />, label: 'Dateien', count: stats.files },
-    { icon: <Headphones className="h-4 w-4" />, label: 'Audiodateien', count: stats.audioFiles },
-    { icon: <Link2 className="h-4 w-4" />, label: 'Geteilte Links', count: stats.sharedLinks },
-    { icon: <BarChart3 className="h-4 w-4" />, label: 'Umfragen', count: stats.polls },
-    { icon: <Mic className="h-4 w-4" />, label: 'Sprachnachrichten', count: stats.voiceMessages },
-    { icon: <ImageIcon className="h-4 w-4" />, label: 'GIFs', count: stats.gifs },
+    { icon: <MessageSquareText className="h-4 w-4" />, label: 'Textnachrichten', count: p.textCount, kind: null as null | keyof InboxConversationMediaStats },
+    { icon: <ImageIcon className="h-4 w-4" />, label: 'Fotos', count: p.stats.photos, kind: 'photos' as const },
+    { icon: <Video className="h-4 w-4" />, label: 'Videos', count: p.stats.videos, kind: 'videos' as const },
+    { icon: <FileText className="h-4 w-4" />, label: 'Dateien', count: p.stats.files, kind: 'files' as const },
+    { icon: <Headphones className="h-4 w-4" />, label: 'Audiodateien', count: p.stats.audioFiles, kind: 'audioFiles' as const },
+    { icon: <Link2 className="h-4 w-4" />, label: 'Geteilte Links', count: p.stats.sharedLinks, kind: 'sharedLinks' as const },
+    { icon: <BarChart3 className="h-4 w-4" />, label: 'Umfragen', count: p.stats.polls, kind: 'polls' as const },
+    { icon: <Mic className="h-4 w-4" />, label: 'Sprachnachrichten', count: p.stats.voiceMessages, kind: 'voiceMessages' as const },
+    { icon: <ImageIcon className="h-4 w-4" />, label: 'GIFs', count: p.stats.gifs, kind: 'gifs' as const },
   ].filter((r) => r.count > 0)
 
   if (rows.length === 0) {
-    return <p className="text-sm text-muted-foreground">Noch keine geteilten Medien in diesem Verlauf.</p>
+    return <p className="text-sm text-muted-foreground">Noch keine Nachrichten in diesem Verlauf.</p>
   }
 
   return (
     <div className="grid gap-2 sm:grid-cols-2">
       {rows.map((r) => (
-        <MediaStatRow key={r.label} icon={r.icon} label={r.label} count={r.count} />
+        <MediaStatRow
+          key={r.label}
+          icon={r.icon}
+          label={r.label}
+          count={r.count}
+          onClick={
+            r.kind == null
+              ? p.onFocusText
+              : p.onFocusMediaKind
+                ? () => p.onFocusMediaKind?.(r.kind!)
+                : undefined
+          }
+        />
       ))}
     </div>
   )
 }
 
-function ConversationPhotoThumbnails(p: { messages: readonly Message[] }) {
+function ConversationPhotoThumbnails(p: {
+  messages: readonly Message[]
+  onOpenMessage?: (messageId: string) => void
+}) {
   const candidates = useMemo(() => {
     const out: { id: string; dataUrl?: string; label: string }[] = []
     for (const m of p.messages) {
@@ -146,10 +191,12 @@ function ConversationPhotoThumbnails(p: { messages: readonly Message[] }) {
       {candidates.map((c) => {
         const src = urls[c.id]
         return (
-          <div
+          <button
             key={c.id}
-            className="aspect-square overflow-hidden rounded-lg border border-border/60 bg-muted/30"
+            type="button"
+            className="aspect-square overflow-hidden rounded-lg border border-border/60 bg-muted/30 transition-colors hover:ring-2 hover:ring-primary/40"
             title={c.label}
+            onClick={() => p.onOpenMessage?.(c.id)}
           >
             {src ? (
               <img src={src} alt="" className="h-full w-full object-cover" />
@@ -158,7 +205,7 @@ function ConversationPhotoThumbnails(p: { messages: readonly Message[] }) {
                 <ImageIcon className="h-6 w-6" />
               </div>
             )}
-          </div>
+          </button>
         )
       })}
     </div>
@@ -171,6 +218,7 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
   const displayName = address
     ? resolveContactSidebarDisplayName(p.directory, address, entry)
     : ''
+  const [techOpen, setTechOpen] = useState(false)
 
   const conversationMessages = useMemo(() => {
     if (!address || !p.myAddress.trim()) return []
@@ -178,6 +226,17 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
   }, [address, p.messages, p.myAddress, entry, p.directory])
 
   const mediaStats = useMemo(() => countConversationMediaStats(conversationMessages), [conversationMessages])
+  const textCount = useMemo(() => {
+    const mediaLike =
+      mediaStats.photos +
+      mediaStats.videos +
+      mediaStats.files +
+      mediaStats.audioFiles +
+      mediaStats.voiceMessages +
+      mediaStats.polls +
+      mediaStats.gifs
+    return Math.max(0, conversationMessages.length - mediaLike)
+  }, [conversationMessages.length, mediaStats])
 
   const connectedSet = useMemo(
     () => new Set((p.connectedAddresses ?? []).map((a) => a.trim().toLowerCase())),
@@ -204,14 +263,20 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
   const hasPrivateMailbox = entry ? contactHasAnyMailboxSlot(entry, address) : false
   const loraOnly = hasLora && !connectedSet.has(address.toLowerCase())
 
+  const focusFirst = () => {
+    const first = conversationMessages[0]
+    if (first) {
+      p.onFocusMessage?.(first.id)
+      p.onOpenChange(false)
+    }
+  }
+
   return (
     <Dialog open={p.open} onOpenChange={p.onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{displayName}</DialogTitle>
-          <DialogDescription>
-            Info: IDs, Mailboxen und geteilte Inhalte — ohne in den Einstellungen zu suchen.
-          </DialogDescription>
+          <DialogDescription>Medien, Chat öffnen — technische IDs unter Mehr.</DialogDescription>
         </DialogHeader>
 
         {entry ? (
@@ -234,49 +299,76 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
             onSelectForMessenger={p.onSelectForMessenger}
           />
         ) : (
-          <p className="font-mono text-xs text-muted-foreground break-all">{address}</p>
+          <p className="text-sm text-muted-foreground">Kein Telefonbuch-Eintrag — nur Adresse bekannt.</p>
         )}
-
-        {infoSections.map((section) => (
-          <TechnicalIdSection
-            key={section.id}
-            title={section.title}
-            className="border-t border-border pt-4"
-          >
-            {section.fields.length === 0 ? (
-              <p className="text-[11px] text-muted-foreground">{section.note ?? '—'}</p>
-            ) : (
-              <>
-                {section.fields.map((f) => (
-                  <TechnicalIdRow
-                    key={f.id}
-                    label={f.label}
-                    value={f.value}
-                    copyable={f.copyable}
-                    hint={f.hint}
-                    href={f.href}
-                    hrefLabel={f.hrefLabel}
-                  />
-                ))}
-                {section.note ? (
-                  <p className="border-t border-border/50 pt-2 text-[10px] text-muted-foreground">
-                    {section.note}
-                  </p>
-                ) : null}
-              </>
-            )}
-          </TechnicalIdSection>
-        ))}
 
         <section className="space-y-3 border-t border-border pt-4">
           <h3 className="text-sm font-semibold text-foreground">Geteilte Medien &amp; Inhalte</h3>
           <p className="text-xs text-muted-foreground">
             {conversationMessages.length}{' '}
-            {conversationMessages.length === 1 ? 'Nachricht' : 'Nachrichten'} in diesem 1:1-Verlauf (IOTA, Funk,
-            Telegram).
+            {conversationMessages.length === 1 ? 'Nachricht' : 'Nachrichten'} in diesem 1:1-Verlauf.
           </p>
-          <ConversationPhotoThumbnails messages={conversationMessages} />
-          <MediaStatsPanel stats={mediaStats} />
+          <ConversationPhotoThumbnails
+            messages={conversationMessages}
+            onOpenMessage={(id) => {
+              p.onFocusMessage?.(id)
+              p.onOpenChange(false)
+            }}
+          />
+          <MediaStatsPanel
+            stats={mediaStats}
+            textCount={textCount}
+            onFocusText={conversationMessages.length > 0 ? focusFirst : undefined}
+            onFocusMediaKind={
+              p.onFocusMessage
+                ? () => {
+                    focusFirst()
+                  }
+                : undefined
+            }
+          />
+        </section>
+
+        <section className="border-t border-border pt-4">
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-muted/40"
+            onClick={() => setTechOpen((v) => !v)}
+            aria-expanded={techOpen}
+          >
+            <span>Mehr — Identität &amp; Mailboxen</span>
+            {techOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </button>
+          {techOpen ? (
+            <div className="mt-3 space-y-4">
+              {infoSections.map((section) => (
+                <TechnicalIdSection key={section.id} title={section.title}>
+                  {section.fields.length === 0 ? (
+                    <p className="text-[11px] text-muted-foreground">{section.note ?? '—'}</p>
+                  ) : (
+                    <>
+                      {section.fields.map((f) => (
+                        <TechnicalIdRow
+                          key={f.id}
+                          label={f.label}
+                          value={f.value}
+                          copyable={f.copyable}
+                          hint={f.hint}
+                          href={f.href}
+                          hrefLabel={f.hrefLabel}
+                        />
+                      ))}
+                      {section.note ? (
+                        <p className="border-t border-border/50 pt-2 text-[10px] text-muted-foreground">
+                          {section.note}
+                        </p>
+                      ) : null}
+                    </>
+                  )}
+                </TechnicalIdSection>
+              ))}
+            </div>
+          ) : null}
         </section>
       </DialogContent>
     </Dialog>

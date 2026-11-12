@@ -18,15 +18,19 @@
 import {
   Download,
   Forward,
+  Globe2,
   Inbox,
   Link2,
   Lock,
   MessageCircle,
   MoreHorizontal,
   Package,
+  Radio,
   Reply,
+  Send,
   ShieldCheck,
   Pin,
+  Smartphone,
   Star,
   Trash2,
   UserPlus,
@@ -373,34 +377,42 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
               )}
               <div className="min-w-0 flex-1 space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex gap-0.5 rounded-md bg-muted/80 px-1.5 py-0.5" title="Transport">
+                  <span className="inline-flex items-center gap-0.5 rounded-md bg-muted/80 px-1.5 py-0.5" title="Kanal">
                     {(row.msg.transports?.length
                       ? row.msg.transports
                       : row.msg.source === 'mesh'
                         ? (['mesh'] as const)
-                        : (['internet'] as const)
-                    ).map((t) => (
-                      <span key={t} className="select-none text-sm" aria-hidden>
-                        {t === 'internet'
-                          ? '🌍'
-                          : t === 'mesh'
-                            ? '📡'
-                            : t === 'telegram'
-                              ? '✈️'
-                              : '📱'}
-                      </span>
-                    ))}
-                  </span>
-                  <span className="font-mono text-xs font-medium text-foreground">
-                    {row.msg.from.startsWith('0x')
-                      ? `${row.msg.from.slice(0, 8)}…${row.msg.from.slice(-4)}`
-                      : row.msg.from}
+                        : row.msg.source === 'telegram'
+                          ? (['telegram'] as const)
+                          : (['internet'] as const)
+                    ).map((t) => {
+                      const Icon =
+                        t === 'mesh' ? Radio : t === 'telegram' ? Send : t === 'internet' ? Globe2 : Smartphone
+                      const label =
+                        t === 'mesh' ? 'Funk' : t === 'telegram' ? 'Telegram' : t === 'internet' ? 'Online' : String(t)
+                      return (
+                        <span
+                          key={t}
+                          className="inline-flex items-center text-muted-foreground"
+                          title={label}
+                          aria-label={label}
+                        >
+                          <Icon className="h-3.5 w-3.5" aria-hidden />
+                        </span>
+                      )
+                    })}
                   </span>
                   {fromLabel ? (
                     <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                       {fromLabel}
                     </span>
-                  ) : null}
+                  ) : (
+                    <span className="text-xs font-medium text-foreground">
+                      {row.msg.from.startsWith('0x')
+                        ? `${row.msg.from.slice(0, 8)}…${row.msg.from.slice(-4)}`
+                        : row.msg.from}
+                    </span>
+                  )}
                   {isMeshVerifiedForAddress(row.msg.from) && (
                     <span className="inline-flex items-center text-emerald-500" title="Mesh im Kontaktverzeichnis">
                       <ShieldCheck className="h-3.5 w-3.5" />

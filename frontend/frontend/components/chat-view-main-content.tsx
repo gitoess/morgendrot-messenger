@@ -1197,6 +1197,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       onOpenGroupSettings={openGroupSettings}
       onOpenContactDetail={handleOpenContactDetail}
       onOpenPhonebook={() => setPhonebookOpen(true)}
+      myAddress={myAddress}
       selfProfile={{
         ...myDataPanelProps,
         packageId: apiStatus?.packageId,
@@ -1270,6 +1271,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           onOpenGroupSettings={openGroupSettings}
           onOpenContactDetail={handleOpenContactDetail}
           onOpenPhonebook={() => setPhonebookOpen(true)}
+          myAddress={myAddress}
           selfProfile={{
         ...myDataPanelProps,
         packageId: apiStatus?.packageId,
@@ -1506,6 +1508,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               onOpenGroupSettings={openGroupSettings}
               onOpenContactDetail={handleOpenContactDetail}
               onOpenPhonebook={() => setPhonebookOpen(true)}
+              myAddress={myAddress}
               selfProfile={{
         ...myDataPanelProps,
         packageId: apiStatus?.packageId,

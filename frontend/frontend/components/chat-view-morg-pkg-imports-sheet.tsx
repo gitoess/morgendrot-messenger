@@ -65,7 +65,7 @@ export function ChatViewMorgPkgImportsSheet(p: ChatViewMorgPkgImportsSheetProps)
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 space-y-4">
           {records.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Noch keine Pakete. Unter Posteingang → <strong className="text-foreground">Pakete</strong> → Import.
+              Noch keine Pakete. Unter Posteingang → <strong className="text-foreground">Datei-Paket</strong> → Import.
             </p>
           ) : (
             records.map((rec) => {

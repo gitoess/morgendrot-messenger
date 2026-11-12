@@ -286,7 +286,7 @@ export function ContactPhonebookCard(props: ContactPhonebookCardProps) {
               className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 text-sm font-medium text-primary hover:bg-primary/15"
             >
               <MessageSquare className="h-4 w-4 shrink-0" aria-hidden />
-              Im Messenger verwenden
+              Chat öffnen
             </button>
           ) : null}
 

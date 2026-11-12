@@ -64,7 +64,7 @@ export function ChatViewEncryptedPartnerPanel(p: ChatViewEncryptedPartnerPanelPr
       {isGroupMode ? (
         <section aria-labelledby="encrypted-group-members">
           <h4 id="encrypted-group-members" className="mb-2 text-sm font-semibold text-foreground">
-            Gruppe — Handshake pro Mitglied
+            Handshake je Mitglied
           </h4>
           {groupMembers.length === 0 ? (
             <p className="text-[11px] text-muted-foreground">

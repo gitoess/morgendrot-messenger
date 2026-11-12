@@ -2681,6 +2681,9 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T26 | **Typo/Farbe überall lesbar** | UX | fortlaufend | Kein Lila als Fließtext; einheitliche foreground/muted — Start Einsatzleitung 2026-11-12 |
 | T27 | **Telefonbuch entschlacken** | UX | Messenger-Durchgang | Alarmgruppe nicht oben; Team-Roster nicht doppelt; Funk-Backup vs. Telegram-Backup klar; „Aus Team entfernen“ vs. Telefonbuch trennen; Icons/Avatare (Telegram-Inspiration); Notizen am Kontakt |
 | T28 | **Handbuch-Platz** | UX | mit T12/T17 | Nicht am Sendepfad „Online“ — App-Menü/Settings; Chat-Kopf prüfen |
+| T29 | **Klang & Magnet-Prefs** | UX | Messenger-Durchgang | Einstellungen → Erscheinungsbild: Ton an/aus, Hover-Widerstand; Vibration weglassen |
+| T30 | **Kontakt-Info = Mehr** | UX | Messenger-Durchgang | Kein Doppelklick-Zwang; Medien klickbar; IDs hinter „Mehr“; nur Namen in Sidebar |
+| T31 | **Posteingang Filter vs Composer** | UX | Messenger-Durchgang | „Nur verschlüsselt“ = Ansichtsfilter; Sendemodus nur Composer; pkg = Offline-Datei-Archiv; Auswahl ≠ Filter |
 
 **Nicht** parallel zu Session C / Zeitkapsel-Feldtest starten.
 

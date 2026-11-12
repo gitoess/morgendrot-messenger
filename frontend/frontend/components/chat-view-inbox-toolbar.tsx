@@ -352,12 +352,12 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger>
                   <Package className="mr-2 h-4 w-4 opacity-80" aria-hidden />
-                  Pakete
+                  Datei-Paket
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="min-w-[18rem]">
                   <p className="px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
-                    ECDH-verschlüsselt für einen Handshake-Partner. Import →{' '}
-                    <strong className="text-foreground">Paket-Archiv</strong> (nicht Posteingang).
+                    Offline-Datei (.morg-pkg) für einen verbundenen Partner — landet im{' '}
+                    <strong className="text-foreground">Archiv</strong>, nicht im Chat-Posteingang.
                   </p>
                   {morgPkgExportPartnerOptions.length > 0 && onMorgPkgExportRecipientChange ? (
                     <div className="space-y-1 border-b border-border px-2 py-2">

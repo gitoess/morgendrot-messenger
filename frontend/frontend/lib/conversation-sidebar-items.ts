@@ -80,10 +80,10 @@ export function resolveContactSidebarSubtitle(
 ): string {
   const e = entry ?? directory[address]
   const parts: string[] = []
-  if (/^0x[a-f0-9]{64}$/i.test(address)) parts.push(maskWalletAddress(address, 6, 4))
-  if (e?.telegramChatId?.trim()) parts.push(`TG ${e.telegramChatId.trim()}`)
-  if (e?.meshNodeId?.trim()) parts.push(`Funk ${e.meshNodeId.trim()}`)
-  return parts.join(' · ') || address
+  // Keine Wallet-Adressen in der Chat-Liste — nur Kanal-Hinweise.
+  if (e?.telegramChatId?.trim()) parts.push('Telegram')
+  if (e?.meshNodeId?.trim()) parts.push('Funk')
+  return parts.join(' · ')
 }
 
 export function buildConversationSidebarContacts(p: {
@@ -94,12 +94,16 @@ export function buildConversationSidebarContacts(p: {
   lastContacted: Readonly<Record<string, number>>
   hidden: ReadonlySet<string>
   sendPath?: ActiveSendPath
+  /** Eigene Wallet — nicht nochmals unter Direktchats („Ich“ ist separat). */
+  excludeAddress?: string
 }): ConversationSidebarContactItem[] {
   const byKey = new Map<string, ConversationSidebarContactItem>()
+  const exclude = (p.excludeAddress ?? '').trim().toLowerCase()
 
   for (const [addr, entry] of Object.entries(p.directory)) {
     const address = addr.trim().toLowerCase()
     if (!address || p.hidden.has(address) || !isDisplayableContactStorageKey(address)) continue
+    if (exclude && address === exclude) continue
     byKey.set(address, {
       kind: 'contact',
       key: `contact:${address}`,

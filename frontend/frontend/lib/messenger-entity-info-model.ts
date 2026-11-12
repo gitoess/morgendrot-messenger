@@ -105,18 +105,27 @@ export function buildContactInfoSections(p: {
   push(chain, field('last-mb', 'Letzte Mailbox (Verlauf)', meta.lastMailbox))
 
   const sections: MessengerInfoSection[] = []
-  if (identity.length) sections.push({ id: 'identity', title: 'Identität', fields: identity })
+  if (identity.length) {
+    sections.push({
+      id: 'identity',
+      title: 'Identität (IDs)',
+      fields: identity,
+      note: 'Wallet / Funk / Telegram — zum Kopieren, nicht der Anzeigename.',
+    })
+  }
   if (mailbox.length) {
     sections.push({
       id: 'mailboxes',
-      title: 'Mailboxen',
+      title: 'Mailboxen (Ziele)',
       fields: mailbox,
-      note: mailbox.length ? undefined : 'Keine Mailbox-Slots hinterlegt — unter Bearbeiten zuweisen.',
+      note: mailbox.length
+        ? 'Postfach-Object-IDs für diesen Kontakt — wohin Nachrichten landen können.'
+        : 'Keine Mailbox-Slots hinterlegt — unter Bearbeiten zuweisen.',
     })
   } else {
     sections.push({
       id: 'mailboxes',
-      title: 'Mailboxen',
+      title: 'Mailboxen (Ziele)',
       fields: [],
       note: 'Keine Mailbox-Slots hinterlegt — unter Bearbeiten / Mailbox zuweisen.',
     })
@@ -124,9 +133,9 @@ export function buildContactInfoSections(p: {
   if (chain.length) {
     sections.push({
       id: 'chain',
-      title: 'On-Chain',
+      title: 'Zuletzt in der Chain (Verlauf)',
       fields: chain,
-      note: 'TX/Mailbox aus dem lokalen Verlauf — nicht live vom Explorer.',
+      note: 'Aus dem lokalen Verlauf — nicht live vom Explorer. Package = aktives Move-Paket.',
     })
   }
   return sections

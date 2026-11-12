@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
-import { BookUser, Megaphone, MessageCircle, Settings2, User, Users } from 'lucide-react'
+import { BookUser, Info, Megaphone, MessageCircle, Settings2, User, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { InboxPartnerOption } from '@/frontend/components/chat-view-inbox-partner-strip'
@@ -16,7 +16,6 @@ import {
   readTelegramAlarmGroupMembership,
   TELEGRAM_ALARM_GROUP_JOIN_CHANGED_EVENT,
 } from '@/frontend/lib/telegram-alarm-group-prefs'
-import { maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
 import {
   readContactFavorites,
   readContactLastContacted,
@@ -75,6 +74,8 @@ export type ChatViewContactSidebarProps = {
     packageId?: string
     onOpenIotaSettings?: () => void
   }
+  /** Eigene Adresse — aus Direktchats filtern (kein zweites „Ich“). */
+  myAddress?: string
   className?: string
   /** Native Handy: keine Mindesthöhe — Parent scrollt. */
   compactNative?: boolean
@@ -88,42 +89,64 @@ function SidebarRow(p: {
   handshakeBadge?: ContactHandshakeBadgeKind
   icon?: React.ReactNode
   onClick: () => void
-  onDoubleClick?: () => void
+  onOpenMore?: () => void
+  moreLabel?: string
 }) {
   return (
-    <button
-      type="button"
-      onClick={p.onClick}
-      onDoubleClick={p.onDoubleClick}
+    <div
       className={cn(
-        'flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition-colors',
-        p.active ? 'bg-primary/15 text-foreground' : 'text-foreground hover:bg-muted/60'
+        'flex w-full items-stretch gap-0.5 rounded-xl',
+        p.active ? 'bg-primary/15 text-foreground' : 'text-foreground'
       )}
     >
-      {p.icon ? (
-        <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted/60 text-muted-foreground">
-          {p.icon}
-        </span>
-      ) : (
-        <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted/50 text-sm font-semibold uppercase text-muted-foreground">
-          {p.title.slice(0, 1)}
-        </span>
-      )}
-      <span className="min-w-0 flex-1">
-        <span className="flex items-center gap-1.5">
-          <span className="truncate text-sm font-semibold">{p.title}</span>
-          {p.handshakeBadge ? <ContactHandshakeBadge kind={p.handshakeBadge} compact /> : null}
-          {(p.unreadCount ?? 0) > 0 ? (
-            <span className="ml-auto inline-flex min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold leading-4 text-white">
-              {p.unreadCount! > 99 ? '99+' : p.unreadCount}
-            </span>
+      <button
+        type="button"
+        onClick={p.onClick}
+        className={cn(
+          'flex min-w-0 flex-1 items-start gap-3 rounded-xl px-3 py-3 text-left transition-colors',
+          p.active ? '' : 'hover:bg-muted/60'
+        )}
+      >
+        {p.icon ? (
+          <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted/60 text-muted-foreground">
+            {p.icon}
+          </span>
+        ) : (
+          <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted/50 text-sm font-semibold uppercase text-muted-foreground">
+            {p.title.slice(0, 1)}
+          </span>
+        )}
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-1.5">
+            <span className="truncate text-sm font-semibold">{p.title}</span>
+            {p.handshakeBadge ? <ContactHandshakeBadge kind={p.handshakeBadge} compact /> : null}
+            {(p.unreadCount ?? 0) > 0 ? (
+              <span className="ml-auto inline-flex min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold leading-4 text-white">
+                {p.unreadCount! > 99 ? '99+' : p.unreadCount}
+              </span>
+            ) : null}
+          </span>
+          {p.subtitle ? (
+            <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">{p.subtitle}</span>
           ) : null}
         </span>
-        {p.subtitle ? (
-          <span className="mt-0.5 block truncate font-mono text-[10px] text-muted-foreground">{p.subtitle}</span>
-        ) : null}
-      </span>
-    </button>
+      </button>
+      {p.onOpenMore ? (
+        <button
+          type="button"
+          className="my-1 mr-1 flex w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+          title={p.moreLabel ?? 'Mehr'}
+          aria-label={p.moreLabel ?? 'Mehr'}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            p.onOpenMore?.()
+          }}
+        >
+          <Info className="h-4 w-4" aria-hidden />
+        </button>
+      ) : null}
+    </div>
   )
 }
 
@@ -165,8 +188,18 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
         lastContacted,
         hidden,
         sendPath: sidebarPathFilter,
+        excludeAddress: p.myAddress ?? p.selfProfile?.myAddressLine,
       }),
-    [p.directory, p.partnerOptions, favorites, lastContacted, hidden, sidebarPathFilter]
+    [
+      p.directory,
+      p.partnerOptions,
+      favorites,
+      lastContacted,
+      hidden,
+      sidebarPathFilter,
+      p.myAddress,
+      p.selfProfile?.myAddressLine,
+    ]
   )
 
   const sendPathContactCount = useMemo(
@@ -195,10 +228,7 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
     [joinMetaTick]
   )
 
-  const selfAddress = (p.selfProfile?.myAddressLine || '').trim()
-  const selfSubtitle = /^0x[a-fA-F0-9]{64}$/i.test(selfAddress)
-    ? maskWalletAddress(selfAddress, 8, 6)
-    : 'Kontakt-ID & QR'
+  const selfSubtitle = 'Profil & QR'
 
   const q = (p.searchQuery ?? '').trim().toLowerCase()
   const filterItem = (item: ConversationSidebarItem) => {
@@ -243,11 +273,7 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
   const showGroupsSection = !q || filteredGroups.length > 0 || Boolean(showTelegramAlarm) || Boolean(p.onOpenGroupSettings)
   const showSelfRow =
     p.selfProfile &&
-    (!q ||
-      q === 'ich' ||
-      'ich'.startsWith(q) ||
-      selfAddress.toLowerCase().includes(q) ||
-      selfSubtitle.toLowerCase().includes(q))
+    (!q || q === 'ich' || 'ich'.startsWith(q) || selfSubtitle.toLowerCase().includes(q))
 
   const openSelfProfile = () => setSelfProfileOpen(true)
 
@@ -300,22 +326,10 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
               active={p.activeSelfSelected === true}
               icon={<User className="h-5 w-5" />}
               onClick={handleSelectSelf}
-              onDoubleClick={openSelfProfile}
+              onOpenMore={openSelfProfile}
+              moreLabel="Profil öffnen"
             />
           ) : null}
-
-          <SidebarRow
-            title="Alle"
-            subtitle={
-              sidebarPathFilter
-                ? sidebarAllSubtitleForSendPath(sidebarPathFilter, sendPathContactCount)
-                : sendPathContactCount > 0
-                  ? `${sendPathContactCount} Kontakte — alle Pfade`
-                  : 'Gesamter Posteingang — alle Pfade'
-            }
-            active={p.showAllActive}
-            onClick={p.onSelectAll}
-          />
 
           {showPinnwandSection && pinnwandItem ? (
             <section className="mt-2">
@@ -344,11 +358,11 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
                   <button
                     type="button"
                     onClick={() => p.onOpenGroupSettings?.()}
-                    className="inline-flex items-center gap-1 rounded-md border border-violet-500/40 bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold text-violet-950 hover:bg-violet-500/20 dark:text-violet-100"
-                    title="Gruppe anlegen · Team-Postfach · Team-Key erzeugen/rotieren"
+                    className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-semibold text-foreground hover:bg-muted"
+                    title="Gruppe anlegen · Team-Postfach · Geheimnis"
                   >
                     <Settings2 className="h-3 w-3" aria-hidden />
-                    Gruppe verwalten
+                    Verwalten
                   </button>
                 ) : null}
               </div>
@@ -364,40 +378,27 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
               ) : null}
               {filteredGroups.length === 0 && !showTelegramAlarm ? (
                 <p className="px-2 py-2 text-[11px] text-muted-foreground">
-                  Noch keine Gruppe — oben{' '}
-                  <span className="font-medium text-foreground">Gruppe verwalten</span> tippen
-                  (anlegen, Team-Postfach, Team-Key).
+                  Noch keine Gruppe — <span className="font-medium text-foreground">Verwalten</span> tippen.
                 </p>
               ) : null}
               {filteredGroups.map((g) => (
-                <div key={g.key} className="flex items-stretch gap-0.5">
-                  <div className="min-w-0 flex-1">
-                    <SidebarRow
-                      title={g.displayName}
-                      subtitle={`${g.memberCount} Mitglieder`}
-                      active={p.activeGroupId === g.groupId}
-                      icon={<Users className="h-4 w-4" />}
-                      onClick={() => p.onSelectGroup(g.groupId)}
-                      onDoubleClick={() => p.onOpenGroupSettings?.()}
-                    />
-                  </div>
-                  {p.onOpenGroupSettings ? (
-                    <button
-                      type="button"
-                      className="mt-1 mb-1 mr-1 flex h-auto w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
-                      title={`„${g.displayName}“ verwalten`}
-                      aria-label={`Gruppe ${g.displayName} verwalten`}
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        p.onSelectGroup(g.groupId)
-                        p.onOpenGroupSettings?.()
-                      }}
-                    >
-                      <Settings2 className="h-4 w-4" aria-hidden />
-                    </button>
-                  ) : null}
-                </div>
+                <SidebarRow
+                  key={g.key}
+                  title={g.displayName}
+                  subtitle={`${g.memberCount} Mitglieder`}
+                  active={p.activeGroupId === g.groupId}
+                  icon={<Users className="h-4 w-4" />}
+                  onClick={() => p.onSelectGroup(g.groupId)}
+                  onOpenMore={
+                    p.onOpenGroupSettings
+                      ? () => {
+                          p.onSelectGroup(g.groupId)
+                          p.onOpenGroupSettings?.()
+                        }
+                      : undefined
+                  }
+                  moreLabel={`„${g.displayName}“ verwalten`}
+                />
               ))}
             </section>
           ) : null}
@@ -406,6 +407,18 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
             <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               Direktchats
             </p>
+            <SidebarRow
+              title="Alle"
+              subtitle={
+                sidebarPathFilter
+                  ? sidebarAllSubtitleForSendPath(sidebarPathFilter, sendPathContactCount)
+                  : sendPathContactCount > 0
+                    ? `${sendPathContactCount} Kontakte`
+                    : 'Gesamter Posteingang'
+              }
+              active={p.showAllActive}
+              onClick={p.onSelectAll}
+            />
             {filteredContacts.length === 0 ? (
               <p className="px-2 py-4 text-xs text-muted-foreground">
                 {sidebarPathFilter
@@ -417,12 +430,13 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
                 <SidebarRow
                   key={c.key}
                   title={c.displayName}
-                  subtitle={c.subtitle}
+                  subtitle={c.subtitle || undefined}
                   active={p.activePartnerKey != null && p.activePartnerKey.toLowerCase() === c.address.toLowerCase()}
                   unreadCount={c.unreadCount}
                   handshakeBadge={handshakeKindFor(c.address)}
                   onClick={() => p.onSelectContact(c.address)}
-                  onDoubleClick={() => p.onOpenContactDetail(c.address, c.entry)}
+                  onOpenMore={() => p.onOpenContactDetail(c.address, c.entry)}
+                  moreLabel={`Mehr zu ${c.displayName}`}
                 />
               ))
             )}
@@ -431,8 +445,8 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
 
         <div className="border-t border-border px-3 py-2 text-[10px] text-muted-foreground">
           <span className="inline-flex items-center gap-1">
-            <BookUser className="h-3 w-3" aria-hidden />
-            Kontakt doppelklicken → Info · Gruppenname/⋮ → Info · Zahnrad → Verwalten · „Ich“ → Profil
+            <Info className="h-3 w-3" aria-hidden />
+            Info-Symbol → Mehr (wie bei NFT) · „Ich“ → Profil
           </span>
         </div>
       </aside>
