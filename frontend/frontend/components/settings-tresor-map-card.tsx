@@ -57,9 +57,9 @@ export function SettingsTresorMapCard() {
           <span>
             <span className="font-medium text-foreground">4. Nur-Browser-Speicher (kein eigener Menüpunkt)</span>
             <span className="mt-0.5 block text-[12px] text-muted-foreground">
-              Früher „Sidecar“ genannt: Daten <strong className="text-foreground">nur in diesem Browser</strong>{' '}
-              (localStorage), <em>nicht</em> in der Tresor-Datei. Beispiele: „Passphrase merken“, Liste der
-              NFT-Schlüsselkarten, Team-Key-Merker. Anderer PC / anderer Browser = weg, bis du neu merkst.
+              Früher „Sidecar“: verschlüsselte Merker <strong className="text-foreground">nur in diesem Browser</strong>{' '}
+              (localStorage), <em>nicht</em> in der Tresor-Datei — Passphrasen, NFT-Schlüsselkarten-Liste, Team-Keys.
+              Löschen: Sicherheit → Notfall → „Nur Browser-Geheimnisse“. Anderer PC/Browser = neu merken.
             </span>
           </span>
         </li>

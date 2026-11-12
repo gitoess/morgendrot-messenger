@@ -2,52 +2,121 @@
 
 import { useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
-import { emergencyPurge, vaultLockCommand, clearLocalHistory } from '@/frontend/lib/api'
+import { emergencyPurge, vaultLockCommand, clearLocalHistory, vaultDeleteLocal } from '@/frontend/lib/api'
 import { lockLocalSecretVaults, purgeLocalSecretVaults } from '@/frontend/lib/local-secret-vaults'
+import {
+  EINSATZ_END_CACHE_WIPED_EVENT,
+  performEinsatzEndCacheWipe,
+  wipeAllInboxCacheKeys,
+} from '@/frontend/lib/einsatz-end-cache-wipe'
+
+type PurgeScope =
+  | 'lock_session'
+  | 'messages'
+  | 'browser_secrets'
+  | 'device_local'
+  | 'full'
+  | 'local_vault_file'
+
+function notifyInboxRamCleared(): void {
+  try {
+    window.dispatchEvent(new CustomEvent(EINSATZ_END_CACHE_WIPED_EVENT))
+  } catch {
+    /* ignore */
+  }
+}
 
 export function SettingsEmergencyPurgeSection() {
   const [confirmPurge, setConfirmPurge] = useState(false)
   const [confirmText, setConfirmText] = useState('')
-  const [purgeScope, setPurgeScope] = useState<
-    'full' | 'local_cache' | 'lock_session' | 'chat_passphrases'
-  >('full')
+  const [purgeScope, setPurgeScope] = useState<PurgeScope>('lock_session')
   const [processing, setProcessing] = useState(false)
   const [statusMsg, setStatusMsg] = useState('')
+
+  const needsStrongConfirm = purgeScope === 'full' || purgeScope === 'local_vault_file'
 
   const handlePurge = async () => {
     if (confirmText !== 'LÖSCHEN') return
     setProcessing(true)
     setStatusMsg('')
     try {
-      if (purgeScope === 'full') {
-        const res = await emergencyPurge()
-        if (res.ok) purgeLocalSecretVaults()
-        setStatusMsg(res.ok ? 'Vault on-chain notfall-gelöscht + lokaler Inbox-Cache geschreddert.' : res.error || 'Fehler')
+      if (purgeScope === 'lock_session') {
+        const res = await vaultLockCommand()
+        if (res.ok) lockLocalSecretVaults()
+        setStatusMsg(res.ok ? res.message || 'Tresor gesperrt, Keys aus RAM.' : res.error || res.message || 'Fehler')
         if (res.ok) {
           setConfirmPurge(false)
           setConfirmText('')
         }
-      } else if (purgeScope === 'local_cache') {
+        return
+      }
+
+      if (purgeScope === 'messages') {
+        wipeAllInboxCacheKeys()
+        notifyInboxRamCleared()
         const res = await clearLocalHistory({ shred: true })
-        if (res.ok) purgeLocalSecretVaults()
         setStatusMsg(
           res.ok
-            ? `${res.message || 'Lokaler Klartext-Inbox-Cache entfernt.'} Passphrasen-Sidecars geleert.`
+            ? `${res.message || 'Lokaler Nachrichten-Cache entfernt.'} Browser-Posteingang geleert. On-Chain-Nachrichten bleiben.`
             : res.error || 'Fehler'
         )
         if (res.ok) {
           setConfirmPurge(false)
           setConfirmText('')
         }
-      } else if (purgeScope === 'chat_passphrases') {
+        return
+      }
+
+      if (purgeScope === 'browser_secrets') {
         purgeLocalSecretVaults()
-        setStatusMsg('Chat-/ImageNFT-Passphrasen + Team-Keys (RAM + Sidecars) gelöscht.')
+        setStatusMsg('Browser-Geheimnisse geleert (Passphrasen, Team-Keys, NFT-Merker). Tresor-Datei unverändert.')
         setConfirmPurge(false)
         setConfirmText('')
-      } else {
-        const res = await vaultLockCommand()
-        if (res.ok) lockLocalSecretVaults()
-        setStatusMsg(res.ok ? res.message || 'Tresor gesperrt, Keys aus RAM.' : res.error || res.message || 'Fehler')
+        return
+      }
+
+      if (purgeScope === 'device_local') {
+        const wipe = await performEinsatzEndCacheWipe({ clearServerInbox: true, clearTransportQueues: true })
+        setStatusMsg(
+          wipe.ok
+            ? `Gerät lokal aufgeräumt (Nachrichten-Cache, Browser-Spuren, Geheimnisse). Tresor-Datei und Chain unverändert.${
+                wipe.serverInboxCleared ? '' : wipe.serverError ? ` Server: ${wipe.serverError}` : ''
+              }`
+            : wipe.serverError || 'Fehler beim Aufräumen'
+        )
+        if (wipe.ok || wipe.removedLocalStorageKeys > 0) {
+          setConfirmPurge(false)
+          setConfirmText('')
+        }
+        return
+      }
+
+      if (purgeScope === 'full') {
+        const res = await emergencyPurge()
+        if (res.ok) {
+          wipeAllInboxCacheKeys()
+          notifyInboxRamCleared()
+          purgeLocalSecretVaults()
+        }
+        setStatusMsg(
+          res.ok
+            ? `${res.message || 'On-Chain-Tresor gelöscht.'} Browser-Nachrichten/Geheimnisse geleert. Lokale Datei .morgendrot-vault bleibt — ggf. „Lokale Tresor-Datei“ wählen.`
+            : res.error || 'Fehler'
+        )
+        if (res.ok) {
+          setConfirmPurge(false)
+          setConfirmText('')
+        }
+        return
+      }
+
+      if (purgeScope === 'local_vault_file') {
+        const res = await vaultDeleteLocal()
+        setStatusMsg(
+          res.ok
+            ? res.message || 'Lokale Tresor-Datei gelöscht (nur wenn Chain-Backup vorhanden).'
+            : res.error || res.message || 'Fehler'
+        )
         if (res.ok) {
           setConfirmPurge(false)
           setConfirmText('')
@@ -65,31 +134,37 @@ export function SettingsEmergencyPurgeSection() {
         <div>
           <h4 className="font-semibold text-red-400">Notfall-Löschung</h4>
           <p className="mt-1 text-sm text-muted-foreground">
-            On-Chain-Vault-Purge ist unwiderruflich. Scope wählen, dann mit „LÖSCHEN“ bestätigen.
+            Scope wählen — jeder Schalter löscht etwas anderes. On-Chain-Purge und Tresor-Datei sind unwiderruflich.
+            Bestätigung: <span className="font-mono text-red-400">LÖSCHEN</span>.
           </p>
         </div>
       </div>
       <div className="space-y-2 text-sm">
         <label className="flex cursor-pointer items-start gap-2">
-          <input type="radio" name="purge-scope-settings" checked={purgeScope === 'full'} onChange={() => setPurgeScope('full')} className="mt-1" />
+          <input
+            type="radio"
+            name="purge-scope-settings"
+            checked={purgeScope === 'lock_session'}
+            onChange={() => setPurgeScope('lock_session')}
+            className="mt-1"
+          />
           <span>
-            <strong className="text-foreground">Vollständig (Vault on-chain)</strong>
-            <span className="block text-muted-foreground">Chain-Purge + Inbox-Cache schreddern.</span>
+            <strong className="text-foreground">Sitzung sperren</strong>
+            <span className="block text-muted-foreground">Keys aus RAM; Dateien bleiben. Sanftester Knopf.</span>
           </span>
         </label>
         <label className="flex cursor-pointer items-start gap-2">
-          <input type="radio" name="purge-scope-settings" checked={purgeScope === 'local_cache'} onChange={() => setPurgeScope('local_cache')} className="mt-1" />
+          <input
+            type="radio"
+            name="purge-scope-settings"
+            checked={purgeScope === 'messages'}
+            onChange={() => setPurgeScope('messages')}
+            className="mt-1"
+          />
           <span>
-            <strong className="text-foreground">Nur lokale Klartext-Spuren</strong>
-            <span className="block text-muted-foreground">Nur .inbox.enc — keine Chain-TX.</span>
-          </span>
-        </label>
-        <label className="flex cursor-pointer items-start gap-2">
-          <input type="radio" name="purge-scope-settings" checked={purgeScope === 'lock_session'} onChange={() => setPurgeScope('lock_session')} className="mt-1" />
-          <span>
-            <strong className="text-foreground">Nur Sitzung sperren</strong>
+            <strong className="text-foreground">Nur Nachrichten lokal</strong>
             <span className="block text-muted-foreground">
-              Keys aus RAM; Chat-Passphrasen-Ciphertext bleibt bis Unlock.
+              Server-Cache (.inbox.enc) + Browser-Posteingang. Chain-Nachrichten und Medien-NFTs bleiben.
             </span>
           </span>
         </label>
@@ -97,25 +172,75 @@ export function SettingsEmergencyPurgeSection() {
           <input
             type="radio"
             name="purge-scope-settings"
-            checked={purgeScope === 'chat_passphrases'}
-            onChange={() => setPurgeScope('chat_passphrases')}
+            checked={purgeScope === 'browser_secrets'}
+            onChange={() => setPurgeScope('browser_secrets')}
             className="mt-1"
           />
           <span>
-            <strong className="text-foreground">Nur lokale Geheimnisse</strong>
+            <strong className="text-foreground">Nur Browser-Geheimnisse</strong>
             <span className="block text-muted-foreground">
-              RAM + Sidecars (Chat-/NFT-Passphrasen, Team-Keys) — kein Chain-Purge.
+              Passphrasen-/Team-/NFT-Merker in diesem Browser — nicht die Tresor-Datei.
+            </span>
+          </span>
+        </label>
+        <label className="flex cursor-pointer items-start gap-2">
+          <input
+            type="radio"
+            name="purge-scope-settings"
+            checked={purgeScope === 'device_local'}
+            onChange={() => setPurgeScope('device_local')}
+            className="mt-1"
+          />
+          <span>
+            <strong className="text-foreground">Gerät lokal aufräumen</strong>
+            <span className="block text-muted-foreground">
+              Nachrichten-Cache + Browser-Spuren + Geheimnisse (wie Einsatz beenden). Kein Chain-Purge, Tresor-Datei bleibt.
+            </span>
+          </span>
+        </label>
+        <label className="flex cursor-pointer items-start gap-2">
+          <input
+            type="radio"
+            name="purge-scope-settings"
+            checked={purgeScope === 'full'}
+            onChange={() => setPurgeScope('full')}
+            className="mt-1"
+          />
+          <span>
+            <strong className="text-foreground">Tresor on-chain löschen</strong>
+            <span className="block text-muted-foreground">
+              Unwiderruflich: Chain-Backup weg + lokale Nachrichten/Geheimnisse. Datei .morgendrot-vault bleibt erhalten.
+            </span>
+          </span>
+        </label>
+        <label className="flex cursor-pointer items-start gap-2">
+          <input
+            type="radio"
+            name="purge-scope-settings"
+            checked={purgeScope === 'local_vault_file'}
+            onChange={() => setPurgeScope('local_vault_file')}
+            className="mt-1"
+          />
+          <span>
+            <strong className="text-foreground">Lokale Tresor-Datei löschen</strong>
+            <span className="block text-muted-foreground">
+              Nur wenn On-Chain-Backup existiert (Sicherheit). Keys/Notizen/Passwörter auf dem Datenträger weg.
             </span>
           </span>
         </label>
       </div>
+      <p className="text-[11px] leading-relaxed text-muted-foreground">
+        <span className="font-medium text-foreground">Nur Medien?</span> Gibt es nicht als eigenen Schalter —
+        Bilder stecken in Nachrichten bzw. als NFT (Posteingang → On-Chain / NFT → dort brennen). Einzelne
+        Chat-Nachrichten on-chain: Posteingang → Auswahl → Burn.
+      </p>
       {!confirmPurge ? (
         <button
           type="button"
           onClick={() => setConfirmPurge(true)}
           className="w-full rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-center text-sm font-semibold text-red-400 hover:bg-red-500/20"
         >
-          Notfall-Löschung starten
+          {needsStrongConfirm ? 'Unwiderrufliche Löschung starten' : 'Löschung starten'}
         </button>
       ) : (
         <div className="space-y-3">

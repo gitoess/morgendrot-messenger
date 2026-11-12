@@ -305,13 +305,6 @@ export function SettingsView({
 
       <SettingsCollapsiblePanel open={activeCategory === 'security'} title="Sicherheit & Notfall" icon={<Shield className="h-5 w-5" />}>
         <SettingsTresorMapCard />
-        <div className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
-          <p className="font-medium text-foreground">Hash &amp; Prüfen</p>
-          <p className="mt-1 text-[12px]">
-            Gleiches Werkzeug wie unter Posteingang → Optionen → Hash &amp; Prüfen… (SHA-256). Hier kein zweites
-            Panel, damit nichts doppelt wirkt.
-          </p>
-        </div>
         <SettingsEmergencyPurgeSection />
       </SettingsCollapsiblePanel>
 

@@ -2,33 +2,32 @@
 
 Kurzreferenz: **was** welcher Schalter löscht und **was nicht**.
 
-## UI (Messenger-Frontend) – drei Umfänge
+## UI (Einstellungen → Sicherheit → Notfall-Löschung)
 
-| Option | Chain | Lokale Datei `.morgendrot-vault` (oder `VAULT_FILE`) | Inbox-Klartext-Cache (`.inbox.enc` neben dem Vault) | RAM (Keys / Passwort) |
-|--------|--------|------------------------------------------------------|------------------------------------------------------|-------------------------|
-| **Vollständig** (`emergencyPurge` / `/emergency-purge`) | Ja: Vault-Objekt im Registry wird per PTB entfernt (`enable` + `purge`). | **Bleibt** – wird nicht gelöscht; Inhalt ist weiter verschlüsselt. On-Chain-Backup ist danach weg. | Ja, **geschreddert** (überschreiben + löschen). | Wallet/Session wie nach Neustart ohne Unlock |
-| **Nur lokale Klartext-Spuren** (`clearLocalHistory` mit shred) | Nein | Unverändert | Ja, geschreddert | Unverändert (wenn Tresor offen) |
-| **Nur Sitzung / Tresor sperren** (`/vault-lock`) | Nein | Unverändert | Ja, geschreddert | Keys und Wallet-Passwort aus RAM entfernt |
+| Option | Chain-Tresor | Lokale Datei `.morgendrot-vault` | Inbox-Cache (`.inbox.enc` + Browser-Liste) | Browser-Geheimnisse (Sidecars) | RAM |
+|--------|--------------|-----------------------------------|--------------------------------------------|--------------------------------|-----|
+| **Sitzung sperren** | Nein | Bleibt | oft geschreddert via `/vault-lock` | gesperrt (Ciphertext bleibt) | Keys weg |
+| **Nur Nachrichten lokal** | Nein | Bleibt | Ja (Server + Browser) | Nein | Inbox-RAM leer |
+| **Nur Browser-Geheimnisse** | Nein | Bleibt | Nein | Ja (`purgeLocalSecretVaults`) | Session-PW weg |
+| **Gerät lokal aufräumen** | Nein | Bleibt | Ja + Einsatz-Spuren | Ja | wie Einsatz-Ende |
+| **Tresor on-chain löschen** | Ja (`/emergency-purge`) | **Bleibt** | Ja | Ja | — |
+| **Lokale Tresor-Datei löschen** | Nein | Ja (`/vault-delete-local`, nur mit Chain-Backup) | Nein | Nein | — |
 
-**Wichtig:** Eine vollständige „alles weg vom Datenträger“-Löschung der Vault-Datei passiert **nicht** automatisch. Nach Notfall-Purge die Datei bei Bedarf **manuell** löschen (und ggf. weitere Artefakte: `.morgendrot-partner`, Logs, …).
+**Nur Medien:** kein eigener Scope — Bilder in Nachrichten bzw. NFT (On-Chain/NFT brennen). Einzelne Chain-Msgs: Posteingang → Burn.
 
-## Voraussetzungen (Voll-Purge)
+## Voraussetzungen (On-Chain-Purge)
 
 - `ENABLE_PURGE=true`
 - `VAULT_REGISTRY_ID` gesetzt
 - Wallet kann signieren (Gas)
 - Implementierung: `src/messenger-nest/messenger-command-handler.ts` (`/emergency-purge`)
 
-## Verwandte Befehle (nicht identisch)
+## Verwandt
 
-- **`/purge-key`**, **`/purge-ticket`**, **`/purge-handshake`**, **`/purge-msg`**: gezielte Chain-/Mailbox-Löschungen – anderer Zweck als Vault-Notfall-Purge.
-- **`POST /api/clear-local-history`**: wie „nur lokaler Cache“ oben.
-
-## Aufräum-Status (Projekt)
-
-
-**Verwandt (operativ, nicht Purge-Technik):** **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`** — wen man im Ernstfall erreicht, Brücken zur professionellen Hilfe.
+- `POST /api/clear-local-history` — Server-Inbox-Cache
+- `/purge-msg`, `/purge-key`, … — gezielte Chain-Objekte, nicht Vault-Notfall
+- Einsatz beenden — `performEinsatzEndCacheWipe` (gleiche Browser-Aufräumlogik wie „Gerät lokal“)
 
 ---
 
-*Technische Quelle: `purgeInboxCache` / `inboxCachePath` in `src/vault-local.ts`, Emergency-Purge in `messenger-command-handler.ts`.*
+*Stand: 2026-11-12 — UI-Scopes an echten APIs ausgerichtet.*
