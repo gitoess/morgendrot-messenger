@@ -98,8 +98,11 @@ export function DashboardIotaActivityCard({ compact = false }: { compact?: boole
                 >
                   <span className="min-w-0 flex-1">
                     <span className="font-semibold text-foreground">{iotaActivityKindLabel(a.kind)}</span>
-                    <span className="ml-1 text-[9px] text-muted-foreground" aria-hidden>
-                      · 2×
+                    <span
+                      className="ml-1 text-[9px] text-muted-foreground"
+                      title="Doppelklick auf die Zeile: IDs anzeigen"
+                    >
+                      · 2× tippen
                     </span>
                     {' · '}
                     {when}

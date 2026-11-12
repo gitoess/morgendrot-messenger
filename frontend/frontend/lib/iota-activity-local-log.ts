@@ -105,15 +105,23 @@ function nftToIota(a: NftActivityEntry): IotaActivityEntry {
     a.kind === 'mint'
       ? 'NFT Mint'
       : a.kind === 'sent'
-        ? 'NFT gesendet'
+        ? a.label?.includes('Zeitkapsel')
+          ? 'NFT verliehen'
+          : 'NFT gesendet'
         : a.kind === 'received'
-          ? 'NFT empfangen'
+          ? a.label?.includes('Zeitkapsel')
+            ? 'NFT zurück'
+            : 'NFT empfangen'
           : 'NFT vernichtet'
   return {
     id: `nft:${a.id}`,
     atMs: a.atMs,
     kind,
-    summary: a.label ? `${label}: ${a.label}` : label,
+    summary: a.label
+      ? a.label.includes('Zeitkapsel')
+        ? `${label}: ${a.label.replace(/^Zeitkapsel[:\s-]*/i, '').trim() || a.label}`
+        : `${label}: ${a.label}`
+      : label,
     objectId: a.objectId,
     ...(a.counterparty ? { counterparty: a.counterparty } : {}),
     ...(a.digest ? { digest: a.digest } : {}),

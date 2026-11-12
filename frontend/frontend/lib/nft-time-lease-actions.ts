@@ -271,6 +271,23 @@ export async function createNftTimeLease(input: {
       status: 'active',
       createDigest: out.digest,
     })
+    try {
+      const { recordNftActivity, noteNftNoLongerOwned } = await import(
+        '@/frontend/lib/nft-activity-local-log'
+      )
+      const oid = input.nftObjectId.trim().toLowerCase()
+      const borrower = input.borrowerAddress.trim().toLowerCase()
+      recordNftActivity({
+        kind: 'sent',
+        objectId: oid,
+        counterparty: borrower,
+        digest: out.digest,
+        label: `Zeitkapsel-Verleih → ${borrower.slice(0, 10)}…`,
+      })
+      noteNftNoLongerOwned(oid)
+    } catch {
+      /* Aktivität lokal optional */
+    }
     return {
       ok: true,
       digest: out.digest,
@@ -327,6 +344,25 @@ export async function returnEarlyNftTimeLease(input: {
       return { ok: false, error: mapLeaseAbortError('return_early', out.errorDetail) }
     }
     patchNftTimeLeaseLocal(input.leaseObjectId, { status: 'returned' })
+    try {
+      const { listNftTimeLeasesLocal } = await import('@/frontend/lib/nft-time-lease-local-store')
+      const row = listNftTimeLeasesLocal().find((l) => l.leaseObjectId === input.leaseObjectId)
+      const nftId = row?.nftObjectId?.trim().toLowerCase()
+      if (nftId) {
+        const { recordNftActivity, noteNftNowOwned } = await import(
+          '@/frontend/lib/nft-activity-local-log'
+        )
+        recordNftActivity({
+          kind: 'received',
+          objectId: nftId,
+          digest: out.digest,
+          label: 'Zeitkapsel: früh zurückgegeben (Borrower)',
+        })
+        noteNftNowOwned(nftId)
+      }
+    } catch {
+      /* optional */
+    }
     return { ok: true, digest: out.digest, leaseObjectId: input.leaseObjectId }
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }
@@ -427,6 +463,25 @@ export async function reclaimNftTimeLease(input: {
       return { ok: false, error: mapLeaseAbortError('reclaim', out.errorDetail) }
     }
     patchNftTimeLeaseLocal(input.leaseObjectId, { status: 'reclaimed' })
+    try {
+      const { listNftTimeLeasesLocal } = await import('@/frontend/lib/nft-time-lease-local-store')
+      const row = listNftTimeLeasesLocal().find((l) => l.leaseObjectId === input.leaseObjectId)
+      const nftId = row?.nftObjectId?.trim().toLowerCase()
+      if (nftId) {
+        const { recordNftActivity, noteNftNowOwned } = await import(
+          '@/frontend/lib/nft-activity-local-log'
+        )
+        recordNftActivity({
+          kind: 'received',
+          objectId: nftId,
+          digest: out.digest,
+          label: 'Zeitkapsel: Verleih zurückgeholt',
+        })
+        noteNftNowOwned(nftId)
+      }
+    } catch {
+      /* optional */
+    }
     return { ok: true, digest: out.digest, leaseObjectId: input.leaseObjectId }
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }
