@@ -37,7 +37,10 @@ import {
   UserPlus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import { ChatMessageBody } from '@/frontend/components/chat-message-body'
+import { isNftGateMessageWire } from '@/frontend/lib/nft-gate-dek-capsule'
+import { isPassphraseMessageWire } from '@/frontend/lib/passphrase-message-crypto'
 import { parseHandoffZipWire } from '@/frontend/lib/handoff-iota-wire'
 import { queueHandoffZipFromInbox } from '@/frontend/lib/handoff-pending-inbox'
 import {
@@ -522,12 +525,33 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   <DropdownMenuItem
                     onClick={() => {
                       const raw = `${row.msg.content ?? ''}`
-                      void navigator.clipboard.writeText(raw).catch(() => undefined)
+                      void navigator.clipboard.writeText(raw).then(
+                        () => {
+                          if (isPassphraseMessageWire(raw)) {
+                            toast.message('PWMSG-Wire kopiert — Optionen → Wire einfügen kann das lesen.')
+                          } else if (isNftGateMessageWire(raw)) {
+                            toast.message(
+                              'NFT-Gate-Wire kopiert — Entschlüsseln in der Nachrichten-Zeile (nicht Wire einfügen).'
+                            )
+                          } else if (row.msg.encrypted) {
+                            toast.message(
+                              'Inhalt kopiert. ECDH/Envelope: Lesen braucht Handshake — Wire einfügen nur für PWMSG.'
+                            )
+                          } else {
+                            toast.message('Inhalt kopiert.')
+                          }
+                        },
+                        () => toast.error('Kopieren fehlgeschlagen')
+                      )
                     }}
-                    title="Rohinhalt / Wire in die Zwischenablage"
+                    title="Rohinhalt der Zeile kopieren (bei PWMSG = Wire für „Wire einfügen“)"
                   >
                     <Copy className="mr-2 h-4 w-4" />
-                    Wire kopieren
+                    {isPassphraseMessageWire(`${row.msg.content ?? ''}`)
+                      ? 'PWMSG-Wire kopieren'
+                      : isNftGateMessageWire(`${row.msg.content ?? ''}`)
+                        ? 'NFT-Gate-Wire kopieren'
+                        : 'Inhalt kopieren'}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     disabled={!canAddContact}

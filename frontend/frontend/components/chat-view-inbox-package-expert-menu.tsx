@@ -95,9 +95,15 @@ export function ChatViewInboxPackageExpertMenu(p: ChatViewInboxPackageExpertMenu
         </DropdownMenuLabel>
         <p className="px-2 pb-2 text-[10px] leading-snug text-muted-foreground">
           Die <strong className="text-foreground">0x…-Zahl</strong> ist die On-Chain-Programm-ID (Smart Contract),
-          mit der Mailboxen/Nachrichten gebaut wurden — <strong className="text-foreground">keine Wallet-Adresse</strong>{' '}
-          und <strong className="text-foreground">kein</strong> Datei-Paket (.morg-pkg).
-          Alltag: nichts ändern. Temporär nur, um Nachrichten eines <em>älteren</em> Programm-Standes nachzuschlagen.
+          mit der Mailboxen gebaut wurden — <strong className="text-foreground">keine Wallet-Adresse</strong>,{' '}
+          <strong className="text-foreground">kein</strong> .morg-pkg.
+        </p>
+        <p className="px-2 pb-2 text-[10px] leading-snug text-muted-foreground">
+          <strong className="text-foreground">Warum oft nur eine?</strong> Die Liste kommt aus Deploy-Historie +
+          Posteingang. Ein frisches/einmaliges Setup kennt nur die aktuelle ID — das ist normal. Andere IDs
+          brauchst du nur nach <em>Contract-Upgrade</em> / altem Netz, um alte Nachrichten noch zu finden.
+          Alltag: <strong className="text-foreground">nicht wechseln</strong>. Andere ID = unten eintippen (nicht
+          aus einer magischen Auswahlliste).
         </p>
         {canonical ? (
           <p className="px-2 pb-1 font-mono text-[10px] text-foreground/90" title={canonical}>
@@ -156,26 +162,36 @@ export function ChatViewInboxPackageExpertMenu(p: ChatViewInboxPackageExpertMenu
             Zurück zum aktiven Vertrag
           </DropdownMenuItem>
         ) : null}
-        {packageIdSuggestions.length > 0 ? (
+        {packageIdSuggestions.filter((id) => normalizePackageIdHex(id) !== canonical).length > 0 ? (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground">
-              Bekannte Programm-IDs ({packageIdSuggestions.length})
+              Weitere bekannte Programm-IDs (ältere Deploys)
             </DropdownMenuLabel>
-            {packageIdSuggestions.slice(0, 8).map((id) => (
-              <DropdownMenuItem
-                key={id}
-                disabled={packageIdBusy}
-                onSelect={(e) => {
-                  e.preventDefault()
-                  void onApplyTemporary(id)
-                }}
-              >
-                <span className="font-mono text-[10px]">{maskPackageIdForUi(id)}</span>
-              </DropdownMenuItem>
-            ))}
+            {packageIdSuggestions
+              .filter((id) => normalizePackageIdHex(id) !== canonical)
+              .slice(0, 8)
+              .map((id) => (
+                <DropdownMenuItem
+                  key={id}
+                  disabled={packageIdBusy}
+                  onSelect={(e) => {
+                    e.preventDefault()
+                    void onApplyTemporary(id)
+                  }}
+                >
+                  <span className="font-mono text-[10px]">{maskPackageIdForUi(id)}</span>
+                </DropdownMenuItem>
+              ))}
           </>
-        ) : null}
+        ) : (
+          <>
+            <DropdownMenuSeparator />
+            <p className="px-2 py-1.5 text-[10px] text-muted-foreground">
+              Keine weiteren Programm-IDs bekannt — Auswahl „nur aktuell“ ist erwartet, kein Fehler.
+            </p>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )
