@@ -114,22 +114,32 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
   const scanQr = async () => {
     const s = await startScan()
     if ('error' in s) return
+    const contactExtras = parseContactQrPayload(s.bundleJson)
     const peering = parsePeeringQrPayload(s.bundleJson)
+    if (contactExtras) {
+      const next: ContactPhonebookFormValues = {
+        ...form,
+        address: contactExtras.address,
+        label: contactExtras.displayName ?? form.label,
+        mailboxPrivateId:
+          contactExtras.mailboxPrivateId ?? contactExtras.mailboxObjectId ?? form.mailboxPrivateId,
+        mailboxSharedId: contactExtras.mailboxSharedId ?? form.mailboxSharedId,
+        mailboxTeamId: contactExtras.mailboxTeamId ?? form.mailboxTeamId,
+        mailboxBufferId: contactExtras.mailboxBufferId ?? form.mailboxBufferId,
+      }
+      setForm(next)
+      if (hasExtraMailboxSlots(next)) setShowExtraMailboxes(true)
+      if (onScanImport) await onScanImport(next)
+      return
+    }
     if (!peering) return
     applyPeeringQrImport(peering)
-    const contactExtras = parseContactQrPayload(s.bundleJson)
     const next: ContactPhonebookFormValues = {
       ...form,
       address: peering.address,
       label: peering.displayName ?? form.label,
-      mailboxPrivateId:
-        contactExtras?.mailboxPrivateId ?? contactExtras?.mailboxObjectId ?? form.mailboxPrivateId,
-      mailboxSharedId: contactExtras?.mailboxSharedId ?? form.mailboxSharedId,
-      mailboxTeamId: contactExtras?.mailboxTeamId ?? form.mailboxTeamId,
-      mailboxBufferId: contactExtras?.mailboxBufferId ?? form.mailboxBufferId,
     }
     setForm(next)
-    if (hasExtraMailboxSlots(next)) setShowExtraMailboxes(true)
     if (onScanImport) await onScanImport(next)
   }
 
@@ -148,8 +158,11 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
             className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             <QrCode className="h-5 w-5" aria-hidden />
-            QR-Code scannen
+            Kontakt-/Peering-QR scannen
           </button>
+          <p className="text-[10px] text-muted-foreground">
+            Liest Morgendrot-Kontakt-QR oder Peering-QR (Kamera). Andere QR-Formate werden ignoriert.
+          </p>
 
           <div className="space-y-3">
             <div className="space-y-1.5">
@@ -267,7 +280,7 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
                     onClick={() => setShowExtraMailboxes(true)}
                     className="text-[10px] font-medium text-primary underline hover:no-underline"
                   >
-                    Team / Einsatz / Puffer eintragen
+                    Weitere Mailboxen (Team / Einsatz / Zwischenlager)
                   </button>
                 )}
               </div>

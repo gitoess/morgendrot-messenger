@@ -1,9 +1,9 @@
 'use client'
 
 import type { ApiStatus } from '@/frontend/lib/api'
+import { DashboardBossQuickActions } from '@/frontend/components/dashboard-boss-quick-actions'
 import { DashboardIotaTransferCard } from '@/frontend/components/dashboard-iota-transfer-card'
 import { DashboardIotaActivityCard } from '@/frontend/components/dashboard-iota-activity-card'
-import { DashboardSosEmergencyButton } from '@/frontend/components/dashboard-sos-emergency-button'
 
 export function DashboardMessengerBossHome(p: {
   apiSnapshot: (ApiStatus & { error?: string }) | null
@@ -15,10 +15,10 @@ export function DashboardMessengerBossHome(p: {
 }) {
   return (
     <div className="space-y-5">
-      {/* Große Kacheln Nachrichten/Einsatzleitung entfernt — Nav reicht. */}
-      <div className="flex justify-center">
-        <DashboardSosEmergencyButton onOpenMessages={p.onOpenMessages} />
-      </div>
+      <DashboardBossQuickActions
+        onOpenMessages={p.onOpenMessages}
+        onOpenEinsatzleitung={p.onOpenEinsatzleitung}
+      />
 
       <div className="space-y-3">
         <DashboardIotaTransferCard

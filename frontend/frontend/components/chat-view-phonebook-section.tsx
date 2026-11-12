@@ -19,7 +19,6 @@ import {
 } from '@/frontend/components/contact-phonebook-contact-dialog'
 import { ContactPhonebookQrDialog } from '@/frontend/components/contact-phonebook-qr-dialog'
 import { TelegramAlarmGroupPhonebookBanner } from '@/frontend/components/telegram-alarm-group-phonebook-banner'
-import { EinsatzleitungTeamRosterPanel } from '@/frontend/components/einsatzleitung-team-roster-panel'
 import {
   formatContactRoleTagsCsv,
   maskWalletAddress,
@@ -341,17 +340,21 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
         </div>
       </div>
 
-      <TelegramAlarmGroupPhonebookBanner />
-
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Name, Adresse oder Meshtastic suchen…"
-          className="min-h-12 w-full rounded-xl border border-border bg-input py-3 pl-11 pr-4 text-base text-foreground placeholder:text-muted-foreground"
-        />
+      <div className="space-y-1.5">
+        <label htmlFor="phonebook-search" className="text-sm font-semibold text-foreground">
+          Kontakte suchen
+        </label>
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-foreground/70" />
+          <input
+            id="phonebook-search"
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Name, 0x-Adresse, Telegram-ID oder Funk-Node…"
+            className="min-h-14 w-full rounded-xl border-2 border-foreground/25 bg-background py-3.5 pl-12 pr-4 text-base font-medium text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:border-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
+          />
+        </div>
       </div>
 
       <div
@@ -417,32 +420,29 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
       )}
 
       {showMailboxes && p.onOpenSettings ? (
-        <div className="rounded-xl border border-violet-500/25 bg-violet-500/5 p-3">
-          <p className="text-sm font-semibold text-foreground mb-1">Meine Mailboxen</p>
+        <div className="rounded-xl border border-border bg-card p-3">
+          <p className="mb-1 text-sm font-semibold text-foreground">Meine Mailboxen</p>
           <button
             type="button"
             onClick={p.onOpenSettings}
-            className="text-xs font-medium text-primary underline hover:no-underline"
+            className="text-xs font-medium text-foreground underline underline-offset-2 hover:no-underline"
           >
-            Einstellungen {'\u2192'} Meine Mailboxen
+            Einstellungen → IOTA → Meine Mailboxen
           </button>
         </div>
       ) : null}
 
+      {/* Team-Mitglieder-Liste gehört in Einsatzleitung — hier nicht nochmal. */}
       {p.allowInitialProfileImport ? (
-        <>
-          <EinsatzleitungTeamRosterPanel
-            apiStatus={p.apiStatus ?? null}
-            contactDirectory={directory}
-          />
-          <PhonebookContactDistributePanel
-            directory={directory}
-            onContactsChanged={refreshContactDirectory}
-          />
-        </>
+        <PhonebookContactDistributePanel
+          directory={directory}
+          onContactsChanged={refreshContactDirectory}
+        />
       ) : null}
 
       <PhonebookMeshBackupPanel directory={directory} onContactsChanged={refreshContactDirectory} />
+
+      <TelegramAlarmGroupPhonebookBanner />
 
       <ContactPhonebookContactDialog
         open={dialog != null}

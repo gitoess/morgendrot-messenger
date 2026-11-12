@@ -109,7 +109,7 @@ export function PhonebookMeshBackupPanel(p: PhonebookMeshBackupPanelProps) {
   return (
     <details className={p.className}>
       <summary className="cursor-pointer list-none rounded-xl border border-border/80 bg-muted/15 px-3 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted/25 [&::-webkit-details-marker]:hidden">
-        <span className="text-foreground">Funk · Node-IDs sichern</span>
+        <span className="text-foreground">Funk-Node-IDs sichern (nicht Telegram)</span>
         <span className="ml-2 text-[10px] font-normal">(Export / Import)</span>
       </summary>
       <div className="mt-2 space-y-2 rounded-xl border border-border/60 bg-muted/10 px-3 py-2">

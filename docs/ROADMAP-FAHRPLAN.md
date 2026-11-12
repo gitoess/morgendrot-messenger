@@ -2679,6 +2679,8 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T24 | **Nachrichten-Archiv UX** | Feature | später | Auswahl/alle archivieren (nicht nur „neu“); Verschlüsselung klar (Chain-Envelope ≠ NFT-PW); Mainnet-only Guard wenn Testnet sinnlos |
 | T25 | **„Team einrichten“ Rename** | UX | mit Einsatzleitung | „Helfer einrichten“ → klarerer Name; Provision-Registry bleibt optional im Export-Flow, nicht parallel unter Mein Team |
 | T26 | **Typo/Farbe überall lesbar** | UX | fortlaufend | Kein Lila als Fließtext; einheitliche foreground/muted — Start Einsatzleitung 2026-11-12 |
+| T27 | **Telefonbuch entschlacken** | UX | Messenger-Durchgang | Alarmgruppe nicht oben; Team-Roster nicht doppelt; Funk-Backup vs. Telegram-Backup klar; „Aus Team entfernen“ vs. Telefonbuch trennen; Icons/Avatare (Telegram-Inspiration); Notizen am Kontakt |
+| T28 | **Handbuch-Platz** | UX | mit T12/T17 | Nicht am Sendepfad „Online“ — App-Menü/Settings; Chat-Kopf prüfen |
 
 **Nicht** parallel zu Session C / Zeitkapsel-Feldtest starten.
 

@@ -132,8 +132,8 @@ export function ChatViewMessengerSearch(p: ChatViewMessengerSearchProps) {
           onBlur={() => window.setTimeout(() => setFocused(false), 150)}
           placeholder={p.placeholder ?? 'Chats, Personen, Nachrichten…'}
           className={cn(
-            'w-full rounded-lg border border-border bg-background py-2 pl-8 pr-8 text-xs',
-            p.compact && 'py-1.5'
+            'w-full rounded-xl border-2 border-foreground/20 bg-background py-2.5 pl-9 pr-8 text-sm font-medium shadow-sm placeholder:text-muted-foreground focus-visible:border-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/15',
+            p.compact && 'py-2 text-xs'
           )}
           aria-label="Messenger durchsuchen"
         />

@@ -190,7 +190,7 @@ export function ContactPhonebookCard(props: ContactPhonebookCardProps) {
                     onShowQr()
                   }}
                 >
-                  QR-Code anzeigen
+                  Kontakt-QR zeigen
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onSelect={(e) => {
@@ -208,7 +208,7 @@ export function ContactPhonebookCard(props: ContactPhonebookCardProps) {
                       onRemoveFromTeam()
                     }}
                   >
-                    Aus Team entfernen
+                    Aus Einsatz-Team nehmen
                   </DropdownMenuItem>
                 ) : teamRemoveSent ? (
                   <DropdownMenuItem disabled className="text-emerald-600 dark:text-emerald-400">
@@ -300,7 +300,7 @@ export function ContactPhonebookCard(props: ContactPhonebookCardProps) {
               className="mt-2 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 text-sm font-medium text-rose-800 hover:bg-rose-500/15 dark:text-rose-200"
             >
               <UserMinus className="h-4 w-4 shrink-0" aria-hidden />
-              Aus Team entfernen
+              Aus Einsatz-Team nehmen
             </button>
           ) : teamRemoveSent ? (
             <p className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-800 dark:text-emerald-200">

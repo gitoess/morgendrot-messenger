@@ -25,10 +25,10 @@ const LS_SEND_SLOT = 'morgendrot.contactSendMailboxSlot.v1'
 const LS_SLOT_OVERRIDE = 'morgendrot.contactMailboxSlotsByWallet.v1'
 
 export const CONTACT_MAILBOX_SLOT_LABELS: Record<ContactMailboxSlotId, string> = {
-  shared: 'Einsatz (Shared)',
-  private: 'Privat',
-  team: 'Team / Gruppe',
-  buffer: 'Puffer',
+  shared: 'Einsatz-Mailbox (geteilt)',
+  private: 'Private Mailbox-ID',
+  team: 'Team-Mailbox',
+  buffer: 'Zwischenlager-Mailbox',
 }
 
 export function normalizeMailboxObjectId(id: string): string | undefined {
