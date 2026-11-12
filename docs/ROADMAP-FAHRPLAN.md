@@ -2699,7 +2699,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T34 | **Magnet Wii-Feel** | UX | Messenger | Hover Scale+Glow+Hover-Ton; Einstellungen Erscheinungsbild; nur Maus/Trackpad |
 | T35 | **Gruppe 1:1 vs gemeinsames Postfach** | Doku/UI | erledigt 2026-11-12, Retest | Labels + Handbuch-Tabelle; Handshake-Liste nur bei 1:1 |
 | T36 | **Telegram-Verlauf-Export** | Dialog statt Submenu 2026-11-12 | **live smoke** | Optionen → Export… → Dialog mit JSON/TXT/ZIP. Nested Submenu entfernt (leerer Scroll). T37 gemeinsam am Ende |
-| T37 | **Tresor-Landkarte UI** | UX | **done → live smoke** | Sicherheit-Tab: Tresor vs Datei vs Sidecar vs NFT |
+| T37 | **Tresor-Landkarte UI** | UX | **done → live smoke** | Sicherheit-Tab: Tresor vs Datei vs Sidecar vs NFT. **2026-11-12:** Chat-Tab Notizen → Unterreiter Passwörter (Vault `personalSecrets`) |
 | T38 | **Hash & Prüfen (SHA-256)** | Feature | **done → live smoke** | Sicherheit: hashen + prüfen; Unit-Test grün |
 | T54 | **Seed / Passwort SPOF** | Sicherheit/Doku | fortlaufend | Mnemonic = Identität/Coins; Vault-PW = Tresor-Inhalt; beides offline sichern; Ordner `.morgendrot-*` / Sidecar / `.env` = Gerät+Backup, nicht „Cloud = sicher“ |
 | T39 | **Telegram↔IOTA Beweis** | Produkt | später / gemeinsam am Ende | Export-JSON enthält Journal-Felder (chatId/Richtung); Beweis-Paket = JSON + SHA-256 (+ optional Chain). Kein TG-Vollforensik/Medien. Mit User am Roadmap-Ende priorisieren |

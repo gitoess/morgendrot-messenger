@@ -418,16 +418,50 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     </span>
                   )}
                   {isMeshVerifiedForAddress(row.msg.from) && (
-                    <span className="inline-flex items-center text-emerald-500" title="Mesh im Kontaktverzeichnis">
+                    <span
+                      className="inline-flex items-center text-emerald-500"
+                      title="Funk-Kontakt im Telefonbuch (kein Verschlüsselungs-Badge)"
+                    >
                       <ShieldCheck className="h-3.5 w-3.5" />
                     </span>
                   )}
-                  {row.msg.encrypted && (
-                    <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
-                      <Lock className="h-3 w-3" aria-hidden />
-                      Verschlüsselt
-                    </span>
-                  )}
+                  {(() => {
+                    const content = `${row.msg.content ?? ''}`
+                    if (isNftGateMessageWire(content)) {
+                      return (
+                        <span
+                          className="inline-flex items-center gap-0.5 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-800 dark:text-violet-300"
+                          title="NFT-Gate-Wire (Schlüsselkarte)"
+                        >
+                          <Lock className="h-3 w-3" aria-hidden />
+                          NFT-Gate
+                        </span>
+                      )
+                    }
+                    if (isPassphraseMessageWire(content)) {
+                      return (
+                        <span
+                          className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-900 dark:text-amber-200"
+                          title="Passphrase-Nachricht (PWMSG)"
+                        >
+                          <Lock className="h-3 w-3" aria-hidden />
+                          PWMSG
+                        </span>
+                      )
+                    }
+                    if (row.msg.encrypted) {
+                      return (
+                        <span
+                          className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400"
+                          title="ECDH / Envelope-verschlüsselt"
+                        >
+                          <Lock className="h-3 w-3" aria-hidden />
+                          Verschlüsselt
+                        </span>
+                      )
+                    }
+                    return null
+                  })()}
                   {row.msg.chainPurgeable && (
                     <span className="inline-flex items-center gap-0.5 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-800 dark:text-violet-300">
                       {isTeamBroadcastInboxMessage(row.msg) ? 'Team-Broadcast' : 'Mailbox'}

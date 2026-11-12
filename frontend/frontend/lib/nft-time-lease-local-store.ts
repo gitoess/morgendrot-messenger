@@ -81,12 +81,32 @@ export function listNftTimeLeasesLocal(): NftTimeLeaseLocalEntry[] {
   return Object.values(readStore().leases).sort((a, b) => b.updatedAtMs - a.updatedAtMs)
 }
 
+export function isPendingNftTimeLeaseId(leaseObjectId: string): boolean {
+  return norm(leaseObjectId).startsWith('pending:')
+}
+
 export function findNftTimeLeaseByNft(nftObjectId: string): NftTimeLeaseLocalEntry | null {
   const n = norm(nftObjectId)
   const hits = listNftTimeLeasesLocal().filter(
     (e) => e.nftObjectId === n && (e.status === 'active' || e.status === 'cancelled')
   )
-  return hits[0] ?? null
+  // Echte Lease-ID vor pending:… bevorzugen
+  const real = hits.find((e) => !isPendingNftTimeLeaseId(e.leaseObjectId))
+  return real ?? hits[0] ?? null
+}
+
+/** Pending-Einträge (ohne geparste Lease-ID) für dasselbe NFT entfernen. */
+export function dropPendingNftTimeLeasesForNft(nftObjectId: string): void {
+  const n = norm(nftObjectId)
+  const s = readStore()
+  let changed = false
+  for (const [id, e] of Object.entries(s.leases)) {
+    if (e.nftObjectId === n && isPendingNftTimeLeaseId(id)) {
+      delete s.leases[id]
+      changed = true
+    }
+  }
+  if (changed) writeStore(s)
 }
 
 /** Badge-Text laut Spec §7. */

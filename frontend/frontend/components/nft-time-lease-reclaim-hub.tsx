@@ -13,6 +13,7 @@ import {
   reclaimNftTimeLease,
 } from '@/frontend/lib/nft-time-lease-actions'
 import {
+  isPendingNftTimeLeaseId,
   listNftTimeLeasesLocal,
   NFT_TIME_LEASE_CHANGED,
   type NftTimeLeaseLocalEntry,
@@ -202,8 +203,9 @@ export function NftTimeLeaseReclaimHub(p: {
 
       {rows.length === 0 ? (
         <p className="text-[11px] leading-snug text-muted-foreground">
-          Keine Leihen in <strong className="text-foreground">diesem Browser</strong>. Gestern verliehen ≠
-          automatisch hier — Index ist lokal. Lease-Object-ID aus Explorer/TX eintragen → laden → Reclaim.
+          Keine Leihen in <strong className="text-foreground">diesem Browser</strong>. Ab jetzt speichert
+          „Leihe starten“ den Eintrag lokal (NFT + Lease). Ältere Leihen: Lease-Object-ID unten laden →
+          dann ID anklicken / Reclaim.
         </p>
       ) : null}
 
@@ -246,7 +248,10 @@ export function NftTimeLeaseReclaimHub(p: {
             p.compact ? 'max-h-40' : 'max-h-[min(50vh,22rem)]'
           }`}
         >
-          {rows.map((e) => (
+          {rows.map((e) => {
+            const pending = isPendingNftTimeLeaseId(e.leaseObjectId)
+            const canReclaim = e.ready && !pending
+            return (
             <li
               key={e.leaseObjectId}
               className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/10 px-2.5 py-2"
@@ -257,38 +262,72 @@ export function NftTimeLeaseReclaimHub(p: {
                   <button
                     type="button"
                     className="font-mono text-primary hover:underline"
-                    title={`${e.nftObjectId} — klicken zum Kopieren`}
-                    onClick={() => void copyTextSafe(e.nftObjectId)}
+                    title={
+                      canReclaim
+                        ? `${e.nftObjectId} — klicken = Reclaim (NFT zurückholen)`
+                        : `${e.nftObjectId} — klicken zum Kopieren`
+                    }
+                    onClick={() => {
+                      if (canReclaim) {
+                        void onReclaim(e.leaseObjectId)
+                        return
+                      }
+                      void copyTextSafe(e.nftObjectId)
+                    }}
                   >
                     {shortId(e.nftObjectId)}
                   </button>
                   <span className="text-muted-foreground"> · Lease </span>
-                  <button
-                    type="button"
-                    className="font-mono text-primary hover:underline"
-                    title={`${e.leaseObjectId} — klicken zum Kopieren`}
-                    onClick={() => void copyTextSafe(e.leaseObjectId)}
-                  >
-                    {shortId(e.leaseObjectId)}
-                  </button>
+                  {pending ? (
+                    <span className="font-mono text-amber-800 dark:text-amber-200" title="ID nach TX nicht geparst">
+                      ID fehlt
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="font-mono text-primary hover:underline"
+                      title={
+                        canReclaim
+                          ? `${e.leaseObjectId} — klicken = Reclaim`
+                          : `${e.leaseObjectId} — klicken zum Kopieren`
+                      }
+                      onClick={() => {
+                        if (canReclaim) {
+                          void onReclaim(e.leaseObjectId)
+                          return
+                        }
+                        void copyTextSafe(e.leaseObjectId)
+                      }}
+                    >
+                      {shortId(e.leaseObjectId)}
+                    </button>
+                  )}
                 </p>
                 <p className="text-[10px] text-muted-foreground">
                   an {shortId(e.borrower)} ·{' '}
-                  {e.ready ? (
-                    <span className="text-emerald-700 dark:text-emerald-300">Reclaim möglich</span>
+                  {pending ? (
+                    <span className="text-amber-800 dark:text-amber-200">
+                      Lease-ID nachtragen (unten laden), dann reclaimen
+                    </span>
+                  ) : e.ready ? (
+                    <span className="text-emerald-700 dark:text-emerald-300">
+                      Reclaim möglich — ID anklicken oder Button
+                    </span>
                   ) : (
                     <span>noch {formatRemain(e.remainMs)}</span>
                   )}
                 </p>
                 <p className="flex flex-wrap gap-2 text-[10px]">
-                  <a
-                    href={explorerObjectUrlFromId(e.leaseObjectId)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline"
-                  >
-                    Lease Explorer
-                  </a>
+                  {!pending ? (
+                    <a
+                      href={explorerObjectUrlFromId(e.leaseObjectId)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      Lease Explorer
+                    </a>
+                  ) : null}
                   <a
                     href={explorerObjectUrlFromId(e.nftObjectId)}
                     target="_blank"
@@ -300,7 +339,11 @@ export function NftTimeLeaseReclaimHub(p: {
                   <button
                     type="button"
                     className="text-primary hover:underline"
-                    onClick={() => void copyTextSafe(`${e.leaseObjectId}\n${e.nftObjectId}`)}
+                    onClick={() =>
+                      void copyTextSafe(
+                        pending ? e.nftObjectId : `${e.leaseObjectId}\n${e.nftObjectId}`
+                      )
+                    }
                   >
                     IDs kopieren
                   </button>
@@ -310,19 +353,28 @@ export function NftTimeLeaseReclaimHub(p: {
                 type="button"
                 size="sm"
                 className="h-8 shrink-0 text-[11px]"
-                variant={e.ready ? 'default' : 'outline'}
-                disabled={p.disabled || busyId === e.leaseObjectId || !e.ready}
+                variant={canReclaim ? 'default' : 'outline'}
+                disabled={p.disabled || busyId === e.leaseObjectId || !canReclaim}
                 title={
-                  e.ready
-                    ? 'NFT aus Escrow an dich (Lender) zurück'
-                    : `Warten bis ${new Date(e.unlockMs).toLocaleString()}`
+                  pending
+                    ? 'Zuerst echte Lease-Object-ID laden'
+                    : canReclaim
+                      ? 'NFT aus Escrow an dich (Lender) zurück'
+                      : `Warten bis ${new Date(e.unlockMs).toLocaleString()}`
                 }
                 onClick={() => void onReclaim(e.leaseObjectId)}
               >
-                {busyId === e.leaseObjectId ? '…' : e.ready ? 'Reclaim' : formatRemain(e.remainMs)}
+                {busyId === e.leaseObjectId
+                  ? '…'
+                  : canReclaim
+                    ? 'Reclaim'
+                    : pending
+                      ? 'ID fehlt'
+                      : formatRemain(e.remainMs)}
               </Button>
             </li>
-          ))}
+            )
+          })}
         </ul>
       ) : null}
 
