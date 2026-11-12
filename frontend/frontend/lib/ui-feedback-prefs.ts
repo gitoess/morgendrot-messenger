@@ -8,8 +8,8 @@ const LS_SOUND = 'morgendrot.ui.feedback.sound.v1'
 const LS_SOUND_VOLUME = 'morgendrot.ui.feedback.soundVolume.v1'
 const LS_MAGNET = 'morgendrot.ui.feedback.magnet.v1'
 
-/** 0–100; Default 45 (bisheriger Klick-Ton war eher leise). */
-export const DEFAULT_SOUND_FEEDBACK_VOLUME = 45
+/** 0–100; Default 70 — Regler-Unterschiede sollen hörbar sein. */
+export const DEFAULT_SOUND_FEEDBACK_VOLUME = 70
 
 function emitPrefsChanged(): void {
   if (typeof window === 'undefined') return

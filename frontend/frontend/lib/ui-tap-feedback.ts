@@ -28,35 +28,40 @@ function getAudioContext(): AudioContext | null {
 
 export type TapFeedbackKind = 'select' | 'confirm' | 'soft' | 'hover'
 
+/** Gains = Lautstärke bei Regler 100 %. */
 const TONES: Record<TapFeedbackKind, { freq: number; durMs: number; gain: number }> = {
-  select: { freq: 520, durMs: 85, gain: 0.1 },
-  confirm: { freq: 660, durMs: 100, gain: 0.11 },
-  soft: { freq: 380, durMs: 55, gain: 0.05 },
-  hover: { freq: 440, durMs: 45, gain: 0.035 },
+  select: { freq: 520, durMs: 85, gain: 0.22 },
+  confirm: { freq: 660, durMs: 100, gain: 0.24 },
+  soft: { freq: 380, durMs: 70, gain: 0.18 },
+  hover: { freq: 440, durMs: 45, gain: 0.1 },
 }
 
 export function playTapClick(kind: TapFeedbackKind = 'select'): void {
   try {
     if (!readSoundFeedbackEnabled()) return
+    const volPct = readSoundFeedbackVolume()
+    if (volPct <= 0) return
     const ctx = getAudioContext()
     if (!ctx) return
     void ctx.resume().catch(() => undefined)
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
     const { freq, durMs, gain: peak } = TONES[kind]
-    const vol = readSoundFeedbackVolume() / 100
-    const scaled = Math.max(0.0001, peak * vol)
+    // Linear + leicht angehoben: 50 % soll klar leiser klingen als 100 %.
+    const scaled = Math.max(0.001, peak * (volPct / 100))
     const now = ctx.currentTime
+    const end = now + durMs / 1000
     osc.type = kind === 'hover' ? 'sine' : 'triangle'
     osc.frequency.setValueAtTime(freq, now)
-    osc.frequency.exponentialRampToValueAtTime(freq * (kind === 'hover' ? 1.08 : 0.75), now + durMs / 1000)
-    gain.gain.setValueAtTime(0.0001, now)
-    gain.gain.exponentialRampToValueAtTime(scaled, now + 0.01)
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + durMs / 1000)
+    osc.frequency.exponentialRampToValueAtTime(freq * (kind === 'hover' ? 1.08 : 0.75), end)
+    // linearRamp: zuverlässiger hörbar als exponential bei leisen Pegeln
+    gain.gain.setValueAtTime(0, now)
+    gain.gain.linearRampToValueAtTime(scaled, now + 0.012)
+    gain.gain.linearRampToValueAtTime(0, end)
     osc.connect(gain)
     gain.connect(ctx.destination)
     osc.start(now)
-    osc.stop(now + durMs / 1000 + 0.02)
+    osc.stop(end + 0.02)
   } catch {
     // ignore
   }

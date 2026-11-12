@@ -114,23 +114,23 @@ export function TresorSessionBadge({
         : 'border-emerald-600/55 bg-emerald-100 text-emerald-950 dark:border-emerald-400/50 dark:bg-emerald-950/90 dark:text-emerald-50'
   )
   const passiveTitle = needsVaultPassword
-    ? 'Vault-Sitzung fehlt — tippen, Vault-Passwort eingeben (Merken / Passphrasen).'
+    ? 'Tresor-Sitzung fehlt — tippen, Tresor-Passwort eingeben (Merken / Passphrasen).'
     : ui === 'locked'
       ? softLocked && !sessionLocked
-        ? 'Privacy gesperrt — Passphrasen/Signer aus RAM; Chat lesbar. Tippen zum Entsperren.'
+        ? 'Tresor weich gesperrt — Passphrasen/Signer aus RAM; Chat lesbar. Tippen zum Entsperren.'
         : 'Tresor gesperrt — Entsperr-Dialog öffnen.'
       : ui === 'no-keys'
-        ? 'API kann entsperrt sein — Browser-Signer fehlt. Tippen → Vault-Passwort (lädt Signer in diese Sitzung).'
+        ? 'API kann entsperrt sein — Browser-Signer fehlt. Tippen → Tresor-Passwort (lädt Signer in diese Sitzung).'
         : 'Schlüssel geladen — Signieren und Mailbox senden möglich.'
   const activeTitle = needsVaultPassword
-    ? 'Vault-Passwort eingeben (Session-Signer + Passphrasen-Vault).'
+    ? 'Tresor-Passwort eingeben (Session-Signer + Browser-Geheimnisse).'
     : ui === 'locked'
       ? softLocked && !sessionLocked
-        ? 'Privacy entsperren (Passwort → Signer + Vault-Sidecars).'
+        ? 'Tresor entsperren (Passwort → Signer + Browser-Geheimnisse).'
         : 'Dialog „Tresor entsperren“ öffnen.'
       : ui === 'no-keys'
-        ? 'Vault-Passwort eingeben — lädt den Signer in den Browser (auch wenn der API-Tresor schon offen ist).'
-        : 'Privacy sperren — Signer/Passphrasen aus dem RAM; Chat bleibt offen (kein Login-Fenster).'
+        ? 'Tresor-Passwort eingeben — lädt den Signer in den Browser (auch wenn der API-Tresor schon offen ist).'
+        : 'Tresor weich sperren — Signer/Passphrasen aus dem RAM; Chat bleibt offen (kein Login-Fenster).'
 
   const icon =
     ui === 'ready' && !needsVaultPassword ? (
@@ -141,13 +141,13 @@ export function TresorSessionBadge({
   const label = (
     <span className="truncate font-semibold">
       {needsVaultPassword
-        ? 'Vault: Passwort'
+        ? 'Tresor: Passwort'
         : ui === 'locked'
           ? softLocked && !sessionLocked
-            ? 'Privacy: gesperrt'
+            ? 'Tresor: weich'
             : 'Tresor: gesperrt'
           : ui === 'no-keys'
-            ? 'Signer: PW tippen'
+            ? 'Tresor: PW tippen'
             : 'Tresor: bereit'}
     </span>
   )
@@ -169,8 +169,10 @@ export function TresorSessionBadge({
       title={activeTitle}
       aria-label={
         ui === 'locked' || ui === 'no-keys' || needsVaultPassword
-          ? 'Vault-Passwort eingeben'
-          : 'Tresor sperren'
+          ? 'Tresor-Passwort eingeben'
+          : softLocked && !sessionLocked
+            ? 'Tresor weich sperren'
+            : 'Tresor sperren'
       }
       onClick={() => {
         if (ui === 'locked' || ui === 'no-keys' || needsVaultPassword) {

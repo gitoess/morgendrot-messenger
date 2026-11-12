@@ -2650,7 +2650,7 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 ### Durchgangs-Reihenfolge (verbindlich — Stand 2026-11-12)
 
 1. **Erledigt:** **T37** Landkarte · **T8/T9** Passwort/Backup/Schatten → Sicherheit · Telegram-Wipe-Scope · Klick-Lautstärke  
-2. **Als Nächstes:** **T2** Passwort ändern (live) · **T3** Meine Mailboxen · **T4** Schatten→Main (jetzt unter Sicherheit)  
+2. **Als Nächstes:** **T3** Meine Mailboxen · **T4** Schatten→Main (jetzt unter Sicherheit)  
 3. **Backlog (überdenken, nicht jetzt bauen):** **T56** Komplett-alles-löschen (Wizard inkl. optional NFT)  
 4. **Dann am Ende:** Ideen **T39–T54** priorisieren; T33 + Zeitkapsel nachholen  
 5. **Später (nicht blockierend):** T45 · T47 · T51 · T52 · T53  
@@ -2666,7 +2666,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | # | Thema | Art | Wann | Notiz |
 |---|--------|-----|------|-------|
 | T1 | **Mainnet einrichten** | Feld/UI-Test | **am Schluss** dieses Durchgangs | Deploy / Gas / Schalter Produktion / Signer-Strip — zusammen klicken |
-| T2 | **Passwort ändern** | Durchgang + ggf. Smoke | nach IOTA-Lesepass | Bleibt vorerst unter IOTA; Zielplatz: **Sicherheit** (**nicht** Allgemein) |
+| T2 | **Passwort ändern** | Durchgang + ggf. Smoke | **done 2026-11-12** | Unter **Sicherheit**; Session-PW nach Ändern sync; Header vs. voller Lock erklärt |
 | T3 | **Meine Mailboxen** | Durchgang | nach T2 | Privat/Team vs. Deploy-Mailbox unter „Wo senden?“ |
 | T4 | **Schatten → Main (Sweep)** | Durchgang | nach T3 | Einmal-Werkzeug; Zielplatz: **Sicherheit** |
 | T5 | **§ H.32b Einsatz beenden** | Retest | bewusst später | = QA #3 |

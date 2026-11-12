@@ -27,7 +27,7 @@ describe('TresorSessionBadge (§ H.1a)', () => {
     expect(screen.getByText(/Tresor: gesperrt/)).toBeInTheDocument()
 
     rerender(<TresorSessionBadge sessionLocked={false} hasKeys={false} />)
-    expect(screen.getByText(/Signer: PW tippen/)).toBeInTheDocument()
+    expect(screen.getByText(/Tresor: PW tippen/)).toBeInTheDocument()
 
     rerender(<TresorSessionBadge sessionLocked={false} hasKeys />)
     expect(screen.getByText(/Tresor: bereit/)).toBeInTheDocument()
@@ -42,7 +42,7 @@ describe('TresorSessionBadge (§ H.1a)', () => {
         actions={{ onLockSession: vi.fn(), onNavigateHomeWhenLocked }}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Vault-Passwort eingeben/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Tresor-Passwort eingeben/i }))
     expect(onNavigateHomeWhenLocked).toHaveBeenCalledTimes(1)
   })
 
@@ -60,7 +60,7 @@ describe('TresorSessionBadge (§ H.1a)', () => {
     expect(onLockSession).toHaveBeenCalledTimes(1)
   })
 
-  it('ohne Vault-Sitzung: Badge „Vault: Passwort“ öffnet Sync statt zu sperren', () => {
+  it('ohne Tresor-Sitzung: Badge „Tresor: Passwort“ öffnet Sync statt zu sperren', () => {
     setVaultPasswordSession(null)
     const onNavigateHomeWhenLocked = vi.fn()
     const onLockSession = vi.fn()
@@ -71,8 +71,8 @@ describe('TresorSessionBadge (§ H.1a)', () => {
         actions={{ onLockSession, onNavigateHomeWhenLocked }}
       />
     )
-    expect(screen.getByText(/Vault: Passwort/)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /Vault-Passwort eingeben/i }))
+    expect(screen.getByText(/Tresor: Passwort/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Tresor-Passwort eingeben/i }))
     expect(onNavigateHomeWhenLocked).toHaveBeenCalledTimes(1)
     expect(onLockSession).not.toHaveBeenCalled()
   })

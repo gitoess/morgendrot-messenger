@@ -223,22 +223,28 @@ export function SettingsAppearanceSection() {
             step={5}
             value={soundVolume}
             disabled={!soundOn}
+            data-no-tap-feedback="true"
+            onInput={(e) => {
+              const v = Number((e.target as HTMLInputElement).value)
+              setSoundVolume(v)
+              persistSoundFeedbackVolume(v)
+            }}
             onChange={(e) => {
               const v = Number(e.target.value)
               setSoundVolume(v)
               persistSoundFeedbackVolume(v)
             }}
-            onMouseUp={() => {
-              if (soundOn) playTapClick('soft')
-            }}
-            onTouchEnd={() => {
-              if (soundOn) playTapClick('soft')
+            onPointerUp={() => {
+              if (soundOn && readSoundFeedbackVolume() > 0) playTapClick('soft')
             }}
             className="w-full accent-[var(--path-online)]"
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={soundVolume}
           />
+          <p className="text-[11px] text-muted-foreground">
+            Nach dem Loslassen Probe-Ton. 0 = stumm, 100 = laut. Hard-Refresh falls der Regler noch stumm wirkt.
+          </p>
         </div>
         <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
           <Label htmlFor="ui-magnet" className="text-sm text-foreground">

@@ -6,13 +6,14 @@ Kurzreferenz: **was** welcher Schalter löscht und **was nicht**.
 
 | Option | Chain-Tresor | Lokale Datei `.morgendrot-vault` | Inbox-Cache | Browser-Geheimnisse | Telegram Runtime/Journal | RAM |
 |--------|--------------|-----------------------------------|-------------|---------------------|--------------------------|-----|
-| **Sitzung sperren** | Nein | Bleibt | oft via `/vault-lock` | gesperrt | Nein | Keys weg |
 | **Nur Nachrichten lokal** | Nein | Bleibt | Ja (Server + Browser) | Nein | Nein | Inbox-RAM |
 | **Nur Browser-Geheimnisse** | Nein | Bleibt | Nein | Ja | Nein | Session-PW |
 | **Telegram lokal löschen** | Nein | Bleibt | Nein | Nein | Ja (Runtime + Journal + Prefs) | — |
 | **Gerät lokal aufräumen** | Nein | Bleibt | Ja + Einsatz-Spuren | Ja | Nein (bewusst getrennt) | wie Einsatz-Ende |
 | **Tresor on-chain löschen** | Ja | **Bleibt** | Ja | Ja | Nein | — |
 | **Lokale Tresor-Datei löschen** | Nein | Ja (nur mit Chain-Backup) | Nein | Nein | Nein | — |
+
+**Sperren (kein Löschen):** Header-Badge **Tresor** (im Chat = weiches Privacy-Lock) oder Sicherheit → Passwort → **Tresor sperren** (voller `/vault-lock`). Nicht unter Notfall-Löschung.
 
 **Nur Medien:** kein eigener Scope — in Nachrichten bzw. NFT (brennen).
 

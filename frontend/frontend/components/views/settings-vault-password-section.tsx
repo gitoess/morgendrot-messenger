@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { Lock } from 'lucide-react'
 import { toast } from 'sonner'
 import { fetchStatus, vaultChangePassword, vaultLockCommand } from '@/frontend/lib/api'
+import { wipeLocalPassphraseStoresOnLock } from '@/frontend/lib/privacy-lock-wipe'
+import { setVaultPasswordSession } from '@/frontend/lib/vault-password-session'
 
 type SettingsVaultPasswordSectionProps = {
   vaultLocked?: boolean
@@ -50,9 +52,11 @@ export function SettingsVaultPasswordSection({ vaultLocked = false }: SettingsVa
       return
     }
     setChangePwBusy(true)
-    const res = await vaultChangePassword(changePwCurrent.trim(), changePwNew.trim())
+    const newPw = changePwNew.trim()
+    const res = await vaultChangePassword(changePwCurrent.trim(), newPw)
     if (res.ok) {
-      toast.success(res.message || 'Passwort geändert.')
+      setVaultPasswordSession(newPw)
+      toast.success(res.message || 'Tresor-Passwort geändert. Beim nächsten Entsperren das neue Passwort nutzen.')
       setChangePwCurrent('')
       setChangePwNew('')
       setChangePwConfirm('')
@@ -72,7 +76,8 @@ export function SettingsVaultPasswordSection({ vaultLocked = false }: SettingsVa
         'Tresor sperren?\n\n' +
           '• Messaging-Keys + Wallet-Passwort verlassen den Server-RAM\n' +
           '• Lokaler Klartext-Inbox-Cache (.inbox.enc) wird geschreddert\n' +
-          '• Vault-Datei auf der Platte bleibt' +
+          '• Tresor-Datei auf der Platte bleibt\n' +
+          '• Browser-Geheimnisse werden nur gesperrt (nicht gelöscht)' +
           sdkHint
       )
     ) {
@@ -81,7 +86,8 @@ export function SettingsVaultPasswordSection({ vaultLocked = false }: SettingsVa
     setSessionBusy(true)
     const res = await vaultLockCommand()
     if (res.ok) {
-      toast.message('Entsperr-Dialog — Vault-Passwort eingeben', { duration: 14_000 })
+      await wipeLocalPassphraseStoresOnLock()
+      toast.message('Tresor gesperrt — Passwort zum Entsperren eingeben', { duration: 14_000 })
     } else {
       toast.error(res.error || res.message || 'Fehler')
     }
@@ -94,7 +100,7 @@ export function SettingsVaultPasswordSection({ vaultLocked = false }: SettingsVa
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Lock className="h-5 w-5 text-primary" />
-          <h4 className="font-semibold text-foreground">Passwort ändern</h4>
+          <h4 className="font-semibold text-foreground">Tresor-Passwort ändern</h4>
         </div>
         <button
           type="button"
@@ -106,6 +112,18 @@ export function SettingsVaultPasswordSection({ vaultLocked = false }: SettingsVa
           Tresor sperren
         </button>
       </div>
+      <p className="mb-3 text-[12px] leading-relaxed text-muted-foreground">
+        <strong className="text-foreground">Header-Badge im Chat</strong> = weiches Privacy-Sperren (Chat bleibt
+        offen). <strong className="text-foreground">Dieser Knopf</strong> = voller Tresor-Lock (Keys aus Server-RAM,
+        Entsperr-Dialog). Beides heißt „Tresor“ — technisch intern oft noch „Vault“.
+      </p>
+      {!canUseVault ? (
+        <p className="mb-3 text-[12px] text-amber-800 dark:text-amber-200">
+          {vaultLocked || hasKeys === false
+            ? 'Tresor entsperren, dann Passwort ändern.'
+            : 'Status wird geladen…'}
+        </p>
+      ) : null}
       <div className="grid max-w-md gap-3">
         <label className="block text-sm">
           <span className="text-muted-foreground">Aktuelles Passwort</span>

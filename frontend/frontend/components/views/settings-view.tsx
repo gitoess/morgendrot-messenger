@@ -120,7 +120,7 @@ export function SettingsView({
   const handleRevealSignerImport = async () => {
     setRecoveryErr('')
     if (!recoveryPw.trim()) {
-      setRecoveryErr('Vault-Passwort eingeben.')
+      setRecoveryErr('Tresor-Passwort eingeben.')
       return
     }
     setRecoveryBusy(true)
@@ -226,11 +226,11 @@ export function SettingsView({
               <h4 className="font-semibold text-foreground">Wallet-Recovery (SIGNER=sdk)</h4>
             </div>
             {!status.vaultHasLocal ? (
-              <p className="mb-3 text-sm text-muted-foreground">Keine lokale Vault-Datei.</p>
+              <p className="mb-3 text-sm text-muted-foreground">Keine lokale Tresor-Datei.</p>
             ) : null}
             <div className="space-y-3">
               <label className="block text-sm">
-                <span className="text-muted-foreground">Vault-Passwort</span>
+                <span className="text-muted-foreground">Tresor-Passwort</span>
                 <input
                   type="password"
                   autoComplete="off"

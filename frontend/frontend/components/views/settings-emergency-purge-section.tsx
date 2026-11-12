@@ -4,12 +4,11 @@ import { useState } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import {
   emergencyPurge,
-  vaultLockCommand,
   clearLocalHistory,
   vaultDeleteLocal,
   wipeTelegramIntegration,
 } from '@/frontend/lib/api'
-import { lockLocalSecretVaults, purgeLocalSecretVaults } from '@/frontend/lib/local-secret-vaults'
+import { purgeLocalSecretVaults } from '@/frontend/lib/local-secret-vaults'
 import {
   EINSATZ_END_CACHE_WIPED_EVENT,
   performEinsatzEndCacheWipe,
@@ -18,7 +17,6 @@ import {
 import { purgeTelegramBrowserPrefs } from '@/frontend/lib/telegram-browser-purge'
 
 type PurgeScope =
-  | 'lock_session'
   | 'messages'
   | 'browser_secrets'
   | 'telegram'
@@ -37,7 +35,7 @@ function notifyInboxRamCleared(): void {
 export function SettingsEmergencyPurgeSection() {
   const [confirmPurge, setConfirmPurge] = useState(false)
   const [confirmText, setConfirmText] = useState('')
-  const [purgeScope, setPurgeScope] = useState<PurgeScope>('lock_session')
+  const [purgeScope, setPurgeScope] = useState<PurgeScope>('messages')
   const [processing, setProcessing] = useState(false)
   const [statusMsg, setStatusMsg] = useState('')
 
@@ -48,17 +46,6 @@ export function SettingsEmergencyPurgeSection() {
     setProcessing(true)
     setStatusMsg('')
     try {
-      if (purgeScope === 'lock_session') {
-        const res = await vaultLockCommand()
-        if (res.ok) lockLocalSecretVaults()
-        setStatusMsg(res.ok ? res.message || 'Tresor gesperrt, Keys aus RAM.' : res.error || res.message || 'Fehler')
-        if (res.ok) {
-          setConfirmPurge(false)
-          setConfirmText('')
-        }
-        return
-      }
-
       if (purgeScope === 'messages') {
         wipeAllInboxCacheKeys()
         notifyInboxRamCleared()
@@ -162,20 +149,11 @@ export function SettingsEmergencyPurgeSection() {
           </p>
         </div>
       </div>
+      <p className="text-[11px] leading-relaxed text-muted-foreground">
+        Nur sperren (nichts löschen): Header-Badge <strong className="text-foreground">Tresor</strong> (im Chat =
+        weich) oder unter Passwort ändern → <strong className="text-foreground">Tresor sperren</strong> (voll).
+      </p>
       <div className="space-y-2 text-sm">
-        <label className="flex cursor-pointer items-start gap-2">
-          <input
-            type="radio"
-            name="purge-scope-settings"
-            checked={purgeScope === 'lock_session'}
-            onChange={() => setPurgeScope('lock_session')}
-            className="mt-1"
-          />
-          <span>
-            <strong className="text-foreground">Sitzung sperren</strong>
-            <span className="block text-muted-foreground">Keys aus RAM; Dateien bleiben. Sanftester Knopf.</span>
-          </span>
-        </label>
         <label className="flex cursor-pointer items-start gap-2">
           <input
             type="radio"
