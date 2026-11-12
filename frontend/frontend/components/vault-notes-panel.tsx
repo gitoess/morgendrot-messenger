@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { FileText, FolderOpen, ImageIcon, Mic, Paperclip, Plus, Trash2, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { VaultNoteAttachment, VaultNoteEntry } from '@/frontend/lib/api/vault-notes'
@@ -65,6 +65,13 @@ export function VaultNotesPanel({ unlocked, notes, onNotesChange }: VaultNotesPa
     }
     return [...set].sort((a, b) => a.localeCompare(b, 'de'))
   }, [notes])
+
+  useEffect(() => {
+    if (folderFilter === '__none__' && folders.length === 0) setFolderFilter('__all__')
+    if (folderFilter !== '__all__' && folderFilter !== '__none__' && !folders.includes(folderFilter)) {
+      setFolderFilter('__all__')
+    }
+  }, [folderFilter, folders])
 
   const filtered = useMemo(() => {
     if (folderFilter === '__all__') return notes
@@ -133,35 +140,41 @@ export function VaultNotesPanel({ unlocked, notes, onNotesChange }: VaultNotesPa
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <label
-          className="flex items-center gap-1.5 text-sm text-muted-foreground"
-          title="Optionaler Ordnername — Filter „Ungeordnet“ = Notizen ohne Ordnerfeld"
-        >
-          <FolderOpen className="h-4 w-4" />
-          Ordner
-          <select
-            value={folderFilter}
-            onChange={(e) => setFolderFilter(e.target.value)}
-            className="rounded-lg border border-border bg-input px-2 py-1 text-sm text-foreground"
+      <div className="space-y-1.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <FolderOpen className="h-4 w-4" />
+            Anzeigen
+            <select
+              value={folderFilter}
+              onChange={(e) => setFolderFilter(e.target.value)}
+              className="rounded-lg border border-border bg-input px-2 py-1 text-sm text-foreground"
+              title="Filtert die Liste links — Ordner entstehen, wenn du bei einer Notiz einen Ordnernamen einträgst"
+            >
+              <option value="__all__">Alle Notizen</option>
+              {folders.length > 0 ? (
+                <option value="__none__">Nur ohne Ordnername</option>
+              ) : null}
+              {folders.map((f) => (
+                <option key={f} value={f}>
+                  Nur „{f}“
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            onClick={handleAdd}
+            className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs font-medium hover:bg-accent"
           >
-            <option value="__all__">Alle</option>
-            <option value="__none__">Ungeordnet (kein Ordner)</option>
-            {folders.map((f) => (
-              <option key={f} value={f}>
-                {f}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          type="button"
-          onClick={handleAdd}
-          className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs font-medium hover:bg-accent"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Notiz
-        </button>
+            <Plus className="h-3.5 w-3.5" />
+            Notiz
+          </button>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Ordner anlegen: bei einer Notiz rechts „Ordner“ ausfüllen (z. B. Einsatz). Der Name erscheint
+          dann oben im Filter — kein separates Ordner-Menü.
+        </p>
       </div>
 
       <div className="grid gap-3 md:grid-cols-[minmax(0,11rem)_1fr]">
@@ -210,17 +223,23 @@ export function VaultNotesPanel({ unlocked, notes, onNotesChange }: VaultNotesPa
                 />
               </label>
               <label className="block text-sm">
-                <span className="text-muted-foreground">Ordner (optional)</span>
+                <span className="text-muted-foreground">Ordner (optional — frei tippen)</span>
                 <input
                   value={selected.folder ?? ''}
                   maxLength={VN_MAX_FOLDER}
+                  list="vault-note-folder-suggestions"
                   onChange={(e) => {
                     const v = e.target.value.slice(0, VN_MAX_FOLDER)
                     patchSelected({ folder: v.trim() ? v : undefined })
                   }}
-                  placeholder="z. B. Einsatz, Privat"
+                  placeholder="Leer lassen oder z. B. Einsatz"
                   className="mt-1 w-full rounded-lg border border-border bg-input px-3 py-2"
                 />
+                <datalist id="vault-note-folder-suggestions">
+                  {folders.map((f) => (
+                    <option key={f} value={f} />
+                  ))}
+                </datalist>
               </label>
             </div>
             <label className="block text-sm">

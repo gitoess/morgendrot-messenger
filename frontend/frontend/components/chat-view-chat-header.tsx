@@ -61,6 +61,11 @@ export type ChatViewChatHeaderProps = {
   pinnwandTabUnreadCount?: number
   /** APK: schlanke Kopfzeile — Sendepfad und Handbuch ausblenden (liegen unten). */
   compactNative?: boolean
+  /**
+   * Unter festem App-Header (Boss): kein zweites Handbuch/Einstellungen/Vault/Netz-Badge.
+   * Notizen bleibt (Chat-Kontext).
+   */
+  suppressAppChrome?: boolean
 }
 
 type TresorSessionUi = 'locked' | 'no-keys' | 'ready'
@@ -246,6 +251,7 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
     conversationTitle,
     conversationSubtitle,
     compactNative = false,
+    suppressAppChrome = false,
   } = p
 
   const channelTitle =
@@ -257,10 +263,13 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
         : 'Chats')
 
   const channelSubtitle = conversationSubtitle?.trim() || null
-  const showHandbook = channelMode !== 'notes' && !compactNative
-  /** Auch auf Notizen: Vault-Badge bleibt sichtbar (Tresor entsperren/sperren). */
-  const showTreasuryBadge = Boolean(apiStatus) && channelMode !== 'pinnwand'
+  const showHandbook = channelMode !== 'notes' && !compactNative && !suppressAppChrome
+  /** Vault nur hier, wenn kein fester App-Header darüber. */
+  const showTreasuryBadge =
+    !suppressAppChrome && Boolean(apiStatus) && channelMode !== 'pinnwand'
+  const showProfileBadges = !suppressAppChrome && !compactNative
   const showSendPathInHeader = sendPath?.visible && !compactNative
+  const showSettingsBtn = Boolean(onOpenSettings) && !suppressAppChrome
 
   const queuePending = offlineStatus?.queuePending ?? 0
   const showQueueOnlyBanner =
@@ -305,15 +314,15 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                     >
                       {channelTitle}
                     </h2>
-                    <ChatNetworkBadge />
-                    {!compactNative ? <ActiveProfileBadge status={apiStatus} compact /> : null}
+                    {showProfileBadges ? <ChatNetworkBadge /> : null}
+                    {showProfileBadges ? <ActiveProfileBadge status={apiStatus} compact /> : null}
                   </div>
                   {channelSubtitle ? (
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">{channelSubtitle}</p>
                   ) : null}
                 </div>
               </div>
-              {showHandbook || onOpenNotes || onOpenSettings || showTreasuryBadge ? (
+              {showHandbook || onOpenNotes || showSettingsBtn || showTreasuryBadge ? (
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   {showHandbook ? <MessengerHandbookLink /> : null}
                   {onOpenNotes ? (
@@ -328,7 +337,7 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                       }
                     />
                   ) : null}
-                  {onOpenSettings ? (
+                  {showSettingsBtn ? (
                     <HeaderToolbarButton
                       label="Einstellungen"
                       icon={<Settings className="h-4 w-4 shrink-0" aria-hidden />}

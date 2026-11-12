@@ -132,6 +132,7 @@ export type ChatViewMainContentProps = ChatViewCoreState & {
   onOpenEinsatzleitung?: () => void
   phonebookNavRequest?: number
   onOpenSettings?: () => void
+  suppressAppChrome?: boolean
 }
 
 export function ChatViewMainContent(c: ChatViewMainContentProps) {
@@ -929,8 +930,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       conversationTitle: chatHeaderContext.title,
       conversationSubtitle: chatHeaderContext.subtitle,
       onOpenNotes: onChannelModeChange ? handleSelectSidebarNotes : undefined,
+      suppressAppChrome: c.suppressAppChrome === true,
     }),
-    [chatHeaderProps, chatHeaderContext, onChannelModeChange, handleSelectSidebarNotes]
+    [
+      chatHeaderProps,
+      chatHeaderContext,
+      onChannelModeChange,
+      handleSelectSidebarNotes,
+      c.suppressAppChrome,
+    ]
   )
 
   const pinnwandSidebarProps = useMemo(

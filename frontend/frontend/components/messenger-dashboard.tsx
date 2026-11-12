@@ -372,49 +372,60 @@ function MessengerDashboardBody({
             vaultBannerActions={showHomeVaultBadge ? homeVaultActions : undefined}
             sessionLocked={vaultSessionLocked}
             hasKeys={browserSignerReady}
+            subNav={{
+              viewTitle:
+                s.activeView.type === 'settings'
+                  ? t('views.settings')
+                  : s.activeView.type === 'config'
+                    ? t('views.config')
+                    : s.activeView.type === 'einsatzleitung'
+                      ? t('views.einsatzleitung')
+                      : featureTitle(s.activeView.type, messengerFeaturesI18n),
+              onBack: s.handleBack,
+              onGoHome: s.goHome,
+            }}
           />
-        ) : null}
-        {!(isCapacitorNativePlatform() && s.activeView.type === 'chat') ? (
-        <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
-          <div className="flex h-14 items-center gap-3 px-4">
-            <button
-              type="button"
-              onClick={s.handleBack}
-              className="flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
-              title={t('nav.back')}
-            >
-              <ChevronLeft className="h-5 w-5" />
-              <span className="text-sm font-medium">{t('nav.back')}</span>
-            </button>
-            <button
-              type="button"
-              onClick={s.goHome}
-              className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
-              title={t('nav.home')}
-            >
-              {t('nav.home')}
-            </button>
-            <div className="h-4 w-px bg-border" />
-            <span className="text-sm font-semibold text-foreground">
-              {s.activeView.type === 'settings'
-                ? t('views.settings')
-                : s.activeView.type === 'config'
-                  ? t('views.config')
-                  : s.activeView.type === 'einsatzleitung'
-                    ? t('views.einsatzleitung')
-                    : featureTitle(s.activeView.type, messengerFeaturesI18n)}
-            </span>
-            {!isEinsatzLeadHome && showHomeVaultBadge ? (
-              <div className="ml-auto">
-                <TresorSessionBadge
-                  sessionLocked={vaultSessionLocked}
-                  hasKeys={browserSignerReady}
-                  actions={homeVaultActions}
-                />
-              </div>
-            ) : null}
-          </div>
-        </header>
+        ) : !(isCapacitorNativePlatform() && s.activeView.type === 'chat') ? (
+          <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
+            <div className="flex h-14 items-center gap-3 px-4">
+              <button
+                type="button"
+                onClick={s.handleBack}
+                className="flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
+                title={t('nav.back')}
+              >
+                <ChevronLeft className="h-5 w-5" />
+                <span className="text-sm font-medium">{t('nav.back')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={s.goHome}
+                className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
+                title={t('nav.home')}
+              >
+                {t('nav.home')}
+              </button>
+              <div className="h-4 w-px bg-border" />
+              <span className="text-sm font-semibold text-foreground">
+                {s.activeView.type === 'settings'
+                  ? t('views.settings')
+                  : s.activeView.type === 'config'
+                    ? t('views.config')
+                    : s.activeView.type === 'einsatzleitung'
+                      ? t('views.einsatzleitung')
+                      : featureTitle(s.activeView.type, messengerFeaturesI18n)}
+              </span>
+              {showHomeVaultBadge ? (
+                <div className="ml-auto">
+                  <TresorSessionBadge
+                    sessionLocked={vaultSessionLocked}
+                    hasKeys={browserSignerReady}
+                    actions={homeVaultActions}
+                  />
+                </div>
+              ) : null}
+            </div>
+          </header>
         ) : null}
 
         {/* View Content */}
@@ -486,6 +497,7 @@ function MessengerDashboardBody({
               myAddress={s.myAddress}
               vaultBannerActions={s.chatVaultBannerActions}
               pendingHandshakes={s.pendingHandshakes}
+              suppressAppChrome={isEinsatzLeadHome}
               onOpenEinsatzleitung={canAccessEinsatzleitung(s.role) ? s.openEinsatzleitungView : undefined}
               phonebookNavRequest={s.phonebookNavRequest}
               onOpenSettings={s.openSettingsView}

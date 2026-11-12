@@ -28,6 +28,8 @@ interface ChatViewProps {
   /** Bottom-Nav: Telefonbuch-Sheet öffnen. */
   phonebookNavRequest?: number
   onOpenSettings?: () => void
+  /** Fester App-Header darüber — Chat-Kopf ohne Doppel-Chrome. */
+  suppressAppChrome?: boolean
 }
 
 function ChatViewLoadingShell() {
@@ -55,6 +57,7 @@ export function ChatView({
   onOpenEinsatzleitung,
   phonebookNavRequest,
   onOpenSettings,
+  suppressAppChrome = false,
 }: ChatViewProps) {
   const [coreReady, setCoreReady] = useState(() => !isCapacitorNativePlatform())
 
@@ -152,6 +155,7 @@ function ChatViewLoaded({
       onOpenEinsatzleitung={onOpenEinsatzleitung}
       phonebookNavRequest={phonebookNavRequest}
       onOpenSettings={onOpenSettings}
+      suppressAppChrome={suppressAppChrome}
     />
   )
 }
