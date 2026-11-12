@@ -36,7 +36,6 @@ export type ChatViewInboxPanelPropsDeps = {
   showInboxPackageExpertMenu: boolean
   inboxSearchQuery?: string
   conversationMenu?: ChatViewInboxPanelProps['conversationMenu']
-  onOpenSettings?: () => void
 }
 
 export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
@@ -108,7 +107,6 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
           onApplyTemporary={packageExpert.applyTemporaryInboxPackage}
           onClearTemporary={packageExpert.clearTemporaryInboxPackage}
           onApplyPermanent={packageExpert.applyPackageIdBackend}
-          onOpenSettings={deps.onOpenSettings}
         />
       ) : null,
     [
@@ -120,7 +118,6 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
       packageExpert.applyTemporaryInboxPackage,
       packageExpert.clearTemporaryInboxPackage,
       packageExpert.applyPackageIdBackend,
-      deps.onOpenSettings,
     ]
   )
 

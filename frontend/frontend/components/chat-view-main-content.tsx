@@ -484,7 +484,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     showIotaExpertInboxActions: uiCaps.expertTools,
     pinnwandOverviewConfigured: pinnwandCaps.configured,
     showInboxPackageExpertMenu: showInboxPackageExpert,
-    onOpenSettings,
     hidePartnerStrip: showConversationSidebar,
     hideOverviewChips:
       showConversationSidebar &&

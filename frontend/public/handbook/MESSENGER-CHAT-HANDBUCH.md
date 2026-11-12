@@ -561,7 +561,16 @@ Drei getrennte Menüs — nicht vermischen:
 
 **Flow „Nachricht jetzt, NFT später“:** Zeile bleibt gesperrt → Object-ID/Schlüsselkarte unter On-Chain/NFT laden bzw. besitzen → zurück zur Zeile → Entschlüsseln (Passphrase manuell oder Auto über Keycard-Bindung). **Optionen → Wire einfügen:** nur **Passphrase-Wires** (`MORG_PWMSG`) — kein NFT-Gate, kein ECDH.
 
-**T32 Live-Checkliste:** (1) Sendepfad **Online**. (2) Optionen: Wire · Hash · Export · pkg. (3) On-Chain/NFT Tabs. (4) PWMSG entsperren. (5) NFT-Gate → Besitz. (6) Wire einfügen nur PWMSG.
+**T32 Live-Checkliste (Schritt für Schritt):**
+
+1. Sendepfad **Online**.
+2. Posteingang **Optionen** kurz öffnen (Wire / Hash / Export / Datei-Paket) — Dialoge schließen reicht.
+3. Button **On-Chain / NFT** öffnen, Tab **Galerie** oder **Object-ID** — Dialog schließen.
+4. **Passphrase-Nachricht:** Im Posteingang eine Zeile suchen, die nach Passphrase fragt oder `MORG_PWMSG` im Wire hat. Passphrase eingeben → Entschlüsseln. Danach erscheinen Verbergen / Passphrase anzeigen. *Keine solche Zeile?* Composer: Passphrase-Nachricht senden (an dich oder Partner), dann hier zurück.
+5. **NFT-Gate (optional):** Zeile mit Hinweis „NFT-Gate“ / `MORG_NFTGATE` → Entschlüsseln nur mit NFT-Besitz (oder aktiver Leihe). Fehlt Besitz → Fehlertext lesen, nicht Galerie mit Schlüsselkarte verwechseln.
+6. **Wire einfügen:** Optionen → Wire einfügen → nur einen kopierten `MORG_PWMSG_…`-String. NFT-Gate hier nicht.
+
+**Nicht verwechseln:** Toolbar **„Vertrag: 0x…“** = IOTA-Move-Programm (Experten). **Datei-Paket** in Optionen = `.morg-pkg` Sneakernet.
 
 ---
 
