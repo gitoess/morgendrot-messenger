@@ -833,13 +833,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
               rememberedAny = true
               if (!isPassphraseMessageVaultSessionOpen()) rememberOnlyTab = true
             }
-            if (cardOid && getNftKeycard(cardOid)) {
-              bindWireToNftKeycard({
-                objectId: cardOid,
-                wireFingerprint: fingerprintPassphraseMessageWire(wire),
-                slotId: readPassphraseNftKeycardBindSlotId(),
-              })
-            }
+            // Kein Auto-Bind an Schlüsselkarte bei normalem PWMSG (Rest-OID von Zeitkapsel
+            // erzeugte sonst falschen „gebunden“-Hinweis). Binden: nach Unlock in der Zeile.
             wrapped.push(wire)
           }
           textSnaps = wrapped

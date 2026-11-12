@@ -225,11 +225,23 @@ async function resolveAutoPassphraseForWire(wire: string): Promise<{
   }
   const me = getDirectIotaSessionSignerAddress()
   if (!me) {
-    return { pass: '', gatedByKeycard: true, owned: false, cardObjectId: binding.cardObjectId }
+    // Merker bleibt nutzbar; Kartenslot ohne Signer nicht.
+    return {
+      pass: remembered,
+      gatedByKeycard: true,
+      owned: false,
+      cardObjectId: binding.cardObjectId,
+    }
   }
   const own = await checkNftKeycardOwnedBySigner(binding.cardObjectId, me)
   if (!own.ok || !own.owned) {
-    return { pass: '', gatedByKeycard: true, owned: false, cardObjectId: binding.cardObjectId }
+    // Ohne Besitz: kein Auto aus Kartenslot — aber lokal gemerkte Passphrase weiter nutzen.
+    return {
+      pass: remembered,
+      gatedByKeycard: true,
+      owned: false,
+      cardObjectId: binding.cardObjectId,
+    }
   }
   return {
     pass: candidate,
@@ -327,10 +339,16 @@ function PassphraseMessageBody(p: {
         if (!alive) return
         if (r.gatedByKeycard && r.owned === false) {
           setKeycardGateHint(
-            'An NFT-Schlüsselkarte gebunden — Auto-Lesen nur mit aktuellem Besitz. Passphrase manuell bleibt möglich (Komfort-Modus, kein starkes Crypto-Gate).'
+            'Lokal an eine Schlüsselkarte gekoppelt (oft Rest von Zeitkapsel/Composer) — NFT-Besitz fehlt, Kartenslot-Auto aus. Gemerkte Passphrase gilt weiter. Unten „Bindung lösen“, wenn unerwünscht.'
           )
-          setKnown('')
-          setPlain(null)
+          setBoundCardOid(r.cardObjectId ?? null)
+          if (r.cardObjectId) setBindPickOid(r.cardObjectId)
+          setKnown((prev) => (prev === r.pass ? prev : r.pass))
+          setPass((prev) => (prev.trim().length >= 8 ? prev : r.pass))
+          if (!r.pass) {
+            setPlain(null)
+            setHidden(false)
+          }
           return
         }
         setKeycardGateHint(
@@ -552,7 +570,18 @@ function PassphraseMessageBody(p: {
             optional NFT-Schlüsselkarte.
           </p>
           {keycardGateHint ? (
-            <p className="text-[11px] text-amber-800/90 dark:text-amber-100/90">{keycardGateHint}</p>
+            <div className="space-y-1">
+              <p className="text-[11px] text-amber-800/90 dark:text-amber-100/90">{keycardGateHint}</p>
+              {boundCardOid ? (
+                <button
+                  type="button"
+                  className="text-[11px] font-medium text-primary underline hover:no-underline"
+                  onClick={unbindFromKeycard}
+                >
+                  Lokale Schlüsselkarten-Bindung lösen
+                </button>
+              ) : null}
+            </div>
           ) : null}
           <input
             type="password"

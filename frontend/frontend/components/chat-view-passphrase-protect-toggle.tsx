@@ -326,6 +326,9 @@ export function PassphraseProtectComposerToggle(p: {
             if (next && p.encrypted) p.onEncryptedChange?.(false)
             if (next) {
               setZeitkapsel(false)
+              writePassphraseZeitkapselModeEnabled(false)
+              // Rest-OID von Zeitkapsel nicht stillschweigend mit PWMSG verknüpfen
+              pickNft('')
               ensureSharedPass()
             }
           }}
