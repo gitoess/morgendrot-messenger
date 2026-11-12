@@ -2649,8 +2649,8 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 
 ### Durchgangs-Reihenfolge (verbindlich — Stand 2026-11-12)
 
-1. **Jetzt:** **T55** Optionen-Hub (nach T32) — T33 später  
-2. **Am Ende:** **T37** Tresor-Landkarte + Ideen **T39–T54** priorisieren  
+1. **Jetzt:** **T37** Tresor-Landkarte (Sicherheit) — kurz smoke  
+2. **Dann am Ende:** Ideen **T39–T54** priorisieren; T33 + Zeitkapsel nachholen  
 3. **Später (nicht blockierend):** T45 · T47 · T51 · T52 · T53  
 4. **Explizit nicht im Messenger-Durchgang:** Abo-NFT-Verkaufsstory, PlanRadar-App, Zapier-Store, TG-Gerichts-Vollforensik  
 5. **Nachholen:** T33 (⋮-Menüs) · Zeitkapsel-Feldtest (Rest T32)
@@ -2699,11 +2699,11 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T34 | **Magnet Wii-Feel** | UX | Messenger | Hover Scale+Glow+Hover-Ton; Einstellungen Erscheinungsbild; nur Maus/Trackpad |
 | T35 | **Gruppe 1:1 vs gemeinsames Postfach** | Doku/UI | erledigt 2026-11-12, Retest | Labels + Handbuch-Tabelle; Handshake-Liste nur bei 1:1 |
 | T36 | **Telegram-Verlauf-Export** | Dialog statt Submenu 2026-11-12 | **live smoke** | Optionen → Export… → Dialog mit JSON/TXT/ZIP. Nested Submenu entfernt (leerer Scroll). T37 gemeinsam am Ende |
-| T37 | **Tresor-Landkarte UI** | UX | **done → live smoke** | Sicherheit-Tab: Tresor vs Datei vs Sidecar vs NFT. **2026-11-12:** Chat-Tab Notizen → Unterreiter Passwörter (Vault `personalSecrets`) |
+| T37 | **Tresor-Landkarte UI** | UX | **jetzt live smoke** | Sicherheit-Tab: Tresor vs Datei vs Sidecar vs NFT. Notizen/Passwörter über Posteingang → Notizen |
 | T38 | **Hash & Prüfen (SHA-256)** | Feature | **done → live smoke** | Sicherheit: hashen + prüfen; Unit-Test grün |
 | T54 | **Seed / Passwort SPOF** | Sicherheit/Doku | fortlaufend | Mnemonic = Identität/Coins; Vault-PW = Tresor-Inhalt; beides offline sichern; Ordner `.morgendrot-*` / Sidecar / `.env` = Gerät+Backup, nicht „Cloud = sicher“ |
 | T39 | **Telegram↔IOTA Beweis** | Produkt | später / gemeinsam am Ende | Export-JSON enthält Journal-Felder (chatId/Richtung); Beweis-Paket = JSON + SHA-256 (+ optional Chain). Kein TG-Vollforensik/Medien. Mit User am Roadmap-Ende priorisieren |
-| T55 | **Optionen-Hub Online** | UX | **jetzt** (nach T32) | Wire · Hash · Export · Decrypt-JSON · pkg klar trennen; Hash bleibt auch unter Sicherheit (gleicher Panel). Keine Nested-Submenus. Notizen-Button nur 1× (Posteingang) |
+| T55 | **Optionen-Hub Online** | UX | **done 2026-11-12** | Wire · Hash · Export · Decrypt-JSON · pkg getrennt; Hash auch unter Sicherheit. Notizen-Button 1× (Posteingang) |
 | T40 | **Magnet/Haptik** | Entscheidung 2026-11-12 | erledigt | Default **aus**; optional lassen. Nicht weiter aufblasen — Affordance statt Pseudo-Wii |
 | T41 | **Klickbarkeit ohne Magnet** | UX | mit Messenger-Polish | Fokusring, Button-vs-Text, Hover-Unterstrich, „⋯ / Mehr“ sichtbar — Telegram-ähnlich |
 | T42 | **IOTA↔Telegram-Brücke Scope** | Produkt-Freeze | vor Feature-Wünschen | Telegram = Hinweis/Inbound/Alarm — **kein** Video/NFT/E2EE über TG. IOTA = Archiv/Beweis |
