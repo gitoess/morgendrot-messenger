@@ -26,9 +26,13 @@ export function buildEinsatzberichtPayload(
     iso: string
     recipient?: string
     encrypted: boolean
+    source?: string
     transports: string[]
     content: string
     contentLength: number
+    telegramMeta?: Message['telegramMeta']
+    telegramRecipients?: string[]
+    chainTxDigest?: string
   }>
 } {
   const chronological = [...messages].sort((a, b) => a.timestamp - b.timestamp)
@@ -37,7 +41,8 @@ export function buildEinsatzberichtPayload(
     meta: {
       exportedAt: Date.now(),
       exportedByAddress: meta.exportedByAddress,
-      note: 'Chronologische Kopie des lokalen Posteingangs (Wire-Inhalte wie in der UI). Für Dritte: Klartext-Export kann sensible Daten enthalten; verschlüsselter Export bevorzugen.',
+      note:
+        'Chronologische Kopie des lokalen Posteingangs. Telegram = Journal (Text/Chat-ID/Richtung) — kein Telegram-Server-Vollsatz, keine Medien-Binärdaten. Beweis-Idee: JSON + SHA-256 der Datei (+ optional Chain-Anker). Klartext sensibel; verschlüsselter Export bevorzugen.',
     },
     messagesChronological: chronological.map((m) => ({
       id: m.id,
@@ -46,9 +51,19 @@ export function buildEinsatzberichtPayload(
       iso: new Date(m.timestamp).toISOString(),
       recipient: m.recipient,
       encrypted: m.encrypted === true,
-      transports: m.transports?.length ? [...m.transports] : m.source === 'mesh' ? ['mesh'] : ['internet'],
+      source: m.source,
+      transports: m.transports?.length
+        ? [...m.transports]
+        : m.source === 'mesh'
+          ? ['mesh']
+          : m.source === 'telegram'
+            ? ['telegram']
+            : ['internet'],
       content: m.content ?? '',
       contentLength: (m.content ?? '').length,
+      ...(m.telegramMeta ? { telegramMeta: { ...m.telegramMeta } } : {}),
+      ...(m.telegramRecipients?.length ? { telegramRecipients: [...m.telegramRecipients] } : {}),
+      ...(m.chainTxDigest ? { chainTxDigest: m.chainTxDigest } : {}),
     })),
   }
 }

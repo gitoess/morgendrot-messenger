@@ -28,6 +28,12 @@ export function mapTelegramJournalToMessages(
       encrypted: false,
       source: 'telegram',
       transports: ['telegram'],
+      telegramMeta: {
+        direction: e.direction,
+        chatId: e.chatId,
+        contactKey: e.contactKey,
+        ...(e.senderLabel?.trim() ? { senderLabel: e.senderLabel.trim() } : {}),
+      },
       dedupKey: out
         ? buildTelegramOutboundDedupKey(me, e.text, e.ts)
         : `telegram|${e.direction}|${cp}|${e.text.slice(0, 80)}|${Math.floor(e.ts / 60_000)}`,

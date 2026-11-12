@@ -540,7 +540,7 @@ Drei getrennte Menüs — nicht vermischen:
 
 | Ort | Zweck |
 |-----|--------|
-| **Optionen** (Toolbar) | Wire einfügen; **Export Nachrichtenverlauf…** / **Datei-Paket…** öffnen Dialoge (kein Untermenü). Passwort-JSON wieder öffnen im Export-Dialog. |
+| **Optionen** (Toolbar) | Wire einfügen · **Hash & Prüfen…** · **Export Nachrichtenverlauf…** · **Datei-Paket (Sneakernet)…** — alles Dialoge. On-Chain/NFT = eigener Button. Experten (Verankern) im Export-Dialog. |
 | **On-Chain / NFT** (Toolbar, nur Online/IOTA) | Bild-NFT: Wire aus geladenem Posteingang, Object-ID laden, Galerie, **Minten**, Schlüsselkarte merken, Guthaben/Zeitkapsel |
 | **Nachrichten-⋮** (pro Zeile) | Wire kopieren, Telefonbuch, Weiterleiten, lokal ausblenden, Burn, .morg-pkg/JSON, Funk-Paket… |
 | **Chat-⋮** (Konversation) | Gruppen-Info, Schlüssel erneuern, Burn-on-read — **nicht** dasselbe wie Nachrichten-⋮ |
@@ -561,7 +561,7 @@ Drei getrennte Menüs — nicht vermischen:
 
 **Flow „Nachricht jetzt, NFT später“:** Zeile bleibt gesperrt → Object-ID/Schlüsselkarte unter On-Chain/NFT laden bzw. besitzen → zurück zur Zeile → Entschlüsseln (Passphrase manuell oder Auto über Keycard-Bindung). **Optionen → Wire einfügen:** nur **Passphrase-Wires** (`MORG_PWMSG`) — kein NFT-Gate, kein ECDH.
 
-**T32 Live-Checkliste:** (1) Optionen öffnen — Wire / Datei-Paket / Verlauf. (2) On-Chain/NFT Tabs Wire·Object·Mint. (3) PWMSG-Zeile entsperren → Passphrase-Aktionen. (4) NFT-Gate-Zeile → Besitz. (5) Wire einfügen nur PWMSG.
+**T32 Live-Checkliste:** (1) Sendepfad **Online**. (2) Optionen: Wire · Hash · Export · pkg. (3) On-Chain/NFT Tabs. (4) PWMSG entsperren. (5) NFT-Gate → Besitz. (6) Wire einfügen nur PWMSG.
 
 ---
 

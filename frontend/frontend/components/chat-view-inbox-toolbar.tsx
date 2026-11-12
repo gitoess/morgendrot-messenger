@@ -12,6 +12,7 @@ import {
   ClipboardPaste,
   FileDown,
   Filter,
+  Hash,
   Inbox,
   KeyRound,
   Lock,
@@ -38,6 +39,7 @@ import {
 /** Eager: On-Chain/NFT-Dialog ohne Lazy-Delay in der Toolbar. */
 import { ChatViewEvidenceImageViewerButton } from '@/frontend/components/chat-view-evidence-image-viewer'
 import { ChatViewWirePasteImportDialog } from '@/frontend/components/chat-view-wire-paste-import-dialog'
+import { SettingsContentHashPanel } from '@/frontend/components/settings-content-hash-panel'
 import {
   ChatViewPendingSendsButton,
   type OfflineMailboxQueueListItem,
@@ -217,6 +219,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
   const [wirePasteOpen, setWirePasteOpen] = useState(false)
   const [exportHistoryOpen, setExportHistoryOpen] = useState(false)
   const [pkgToolsOpen, setPkgToolsOpen] = useState(false)
+  const [hashToolsOpen, setHashToolsOpen] = useState(false)
   const filterArmedCount =
     (showWireControls ? 1 : 0) +
     (showChannelControls && pathTools.showKanalFilterToggle ? 1 : 0) +
@@ -353,6 +356,15 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   Wire einfügen
                 </DropdownMenuItem>
               ) : null}
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault()
+                  setHashToolsOpen(true)
+                }}
+              >
+                <Hash className="mr-2 h-4 w-4 opacity-80" aria-hidden />
+                Hash &amp; Prüfen…
+              </DropdownMenuItem>
               {pathTools.showPakete || pathTools.showNachrichtenverlauf ? <DropdownMenuSeparator /> : null}
               {pathTools.showNachrichtenverlauf ? (
                 <DropdownMenuItem
@@ -373,7 +385,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   }}
                 >
                   <Package className="mr-2 h-4 w-4 opacity-80" aria-hidden />
-                  Datei-Paket…
+                  Datei-Paket (Sneakernet)…
                 </DropdownMenuItem>
               ) : null}
             </DropdownMenuContent>
@@ -384,7 +396,8 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               <DialogHeader>
                 <DialogTitle>Nachrichtenverlauf exportieren</DialogTitle>
                 <DialogDescription>
-                  Download auf dieses Gerät. Telegram-Journal und Funk-Zeilen werden mitgemergt (nach Aktualisieren).
+                  Download auf dieses Gerät. Telegram: Journal-Felder (Text, Chat-ID, Richtung) — keine TG-Medien.
+                  Für Beweis: JSON speichern → Hash &amp; Prüfen (SHA-256 der Datei). Chain-Anker = T39.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-3 text-sm">
@@ -518,12 +531,26 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             </DialogContent>
           </Dialog>
 
+          <Dialog open={hashToolsOpen} onOpenChange={setHashToolsOpen}>
+            <DialogContent className="max-h-[min(90vh,40rem)] max-w-lg overflow-y-auto sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Hash &amp; Prüfen</DialogTitle>
+                <DialogDescription>
+                  Lokal SHA-256 — z. B. Export-JSON oder Datei. Gleicher Werkzeugkasten wie unter Einstellungen →
+                  Sicherheit (kein zweiter Algorithmus).
+                </DialogDescription>
+              </DialogHeader>
+              <SettingsContentHashPanel />
+            </DialogContent>
+          </Dialog>
+
           <Dialog open={pkgToolsOpen} onOpenChange={setPkgToolsOpen}>
             <DialogContent className="max-w-md sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Datei-Paket (.morg-pkg)</DialogTitle>
                 <DialogDescription>
-                  Offline-Datei für einen verbundenen Partner — landet im Archiv, nicht im Chat-Posteingang.
+                  Sneakernet: Dateien verschlüsselt für einen verbundenen Partner — Archiv, nicht Chat-Verlauf. Nicht
+                  dasselbe wie „Export Nachrichtenverlauf“.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-3 text-sm">
