@@ -856,12 +856,13 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         setConnected(!!s.connected)
       }
     } else if (res.code === SIGNER_IMPORT_REQUIRED_CODE) {
-      setUnlockMode('import')
+      setUnlockMode('vault')
       setShowSignerImportOpen(true)
       setUnlockError(
-        `${res.error || 'Signatur-Material fehlt.'}\n\n` +
-          '→ Karte „Seed importieren“ (grün markiert): Vault-Passwort **und** Mnemonic/Secret eintragen, dann **„Profil wiederherstellen“**.\n' +
-          'Alternativ unter „Tresor öffnen“: „Mnemonic ergänzen (erweitert)“ öffnen, beides eintragen, **„Entsperren“**.'
+        `${res.error || 'Wallet-Seed fehlt in der Tresor-Datei.'}\n\n` +
+          'Darum: Nach vollem Sperren ist der Seed nicht mehr im RAM. Wenn er nicht mitgespeichert wurde („Wallet-Seed merken“), musst du ihn einmal eintragen.\n\n' +
+          '→ Unter „Bestehender Tresor“: „Seed ergänzen“ öffnen, Seed einfügen, Passwort, dann **Entsperren**. Danach wird der Seed (wenn Haken an) wieder im Tresor gespeichert — nächstes Mal reicht oft nur das Passwort.\n\n' +
+          'Oder Karte „Seed importieren“ (neues Tresor-Passwort + Seed).'
       )
     } else if (VAULT_ALREADY_UNLOCKED_RE.test(res.error || '')) {
       const vaultPw = password

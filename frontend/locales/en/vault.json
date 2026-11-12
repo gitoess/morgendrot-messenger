@@ -21,16 +21,17 @@
     "advancedCreate": "Advanced: create new profile (only without boss handoff)"
   },
   "vault": {
-    "title": "Open vault",
-    "subtitle": "Unlock with password",
+    "title": "Existing vault",
+    "subtitle": "Enter password, then tap “Unlock” below",
     "noLocalFileSdk": "No local vault file — use “Import seed” or “New profile”.",
     "noLocalFileChain": "No local file: if the vault is on-chain only, use the same vault password as when saving on-chain — keys load into the session after unlock.",
     "passwordLabel": "Password",
-    "passwordPlaceholder": "Password",
-    "mnemonicOptionalLabel": "Mnemonic (if needed)",
-    "mnemonicPlaceholder": "24 words …",
+    "passwordPlaceholder": "Vault password",
+    "sdkSeedHint": "Seed only needed if it is not stored in the vault (“Remember wallet seed”). Soft header lock usually needs password only.",
+    "mnemonicOptionalLabel": "Seed / mnemonic (only if needed)",
+    "mnemonicPlaceholder": "12–24 words or Bech32 secret …",
     "hideMnemonic": "Hide",
-    "showMnemonic": "Add mnemonic (advanced)",
+    "showMnemonic": "Add seed (only if password alone is not enough)",
     "unlocking": "Unlocking…",
     "unlock": "Unlock"
   },
@@ -50,7 +51,7 @@
   "create": {
     "title": "Create new profile",
     "subtitle": "Create a fresh vault",
-    "existingVault": "A vault file already exists — “Open vault” is usually enough.",
+    "existingVault": "A vault file already exists — “Existing vault” + Unlock is usually enough.",
     "mnemonicLabel": "Mnemonic / secret",
     "mnemonicPlaceholder": "24 words …",
     "repeatLabel": "Repeat",
@@ -83,7 +84,7 @@
     "standaloneExtra": " Standalone: seed is stored encrypted on device — no Morgendrot backend required.",
     "serverExtra": " Password decrypts the vault file on device or backend.",
     "signerCli": "<mono>SIGNER=cli</mono>: IOTA CLI keystore password — no mnemonic here.",
-    "signerSdk": "<mono>SIGNER=sdk</mono>: after one-time import, password alone often suffices under “Open vault”.",
+    "signerSdk": "<mono>SIGNER=sdk</mono>: if the seed is stored in the vault (“Remember wallet seed”), password alone often suffices under “Existing vault”.",
     "signerRemote": "<mono>SIGNER=remote</mono>: vault password; signature external.",
     "forgotPassword": "<strong>Forgot password?</strong> Vault content cannot be read without the old password. With seed you can create a new profile — old messaging keys stay in the old vault."
   }

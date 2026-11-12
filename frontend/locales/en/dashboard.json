@@ -97,7 +97,7 @@
       "subtitle": "Secure keys & access",
       "variants": {
         "local-vault": {
-          "title": "Open vault",
+          "title": "Vault",
           "hint": "Password, seed, export"
         },
         "emergency-purge": {

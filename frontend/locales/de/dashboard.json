@@ -97,7 +97,7 @@
       "subtitle": "Keys & Zugänge sichern",
       "variants": {
         "local-vault": {
-          "title": "Tresor öffnen",
+          "title": "Tresor",
           "hint": "Passwort, Seed, Export"
         },
         "emergency-purge": {

@@ -185,6 +185,23 @@ function OptionCard({
   subtitle: string
   children?: ReactNode
 }) {
+  const headerInner = (
+    <>
+      <div
+        className={cn(
+          'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+          active && accent ? 'bg-emerald-500/15 text-emerald-400' : 'bg-muted text-muted-foreground'
+        )}
+      >
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-base font-semibold text-foreground">{title}</p>
+        <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>
+      </div>
+    </>
+  )
+
   return (
     <div
       className={cn(
@@ -196,24 +213,15 @@ function OptionCard({
           : 'border-border/60 hover:border-border hover:bg-card'
       )}
     >
-      <button
-        type="button"
-        onClick={onSelect}
-        className="flex w-full items-start gap-3 p-4 text-left"
-      >
-        <div
-          className={cn(
-            'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
-            active && accent ? 'bg-emerald-500/15 text-emerald-400' : 'bg-muted text-muted-foreground'
-          )}
-        >
-          {icon}
+      {active ? (
+        <div className="flex w-full items-start gap-3 p-4 text-left" aria-current="true">
+          {headerInner}
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-base font-semibold text-foreground">{title}</p>
-          <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>
-        </div>
-      </button>
+      ) : (
+        <button type="button" onClick={onSelect} className="flex w-full items-start gap-3 p-4 text-left">
+          {headerInner}
+        </button>
+      )}
       {active && children ? (
         <div className="min-w-0 space-y-4 overflow-hidden border-t border-border/60 px-4 pb-4 pt-1">
           {children}
@@ -451,6 +459,9 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
               <p className="text-xs text-amber-600 dark:text-amber-300">{t('vault.noLocalFileSdk')}</p>
             ) : !hasLocal ? (
               <p className="text-xs text-muted-foreground">{t('vault.noLocalFileChain')}</p>
+            ) : null}
+            {p.signerKind === 'sdk' && hasLocal ? (
+              <p className="text-xs text-muted-foreground">{t('vault.sdkSeedHint')}</p>
             ) : null}
             <div className="space-y-2">
               <Label htmlFor="wallet-password" className="sr-only">
