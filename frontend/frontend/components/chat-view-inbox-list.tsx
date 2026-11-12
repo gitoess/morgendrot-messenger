@@ -26,7 +26,6 @@ import {
   MoreHorizontal,
   Package,
   Reply,
-  Send,
   ShieldCheck,
   Pin,
   Star,
