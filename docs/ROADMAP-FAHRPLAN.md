@@ -2649,11 +2649,11 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 
 ### Durchgangs-Reihenfolge (verbindlich — Stand 2026-11-12)
 
-1. **Jetzt:** Retest **T36 → T37 → T38** (Telegram-Export, Tresor-Karte, Hash & Prüfen)  
-2. **Dann:** **T32** (+ T33 Doku) On-Chain/NFT · Optionen · Entschlüsseln  
+1. **Jetzt:** **T33** (Nachrichten-⋮ vs Chat-⋮) — T32 Kern ok, Zeitkapsel später  
+2. **Dann / am Ende:** **T37** Tresor-Landkarte + Ideen **T39–T55** priorisieren  
 3. **Später (nicht blockierend):** T45 Browser-Link · T47 Schnell-Buttons · T51 Abo/Credits · T52 PlanRadar · T53 Settings-Lücken  
 4. **Explizit nicht im Messenger-Durchgang:** Abo-NFT-Verkaufsstory, PlanRadar-App, Zapier-Store, TG-Gerichts-Vollforensik  
-5. **Am Ende des Roadmap-Durchgangs gemeinsam durchgehen:** alle neuen Ideen T39–T54 (Freeze + Backlog) — priorisieren/streichen, nicht parallel zum Kern-Smoke.
+5. **Nachholen:** Zeitkapsel-Feldtest (Rest von T32)
 
 **Produkt-Freeze (Sicherheit/Sinn):** Telegram = Klingel (T42); Chat-Mailbox ≠ Zahlungsobjekt (T43); Magnet Default aus (T40); Seed/Passwort = Wiederherstellungs-SPOF (siehe Handbuch Sicherheit).
 
@@ -2694,7 +2694,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T29 | **Klang & Magnet-Prefs** | UX | Messenger-Durchgang | Einstellungen → Erscheinungsbild: Ton an/aus, Hover-Widerstand; Vibration weglassen |
 | T30 | **Kontakt-Info = Mehr** | UX | Messenger-Durchgang | Kein Doppelklick-Zwang; Medien klickbar; IDs hinter „Mehr“; nur Namen in Sidebar |
 | T31 | **Posteingang Filter vs Composer** | UX | Messenger-Durchgang | „Nur verschlüsselt“ = Ansichtsfilter; Sendemodus nur Composer; pkg = Offline-Datei-Archiv; Auswahl ≠ Filter |
-| T32 | **On-Chain/NFT + Optionen + Entschlüsseln** | Gemeinsam testen | **jetzt** (nach T36–38) | **Sendepfad Online/IOTA** (sonst On-Chain/Wire-Paste ausgeblendet). Checkliste im Chat-Handbuch. Wire-Paste = nur PWMSG (Fix 2026-11-12). Live: Mint/Keycard/PWMSG/NFT-Gate |
+| T32 | **On-Chain/NFT + Optionen + Entschlüsseln** | Gemeinsam testen | **teil-done 2026-11-12** | PWMSG + Vault-Notizen ok. Zeitkapsel-Feldtest **später**. Wire-Paste = nur PWMSG. Next: T33 |
 | T33 | **Nachrichten-⋮ vs Chat-⋮** | UX/Doku | mit T32 | Wire kopieren in ⋮; Burn-Label vs Handbuch; Passphrase-Aktionen nur bei PWMSG nach Unlock — Angleichen Anleitung |
 | T34 | **Magnet Wii-Feel** | UX | Messenger | Hover Scale+Glow+Hover-Ton; Einstellungen Erscheinungsbild; nur Maus/Trackpad |
 | T35 | **Gruppe 1:1 vs gemeinsames Postfach** | Doku/UI | erledigt 2026-11-12, Retest | Labels + Handbuch-Tabelle; Handshake-Liste nur bei 1:1 |
