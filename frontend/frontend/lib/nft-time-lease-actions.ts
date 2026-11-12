@@ -286,6 +286,71 @@ export async function returnEarlyNftTimeLease(input: {
   }
 }
 
+/** Lease-Object von Chain lesen → lokalen Index füllen (wenn Browser-Merker fehlt). */
+export async function importNftTimeLeaseFromChain(leaseObjectIdRaw: string): Promise<
+  | { ok: true; leaseObjectId: string; nftObjectId: string; unlockMs: number }
+  | { ok: false; error: string }
+> {
+  const leaseObjectId = coerceHex64Id(leaseObjectIdRaw)
+  if (!leaseObjectId) return { ok: false, error: 'Lease-Object-ID: 0x + 64 Hex.' }
+  const rpc = getConfiguredDirectIotaRpcUrl()
+  if (!rpc) return { ok: false, error: 'Keine Direkt-RPC-URL.' }
+  if (isIotaRelayOnlyMode()) {
+    return { ok: false, error: 'Braucht Direkt-RPC (nicht „Nur Morgendrot-API“).' }
+  }
+  try {
+    const client = createDirectIotaClient({ rpcUrl: rpc })
+    const res = await client.getObject({
+      id: leaseObjectId,
+      options: { showContent: true, showType: true },
+    })
+    const content = res.data?.content as
+      | {
+          dataType?: string
+          type?: string
+          fields?: Record<string, unknown>
+        }
+      | undefined
+    if (!content || content.dataType !== 'moveObject' || !content.fields) {
+      return { ok: false, error: 'Objekt nicht gefunden oder kein Move-Objekt.' }
+    }
+    const typeStr = String(content.type || '')
+    if (!typeStr.includes('nft_time_lease::NftTimeLease')) {
+      return {
+        ok: false,
+        error: `Kein NftTimeLease (Typ: ${typeStr.slice(0, 80) || '—'}).`,
+      }
+    }
+    const f = content.fields
+    const nftObjectId = coerceHex64Id(f.nft_id)
+    const lender = coerceHex64Id(f.lender) || String(f.lender || '').trim().toLowerCase()
+    const borrower = coerceHex64Id(f.borrower) || String(f.borrower || '').trim().toLowerCase()
+    const unlockRaw = f.unlock_ms ?? f.unlockMs
+    const unlockMs =
+      typeof unlockRaw === 'number'
+        ? unlockRaw
+        : typeof unlockRaw === 'string'
+          ? Number(unlockRaw)
+          : 0
+    const reclaimCancelled = Boolean(f.reclaim_cancelled ?? f.reclaimCancelled)
+    if (!nftObjectId || !HEX64.test(lender) || !HEX64.test(borrower)) {
+      return { ok: false, error: 'Lease-Felder unvollständig (nft_id/lender/borrower).' }
+    }
+    upsertNftTimeLeaseLocal({
+      leaseObjectId,
+      nftObjectId,
+      lender,
+      borrower,
+      unlockMs: Number.isFinite(unlockMs) ? unlockMs : 0,
+      reclaimCancelled,
+      status: 'active',
+    })
+    return { ok: true, leaseObjectId, nftObjectId, unlockMs: Number.isFinite(unlockMs) ? unlockMs : 0 }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+}
+
 export async function reclaimNftTimeLease(input: {
   messagingPackageId: string
   leaseObjectId: string

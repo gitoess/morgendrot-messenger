@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useRef } from 'react'
+import { toast } from 'sonner'
 import {
   isOfflineMailboxQueueEnabled,
   nextChainMessageNonceU64,
@@ -163,7 +164,8 @@ function applyValidationError(
 ): void {
   setStatus('error')
   setStatusMsg(v.message)
-  setTimeout(() => setStatus('idle'), v.idleMs ?? 6000)
+  toast.error(v.message, { duration: Math.max(v.idleMs ?? 20_000, 12_000) })
+  setTimeout(() => setStatus('idle'), v.idleMs ?? 20_000)
 }
 
 

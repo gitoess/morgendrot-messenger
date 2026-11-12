@@ -383,14 +383,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     backendReachable: basisUnreachable ? false : true,
   })
 
-  /** Inbox-Cache ≠ offline: Composer-Status nicht mit Posteingang-Fallback verwechseln. */
+  /** Nur Offline-Inbox-Fallback löschen — echte Sendefehler nicht sofort killen (war: alle errors weg). */
   useEffect(() => {
     if (basisUnreachable === true) return
-    if (status === 'error') {
+    if (
+      status === 'error' &&
+      /Offline — (letzte Nachrichten|Basis nicht erreichbar)/.test(statusMsg)
+    ) {
       setStatus('idle')
-      if (/Offline — (letzte Nachrichten|Basis nicht erreichbar)/.test(statusMsg)) {
-        setStatusMsg('')
-      }
+      setStatusMsg('')
     }
   }, [basisUnreachable, inboxActions.inboxFromCache, status, statusMsg, setStatus, setStatusMsg])
 
