@@ -454,8 +454,9 @@ export function PassphraseProtectComposerToggle(p: {
                 Key an NFT-Schlüsselkarte binden (optional, nur lokal)
               </span>
               <span className="text-[11px] text-muted-foreground">
-                Soft-Bind: Wire-Fingerprint an die Karte — kein starkes On-Chain-Gate. Für echte
-                Zeitkapsel-Semantik den Modus „Zeitkapsel-Nachricht“ oben nutzen.
+                Nur bei Passphrase-Nachrichten (PWMSG). Klartext, ECDH „Verschlüsselt“ und Telegram
+                haben keinen PWMSG-Wire — deshalb kein Bind im Postausgang. Soft-Bind = lokal
+                Fingerprint↔Karte, kein starkes On-Chain-Gate (dafür Zeitkapsel-Modus).
               </span>
               <select
                 className="rounded border border-border bg-background px-2 py-1.5 text-[11px] text-foreground"

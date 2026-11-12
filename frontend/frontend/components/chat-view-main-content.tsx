@@ -554,7 +554,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const handleSelectSidebarContact = useCallback(
     (address: string) => {
       setTelegramAlarmSelected(false)
-      if ((channelMode === 'group' || channelMode === 'pinnwand') && onChannelModeChange) {
+      if (
+        (channelMode === 'group' || channelMode === 'pinnwand' || channelMode === 'notes') &&
+        onChannelModeChange
+      ) {
         onChannelModeChange('private')
       }
       const entry = lookupContactEntry(directory, address) ?? { label: address }
@@ -647,7 +650,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       toast.message('Keine eigene Wallet-Adresse — zuerst Tresor/Identität prüfen.')
       return
     }
-    if (channelMode === 'group' || channelMode === 'pinnwand') {
+    if (channelMode === 'group' || channelMode === 'pinnwand' || channelMode === 'notes') {
       if (onChannelModeChange) onChannelModeChange('private')
     }
     selectInboxConversationPartner(a)
@@ -669,9 +672,19 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setForcedTransport('internet')
   }, [onChannelModeChange, setComposerDelivery, setForcedTransport])
 
+  const handleSelectSidebarNotes = useCallback(() => {
+    setTelegramAlarmSelected(false)
+    if (onChannelModeChange) onChannelModeChange('notes')
+  }, [onChannelModeChange])
+
   const handleSelectSidebarAll = useCallback(() => {
     setTelegramAlarmSelected(false)
-    if (channelMode === 'pinnwand' && onChannelModeChange) onChannelModeChange('private')
+    if (
+      (channelMode === 'pinnwand' || channelMode === 'notes') &&
+      onChannelModeChange
+    ) {
+      onChannelModeChange('private')
+    }
     selectInboxConversationAll()
     const contacts = collectContactsForSendPath({
       directory,
@@ -916,15 +929,18 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   )
 
   const pinnwandSidebarProps = useMemo(
-    () =>
-      pinnwandCaps.showChannelTab && activeSendPath === 'internet'
+    () => ({
+      ...(pinnwandCaps.showChannelTab && activeSendPath === 'internet'
         ? {
             pinnwandLabel: pinnwandSidebarLabel(role, apiStatus),
             pinnwandUnreadCount: inboxOverviewUnreadCounts?.lagebild ?? 0,
             activePinnwandSelected: onPinnwandTab,
             onSelectPinnwand: handleSelectSidebarPinnwand,
           }
-        : {},
+        : {}),
+      activeNotesSelected: onNotesTab,
+      onSelectNotes: onChannelModeChange ? handleSelectSidebarNotes : undefined,
+    }),
     [
       pinnwandCaps.showChannelTab,
       activeSendPath,
@@ -933,6 +949,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       inboxOverviewUnreadCounts?.lagebild,
       onPinnwandTab,
       handleSelectSidebarPinnwand,
+      onNotesTab,
+      onChannelModeChange,
+      handleSelectSidebarNotes,
     ]
   )
 

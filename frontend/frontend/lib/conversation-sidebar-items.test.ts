@@ -3,6 +3,7 @@ import {
   buildConversationSidebarContacts,
   buildConversationSidebarPinnwand,
   buildConversationSidebarTelegramAlarm,
+  resolveContactSidebarSubtitle,
 } from '@/frontend/lib/conversation-sidebar-items'
 import { ZERO_IOTA_ADDRESS } from '@/frontend/lib/contact-storage-key'
 
@@ -75,6 +76,17 @@ describe('buildConversationSidebarContacts', () => {
       hidden: new Set(),
     })
     expect(items.map((i) => i.address)).toEqual([alice])
+  })
+})
+
+describe('resolveContactSidebarSubtitle', () => {
+  it('zeigt IOTA statt Telegram bei Sendepfad Online', () => {
+    const dir = {
+      [alice]: { label: 'Nicole', telegramChatId: '12345' },
+    }
+    expect(resolveContactSidebarSubtitle(dir, alice, dir[alice], 'internet')).toBe('IOTA')
+    expect(resolveContactSidebarSubtitle(dir, alice, dir[alice], 'telegram')).toBe('Telegram')
+    expect(resolveContactSidebarSubtitle(dir, alice, dir[alice])).toBe('IOTA · Telegram')
   })
 })
 

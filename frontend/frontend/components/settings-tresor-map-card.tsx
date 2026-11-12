@@ -43,8 +43,8 @@ export function SettingsTresorMapCard() {
           <span>
             <span className="font-medium text-foreground">Rein schauen</span>
             <span className="block text-[11px] text-muted-foreground">
-              Notizen + Passwörter: Chat-Tab „Notizen“ (Unterreiter). Beides im Vault-Blob; dauerhaft mit
-              „In Vault-Datei schreiben“.
+              Notizen + Passwörter: Chat-Sidebar → Kanäle → „Notizen“ (Unterreiter Passwörter). Beides im
+              Vault-Blob; dauerhaft mit „In Vault-Datei schreiben“.
             </span>
           </span>
         </li>

@@ -1,4 +1,5 @@
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
+import { parsePhonebookContact } from '@/frontend/lib/apply-phonebook-contact'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import { maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
 import {
@@ -76,13 +77,27 @@ export function resolveContactSidebarDisplayName(
 export function resolveContactSidebarSubtitle(
   directory: Record<string, ContactMeshEntryClient>,
   address: string,
-  entry?: ContactMeshEntryClient
+  entry?: ContactMeshEntryClient,
+  sendPath?: ActiveSendPath
 ): string {
-  const e = entry ?? directory[address]
+  const e = entry ?? directory[address] ?? { label: '' }
+  const c = parsePhonebookContact(address, e)
+  const hasIota = Boolean(c.iotaAddress)
+  const hasTg = Boolean(c.telegramChatId)
+  const hasMesh = Boolean(c.meshNodeId)
+  const hasAdhoc = Boolean(c.bleUuid)
+
+  // Zum aktiven Sendepfad passend — sonst wirkt „Telegram“ unter IOTA-Chats falsch.
+  if (sendPath === 'internet') return hasIota ? 'IOTA' : ''
+  if (sendPath === 'telegram') return hasTg ? 'Telegram' : ''
+  if (sendPath === 'mesh') return hasMesh ? 'Funk' : ''
+  if (sendPath === 'adhoc') return hasAdhoc ? 'Ad-hoc' : ''
+
   const parts: string[] = []
-  // Keine Wallet-Adressen in der Chat-Liste — nur Kanal-Hinweise.
-  if (e?.telegramChatId?.trim()) parts.push('Telegram')
-  if (e?.meshNodeId?.trim()) parts.push('Funk')
+  if (hasIota) parts.push('IOTA')
+  if (hasTg) parts.push('Telegram')
+  if (hasMesh) parts.push('Funk')
+  if (hasAdhoc) parts.push('Ad-hoc')
   return parts.join(' · ')
 }
 
@@ -110,7 +125,7 @@ export function buildConversationSidebarContacts(p: {
       address,
       entry,
       displayName: resolveContactSidebarDisplayName(p.directory, address, entry),
-      subtitle: resolveContactSidebarSubtitle(p.directory, address, entry),
+      subtitle: resolveContactSidebarSubtitle(p.directory, address, entry, p.sendPath),
       unreadCount: 0,
       isFavorite: p.favorites.has(address),
       lastContactedAt: p.lastContacted[address] ?? 0,

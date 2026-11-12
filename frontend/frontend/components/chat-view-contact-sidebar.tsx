@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
-import { BookUser, Info, Megaphone, MessageCircle, Settings2, User, Users } from 'lucide-react'
+import { BookUser, Info, Megaphone, MessageCircle, Settings2, StickyNote, User, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { InboxPartnerOption } from '@/frontend/components/chat-view-inbox-partner-strip'
@@ -53,6 +53,9 @@ export type ChatViewContactSidebarProps = {
   pinnwandLabel?: string
   pinnwandUnreadCount?: number
   onSelectPinnwand?: () => void
+  /** Vault-Notizen / Passwort-Safe (kein Chat). */
+  activeNotesSelected?: boolean
+  onSelectNotes?: () => void
   showAllActive: boolean
   onSelectAll: () => void
   onSelectSelf?: () => void
@@ -331,20 +334,32 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
             />
           ) : null}
 
-          {showPinnwandSection && pinnwandItem ? (
+          {(showPinnwandSection && pinnwandItem) || p.onSelectNotes ? (
             <section className="mt-2">
               <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Kanäle
               </p>
-              <SidebarRow
-                key={pinnwandItem.key}
-                title={pinnwandItem.displayName}
-                subtitle={pinnwandItem.subtitle}
-                active={p.activePinnwandSelected === true}
-                unreadCount={pinnwandItem.unreadCount}
-                icon={<Megaphone className="h-4 w-4" />}
-                onClick={() => p.onSelectPinnwand?.()}
-              />
+              {showPinnwandSection && pinnwandItem ? (
+                <SidebarRow
+                  key={pinnwandItem.key}
+                  title={pinnwandItem.displayName}
+                  subtitle={pinnwandItem.subtitle}
+                  active={p.activePinnwandSelected === true}
+                  unreadCount={pinnwandItem.unreadCount}
+                  icon={<Megaphone className="h-4 w-4" />}
+                  onClick={() => p.onSelectPinnwand?.()}
+                />
+              ) : null}
+              {p.onSelectNotes ? (
+                <SidebarRow
+                  key="notes:vault"
+                  title="Notizen"
+                  subtitle="Tresor · Texte & Passwörter"
+                  active={p.activeNotesSelected === true}
+                  icon={<StickyNote className="h-4 w-4" />}
+                  onClick={() => p.onSelectNotes?.()}
+                />
+              ) : null}
             </section>
           ) : null}
 

@@ -19,23 +19,24 @@ import {
   Copy,
   Download,
   Forward,
-  Globe2,
   Inbox,
   Link2,
   Lock,
   MessageCircle,
   MoreHorizontal,
   Package,
-  Radio,
   Reply,
   Send,
   ShieldCheck,
   Pin,
-  Smartphone,
   Star,
   Trash2,
   UserPlus,
 } from 'lucide-react'
+import {
+  inboxTransportIconKey,
+  messengerTransportMeta,
+} from '@/frontend/lib/messenger-send-path-icons'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { ChatMessageBody } from '@/frontend/components/chat-message-body'
@@ -390,10 +391,9 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                           ? (['telegram'] as const)
                           : (['internet'] as const)
                     ).map((t) => {
-                      const Icon =
-                        t === 'mesh' ? Radio : t === 'telegram' ? Send : t === 'internet' ? Globe2 : Smartphone
-                      const label =
-                        t === 'mesh' ? 'Funk' : t === 'telegram' ? 'Telegram' : t === 'internet' ? 'Online' : String(t)
+                      const meta = messengerTransportMeta(inboxTransportIconKey(String(t)))
+                      const Icon = meta.Icon
+                      const label = meta.label
                       return (
                         <span
                           key={t}
