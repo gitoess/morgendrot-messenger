@@ -7,63 +7,69 @@ import { Lock, StickyNote, KeyRound, HardDrive, Cloud, Smartphone } from 'lucide
  */
 export function SettingsTresorMapCard() {
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <div className="mb-3 flex items-center gap-2">
+    <div
+      id="settings-tresor-landkarte"
+      className="rounded-xl border-2 border-primary/35 bg-card p-4 shadow-sm"
+    >
+      <div className="mb-2 flex items-center gap-2">
         <Lock className="h-5 w-5 text-primary" aria-hidden />
-        <h4 className="font-semibold text-foreground">Tresor — was wo liegt</h4>
+        <h4 className="text-base font-semibold text-foreground">Tresor-Landkarte</h4>
       </div>
-      <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
-        In der UI heißt es <strong className="text-foreground">Tresor</strong>. „Vault“ ist nur der
-        technische Dateiname (<span className="font-mono">.morgendrot-vault</span>). Es gibt{' '}
-        <strong className="text-foreground">keinen zweiten Tresor</strong> für Chat — Chat liegt im
-        Posteingang / Cache.
+      <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
+        <strong className="text-foreground">Tresor</strong> = die verschlüsselte Datei auf dem Gerät (
+        <span className="font-mono text-[11px]">.morgendrot-vault</span>
+        ). „Vault“ ist nur der Technik-Name. Chat-Nachrichten liegen{' '}
+        <strong className="text-foreground">nicht</strong> darin (Posteingang/Cache).
       </p>
-      <ul className="space-y-2.5 text-sm">
-        <li className="flex gap-2">
-          <HardDrive className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+      <ul className="space-y-3 text-sm">
+        <li className="flex gap-3 rounded-lg border border-border/70 bg-muted/20 px-3 py-2.5">
+          <HardDrive className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden />
           <span>
-            <span className="font-medium text-foreground">Lokale Tresor-Datei</span>
-            <span className="block text-[11px] text-muted-foreground">
-              Messaging-Keys, Notizen, Passwortmanager („Mein Safe“) — eine Datei, lokal sichern unter
-              IOTA → Tresor.
+            <span className="font-medium text-foreground">1. Tresor-Datei (lokal)</span>
+            <span className="mt-0.5 block text-[12px] text-muted-foreground">
+              Keys, Notizen, Passwörter. Sichern/Laden: Einstellungen → <strong className="text-foreground">IOTA</strong>{' '}
+              → Tresor-Bereich.
             </span>
           </span>
         </li>
-        <li className="flex gap-2">
-          <Cloud className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+        <li className="flex gap-3 rounded-lg border border-border/70 bg-muted/20 px-3 py-2.5">
+          <Cloud className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden />
           <span>
-            <span className="font-medium text-foreground">Tresor on-chain (Backup)</span>
-            <span className="block text-[11px] text-muted-foreground">
-              Derselbe Blob auf der Chain-Registry — anderer Speicherort, nicht ein zweites Produkt.
+            <span className="font-medium text-foreground">2. Tresor on-chain (Backup)</span>
+            <span className="mt-0.5 block text-[12px] text-muted-foreground">
+              Optional dieselbe Datei als Backup auf der Chain — kein zweiter Tresor, nur anderer Speicherort
+              (ebenfalls unter IOTA).
             </span>
           </span>
         </li>
-        <li className="flex gap-2">
-          <StickyNote className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+        <li className="flex gap-3 rounded-lg border border-border/70 bg-muted/20 px-3 py-2.5">
+          <StickyNote className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden />
           <span>
-            <span className="font-medium text-foreground">Rein schauen</span>
-            <span className="block text-[11px] text-muted-foreground">
-              Notizen + Passwörter: Posteingang → Button „Notizen“ (neben Optionen). Beides im Vault-Blob;
-              dauerhaft mit „In Vault-Datei schreiben“.
+            <span className="font-medium text-foreground">3. Notizen &amp; Passwörter ansehen</span>
+            <span className="mt-0.5 block text-[12px] text-muted-foreground">
+              Nachrichten → Posteingang → Button <strong className="text-foreground">Notizen</strong> (neben
+              Optionen). Inhalt liegt in der Tresor-Datei.
             </span>
           </span>
         </li>
-        <li className="flex gap-2">
-          <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+        <li className="flex gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2.5">
+          <Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden />
           <span>
-            <span className="font-medium text-foreground">Browser-Sidecar</span>
-            <span className="block text-[11px] text-muted-foreground">
-              Passphrasen-Merker, NFT-Schlüsselkarten-Index, Team-Keys — verschlüsselt im Browser, nicht die
-              Tresor-Datei.
+            <span className="font-medium text-foreground">4. Nur-Browser-Speicher (kein eigener Menüpunkt)</span>
+            <span className="mt-0.5 block text-[12px] text-muted-foreground">
+              Früher „Sidecar“ genannt: Daten <strong className="text-foreground">nur in diesem Browser</strong>{' '}
+              (localStorage), <em>nicht</em> in der Tresor-Datei. Beispiele: „Passphrase merken“, Liste der
+              NFT-Schlüsselkarten, Team-Key-Merker. Anderer PC / anderer Browser = weg, bis du neu merkst.
             </span>
           </span>
         </li>
-        <li className="flex gap-2">
-          <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+        <li className="flex gap-3 rounded-lg border border-border/70 bg-muted/20 px-3 py-2.5">
+          <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden />
           <span>
-            <span className="font-medium text-foreground">NFT / Schlüsselkarte</span>
-            <span className="block text-[11px] text-muted-foreground">
-              On-Chain-Objekte + lokaler Index — parallel zum Messaging-Tresor, nicht dasselbe.
+            <span className="font-medium text-foreground">5. NFT / Schlüsselkarte</span>
+            <span className="mt-0.5 block text-[12px] text-muted-foreground">
+              Objekt on-chain + Merkliste im Browser. Parallel zum Messaging-Tresor — öffnen unter Posteingang →
+              On-Chain / NFT.
             </span>
           </span>
         </li>

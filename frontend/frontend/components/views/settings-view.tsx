@@ -202,6 +202,17 @@ export function SettingsView({
         )}
         <SettingsVaultPasswordSection vaultLocked={vaultLocked} />
         <SettingsVaultBackupSection vaultLocked={vaultLocked} onRequestVaultUnlock={onRequestVaultUnlock} />
+        <p className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-[12px] text-muted-foreground">
+          <span className="font-medium text-foreground">Wo liegt was?</span> Übersicht → Tab{' '}
+          <button
+            type="button"
+            className="font-semibold text-primary underline hover:no-underline"
+            onClick={() => selectCategory('security')}
+          >
+            Sicherheit
+          </button>{' '}
+          (Tresor-Landkarte).
+        </p>
         <SettingsMyMailboxesSection
           apiStatus={advancedIotaStatus}
           backendOnline={backendOnline}
@@ -294,10 +305,13 @@ export function SettingsView({
 
       <SettingsCollapsiblePanel open={activeCategory === 'security'} title="Sicherheit & Notfall" icon={<Shield className="h-5 w-5" />}>
         <SettingsTresorMapCard />
-        <p className="rounded-xl border border-border bg-card px-4 py-3 text-[11px] leading-relaxed text-muted-foreground">
-          <span className="font-medium text-foreground">Hash &amp; Prüfen</span> liegt unter Posteingang →{' '}
-          <span className="text-foreground">Optionen → Hash &amp; Prüfen…</span> (nicht doppelt hier).
-        </p>
+        <div className="rounded-xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+          <p className="font-medium text-foreground">Hash &amp; Prüfen</p>
+          <p className="mt-1 text-[12px]">
+            Gleiches Werkzeug wie unter Posteingang → Optionen → Hash &amp; Prüfen… (SHA-256). Hier kein zweites
+            Panel, damit nichts doppelt wirkt.
+          </p>
+        </div>
         <SettingsEmergencyPurgeSection />
       </SettingsCollapsiblePanel>
 
