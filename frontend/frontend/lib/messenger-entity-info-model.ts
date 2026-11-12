@@ -187,7 +187,7 @@ export function buildGroupInfoSections(p: {
       field(
         'broadcast',
         'Broadcast-Modus',
-        g.useTeamBroadcast === false ? 'Pro Mitglied (pairwise)' : 'Team-Broadcast',
+        g.useTeamBroadcast === false ? '1:1 je Person (Handshake)' : 'Gemeinsames Postfach',
         { copyable: false }
       )
     )

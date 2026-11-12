@@ -144,24 +144,55 @@
   }
 }
 
-/* Hover-/Press-„Widerstand“ (Magnet) — Klasse setzt ui-tap-feedback.ts */
-.ui-magnet-hover {
-  transform: scale(1.045);
-  box-shadow: 0 2px 10px color-mix(in oklab, var(--foreground) 12%, transparent);
-  transition:
-    transform 110ms ease-out,
-    box-shadow 110ms ease-out;
-  will-change: transform;
-}
-.ui-magnet-hover:active {
-  transform: scale(0.97);
-  box-shadow: none;
+/*
+ * Wii-ähnlicher Magnet: deutlicher Scale + Lift + Glow.
+ * Flag: html[data-ui-magnet="1"] (ui-tap-feedback.ts).
+ * Zusätzlich .ui-magnet-hover für sofortiges Feedback ohne :hover-Quirk.
+ */
+@media (hover: hover) and (pointer: fine) {
+  html[data-ui-magnet='1'] button:not(:disabled):not([data-no-tap-feedback]),
+  html[data-ui-magnet='1'] [role='button']:not([aria-disabled='true']):not([data-no-tap-feedback]),
+  html[data-ui-magnet='1'] [data-slot='button']:not([aria-disabled='true']):not([data-no-tap-feedback]),
+  html[data-ui-magnet='1'] a[href]:not([data-no-tap-feedback]),
+  html[data-ui-magnet='1'] summary:not([data-no-tap-feedback]),
+  html[data-ui-magnet='1'] [data-tap-feedback] {
+    transition:
+      transform 160ms cubic-bezier(0.34, 1.45, 0.64, 1),
+      box-shadow 160ms ease,
+      filter 160ms ease;
+  }
+
+  html[data-ui-magnet='1'] button:not(:disabled):not([data-no-tap-feedback]):hover,
+  html[data-ui-magnet='1'] [role='button']:not([aria-disabled='true']):not([data-no-tap-feedback]):hover,
+  html[data-ui-magnet='1'] [data-slot='button']:not([aria-disabled='true']):not([data-no-tap-feedback]):hover,
+  html[data-ui-magnet='1'] a[href]:not([data-no-tap-feedback]):hover,
+  html[data-ui-magnet='1'] summary:not([data-no-tap-feedback]):hover,
+  html[data-ui-magnet='1'] [data-tap-feedback]:hover,
+  html[data-ui-magnet='1'] .ui-magnet-hover {
+    position: relative;
+    z-index: 30;
+    transform: scale(1.14) translateY(-3px) !important;
+    filter: brightness(1.06);
+    box-shadow:
+      0 0 0 2px color-mix(in oklab, var(--primary) 45%, transparent),
+      0 10px 28px color-mix(in oklab, var(--foreground) 22%, transparent);
+  }
+
+  html[data-ui-magnet='1'] button:not(:disabled):not([data-no-tap-feedback]):active,
+  html[data-ui-magnet='1'] [role='button']:not([aria-disabled='true']):not([data-no-tap-feedback]):active,
+  html[data-ui-magnet='1'] .ui-magnet-hover:active {
+    transform: scale(0.96) translateY(0) !important;
+    filter: none;
+    box-shadow: 0 0 0 1px color-mix(in oklab, var(--primary) 35%, transparent);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ui-magnet-hover,
-  .ui-magnet-hover:active {
-    transform: none;
-    box-shadow: none;
+  html[data-ui-magnet='1'] button:hover,
+  html[data-ui-magnet='1'] [role='button']:hover,
+  html[data-ui-magnet='1'] .ui-magnet-hover {
+    transform: none !important;
+    filter: none;
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 40%, transparent);
   }
 }

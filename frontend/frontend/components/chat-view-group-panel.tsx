@@ -387,7 +387,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               )}
             >
               <Lock className="h-3 w-3" aria-hidden />
-              Pro Mitglied
+              1:1 je Person
             </button>
             <button
               type="button"
@@ -396,11 +396,11 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               }}
               className={cn(
                 'inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-medium',
-                !encrypted ? 'bg-amber-500/20 text-amber-400' : 'text-muted-foreground hover:text-foreground'
+                !encrypted ? 'bg-amber-500/20 text-amber-800 dark:text-amber-200' : 'text-muted-foreground hover:text-foreground'
               )}
             >
               <Unlock className="h-3 w-3" aria-hidden />
-              Team-Broadcast
+              Gemeinsames Postfach
             </button>
           </div>
         ) : null}
@@ -615,10 +615,10 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
       {/* 3 — Handshake nur bei Pairwise-Enc */}
       {encrypted && handshake && forcedTransport === 'internet' ? (
         <div className="space-y-2 rounded-lg border border-border bg-background/50 px-3 py-3">
-          <p className="text-xs font-semibold text-foreground">3 · Handshake je Mitglied</p>
+          <p className="text-xs font-semibold text-foreground">3 · Handshake je Person</p>
           <p className="text-[11px] leading-relaxed text-muted-foreground">
-            Nur nötig bei „Pro Mitglied“: Session-Schlüssel mit jeder Person einzeln. Team-Broadcast braucht das
-            nicht.
+            Nur bei „1:1 je Person“: mit jedem Mitglied einzeln verbinden (wie Direktchat). Bei „Gemeinsames
+            Postfach“ reicht Kanal einrichten — kein Handshake hier.
           </p>
           {handshakeMembers.length === 0 ? (
             <p className="text-[11px] text-amber-700 dark:text-amber-300">Noch keine 0x-Mitglieder — Telefonbuch nutzen.</p>

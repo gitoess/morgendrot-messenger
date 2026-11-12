@@ -1,17 +1,18 @@
 /**
- * Klick-Feedback: optionaler Ton + leichter Hover-/Press-„Magnet“ (Scale).
- * Vibration bewusst optional/aus — Desktop ohne Vibrate; Widerstand reicht.
- * Fail-silent — nie UX blockieren.
+ * Klick-Ton + Wii-ähnlicher Hover-Magnet (Scale/Lift/Glow).
+ * Prefs: `ui-feedback-prefs.ts`. Fail-silent.
  */
 
 import {
   readMagnetFeedbackEnabled,
   readSoundFeedbackEnabled,
+  UI_FEEDBACK_PREFS_CHANGED,
 } from '@/frontend/lib/ui-feedback-prefs'
 
 let sharedCtx: AudioContext | null = null
 let installed = false
 let lastClickAt = 0
+let lastHoverToneAt = 0
 let hoverTarget: Element | null = null
 
 function getAudioContext(): AudioContext | null {
@@ -24,12 +25,13 @@ function getAudioContext(): AudioContext | null {
   return sharedCtx
 }
 
-export type TapFeedbackKind = 'select' | 'confirm' | 'soft'
+export type TapFeedbackKind = 'select' | 'confirm' | 'soft' | 'hover'
 
 const TONES: Record<TapFeedbackKind, { freq: number; durMs: number; gain: number }> = {
-  select: { freq: 480, durMs: 90, gain: 0.09 },
-  confirm: { freq: 620, durMs: 110, gain: 0.1 },
-  soft: { freq: 360, durMs: 55, gain: 0.04 },
+  select: { freq: 520, durMs: 85, gain: 0.1 },
+  confirm: { freq: 660, durMs: 100, gain: 0.11 },
+  soft: { freq: 380, durMs: 55, gain: 0.05 },
+  hover: { freq: 440, durMs: 45, gain: 0.035 },
 }
 
 export function playTapClick(kind: TapFeedbackKind = 'select'): void {
@@ -42,26 +44,25 @@ export function playTapClick(kind: TapFeedbackKind = 'select'): void {
     const gain = ctx.createGain()
     const { freq, durMs, gain: peak } = TONES[kind]
     const now = ctx.currentTime
-    osc.type = 'triangle'
+    osc.type = kind === 'hover' ? 'sine' : 'triangle'
     osc.frequency.setValueAtTime(freq, now)
-    osc.frequency.exponentialRampToValueAtTime(freq * 0.75, now + durMs / 1000)
+    osc.frequency.exponentialRampToValueAtTime(freq * (kind === 'hover' ? 1.08 : 0.75), now + durMs / 1000)
     gain.gain.setValueAtTime(0.0001, now)
-    gain.gain.exponentialRampToValueAtTime(peak, now + 0.012)
+    gain.gain.exponentialRampToValueAtTime(peak, now + 0.01)
     gain.gain.exponentialRampToValueAtTime(0.0001, now + durMs / 1000)
     osc.connect(gain)
     gain.connect(ctx.destination)
     osc.start(now)
-    osc.stop(now + durMs / 1000 + 0.03)
+    osc.stop(now + durMs / 1000 + 0.02)
   } catch {
     // ignore
   }
 }
 
 export function pulseHaptic(_pattern: number | number[] = 18): void {
-  // Bewusst kein navigator.vibrate — oft wirkungslos/Desktop; Magnet-Scale ersetzt.
+  // Desktop: Magnet ersetzt Vibration.
 }
 
-/** Klick-Ton (wenn an). */
 export function tapSelectFeedback(): void {
   playTapClick('select')
 }
@@ -82,6 +83,14 @@ function isInteractiveTapTarget(el: Element | null): Element | null {
   return hit
 }
 
+/** Sync HTML-Flag für CSS-Hover (zuverlässiger als nur JS-Klasse). */
+export function syncUiMagnetDomFlag(): void {
+  if (typeof document === 'undefined') return
+  const on = readMagnetFeedbackEnabled()
+  document.documentElement.dataset.uiMagnet = on ? '1' : '0'
+  if (!on) clearHoverMagnet()
+}
+
 function clearHoverMagnet(): void {
   if (hoverTarget instanceof HTMLElement) {
     hoverTarget.classList.remove('ui-magnet-hover')
@@ -96,12 +105,18 @@ function applyHoverMagnet(el: Element): void {
   clearHoverMagnet()
   hoverTarget = el
   el.classList.add('ui-magnet-hover')
+  const now = Date.now()
+  if (now - lastHoverToneAt > 180) {
+    lastHoverToneAt = now
+    playTapClick('hover')
+  }
 }
 
-/** Einmalig: Hover-Magnet + Klick-Ton für Buttons und klickbare Controls. */
 export function ensureUiTapFeedbackInstalled(): void {
   if (typeof window === 'undefined' || installed) return
   installed = true
+  syncUiMagnetDomFlag()
+  window.addEventListener(UI_FEEDBACK_PREFS_CHANGED, () => syncUiMagnetDomFlag())
 
   window.addEventListener(
     'pointerover',

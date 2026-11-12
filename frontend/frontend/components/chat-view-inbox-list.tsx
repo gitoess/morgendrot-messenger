@@ -16,6 +16,7 @@
  */
 
 import {
+  Copy,
   Download,
   Forward,
   Globe2,
@@ -518,6 +519,16 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      const raw = `${row.msg.content ?? ''}`
+                      void navigator.clipboard.writeText(raw).catch(() => undefined)
+                    }}
+                    title="Rohinhalt / Wire in die Zwischenablage"
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    Wire kopieren
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     disabled={!canAddContact}
                     title={

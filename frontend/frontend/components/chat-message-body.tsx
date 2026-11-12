@@ -537,7 +537,8 @@ function PassphraseMessageBody(p: {
       ) : (
         <>
           <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
-            Passphrase nötig — ohne Key nur Ciphertext (gilt für Absender und Empfänger).
+            Passphrase nötig — ohne Key nur Ciphertext. Nach dem Entschlüsseln: kopieren, verbergen, Vault,
+            optional NFT-Schlüsselkarte.
           </p>
           {keycardGateHint ? (
             <p className="text-[11px] text-amber-800/90 dark:text-amber-100/90">{keycardGateHint}</p>

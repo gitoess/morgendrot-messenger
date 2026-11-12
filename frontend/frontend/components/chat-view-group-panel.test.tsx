@@ -48,7 +48,7 @@ describe('ChatViewGroupPanel (§ H.1a)', () => {
     render(
       <ChatViewGroupPanel contactDirectory={{}} forcedTransport="mesh" onEncryptedChange={vi.fn()} encrypted />
     )
-    expect(screen.getByRole('button', { name: /Pro Mitglied/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /1:1 je Person/i })).toBeDisabled()
   })
 
   it('warnt vor Klartext per Dialog', () => {
@@ -56,7 +56,7 @@ describe('ChatViewGroupPanel (§ H.1a)', () => {
     render(
       <ChatViewGroupPanel contactDirectory={{}} encrypted onEncryptedChange={onEncryptedChange} />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Team-Broadcast/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Gemeinsames Postfach/i }))
     fireEvent.click(screen.getByRole('button', { name: /Verstanden, fortfahren/i }))
     expect(onEncryptedChange).toHaveBeenCalledWith(false)
   })

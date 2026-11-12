@@ -236,7 +236,7 @@ Weiter: **`docs/HANDSHAKE-PERSISTENZ-UND-H23.md`**, Abschnitt **Handshake Vertra
 
 Doku: `docs/SENDEWEGE-KANAL-MAILBOX-UEBERSICHT.md`, `docs/TEAM-MAILBOXES.md`, `docs/MAILBOX-BEGRIFFE-UND-NUTZUNG.md`, `docs/DEPLOY-MOVE-M2c-TEAM-BROADCAST.md`.
 
-**Auf Chain löschen (Rebate):** Posteingang → Zeile **⋯** → **Auf Chain löschen (Rebate)** — nur bei Mailbox-Zeilen (Badge **Mailbox** oder **Team-Broadcast**). Entfernt den Dynamic-Field-Eintrag on-chain und gibt Storage-Gas zurück.
+**Burn: von Chain löschen:** Posteingang → Zeile **⋯** → **Burn: von Chain löschen** — nur bei Mailbox-Zeilen (Badge **Mailbox** oder **Team-Broadcast**). Entfernt den Dynamic-Field-Eintrag on-chain und gibt Storage-Gas zurück (Rebate).
 
 | Art | Wer darf purgen? | Hinweis |
 |-----|------------------|---------|
@@ -431,9 +431,16 @@ Alle Mitglieder sehen Nachrichten der Gruppe im gefilterten Posteingang (1:1-Dia
 
 **Verschlüsselung umschalten:** Im Sheet **Gruppe verwalten** oder im **Konversations-Menü** (⋮, Verschl./Klar). Wechsel zu Unverschlüsselt bei aktivem Schloss: Warnhinweis (Klartext on-chain).
 
-### Handshake in der Gruppe
+### Handshake in der Gruppe (verständlich)
 
-Im Sheet **Gruppe verwalten** unter **Verschlüsselt:** Liste **Handshake pro Mitglied** (Senden / Annehmen). Peering-QR wie bei 1:1 (Sidebar **Ich** oder Handshake-Leiste).
+Im Sheet **Gruppe verwalten** zwei Modi:
+
+| UI-Label | Bedeutung | Handshake? |
+|----------|-----------|------------|
+| **Gemeinsames Postfach** | 1× Team-Broadcast in Team-Mailbox; gemeinsames Geheimnis per Handoff | **Nein** — Kanal einrichten reicht |
+| **1:1 je Person** | Wie Direktchat: Session-Schlüssel **einzeln** mit jedem Mitglied | **Ja** — Liste „Handshake je Person“ (Senden / Annehmen) |
+
+Peering-QR wie bei 1:1 (Sidebar **Ich** oder Handshake-Leiste). **„1:1 je Person“** ist teurer und nur nötig, wenn ihr kein gemeinsames Team-Postfach nutzen wollt/könnt.
 
 ### Was Gruppenchat **nicht** ist
 
@@ -502,18 +509,47 @@ Bei mehreren Package-IDs in `.env` und **package-id-history** liest der Posteing
 
 ---
 
-## .morg-pkg (Paket-Archiv)
+## .morg-pkg (Datei-Paket / Archiv)
 
-**Posteingang → Pakete:** ECDH-verschlüsselte **`.morg-pkg`**-Dateien für Sneakernet / Offline-Übergabe.
+**Posteingang → Optionen → Datei-Paket:** ECDH-verschlüsselte **`.morg-pkg`**-Dateien für Sneakernet / Offline-Übergabe — **nicht** der normale Chat-Posteingang.
 
 | Aktion | Bedeutung |
 |--------|-----------|
-| **Import: .morg-pkg → Archiv** | Entschlüsselt (Tresor + Handshake zum Absender) → **Paket-Archiv**, nicht Posteingang |
+| **Import: .morg-pkg → Archiv** | Entschlüsselt (Tresor + Handshake zum Absender) → **Paket-Archiv** |
 | **Export: Dateien → .morg-pkg** | Mehrere Dateien zu einem Paket bündeln und herunterladen |
-| **Paket-Archiv** | Sheet mit importierten Bundles; Einzeldateien öffnen/weiterleiten |
-| **Aus Nachricht exportieren** | Kontextmenü an Mailbox-Zeile (wenn implementiert) |
+| **Paket-Archiv** | Sheet mit importierten Bundles |
+| **ECDH .morg-pkg speichern** | Nachrichten-⋮: eine Zeile als Paket |
 
 Voraussetzung Import: **Handshake** zum Absender der Datei (Peer in `peerMap`).
+
+---
+
+## Posteingang: Optionen · On-Chain/NFT · Nachrichten-⋮
+
+Drei getrennte Menüs — nicht vermischen:
+
+| Ort | Zweck |
+|-----|--------|
+| **Optionen** (Toolbar) | Wire einfügen, Export-JSON entschlüsseln, Datei-Paket, Nachrichtenverlauf-Export, Experten-Anker |
+| **On-Chain / NFT** (Toolbar, nur Online/IOTA) | Bild-NFT: Wire aus geladenem Posteingang, Object-ID laden, Galerie, **Minten**, Schlüsselkarte merken, Guthaben/Zeitkapsel |
+| **Nachrichten-⋮** (pro Zeile) | Wire kopieren, Telefonbuch, Weiterleiten, lokal ausblenden, Burn, .morg-pkg/JSON, Funk-Paket… |
+| **Chat-⋮** (Konversation) | Gruppen-Info, Schlüssel erneuern, Burn-on-read — **nicht** dasselbe wie Nachrichten-⋮ |
+
+**On-Chain/NFT gehört nur teilweise hierher:** Schauen (Wire/Object-ID/Galerie) passt zum Posteingang; Mint/Guthaben/Zeitkapsel sind eher Wallet — gemeinsam testen (Roadmap T32).
+
+### Verschlüsselte Nachricht später lesen
+
+| Wire-Typ | So entsperren |
+|----------|----------------|
+| **Passphrase-Nachricht** (`MORG_PWMSG`) | In der Zeile: Passphrase eingeben → **Entschlüsseln**. Optional: Passphrase im Vault merken oder an **NFT-Schlüsselkarte** binden (nach erfolgreichem Lesen). Später: Auto wenn Key lokal + (bei Bindung) NFT-Besitz. |
+| **NFT-Gate** | In der Zeile: **Mit NFT-Besitz entschlüsseln** (kein Passphrase-Feld). |
+| **ECDH / Handshake-Partner** | Vault entsperrt + Partner verbunden — Server/Client entschlüsselt; **keine** Passphrase-Leiste. |
+
+**Passphrase kopieren / Verbergen / Passphrase anzeigen / Im Vault löschen** erscheinen **nur** bei Passphrase-Nachrichten **nach** erfolgreichem Entschlüsseln (bzw. Verbergen mit lokalem Key). Bei Klartext, ECDH-Mailbox oder NFT-Gate fehlen sie — das ist kein Bug der ⋮-Leiste.
+
+**Wire kopieren:** in der Passphrase-/NFT-UI **und** im Nachrichten-⋮ (Rohinhalt).
+
+**Flow „Nachricht jetzt, NFT später“:** Zeile bleibt gesperrt → Object-ID/Schlüsselkarte unter On-Chain/NFT laden bzw. besitzen → zurück zur Zeile → Entschlüsseln (Passphrase manuell oder Auto über Keycard-Bindung). Wire einfügen unter Optionen hilft offline für **Passphrase-Wires** (nicht voller NFT-Gate-Import).
 
 ---
 
@@ -525,4 +561,4 @@ Voraussetzung Import: **Handshake** zum Absender der Datei (Peer in `peerMap`).
 
 ---
 
-*Stand: 2026-06-16 — Sidebar-Chat, SOS/Sendepfad im Kopf, Gruppe-verwalten-Sheet, Peering-QR unter Ich, Inbox vor Composer.*
+*Stand: 2026-11-12 — Handshake-Labels „1:1 je Person“ / „Gemeinsames Postfach“; Posteingang Optionen vs On-Chain/NFT vs ⋮; Passphrase-/NFT-Entschlüsselung dokumentiert; Datei-Paket statt „Pakete“.*
