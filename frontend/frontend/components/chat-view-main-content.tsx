@@ -477,6 +477,13 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setRecipient,
   ])
 
+  const handleSelectSidebarNotes = useCallback(() => {
+    setTelegramAlarmSelected(false)
+    if (!onChannelModeChange) return
+    // Toggle: Notizen ↔ Posteingang
+    onChannelModeChange(channelMode === 'notes' ? 'private' : 'notes')
+  }, [onChannelModeChange, channelMode])
+
   const inboxPanelProps = useChatViewInboxPanelProps({
     messengerPorts: panelMessengerPorts,
     showPinnwandPinActions: pinnwandCaps.configured && pinnwandCaps.canPost,
@@ -673,13 +680,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setComposerDelivery('chain')
     setForcedTransport('internet')
   }, [onChannelModeChange, setComposerDelivery, setForcedTransport])
-
-  const handleSelectSidebarNotes = useCallback(() => {
-    setTelegramAlarmSelected(false)
-    if (!onChannelModeChange) return
-    // Toggle: Notizen ↔ Posteingang
-    onChannelModeChange(channelMode === 'notes' ? 'private' : 'notes')
-  }, [onChannelModeChange, channelMode])
 
   const handleSelectSidebarAll = useCallback(() => {
     setTelegramAlarmSelected(false)
