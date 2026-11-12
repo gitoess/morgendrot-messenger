@@ -92,9 +92,11 @@ export function formatDirectIotaSubmitError(reason: unknown): string {
   }
   if (
     (lower.includes('is not available') && lower.includes('version')) ||
+    lower.includes('not available for consumption') ||
+    lower.includes('current version') ||
     lower.includes('version mismatch')
   ) {
-    return 'Objekt-Version veraltet (oft direkt nach Spend) — kurz warten und erneut versuchen.'
+    return 'Objekt-Version veraltet (oft direkt nach vorherigem Spend/Gas) — App retried automatisch; sonst 2–5 s warten und erneut senden.'
   }
   if (lower.includes('locked') && lower.includes('object')) {
     return 'Objekt auf der Kette gesperrt — Mailbox-Version/Deploy prüfen.'

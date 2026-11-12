@@ -114,25 +114,30 @@ async function resolveEncryptedDirectSubmitContext(
 
 async function executeEncryptedDirectTransaction(
   ctx: Extract<EncryptedSubmitContext, { ok: true }>,
-  txb: Transaction
+  buildTxb: () => Promise<{ ok: true; txb: Transaction } | { ok: false; error: string }>
 ): Promise<{ ok: true; digest?: string } | { ok: false; error: string }> {
-  try {
-    await attachGasPaymentForOwner(ctx.client, txb, ctx.snap.senderAddress.trim())
-    const out = await signAndExecuteTransactionWithSigner({
-      client: ctx.client,
-      transaction: txb,
-      signer: ctx.signer,
-    })
-    if (isDirectChainExecutionSuccess(out.digest, out.status)) {
-      return { ok: true, digest: out.digest }
+  const { withStaleObjectVersionRetry } = await import('@/frontend/lib/direct-iota-stale-version-retry')
+  return withStaleObjectVersionRetry(async () => {
+    const built = await buildTxb()
+    if (!built.ok) return built
+    try {
+      await attachGasPaymentForOwner(ctx.client, built.txb, ctx.snap.senderAddress.trim())
+      const out = await signAndExecuteTransactionWithSigner({
+        client: ctx.client,
+        transaction: built.txb,
+        signer: ctx.signer,
+      })
+      if (isDirectChainExecutionSuccess(out.digest, out.status)) {
+        return { ok: true, digest: out.digest }
+      }
+      return {
+        ok: false,
+        error: `Chain-Status: ${out.status || 'kein Digest'} — im Explorer prüfen, ob die TX trotzdem existiert.`,
+      }
+    } catch (e) {
+      return { ok: false, error: formatDirectIotaSubmitError(e) }
     }
-    return {
-      ok: false,
-      error: `Chain-Status: ${out.status || 'kein Digest'} — im Explorer prüfen, ob die TX trotzdem existiert.`,
-    }
-  } catch (e) {
-    return { ok: false, error: formatDirectIotaSubmitError(e) }
-  }
+  })
 }
 
 async function buildEncryptedDirectTransaction(
@@ -191,9 +196,7 @@ async function trySubmitEncryptedViaDirectIota(
 ): Promise<{ ok: true; digest?: string } | { ok: false; error: string }> {
   const ctx = await resolveEncryptedDirectSubmitContext(opts.recipient, mode)
   if (!ctx.ok) return ctx
-  const txb = await buildEncryptedDirectTransaction(ctx, opts, mode)
-  if (!txb.ok) return txb
-  return executeEncryptedDirectTransaction(ctx, txb.txb)
+  return executeEncryptedDirectTransaction(ctx, () => buildEncryptedDirectTransaction(ctx, opts, mode))
 }
 
 export async function trySubmitEncryptedMailboxViaDirectIota(

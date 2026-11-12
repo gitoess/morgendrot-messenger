@@ -90,9 +90,9 @@ describe('chat-view-handle-send-group', () => {
     expect(resolveSingleWireSuccessMessage(false, 'team-broadcast')).toBeNull()
   })
 
-  it('inboxReloadDelaysMs gestaffelt für Gruppen', () => {
+  it('inboxReloadDelaysMs gestaffelt für Gruppen und 1:1', () => {
     expect(inboxReloadDelaysMs(true)).toEqual([1200, 4000, 9000])
-    expect(inboxReloadDelaysMs(false)).toEqual([1200])
+    expect(inboxReloadDelaysMs(false)).toEqual([1500, 5000, 12000])
   })
 
   it('publishGroupStreamsAnchorAfterSend ruft publishStreamsAnchor auf', () => {
