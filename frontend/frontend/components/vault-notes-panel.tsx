@@ -9,6 +9,11 @@ import {
   vaultNoteAttachmentDataUrl,
   VN_MAX_ATTACHMENTS,
 } from '@/frontend/lib/vault-note-attachment-ingest'
+import {
+  VN_MAX_ATTACH_BYTES_AUDIO,
+  VN_MAX_ATTACH_BYTES_IMAGE,
+  VN_MAX_ATTACH_BYTES_TXT,
+} from '@/frontend/lib/vault-note-attachment-limits'
 
 const VN_MAX_BODY = 50_000
 const VN_MAX_TITLE = 120
@@ -274,7 +279,8 @@ export function VaultNotesPanel({ unlocked, notes, onNotesChange }: VaultNotesPa
                     Datei
                   </button>
                   <span className="text-[10px] text-muted-foreground">
-                    Bild, .txt, Opus/Ogg · max. {VN_MAX_ATTACHMENTS}
+                    Bild ≤{Math.round(VN_MAX_ATTACH_BYTES_IMAGE / (1024 * 1024))} MB, Text/Audio ≤
+                    {Math.round(VN_MAX_ATTACH_BYTES_TXT / 1024)} KiB · max. {VN_MAX_ATTACHMENTS}
                   </span>
                 </div>
               </div>

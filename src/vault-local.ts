@@ -11,10 +11,17 @@ import {
     type SessionKeysArchiveFile,
 } from './shared/morgendrot-session-keys-archive.js';
 import {
-    sanitizeVaultNoteAttachments,
+    sanitizeVaultNoteAttachments as sanitizeVaultNoteAttachmentsImpl,
     type VaultNoteAttachment,
     type VaultNoteAttachmentKind,
 } from './vault-note-attachments.js';
+
+/** Re-export — immer über Impl, damit Save nicht an fehlendem Binding scheitert. */
+export function sanitizeVaultNoteAttachments(
+    raw: unknown
+): VaultNoteAttachment[] {
+    return sanitizeVaultNoteAttachmentsImpl(raw);
+}
 
 const subtle = crypto.webcrypto.subtle;
 const CURVE = 'P-256';
@@ -47,7 +54,6 @@ const PS_MAX_SECRET = 16_384;
 const PS_MAX_NOTE = 50_000;
 
 export type { VaultNoteAttachment, VaultNoteAttachmentKind };
-export { sanitizeVaultNoteAttachments };
 
 /** Strukturierte Notizen (Tresor) — mehrere benannte Einträge, optional Ordner. */
 export type VaultNoteEntry = {

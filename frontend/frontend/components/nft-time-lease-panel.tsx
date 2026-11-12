@@ -167,21 +167,9 @@ export function NftTimeLeasePanel(p: {
 
   return (
     <div className="space-y-2 text-[11px] text-muted-foreground">
-      <p>
-        <span className="text-foreground">NFT zeitlich verleihen (Leserecht)</span> — nicht Chat-Textspeicher.
-        Entschlüsseln braucht zusätzlich Ciphertext (Galerie Object-ID / Enc-ImageNFT oder Wire). Das NFT allein
-        enthält keine Chat-Texte.
+      <p className="text-foreground">
+        NFT verleihen → nach Ablauf zurückholen. Kurz: Adresse + Dauer → Leihe starten.
       </p>
-      <ol className="list-decimal space-y-0.5 pl-4 text-[10px] text-muted-foreground">
-        <li>Enc-Inhalt anlegen oder an NFT binden (Galerie / NFTGATE / Enc-Mint).</li>
-        <li>
-          Hier <span className="text-foreground">Leihe starten</span> an eine andere Wallet (nicht an dich).
-        </li>
-        <li>
-          NFT zurück: Borrower → <span className="text-foreground">Früh zurück</span> (sofort), oder nach Ablauf
-          du als Lender → <span className="text-foreground">Nach Ablauf zurückholen</span>.
-        </li>
-      </ol>
 
       {lease ? (
         <div className="space-y-1.5 rounded border border-amber-800/30 bg-amber-950/15 px-2.5 py-2">
@@ -189,8 +177,8 @@ export function NftTimeLeasePanel(p: {
           {unlockMs > 0 && lease.status === 'active' && !lease.reclaimCancelled ? (
             <p className="text-[10px] text-foreground/90">
               {reclaimReady
-                ? 'Unlock erreicht — „Nach Ablauf zurückholen“ drücken (TX, kein Auto).'
-                : `Noch ${formatRemain(remainMs)} bis Reclaim freigeschaltet (lokale/Chain-Uhr).`}
+                ? 'Bereit — „Zurückholen“ tippen.'
+                : `Noch ${formatRemain(remainMs)}.`}
             </p>
           ) : null}
           <TechnicalIdRow
@@ -209,13 +197,12 @@ export function NftTimeLeasePanel(p: {
         </div>
       ) : (
         <p className="rounded border border-border/50 bg-muted/20 px-2 py-1.5 text-[10px]">
-          Keine aktive Lease lokal. Nach „Leihe starten“ erscheint die ID hier. Fehlt sie: Explorer → TX →
-          created <span className="font-mono">NftTimeLease</span> → unter Erweitert einfügen.
+          Noch keine Leihe — unten starten. ID fehlt danach? Unter Erweitert einfügen.
         </p>
       )}
 
       <label className="flex flex-col gap-0.5">
-        <span>An wen verleihen? (andere Wallet-Adresse)</span>
+        <span>Empfänger-Wallet (nicht du)</span>
         <Input
           className="h-8 font-mono text-[11px]"
           value={borrower}
@@ -241,9 +228,7 @@ export function NftTimeLeasePanel(p: {
           onChange={(e) => setDurationMinutes(e.target.value)}
           inputMode="decimal"
         />
-        <span className="text-[10px] text-muted-foreground">
-          Kurztest: 1 = eine Minute. ({Math.round(durationMs / 1000)}s · früher „Stunden“-Feld → jetzt Minuten)
-        </span>
+        <span className="text-[10px] text-muted-foreground">Test: 1 Min ≈ {Math.round(durationMs / 1000)}s</span>
       </label>
 
       <div className="flex flex-wrap gap-1.5">
@@ -321,19 +306,14 @@ export function NftTimeLeasePanel(p: {
           }}
         >
           {reclaimReady || !unlockMs
-            ? 'Nach Ablauf zurückholen'
+            ? 'Zurückholen'
             : `Zurückholen (${formatRemain(remainMs)})`}
         </Button>
       </div>
-      {!activeLeaseId ? (
-        <p className="text-[10px] text-amber-200/90">
-          Zurückholen/Früh-zurück brauchen eine Lease-Object-ID. Ohne ID wirken die Buttons tot.
-        </p>
-      ) : null}
 
       <details className="rounded border border-border/40 px-2 py-1" open={!lease?.leaseObjectId}>
         <summary className="cursor-pointer text-[10px] text-muted-foreground">
-          Erweitert / Notfall · Package · Lease-ID
+          Erweitert (Lease-ID / Package)
         </summary>
         <div className="mt-2 space-y-2">
           <p className="text-[10px] text-muted-foreground">

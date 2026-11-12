@@ -266,23 +266,22 @@ export function PassphraseProtectComposerToggle(p: {
           }}
         />
         <span>
-          <span className="font-medium text-foreground">Zeitkapsel-Nachricht (NFT-Leserecht)</span>
+          <span className="font-medium text-foreground">Zeitkapsel-Nachricht</span>
           {' — '}
-          Ciphertext als Wire (NFTGATE); NFT = Leserecht. Kein Nachrichten-Passwort. Danach unter
-          On-Chain → Zeitkapsel verleihen.
+          nur mit NFT lesbar. Nach dem Senden: On-Chain → Zeitkapsel → verleihen.
         </span>
       </label>
 
       {zeitkapsel ? (
         <div className="ml-5 space-y-2 rounded-md border border-border/70 bg-muted/20 px-2.5 py-2">
-          <p className="text-[11px] font-medium text-foreground">NFT fürs Gate wählen</p>
+          <p className="text-[11px] font-medium text-foreground">NFT wählen</p>
           {nftSelect}
           <button
             type="button"
             className="text-[11px] font-medium text-foreground underline hover:no-underline"
             onClick={() => setAdvancedOpen((v) => !v)}
           >
-            {advancedOpen ? 'Erweitert ausblenden' : 'Erweitert (Dual / Seal)'}
+            {advancedOpen ? 'Erweitert aus' : 'Erweitert'}
           </button>
           {advancedOpen ? advancedGate : null}
         </div>
@@ -290,15 +289,13 @@ export function PassphraseProtectComposerToggle(p: {
 
       {lastZeitkapselNft ? (
         <div className="ml-5 flex flex-wrap items-center gap-2 rounded-md border border-border/70 bg-muted/10 px-2.5 py-2">
-          <span className="text-[11px] text-foreground">
-            Letzte Zeitkapsel-Nachricht an {shortOid(lastZeitkapselNft)}
-          </span>
+          <span className="text-[11px] text-foreground">Zuletzt: {shortOid(lastZeitkapselNft)}</span>
           <button
             type="button"
             className="rounded border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
             onClick={() => requestOpenZeitkapselLease(lastZeitkapselNft)}
           >
-            Dieses NFT verleihen…
+            Verleihen…
           </button>
           <button
             type="button"
@@ -308,7 +305,7 @@ export function PassphraseProtectComposerToggle(p: {
               setLastZeitkapselNft(null)
             }}
           >
-            Ausblenden
+            Weg
           </button>
         </div>
       ) : null}
@@ -336,8 +333,7 @@ export function PassphraseProtectComposerToggle(p: {
         <span>
           <span className="font-medium text-foreground">Passphrase-Schutz</span>
           {' — '}
-          eigenes Nachrichten-Passwort (ohne Handshake). Schaltet „Verschlüsselt“ (ECDH) aus — beides
-          gleichzeitig geht nicht. Für Zeitkapsel lieber den Modus oben.
+          eigenes Nachrichten-Passwort (ohne Handshake). Nicht zusammen mit ECDH „Verschlüsselt“.
         </span>
       </label>
 

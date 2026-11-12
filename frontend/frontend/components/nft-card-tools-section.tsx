@@ -109,14 +109,14 @@ export function NftCardToolsSection(p: {
 
       {p.tool === 'zeitkapsel' ? (
         <div className="space-y-2 rounded-md border border-amber-800/25 bg-amber-950/10 px-3 py-2.5">
-          <p className="text-[11px] font-medium text-foreground">1. Reclaim (alle offenen)</p>
+          <p className="text-[11px] font-medium text-foreground">Zurückholen</p>
           <NftTimeLeaseReclaimHub disabled={p.disabled} />
         </div>
       ) : null}
 
       <div className="space-y-2 rounded-md border border-border/70 px-3 py-2.5">
         <p className="text-[11px] font-medium text-foreground">
-          {p.tool === 'zeitkapsel' ? '2. Schlüsselkarte für neue Leihe' : '1. Schlüsselkarte wählen'}
+          {p.tool === 'zeitkapsel' ? 'Neue Leihe — NFT wählen' : 'Schlüsselkarte'}
         </p>
         {options.length > 0 ? (
           <select
@@ -133,12 +133,11 @@ export function NftCardToolsSection(p: {
           </select>
         ) : (
           <p className="text-[11px] text-muted-foreground">
-            Keine NFT/Vaults im Index — Galerie laden („Eigene NFT anzeigen“), Tresor entsperren, oder Object-ID
-            unten eintragen.
+            Kein NFT — Galerie laden oder Object-ID eintragen.
           </p>
         )}
         <label className="flex flex-col gap-0.5">
-          <span className="text-[10px] text-muted-foreground">Oder Object-ID (überschreibt die Auswahl)</span>
+          <span className="text-[10px] text-muted-foreground">Oder Object-ID</span>
           <Input
             className="h-8 font-mono text-[11px]"
             value={manual}

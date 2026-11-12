@@ -103,9 +103,10 @@ export function ChatViewNotesTabPanel() {
     <section className="space-y-3 rounded-xl border border-border bg-card p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-sm font-semibold text-foreground">Notizen & Safe</h2>
+          <h2 className="text-sm font-semibold text-foreground">Tresor-Safe</h2>
           <p className="text-[11px] text-muted-foreground">
-            Liegt im Tresor (Vault). Auto-Sitzung; „In Vault-Datei schreiben“ oder Einstellungen → IOTA sichern.
+            Zwei Bereiche reichen: Freitext-Notizen und Login/Passwort-Einträge. Beides im Vault — dauerhaft mit
+            „In Vault-Datei schreiben“.
           </p>
         </div>
         <button
@@ -121,8 +122,8 @@ export function ChatViewNotesTabPanel() {
       <div className="flex flex-wrap gap-1 rounded-lg border border-border/60 bg-muted/20 p-1">
         {(
           [
-            ['notes', 'Notizen'],
-            ['secrets', 'Passwörter'],
+            ['notes', 'Notizen (Text)'],
+            ['secrets', 'Passwörter (Login)'],
           ] as const
         ).map(([id, label]) => (
           <button

@@ -186,8 +186,7 @@ export function NftTimeLeaseReclaimHub(p: {
         <div>
           <p className="text-sm font-medium text-foreground">Offene Verleihungen</p>
           <p className="text-[10px] text-muted-foreground">
-            {rows.length} im lokalen Index
-            {readyCount > 0 ? ` · ${readyCount} reclaim-bereit` : ''} — Chain-Wahrheit ≠ Browser-Merker.
+            {rows.length} lokal{readyCount > 0 ? ` · ${readyCount} bereit` : ''}
           </p>
         </div>
         {rows.length > 6 || q ? (
@@ -202,45 +201,47 @@ export function NftTimeLeaseReclaimHub(p: {
       </div>
 
       {rows.length === 0 ? (
-        <p className="text-[11px] leading-snug text-muted-foreground">
-          Keine Leihen in <strong className="text-foreground">diesem Browser</strong>. Ab jetzt speichert
-          „Leihe starten“ den Eintrag lokal (NFT + Lease). Ältere Leihen: Lease-Object-ID unten laden →
-          dann ID anklicken / Reclaim.
+        <p className="text-[11px] text-muted-foreground">
+          Keine Leihe hier. Neue erscheinen nach „Leihe starten“. Ältere: unten Lease-ID laden.
         </p>
       ) : null}
 
-      <div className="space-y-1.5 rounded-md border border-border/70 bg-muted/15 p-2.5">
-        <p className="text-[10px] font-medium text-foreground">Lease-ID von Chain laden</p>
-        <Input
-          className="h-8 font-mono text-[11px]"
-          value={manualLeaseId}
-          onChange={(e) => setManualLeaseId(e.target.value)}
-          placeholder="0x… (NftTimeLease Object-ID)"
-          disabled={p.disabled || importBusy}
-          spellCheck={false}
-        />
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-8 text-[11px]"
-            disabled={p.disabled || importBusy || !manualLeaseId.trim()}
-            onClick={() => void onImport()}
-          >
-            {importBusy ? '…' : 'Nur laden'}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            className="h-8 text-[11px]"
-            disabled={p.disabled || importBusy || !manualLeaseId.trim()}
-            onClick={() => void onImportAndReclaim()}
-          >
-            Laden + Reclaim
-          </Button>
+      <details className="rounded-md border border-border/70 bg-muted/15 p-2.5" open={rows.length === 0}>
+        <summary className="cursor-pointer text-[10px] font-medium text-foreground">
+          Lease-ID nachtragen
+        </summary>
+        <div className="mt-2 space-y-1.5">
+          <Input
+            className="h-8 font-mono text-[11px]"
+            value={manualLeaseId}
+            onChange={(e) => setManualLeaseId(e.target.value)}
+            placeholder="0x… Lease-Object-ID"
+            disabled={p.disabled || importBusy}
+            spellCheck={false}
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 text-[11px]"
+              disabled={p.disabled || importBusy || !manualLeaseId.trim()}
+              onClick={() => void onImport()}
+            >
+              {importBusy ? '…' : 'Laden'}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 text-[11px]"
+              disabled={p.disabled || importBusy || !manualLeaseId.trim()}
+              onClick={() => void onImportAndReclaim()}
+            >
+              Laden + Reclaim
+            </Button>
+          </div>
         </div>
-      </div>
+      </details>
 
       {rows.length > 0 ? (
         <ul
@@ -306,13 +307,9 @@ export function NftTimeLeaseReclaimHub(p: {
                 <p className="text-[10px] text-muted-foreground">
                   an {shortId(e.borrower)} ·{' '}
                   {pending ? (
-                    <span className="text-amber-800 dark:text-amber-200">
-                      Lease-ID nachtragen (unten laden), dann reclaimen
-                    </span>
+                    <span className="text-amber-800 dark:text-amber-200">ID nachtragen</span>
                   ) : e.ready ? (
-                    <span className="text-emerald-700 dark:text-emerald-300">
-                      Reclaim möglich — ID anklicken oder Button
-                    </span>
+                    <span className="text-emerald-700 dark:text-emerald-300">bereit</span>
                   ) : (
                     <span>noch {formatRemain(e.remainMs)}</span>
                   )}
