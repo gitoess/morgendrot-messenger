@@ -93,6 +93,7 @@ export function ChatView({
       onOpenEinsatzleitung={onOpenEinsatzleitung}
       phonebookNavRequest={phonebookNavRequest}
       onOpenSettings={onOpenSettings}
+      suppressAppChrome={suppressAppChrome}
     />
   )
 }
@@ -106,6 +107,7 @@ function ChatViewLoaded({
   onOpenEinsatzleitung,
   phonebookNavRequest,
   onOpenSettings,
+  suppressAppChrome = false,
 }: ChatViewProps) {
   const [channel, setChannel] = useState<MessengerChatChannel>(() =>
     variant === 'pinnwand' ? 'pinnwand' : 'private'
