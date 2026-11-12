@@ -47,8 +47,9 @@
   },
   "lock": {
     "button": "Abmelden",
-    "buttonTitle": "Tresor sperren — zum Weitermachen erneut entsperren",
-    "confirm": "Tresor sperren?\n\n• Keys und Wallet-Passwort verlassen den Server-RAM\n• Lokaler Inbox-Klartext-Cache wird geschreddert\n• Vault-Datei bleibt — Entsperren mit Vault-Passwort\n• Bei SIGNER=sdk: Seed/Mnemonic ggf. erneut eingeben"
+    "buttonTitle": "Sitzung beenden — Tresor voll sperren",
+    "confirmSoft": "Tresor weich sperren?\n\n• Signer und Passphrasen nur aus diesem Browser-RAM\n• Chat bleibt offen (lesbar)\n• Kein Inbox-Cache-Löschen, Tresor-Datei unverändert\n• Tippen aufs Badge = wieder entsperren",
+    "confirmFull": "Sitzung beenden / Tresor voll sperren?\n\n• Keys + Passwort verlassen den Server-RAM\n• Schnell-Cache entschlüsselter Nachrichten (.inbox.enc) wird gelöscht — Privacy, falls jemand die Festplatte liest; Chat kommt von der Chain nach Entsperren zurück\n• Tresor-Datei (.morgendrot-vault) bleibt\n• Seed in der Datei bleibt (wenn gespeichert); nur RAM-Seed ist weg"
   },
   "mesh": {
     "internet": "Internet",

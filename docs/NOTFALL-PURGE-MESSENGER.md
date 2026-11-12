@@ -13,7 +13,14 @@ Kurzreferenz: **was** welcher Schalter löscht und **was nicht**.
 | **Tresor on-chain löschen** | Ja | **Bleibt** | Ja | Ja | Nein | — |
 | **Lokale Tresor-Datei löschen** | Nein | Ja (nur mit Chain-Backup) | Nein | Nein | Nein | — |
 
-**Sperren (kein Löschen):** Header-Badge **Tresor** (im Chat = weiches Privacy-Lock) oder Sicherheit → Passwort → **Tresor sperren** (voller `/vault-lock`). Nicht unter Notfall-Löschung.
+**Sperren (kein Tresor-Datei-Löschen):**
+
+| Aktion | Inbox-Cache `.inbox.enc` | Keys/RAM | Chat-UI |
+|--------|--------------------------|----------|---------|
+| Badge im Chat (weich) | bleibt | Browser-Signer/Passphrasen weg | bleibt offen |
+| **Sitzung beenden** (Sicherheit / Abmelden) = `/vault-lock` | **geschreddert** (Privacy: Klartext-Cache weg) | Server-Keys weg | Entsperr-Dialog |
+
+`.inbox.enc` = lokaler Schnellcache entschlüsselter Nachrichten neben dem Tresor — **nicht** die Tresor-Datei und nicht die Chain. Nach Entsperren + Laden wieder da.
 
 **Nur Medien:** kein eigener Scope — in Nachrichten bzw. NFT (brennen).
 

@@ -68,18 +68,17 @@ export function SettingsVaultPasswordSection({ vaultLocked = false }: SettingsVa
   }
 
   const handleVaultLock = async () => {
-    const sdkHint =
-      signerKind === 'sdk'
-        ? '\n\nSIGNER=sdk: Seed nur aus dem RAM weg — in der Tresor-Datei bleibt er, wenn er dort gespeichert ist.'
-        : ''
     if (
       !window.confirm(
-        'Tresor sperren?\n\n' +
-          '• Messaging-Keys + Wallet-Passwort verlassen den Server-RAM\n' +
-          '• Lokaler Klartext-Inbox-Cache (.inbox.enc) wird geschreddert\n' +
-          '• Tresor-Datei auf der Platte bleibt\n' +
-          '• Browser-Geheimnisse werden nur gesperrt (nicht gelöscht)' +
-          sdkHint
+        'Sitzung beenden / Tresor voll sperren?\n\n' +
+          'Das ist nicht das weiche Badge-Sperren im Chat.\n\n' +
+          '• Keys + Passwort verlassen den Server-RAM (wie Abmelden)\n' +
+          '• Schnell-Cache entschlüsselter Nachrichten (.inbox.enc neben dem Tresor) wird gelöscht — damit Klartext nicht auf der Platte liegt, während alles gesperrt ist. Nachrichten bleiben on-chain und laden nach Entsperren wieder\n' +
+          '• Tresor-Datei (.morgendrot-vault) bleibt unangetastet\n' +
+          '• Browser-Geheimnisse nur sperren (Ciphertext bleibt), nicht löschen' +
+          (signerKind === 'sdk'
+            ? '\n• Seed: nur aus dem RAM weg; in der Datei bleibt er, wenn gespeichert'
+            : '')
       )
     ) {
       return
@@ -88,7 +87,7 @@ export function SettingsVaultPasswordSection({ vaultLocked = false }: SettingsVa
     const res = await vaultLockCommand()
     if (res.ok) {
       await wipeLocalPassphraseStoresOnLock()
-      toast.message('Tresor gesperrt — Passwort zum Entsperren eingeben', { duration: 14_000 })
+      toast.message('Sitzung beendet — Tresor-Passwort zum Entsperren eingeben', { duration: 14_000 })
     } else {
       toast.error(res.error || res.message || 'Fehler')
     }
@@ -110,13 +109,13 @@ export function SettingsVaultPasswordSection({ vaultLocked = false }: SettingsVa
           className="inline-flex items-center gap-1.5 rounded-lg border border-amber-600/40 bg-amber-500/15 px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-500/25 disabled:opacity-50 dark:text-amber-200"
         >
           <Lock className="h-3.5 w-3.5" />
-          Tresor sperren
+          Sitzung beenden
         </button>
       </div>
       <p className="mb-3 text-[12px] leading-relaxed text-muted-foreground">
-        <strong className="text-foreground">Header-Badge im Chat</strong> = weiches Privacy-Sperren (Chat bleibt
-        offen). <strong className="text-foreground">Dieser Knopf</strong> = voller Tresor-Lock (Keys aus Server-RAM,
-        Entsperr-Dialog). Beides heißt „Tresor“ — technisch intern oft noch „Vault“.
+        <strong className="text-foreground">Sitzung beenden</strong> = volles Sperren wie Abmelden (Keys aus RAM,
+        Inbox-Schnellcache weg). <strong className="text-foreground">Badge im Chat</strong> = nur weich (Chat bleibt
+        offen, kein Cache-Löschen). Notfall-Löschung ist darunter separat.
       </p>
       {!canUseVault ? (
         <p className="mb-3 text-[12px] text-amber-800 dark:text-amber-200">

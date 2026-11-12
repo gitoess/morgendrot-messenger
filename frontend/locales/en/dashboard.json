@@ -47,8 +47,9 @@
   },
   "lock": {
     "button": "Sign out",
-    "buttonTitle": "Lock vault — unlock again to continue",
-    "confirm": "Lock vault?\n\n• Keys and wallet password leave server RAM\n• Local plaintext inbox cache is shredded\n• Vault file on disk remains — unlock with vault password\n• With SIGNER=sdk: re-enter seed/mnemonic if not stored in vault file"
+    "buttonTitle": "End session — fully lock vault",
+    "confirmSoft": "Soft-lock vault?\n\n• Signer and passphrases leave this browser RAM only\n• Chat stays open (readable)\n• Inbox cache and vault file unchanged\n• Tap the badge to unlock again",
+    "confirmFull": "End session / fully lock vault?\n\n• Keys + password leave server RAM\n• Decrypted-message speed cache (.inbox.enc) is deleted — privacy if someone reads the disk; chat returns from chain after unlock\n• Vault file (.morgendrot-vault) stays\n• Seed in the file stays (if stored); only RAM seed is cleared"
   },
   "mesh": {
     "internet": "Internet",

@@ -150,8 +150,8 @@ export function SettingsEmergencyPurgeSection() {
         </div>
       </div>
       <p className="text-[11px] leading-relaxed text-muted-foreground">
-        Nur sperren (nichts löschen): Header-Badge <strong className="text-foreground">Tresor</strong> (im Chat =
-        weich) oder unter Passwort ändern → <strong className="text-foreground">Tresor sperren</strong> (voll).
+        Nur sperren: Badge im Chat = weich; unter Passwort → <strong className="text-foreground">Sitzung beenden</strong>{' '}
+        = voll (inkl. Inbox-Schnellcache). Das hier löscht gezielt mehr.
       </p>
       <div className="space-y-2 text-sm">
         <label className="flex cursor-pointer items-start gap-2">

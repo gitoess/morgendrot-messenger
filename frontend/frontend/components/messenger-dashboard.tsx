@@ -146,9 +146,9 @@ function MessengerDashboardBody({
   const { t: tv } = useAppTranslation('vault')
 
   const onLockSession = async () => {
-    if (!window.confirm(t('lock.confirm'))) return
     // Im Chat: weiches Privacy-Lock (kein Auto-Login-Fenster). Sonst voller API-Lock + Home.
     const stayInView = s.activeView?.type === 'chat'
+    if (!window.confirm(stayInView ? t('lock.confirmSoft') : t('lock.confirmFull'))) return
     await s.lockSession(stayInView ? { stayInView: true } : undefined)
   }
 
