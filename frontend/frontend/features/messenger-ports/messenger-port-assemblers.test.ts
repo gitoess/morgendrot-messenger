@@ -123,6 +123,8 @@ describe('assembleChatViewMessengerPorts', () => {
         isPrivate: true,
         composerMailboxObjectId: '',
         setComposerMailboxObjectId: vi.fn(),
+        iotaPathFocus: false,
+        setIotaPathFocus: vi.fn(),
       },
       transport: {
         encrypted: true,
@@ -395,6 +397,8 @@ describe('assembleChatViewPanelMessengerPorts', () => {
         isPrivate: true,
         composerMailboxObjectId: '',
         setComposerMailboxObjectId: vi.fn(),
+        iotaPathFocus: false,
+        setIotaPathFocus: vi.fn(),
       },
       transport: {
         encrypted: true,

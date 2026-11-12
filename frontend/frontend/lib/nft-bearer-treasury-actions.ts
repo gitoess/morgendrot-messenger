@@ -20,18 +20,25 @@ import {
   buildAdminSetFrozenBearerTreasuryTransaction,
   buildCreateBearerTreasuryTransaction,
   buildDepositBearerTreasuryTransaction,
+  buildDestroyEmptyBearerTreasuryTransaction,
   buildWithdrawBearerTreasuryTransaction,
 } from '@/frontend/lib/nft-bearer-treasury-txb'
 import { recordNftVaultActivity } from '@/frontend/lib/iota-activity-local-log'
-import { bindVaultToNftKeycard, getNftKeycard } from '@/frontend/lib/nft-keycard-local-store'
+import {
+  bindVaultToNftKeycard,
+  clearBoundVaultFromNftKeycardIfMatches,
+  getNftKeycard,
+} from '@/frontend/lib/nft-keycard-local-store'
 import {
   findNftBearerTreasuryById,
   patchNftBearerTreasuryLocal,
+  removeNftBearerTreasuryLocal,
   upsertNftBearerTreasuryLocal,
 } from '@/frontend/lib/nft-bearer-treasury-local-store'
+import { assertCanCreateVaultForNftModeWithDiscover } from '@/frontend/lib/nft-vault-one-per-mode'
 
 export type NftBearerTreasuryActionResult =
-  | { ok: true; digest: string; treasuryObjectId?: string }
+  | { ok: true; digest: string; treasuryObjectId?: string; oneTimeNote?: string }
   | { ok: false; error: string }
 
 const GAS_BUDGET = 50_000_000n
@@ -108,6 +115,11 @@ export async function createNftBearerTreasury(input: {
   amountMist: bigint
   imageNftPackageId?: string
 }): Promise<NftBearerTreasuryActionResult> {
+  const { assertNftVaultMetaSession } = await import('@/frontend/lib/nft-vault-session-gate')
+  const gate = assertNftVaultMetaSession()
+  if (!gate.ok) return gate
+  const one = await assertCanCreateVaultForNftModeWithDiscover(input.nftObjectId, 'bearer')
+  if (!one.ok) return { ok: false, error: one.error }
   const prep = await prepare()
   if (!prep.ok) return prep
   const { client, signer, sender } = prep
@@ -239,10 +251,18 @@ export async function withdrawNftBearerTreasury(input: {
   recipientAddress: string
   imageNftPackageId?: string
 }): Promise<NftBearerTreasuryActionResult> {
+  const {
+    assertNftSpendCapabilityUsable,
+    finalizeOneTimeNftAfterSuccessfulSpend,
+    shouldBurnNftAfterSpend,
+  } = await import('@/frontend/lib/nft-spend-policy-local-store')
+  const cap = assertNftSpendCapabilityUsable(input.nftObjectId)
+  if (!cap.ok) return cap
   const prep = await prepare()
   if (!prep.ok) return prep
   const { client, signer, sender } = prep
   try {
+    const burnInSameTx = shouldBurnNftAfterSpend(input.nftObjectId)
     const txb = buildWithdrawBearerTreasuryTransaction({
       messagingPackageId: input.messagingPackageId,
       senderAddress: sender,
@@ -252,6 +272,13 @@ export async function withdrawNftBearerTreasury(input: {
       recipientAddress: input.recipientAddress,
       imageNftPackageId: input.imageNftPackageId,
     })
+    if (burnInSameTx) {
+      const { appendBurnImageNftCall } = await import('@/frontend/lib/evidence-image-nft-txb')
+      appendBurnImageNftCall(txb, {
+        objectId: input.nftObjectId,
+        packageId: input.imageNftPackageId,
+      })
+    }
     await attachGasPaymentForOwner(client, txb, sender, GAS_BUDGET)
     const out = await signAndExecuteTransactionWithSigner({ client, transaction: txb, signer })
     if (!isDirectChainExecutionSuccess(out.digest, out.status) || !out.digest) {
@@ -272,7 +299,17 @@ export async function withdrawNftBearerTreasury(input: {
       recipient: input.recipientAddress,
       nftLabel: getNftKeycard(input.nftObjectId)?.label,
     })
-    return { ok: true, digest: out.digest, treasuryObjectId: input.treasuryObjectId }
+    const one = await finalizeOneTimeNftAfterSuccessfulSpend({
+      nftObjectId: input.nftObjectId,
+      spendDigest: out.digest,
+      burnAlreadyDone: burnInSameTx,
+    })
+    return {
+      ok: true,
+      digest: out.digest,
+      treasuryObjectId: input.treasuryObjectId,
+      ...(one.note ? { oneTimeNote: one.note } : {}),
+    }
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }
   }
@@ -341,6 +378,48 @@ export async function adminReclaimNftBearerTreasury(input: {
     const local = findNftBearerTreasuryById(input.treasuryObjectId)
     recordNftVaultActivity({
       op: 'treasury_reclaim',
+      vaultObjectId: input.treasuryObjectId,
+      nftObjectId: local?.nftObjectId,
+      digest: out.digest,
+      nftLabel: local?.displayLabel,
+    })
+    return { ok: true, digest: out.digest, treasuryObjectId: input.treasuryObjectId }
+  } catch (e) {
+    return { ok: false, error: formatDirectIotaSubmitError(e) }
+  }
+}
+
+export async function destroyEmptyNftBearerTreasury(input: {
+  messagingPackageId: string
+  treasuryObjectId: string
+}): Promise<NftBearerTreasuryActionResult> {
+  const prep = await prepare()
+  if (!prep.ok) return prep
+  const { client, signer, sender } = prep
+  try {
+    const txb = buildDestroyEmptyBearerTreasuryTransaction({
+      messagingPackageId: input.messagingPackageId,
+      senderAddress: sender,
+      treasuryObjectId: input.treasuryObjectId,
+    })
+    await attachGasPaymentForOwner(client, txb, sender, GAS_BUDGET)
+    const out = await signAndExecuteTransactionWithSigner({ client, transaction: txb, signer })
+    if (!isDirectChainExecutionSuccess(out.digest, out.status) || !out.digest) {
+      return {
+        ok: false,
+        error: `destroy_empty fehlgeschlagen${out.errorDetail ? ` — ${out.errorDetail}` : ''}.`,
+      }
+    }
+    const local = findNftBearerTreasuryById(input.treasuryObjectId)
+    removeNftBearerTreasuryLocal(input.treasuryObjectId)
+    if (local?.nftObjectId) {
+      clearBoundVaultFromNftKeycardIfMatches({
+        objectId: local.nftObjectId,
+        vaultObjectId: input.treasuryObjectId,
+      })
+    }
+    recordNftVaultActivity({
+      op: 'treasury_destroy',
       vaultObjectId: input.treasuryObjectId,
       nftObjectId: local?.nftObjectId,
       digest: out.digest,

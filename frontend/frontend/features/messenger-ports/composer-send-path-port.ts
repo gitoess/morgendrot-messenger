@@ -10,6 +10,8 @@ export type ComposerSendPathPort = {
   readonly isPrivate: boolean
   readonly composerMailboxObjectId: string
   readonly onComposerMailboxObjectIdChange: (id: string) => void
+  readonly iotaPathFocus: boolean
+  readonly onIotaPathFocusChange: (focus: boolean) => void
 }
 
 export function asComposerSendPath(
@@ -19,7 +21,9 @@ export function asComposerSendPath(
   isGroup: boolean,
   isPrivate: boolean,
   composerMailboxObjectId: string,
-  onComposerMailboxObjectIdChange: (id: string) => void
+  onComposerMailboxObjectIdChange: (id: string) => void,
+  iotaPathFocus: boolean,
+  onIotaPathFocusChange: (focus: boolean) => void
 ): ComposerSendPathPort {
   return {
     composerDelivery,
@@ -29,5 +33,7 @@ export function asComposerSendPath(
     isPrivate,
     composerMailboxObjectId,
     onComposerMailboxObjectIdChange,
+    iotaPathFocus,
+    onIotaPathFocusChange,
   }
 }

@@ -8,6 +8,7 @@ import {
   NFT_ACTIVITY_CHANGED_EVENT,
   type NftActivityEntry,
 } from '@/frontend/lib/nft-activity-local-log'
+import { formatMistAsWalletUiIota } from '@/frontend/lib/nft-vault-balance'
 
 export const IOTA_ACTIVITY_LS_KEY = 'morgendrot.iotaActivity.v1'
 export const IOTA_ACTIVITY_CHANGED_EVENT = 'morgendrot:iota-activity'
@@ -177,6 +178,7 @@ export type NftVaultActivityOp =
   | 'treasury_withdraw'
   | 'treasury_freeze'
   | 'treasury_reclaim'
+  | 'treasury_destroy'
   | 'vault_indexed'
 
 /** Gesichertes Guthaben → IOTA-Aktivität (frei → Vault oder Vault → Empfänger). */
@@ -196,10 +198,11 @@ export function recordNftVaultActivity(input: {
   if (mistRaw != null && mistRaw !== '') {
     try {
       const mist = typeof mistRaw === 'bigint' ? mistRaw : BigInt(mistRaw)
-      const whole = mist / 1_000_000_000n
-      const frac = mist % 1_000_000_000n
-      const fracStr = frac.toString().padStart(9, '0').replace(/0+$/, '')
-      iotaPart = ` · ${fracStr ? `${whole}.${fracStr}` : whole.toString()} IOTA`
+      const label = formatMistAsWalletUiIota(mist, {
+        minimumFractionDigits: 6,
+        maximumFractionDigits: 6,
+      })
+      iotaPart = ` · ${label} IOTA`
     } catch {
       /* ignore */
     }
@@ -217,19 +220,53 @@ export function recordNftVaultActivity(input: {
     treasury_withdraw: { kind: 'coin_out', summary: `Bearer-Treasury Auszahlung${iotaPart}${nftBit}` },
     treasury_freeze: { kind: 'coin_out', summary: `Bearer-Treasury Freeze/Thaw${nftBit}` },
     treasury_reclaim: { kind: 'coin_in', summary: `Bearer-Treasury Admin-Reclaim${iotaPart}${nftBit}` },
+    treasury_destroy: { kind: 'coin_out', summary: `Bearer-Treasury gelöscht${nftBit}` },
     vault_indexed: {
       kind: 'coin_out',
       summary: `Gesichertes Guthaben (lokal erkannt)${iotaPart}${nftBit}`,
     },
   }
   const t = titles[input.op]
+  const objectId = (input.vaultObjectId || input.nftObjectId || '').trim().toLowerCase()
+  // „lokal erkannt“ nur einmal pro Vault — parallele Wallet-Refreshs sonst spammt die Liste.
+  if (input.op === 'vault_indexed' && objectId) {
+    const existing = readLocal().find(
+      (e) =>
+        e.objectId === objectId &&
+        (e.summary || '').includes('Gesichertes Guthaben (lokal erkannt)')
+    )
+    if (existing) return existing
+  }
   return recordIotaActivity({
     kind: t.kind,
     summary: t.summary,
     digest: input.digest,
-    objectId: input.vaultObjectId || input.nftObjectId,
+    objectId: objectId || undefined,
     counterparty: input.recipient,
   })
+}
+
+/** Doppelte „lokal erkannt“-Zeilen (Race bei Wallet-Refresh) auf eine pro Vault kürzen. */
+export function dedupeVaultIndexedActivity(): number {
+  const rows = readLocal()
+  const seen = new Set<string>()
+  const next: IotaActivityEntry[] = []
+  let removed = 0
+  for (const e of rows) {
+    const isIdx =
+      (e.summary || '').includes('Gesichertes Guthaben (lokal erkannt)') && Boolean(e.objectId)
+    if (isIdx) {
+      const key = e.objectId!.toLowerCase()
+      if (seen.has(key)) {
+        removed += 1
+        continue
+      }
+      seen.add(key)
+    }
+    next.push(e)
+  }
+  if (removed > 0) writeLocal(next)
+  return removed
 }
 
 export function clearIotaActivityLocal(): void {

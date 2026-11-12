@@ -29,7 +29,13 @@ import { messagesForContactConversation } from '@/frontend/lib/contact-conversat
 import { parseCompactImageMessage } from '@/frontend/lib/compact-image-wire'
 import { reconstructCompactImageToDataUrlWithMeta } from '@/frontend/lib/compact-image-canvas'
 import { resolveContactSidebarDisplayName } from '@/frontend/lib/conversation-sidebar-items'
-import { contactHasAnyMailboxSlot } from '@/frontend/lib/contact-mailbox-slots'
+import {
+  contactHasAnyMailboxSlot,
+  readContactMailboxSlots,
+  readProfileContactMailboxSlotOverride,
+} from '@/frontend/lib/contact-mailbox-slots'
+import { buildContactInfoSections } from '@/frontend/lib/messenger-entity-info-model'
+import { TechnicalIdRow, TechnicalIdSection } from '@/frontend/components/technical-id-row'
 
 export type ChatViewContactDetailDialogProps = {
   open: boolean
@@ -46,6 +52,8 @@ export type ChatViewContactDetailDialogProps = {
   onShowQr: () => void
   onRemove: () => void
   onSelectForMessenger?: () => void
+  /** Aktive Package-ID (Settings / ApiStatus) — nur Anzeige. */
+  packageId?: string
 }
 
 function MediaStatRow(p: { icon: React.ReactNode; label: string; count: number }) {
@@ -176,6 +184,20 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
     [p.connectedAddresses]
   )
 
+  const infoSections = useMemo(() => {
+    if (!address) return []
+    return buildContactInfoSections({
+      address,
+      entry,
+      slotOverrides: {
+        ...readContactMailboxSlots(entry),
+        ...readProfileContactMailboxSlotOverride(address),
+      },
+      messages: conversationMessages,
+      packageId: p.packageId,
+    })
+  }, [address, entry, conversationMessages, p.packageId])
+
   if (!address) return null
 
   const hasLora = Boolean(entry?.meshNodeId?.trim())
@@ -187,7 +209,9 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{displayName}</DialogTitle>
-          <DialogDescription>Kontaktdaten und geteilte Inhalte aus dem Nachrichtenverlauf.</DialogDescription>
+          <DialogDescription>
+            Info: IDs, Mailboxen und geteilte Inhalte — ohne in den Einstellungen zu suchen.
+          </DialogDescription>
         </DialogHeader>
 
         {entry ? (
@@ -212,6 +236,37 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
         ) : (
           <p className="font-mono text-xs text-muted-foreground break-all">{address}</p>
         )}
+
+        {infoSections.map((section) => (
+          <TechnicalIdSection
+            key={section.id}
+            title={section.title}
+            className="border-t border-border pt-4"
+          >
+            {section.fields.length === 0 ? (
+              <p className="text-[11px] text-muted-foreground">{section.note ?? '—'}</p>
+            ) : (
+              <>
+                {section.fields.map((f) => (
+                  <TechnicalIdRow
+                    key={f.id}
+                    label={f.label}
+                    value={f.value}
+                    copyable={f.copyable}
+                    hint={f.hint}
+                    href={f.href}
+                    hrefLabel={f.hrefLabel}
+                  />
+                ))}
+                {section.note ? (
+                  <p className="border-t border-border/50 pt-2 text-[10px] text-muted-foreground">
+                    {section.note}
+                  </p>
+                ) : null}
+              </>
+            )}
+          </TechnicalIdSection>
+        ))}
 
         <section className="space-y-3 border-t border-border pt-4">
           <h3 className="text-sm font-semibold text-foreground">Geteilte Medien &amp; Inhalte</h3>

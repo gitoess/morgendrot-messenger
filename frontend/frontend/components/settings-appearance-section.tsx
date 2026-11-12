@@ -5,7 +5,6 @@ import { Check, Palette } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { SettingsHandbookLink } from '@/frontend/components/settings-handbook-link'
 import {
   DEFAULT_CUSTOM_APPEARANCE,
   DEFAULT_MESSENGER_APPEARANCE,
@@ -41,11 +40,14 @@ export function SettingsAppearanceSection() {
     persistMessengerAppearance(id)
   }, [])
 
-  const toggleCustom = useCallback((on: boolean) => {
-    setCustomOn(on)
-    persistCustomAppearance(on, custom)
-    if (!on) persistMessengerAppearance(active)
-  }, [active, custom])
+  const toggleCustom = useCallback(
+    (on: boolean) => {
+      setCustomOn(on)
+      persistCustomAppearance(on, custom)
+      if (!on) persistMessengerAppearance(active)
+    },
+    [active, custom]
+  )
 
   const updateColor = useCallback(
     (key: keyof CustomAppearanceColors, value: string) => {
@@ -56,17 +58,18 @@ export function SettingsAppearanceSection() {
     [custom, customOn]
   )
 
-  const activePreset = MESSENGER_APPEARANCE_PRESETS.find((p) => p.id === active) ?? MESSENGER_APPEARANCE_PRESETS[0]
+  const activePreset =
+    MESSENGER_APPEARANCE_PRESETS.find((p) => p.id === active) ?? MESSENGER_APPEARANCE_PRESETS[0]
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Palette className="h-5 w-5 text-[var(--path-online)]" aria-hidden />
-          <h4 className="font-semibold text-foreground">Erscheinungsbild</h4>
-        </div>
-        <SettingsHandbookLink />
+      <div className="mb-3 flex items-center gap-2">
+        <Palette className="h-5 w-5 text-primary" aria-hidden />
+        <h4 className="font-semibold text-foreground">Erscheinungsbild</h4>
       </div>
+      <p className="mb-3 text-[11px] text-muted-foreground">
+        Rahmen und Überschriften folgen den Tokens Hintergrund / Karte / Rahmen / Primär.
+      </p>
 
       <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
         <Label htmlFor="appearance-custom" className="text-sm text-foreground">
@@ -82,7 +85,11 @@ export function SettingsAppearanceSection() {
               <label key={key} className="flex items-center gap-2 text-sm">
                 <input
                   type="color"
-                  value={String(custom[key]).startsWith('#') ? String(custom[key]) : DEFAULT_CUSTOM_APPEARANCE[key] as string}
+                  value={
+                    String(custom[key]).startsWith('#')
+                      ? String(custom[key])
+                      : (DEFAULT_CUSTOM_APPEARANCE[key] as string)
+                  }
                   onChange={(e) => updateColor(key, e.target.value)}
                   className="h-9 w-12 cursor-pointer rounded border border-border bg-transparent p-0.5"
                   aria-label={label}
@@ -130,12 +137,12 @@ export function SettingsAppearanceSection() {
                   className={cn(
                     'flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors',
                     selected
-                      ? 'border-[var(--path-online)] bg-[color-mix(in_oklab,var(--path-online)_8%,var(--card))]'
+                      ? 'border-primary bg-primary/10 text-foreground'
                       : 'border-border hover:bg-muted/40'
                   )}
                   aria-pressed={selected}
                 >
-                  {selected ? <Check className="h-4 w-4 shrink-0 text-[var(--path-online)]" /> : null}
+                  {selected ? <Check className="h-4 w-4 shrink-0 text-primary" /> : null}
                   {preset.label}
                 </button>
               )

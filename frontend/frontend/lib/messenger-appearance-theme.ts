@@ -1,8 +1,9 @@
 /**
- * Nutzer-wählbares Erscheinungsbild (Presets) — getrennt von deployment-profile-theme (THW/POL Badge).
+ * Nutzer-wählbares Erscheinungsbild — Presets: Standard + Hell; optional eigene Farben.
+ * Getrennt von deployment-profile-theme (THW/POL Badge).
  */
 
-export type MessengerAppearanceId = 'standard' | 'tactical' | 'high-contrast' | 'light'
+export type MessengerAppearanceId = 'standard' | 'light'
 
 export const MESSENGER_APPEARANCE_STORAGE_KEY = 'morgendrot.appearanceTheme'
 export const MESSENGER_APPEARANCE_CUSTOM_KEY = 'morgendrot.appearanceCustom.v1'
@@ -20,6 +21,7 @@ export type CustomAppearanceColors = {
   borderWidth: 'thin' | 'default' | 'thick'
 }
 
+/** Standard-Preset-Werte — Grundlage für Custom-Defaults. */
 export const DEFAULT_CUSTOM_APPEARANCE: CustomAppearanceColors = {
   background: '#1c2333',
   primary: '#22c55e',
@@ -43,20 +45,8 @@ export const MESSENGER_APPEARANCE_PRESETS: readonly MessengerAppearancePreset[] 
   {
     id: 'standard',
     label: 'Standard',
-    description: 'Zivil / Dienst — Blau-Grau mit Morgendrot-Grün (Büro & Feld).',
+    description: 'Zivil / Dienst — Blau-Grau mit Morgendrot-Grün.',
     swatches: ['#1c2333', '#22c55e', '#64748b'],
-  },
-  {
-    id: 'tactical',
-    label: 'Taktisch',
-    description: 'NATO/NVG-Nacht — Oliv-Schwarz, Amber-Akzente, kein Blau-Leuchten.',
-    swatches: ['#070a04', '#e8a317', '#3d4a28'],
-  },
-  {
-    id: 'high-contrast',
-    label: 'Hoher Kontrast',
-    description: 'MIL-STD-1472 — Schwarz/Weiß/Gelb für Sonne, Handschuhe, Blendung.',
-    swatches: ['#000000', '#ffffff', '#ffff00'],
   },
   {
     id: 'light',
@@ -72,6 +62,7 @@ export const MESSENGER_PATH_SEMANTICS = {
   mesh: '#2DD4A0',
   telegram: '#F59E0B',
   adhoc: '#D97706',
+  iota: '#3B82F6',
   sos: '#EF4444',
 } as const
 
@@ -83,17 +74,21 @@ export const SEND_PATH_ACTIVE_CLASS: Record<SendPathSemanticKey | 'default', str
   mesh: 'send-path-active send-path-active--mesh',
   telegram: 'send-path-active send-path-active--telegram',
   adhoc: 'send-path-active send-path-active--adhoc',
+  iota: 'send-path-active send-path-active--iota',
   sos: 'send-path-active send-path-active--sos',
   default: 'send-path-active send-path-active--online',
 }
 
 export function isMessengerAppearanceId(v: string): v is MessengerAppearanceId {
-  return (
-    v === 'standard' ||
-    v === 'tactical' ||
-    v === 'high-contrast' ||
-    v === 'light'
-  )
+  return v === 'standard' || v === 'light'
+}
+
+/** Alte Presets (Taktisch / Hoher Kontrast) → Standard. */
+export function normalizeMessengerAppearanceId(raw: string | null | undefined): MessengerAppearanceId {
+  if (!raw) return DEFAULT_MESSENGER_APPEARANCE
+  if (isMessengerAppearanceId(raw)) return raw
+  if (raw === 'tactical' || raw === 'high-contrast') return DEFAULT_MESSENGER_APPEARANCE
+  return DEFAULT_MESSENGER_APPEARANCE
 }
 
 export function readCustomAppearanceEnabled(): boolean {
@@ -146,6 +141,8 @@ function applyCustomAppearanceCss(colors: CustomAppearanceColors): void {
   root.style.setProperty('--border', colors.border)
   root.style.setProperty('--input', colors.accent)
   root.style.setProperty('--ring', colors.primary)
+  root.style.setProperty('--muted', colors.accent)
+  root.style.setProperty('--muted-foreground', '#94a3b8')
   root.style.setProperty('--path-online', colors.pathOnline)
   root.style.setProperty('--path-mesh', colors.pathMesh)
   root.style.setProperty('--path-telegram', colors.pathTelegram)
@@ -169,6 +166,8 @@ export function clearCustomAppearanceCss(): void {
     '--border',
     '--input',
     '--ring',
+    '--muted',
+    '--muted-foreground',
     '--path-online',
     '--path-mesh',
     '--path-telegram',
@@ -181,11 +180,19 @@ export function readMessengerAppearanceId(): MessengerAppearanceId {
   if (typeof window === 'undefined') return DEFAULT_MESSENGER_APPEARANCE
   try {
     const raw = localStorage.getItem(MESSENGER_APPEARANCE_STORAGE_KEY)
-    if (raw && isMessengerAppearanceId(raw)) return raw
+    const id = normalizeMessengerAppearanceId(raw)
+    if (raw && raw !== id) {
+      try {
+        if (id === DEFAULT_MESSENGER_APPEARANCE) localStorage.removeItem(MESSENGER_APPEARANCE_STORAGE_KEY)
+        else localStorage.setItem(MESSENGER_APPEARANCE_STORAGE_KEY, id)
+      } catch {
+        /* ignore */
+      }
+    }
+    return id
   } catch {
-    /* ignore */
+    return DEFAULT_MESSENGER_APPEARANCE
   }
-  return DEFAULT_MESSENGER_APPEARANCE
 }
 
 export function applyMessengerAppearance(id: MessengerAppearanceId): void {

@@ -135,7 +135,7 @@ export function inboxSourceFilterReadAllowed(
   if (filter === 'all') return true
   if (filter === 'telegram') return canTransportRead(status, 'telegram')
   if (filter === 'funk') return canTransportRead(status, 'lora')
-  if (filter === 'mailbox' || filter === 'group' || filter === 'lagebild') {
+  if (filter === 'mailbox' || filter === 'group' || filter === 'lagebild' || filter === 'iota') {
     return canTransportRead(status, 'iota')
   }
   return true

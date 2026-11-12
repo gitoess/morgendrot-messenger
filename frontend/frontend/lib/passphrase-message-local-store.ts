@@ -65,6 +65,15 @@ export const PASSPHRASE_NFT_REQUIRED_WALLET_LS_KEY = 'morgendrot.composer.nftReq
 export const PASSPHRASE_NFT_PUBKEY_WRAP_P4A2_LS_KEY = 'morgendrot.composer.nftPubkeyWrapP4a2.v1'
 /** P4b: Seal/Broker-Wrap (Chain-Policy + Key-Broker). */
 export const PASSPHRASE_NFT_SEAL_P4B_LS_KEY = 'morgendrot.composer.nftSealP4b.v1'
+/**
+ * Composer: Zeitkapsel-Nachricht = NFTGATE + gewähltes NFT (ohne Passphrase-Key).
+ * Mutual exclusive mit Passphrase-Schutz.
+ */
+export const PASSPHRASE_ZEITKAPSEL_MODE_LS_KEY = 'morgendrot.composer.zeitkapselMsg.v1'
+/** Letzte NFTGATE-Object-ID nach Send — CTA „NFT verleihen“. */
+export const PASSPHRASE_ZEITKAPSEL_LAST_NFT_LS_KEY = 'morgendrot.composer.zeitkapselLastNft.v1'
+/** Dialog: Zeitkapsel-Tab mit Object-ID öffnen. */
+export const OPEN_ZEITKAPSEL_LEASE_EVENT = 'morgendrot:open-zeitkapsel-lease'
 
 /** FNV-1a über normalisierten Wire — Send und Inbox treffen denselben Fingerprint. */
 export function fingerprintPassphraseMessageWire(wire: string): string {
@@ -438,6 +447,7 @@ export function writePassphraseProtectEnabled(on: boolean): void {
   if (typeof window === 'undefined') return
   try {
     window.localStorage.setItem(PASSPHRASE_PROTECT_LS_KEY, on ? '1' : '0')
+    if (on) window.localStorage.setItem(PASSPHRASE_ZEITKAPSEL_MODE_LS_KEY, '0')
   } catch {
     /* ignore */
   }
@@ -627,6 +637,67 @@ export function writePassphraseNftSealP4bEnabled(on: boolean): void {
   } catch {
     /* ignore */
   }
+}
+
+export function readPassphraseZeitkapselModeEnabled(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return window.localStorage.getItem(PASSPHRASE_ZEITKAPSEL_MODE_LS_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+export function writePassphraseZeitkapselModeEnabled(on: boolean): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(PASSPHRASE_ZEITKAPSEL_MODE_LS_KEY, on ? '1' : '0')
+    if (on) {
+      window.localStorage.setItem(PASSPHRASE_PROTECT_LS_KEY, '0')
+      window.localStorage.setItem(PASSPHRASE_NFT_STRONG_GATE_LS_KEY, '1')
+      window.localStorage.setItem(PASSPHRASE_REMEMBER_ON_DEVICE_LS_KEY, '0')
+    }
+    emitChanged()
+  } catch {
+    /* ignore */
+  }
+}
+
+export function readZeitkapselLastNftObjectId(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const v = window.localStorage.getItem(PASSPHRASE_ZEITKAPSEL_LAST_NFT_LS_KEY)?.trim().toLowerCase()
+    return v && /^0x[a-f0-9]{64}$/.test(v) ? v : null
+  } catch {
+    return null
+  }
+}
+
+export function writeZeitkapselLastNftObjectId(objectId: string | null): void {
+  if (typeof window === 'undefined') return
+  try {
+    if (!objectId?.trim()) {
+      window.localStorage.removeItem(PASSPHRASE_ZEITKAPSEL_LAST_NFT_LS_KEY)
+      emitChanged()
+      return
+    }
+    const v = objectId.trim().toLowerCase()
+    if (!/^0x[a-f0-9]{64}$/.test(v)) return
+    window.localStorage.setItem(PASSPHRASE_ZEITKAPSEL_LAST_NFT_LS_KEY, v)
+    emitChanged()
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Öffnet NFT-Dialog → Zeitkapsel mit vorausgewählter Object-ID. */
+export function requestOpenZeitkapselLease(objectId: string): void {
+  if (typeof window === 'undefined') return
+  const v = objectId.trim().toLowerCase()
+  if (!/^0x[a-f0-9]{64}$/.test(v)) return
+  window.dispatchEvent(
+    new CustomEvent(OPEN_ZEITKAPSEL_LEASE_EVENT, { detail: { objectId: v } })
+  )
 }
 
 /**

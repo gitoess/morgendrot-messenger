@@ -51,7 +51,10 @@ export type MessengerUiCapabilities = {
   showInboxPackageExpertMenu: (clientExpertModeEnabled: boolean) => boolean
   showInboxIotaFilter: boolean
   showPackageIdBanner: boolean
-  /** Ad-hoc BLE-Platzhalter — nicht im Simple Mode. */
+  /**
+   * Ad-hoc BLE-Platzhalter — aus SENDPFAD entfernt (Backlog ganz hinten).
+   * Default immer aus; Flag bleibt für spätere Wiedereinschaltung.
+   */
   showAdhocTransport: boolean
   /** Offline-Mailbox-Queue als Streifen unter der Kopfzeile (Helfer). */
   showProminentOfflineQueueBanner: boolean
@@ -72,7 +75,8 @@ export function getMessengerUiCapabilities(
       canShowInboxPackageExpertMenu(status, clientExpertModeEnabled),
     showInboxIotaFilter: iotaTransportUi,
     showPackageIdBanner: iotaTransportUi,
-    showAdhocTransport: !simpleMode,
+    /** Ad-hoc bewusst aus dem Sendepfad — Roadmap ganz hinten. */
+    showAdhocTransport: false,
     showProminentOfflineQueueBanner: simpleMode,
   }
 }

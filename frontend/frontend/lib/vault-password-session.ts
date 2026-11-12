@@ -3,11 +3,23 @@
  * Chat-Passphrasen, ImageNFT-Passphrasen, Team-Keys (Sidecar-Persistenz).
  */
 
+export const VAULT_PASSWORD_SESSION_CHANGED = 'morgendrot:vault-password-session'
+
 let sessionPassword: string | null = null
+
+function emit(): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.dispatchEvent(new Event(VAULT_PASSWORD_SESSION_CHANGED))
+  } catch {
+    /* ignore */
+  }
+}
 
 export function setVaultPasswordSession(password: string | null): void {
   const p = password?.trim() ?? ''
   sessionPassword = p.length >= 8 ? p : null
+  emit()
 }
 
 export function getVaultPasswordSession(): string | null {
@@ -20,4 +32,5 @@ export function hasVaultPasswordSession(): boolean {
 
 export function clearVaultPasswordSession(): void {
   sessionPassword = null
+  emit()
 }

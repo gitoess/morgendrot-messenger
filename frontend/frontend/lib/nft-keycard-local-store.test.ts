@@ -28,6 +28,11 @@ describe('nft-keycard vault (H.23 B2 P0)', () => {
     window.sessionStorage.clear()
   })
 
+  it('merken ohne Vault-Session abgelehnt', () => {
+    const r = upsertNftKeycardSlot({ objectId: OID, passphrase: 'card-pass-99' })
+    expect(r.ok).toBe(false)
+  })
+
   it('persistiert verschlüsselt und überlebt Lock+Unlock', async () => {
     setVaultPasswordSession('vault-pass-99')
     await unlockNftKeycardVault('vault-pass-99')
@@ -51,6 +56,7 @@ describe('nft-keycard vault (H.23 B2 P0)', () => {
   })
 
   it('P2 Multi-Slot + gebundenes ImageNFT', () => {
+    setVaultPasswordSession('vault-pass-99')
     expect(upsertNftKeycardSlot({ objectId: OID, passphrase: 'slot-default-1', note: 'PWMSG' }).ok).toBe(
       true
     )
@@ -63,6 +69,10 @@ describe('nft-keycard vault (H.23 B2 P0)', () => {
       }).ok
     ).toBe(true)
     expect(getNftKeycard(OID)?.slots.map((s) => s.id).sort()).toEqual(['default', 'img'])
+    const shortImg = '0x' + 'ab'.repeat(31) // 62 Hex → pad auf 64
+    expect(bindObjectToNftKeycard({ cardObjectId: OID, boundObjectId: shortImg, slotId: 'img' }).ok).toBe(
+      true
+    )
     expect(bindObjectToNftKeycard({ cardObjectId: OID, boundObjectId: IMG, slotId: 'img' }).ok).toBe(
       true
     )
@@ -73,6 +83,7 @@ describe('nft-keycard vault (H.23 B2 P0)', () => {
   })
 
   it('unbind Object / Wire einzeln', () => {
+    setVaultPasswordSession('vault-pass-99')
     expect(upsertNftKeycardSlot({ objectId: OID, passphrase: 'slot-default-1' }).ok).toBe(true)
     expect(bindObjectToNftKeycard({ cardObjectId: OID, boundObjectId: IMG, slotId: 'default' }).ok).toBe(
       true
@@ -87,6 +98,7 @@ describe('nft-keycard vault (H.23 B2 P0)', () => {
   })
 
   it('findNftKeycardBindingForWireFingerprint', () => {
+    setVaultPasswordSession('vault-pass-99')
     expect(upsertNftKeycardSlot({ objectId: OID, passphrase: 'slot-default-1' }).ok).toBe(true)
     expect(bindWireToNftKeycard({ objectId: OID, wireFingerprint: 'fnv:9:zz', slotId: 'default' }).ok).toBe(
       true

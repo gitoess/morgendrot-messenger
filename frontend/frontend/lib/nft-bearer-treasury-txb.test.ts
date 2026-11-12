@@ -4,6 +4,7 @@ import {
   buildAdminSetFrozenBearerTreasuryTransaction,
   buildCreateBearerTreasuryTransaction,
   buildDepositBearerTreasuryTransaction,
+  buildDestroyEmptyBearerTreasuryTransaction,
   buildWithdrawBearerTreasuryTransaction,
 } from '@/frontend/lib/nft-bearer-treasury-txb'
 
@@ -55,6 +56,14 @@ describe('nft-bearer-treasury-txb B2-S3', () => {
 
     expect(
       buildAdminReclaimBearerTreasuryTransaction({
+        messagingPackageId: MSG,
+        senderAddress: W1,
+        treasuryObjectId: TREASURY,
+      })
+    ).toBeTruthy()
+
+    expect(
+      buildDestroyEmptyBearerTreasuryTransaction({
         messagingPackageId: MSG,
         senderAddress: W1,
         treasuryObjectId: TREASURY,

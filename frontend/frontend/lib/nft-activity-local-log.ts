@@ -3,9 +3,17 @@
  * Keine Secrets — nur Object-IDs, Richtung, Zeit, optional TX-Digest.
  */
 
+import {
+  NFT_OWNED_SNAPSHOT_LS_KEY,
+  isNftOwnedSnapshotInitialized,
+  noteNftNoLongerOwned as noteNftNoLongerOwnedCore,
+  readNftOwnedSnapshot,
+  writeNftOwnedSnapshot,
+} from '@/frontend/lib/nft-owned-snapshot'
+
 export const NFT_ACTIVITY_LS_KEY = 'morgendrot.nftActivity.v1'
 export const NFT_ACTIVITY_CHANGED_EVENT = 'morgendrot:nft-activity'
-export const NFT_OWNED_SNAPSHOT_LS_KEY = 'morgendrot.nftOwnedSnapshot.v1'
+export { NFT_OWNED_SNAPSHOT_LS_KEY }
 
 const MAX_ENTRIES = 80
 
@@ -115,31 +123,19 @@ export function clearNftActivity(): void {
   emitChanged()
 }
 
-function readOwnedSnapshot(): string[] {
-  if (typeof window === 'undefined') return []
-  try {
-    const raw = window.localStorage.getItem(NFT_OWNED_SNAPSHOT_LS_KEY)
-    if (!raw) return []
-    const j = JSON.parse(raw) as unknown
-    if (!Array.isArray(j)) return []
-    return j.filter((x): x is string => typeof x === 'string' && /^0x[a-f0-9]{64}$/i.test(x)).map((x) => x.toLowerCase())
-  } catch {
-    return []
-  }
+export function listNftOwnedSnapshot(): string[] {
+  return readNftOwnedSnapshot()
 }
 
-function writeOwnedSnapshot(ids: string[]): void {
-  if (typeof window === 'undefined') return
-  try {
-    window.localStorage.setItem(NFT_OWNED_SNAPSHOT_LS_KEY, JSON.stringify([...new Set(ids.map((x) => x.toLowerCase()))]))
-  } catch {
-    /* ignore */
-  }
+/** Nach Versand/Burn: Snapshot anpassen, damit Rückkehr als „empfangen“ erkannt wird. */
+export function noteNftNoLongerOwned(objectId: string): void {
+  noteNftNoLongerOwnedCore(objectId)
 }
 
 /**
  * Nach Galerie-Laden: neue Object-IDs als „empfangen“ loggen (ohne Digest).
  * Erster Snapshot erzeugt keine received-Einträge (Baseline).
+ * Stellt geparkte Purse/Treasury-Bindungen wieder her, wenn NFT zurück ist.
  */
 export function syncNftOwnedSnapshotAndDetectReceived(
   currentObjectIds: readonly string[],
@@ -152,9 +148,9 @@ export function syncNftOwnedSnapshotAndDetectReceived(
         .filter((x) => /^0x[a-f0-9]{64}$/.test(x))
     ),
   ]
-  const prev = readOwnedSnapshot()
+  const prev = readNftOwnedSnapshot()
   const added: NftActivityEntry[] = []
-  if (prev.length > 0) {
+  if (isNftOwnedSnapshotInitialized()) {
     const prevSet = new Set(prev)
     for (const id of current) {
       if (prevSet.has(id)) continue
@@ -166,6 +162,9 @@ export function syncNftOwnedSnapshotAndDetectReceived(
       if (e) added.push(e)
     }
   }
-  writeOwnedSnapshot(current)
+  writeNftOwnedSnapshot(current)
+  void import('@/frontend/lib/nft-vault-local-clear').then((m) => {
+    m.restoreParkedVaultsForOwnedNfts(current)
+  })
   return added
 }

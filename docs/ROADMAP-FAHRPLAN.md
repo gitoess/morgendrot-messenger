@@ -2,7 +2,7 @@
 
 **Zweck:** **Priorisierte** Lieferliste – nur was **Nutzen** bringt; **geringer Aufwand** oben.  
 **Übergeordnet:** Phasen **A → B → C** in **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Meshtastic-First, kein Feature-Wildwuchs).  
-**Stand:** 2026-03 / **aktualisiert 2026-07-07** (Nachtrag **2026-07-07:** Block-2-Feldtest **teil-PASS** — Modus A **PASS 2026-07-03**; Standalone **4b–4d** + Helfer→Boss CDP **PASS** (1 Gerät); Boss-Inbox **ohne Flackern**; APK **Mobile-Shell** Bottom-Nav + 2×2-Sendepfad; Handoff-ZIP **Globals-Reconcile**; **4e/4f** + Block-2 §3 Simple-Checks **offen**; zuvor **2026-06-17:** Messenger-**Sidebar-Navigation**, Telefonbuch/Kontakt-Dialog, Funk-Export-Vorschau, **§ H.36 P0/P1 Teil-Ist**, **§ H.3n B2.5 Teil-Ist**, **§ H.26 B4b Teil-Ist**, Scope-B-**lazy**; zuvor **2026-06-16** **§ H.36** Spec + **§ H.3n §9** Zivil-SOS; zuvor 2026-06-02 **§ H.33** API **`GET /api/einsatz-manifest/*`** — **`docs/API-EINSATZ-MANIFEST.md`**; zuvor **Produkt-Matrix** Abgabe Helfer-APK / Boss-PC / Wanderer / Installer; zuvor **§ H.33** Einsatz-On-Chain — **Mainnet direkt** + Testnet→Anker — **`docs/EINSATZ-MANIFEST-MOVE-SKIZZE.md`**; zuvor **§ H.32** Posteingang **„Antworten“** + **„Einsatz beenden“**; zuvor Einsatzleitung **Helfer einrichten** compact — **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`**; zuvor 2026-05-20 Strategie-Pivot **§ H.0-SIMPLE**: Mesh-First, IOTA optional, Simple Mode; zuvor 2026-05-21 Move-Deploy) (Move-Deploy **`create_team_mailbox`** + **`create_globals`**; § **H.28** Discord/Matrix Backlog; § **H.27** Handshake; § **H.26** Telegram Runtime **Ist-Code**; § **H.25a** Flüchtig-LoRa-Bild) — **§ H.22** Messenger-Kanäle & Mailbox **M1–M4** (`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`); zuvor 2026-03-28 — **§ H.18** TTS/STT (Barrierefreiheit / Freihand, Backlog); **§ H.17** Dashboard/Volldashboard vs. Boss-Ansicht (**Nachtrag**); **§ H.16** Telefonbuch / QR-Onboarding / Boss-LAN (**Nachtrag**); zuvor **2026-04-28** — **§ H.15** Handy-first / Client-IOTA / optionaler Node (**`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6) — **§ H.6b–H.6f** Resilience, Cold-Start, Umzug-Zeitfenster, **Konfiguration (.env vs. Runtime)**, **Android FG-Service + minimale Sync-Ehrlichkeit** (**`docs/ANDROID-FOREGROUND-SERVICE-MINIMAL-SYNC.md`**, **§ H.6f**) — **§ C.0/C.0b** Gliederung + **kanonische Ausführungsreihenfolge** — **§ H.3n** SOS / **`MORG_EMERGENCY_V1`** **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** — **§ H.1b** Messenger-UI-Modularität **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**; **§ H.12** Sync/Source-of-Truth **`SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**; **§ H.11** Offline-Karten **`OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`**; **§ H.10** Sicherheit/Vertrauen **`ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`**; **§ H.10b** Boss/Arbeiter-Seed (Team vs. dezentral) **`docs/BOSS-WORKER-SEED-CUSTODY.md`**; **§ H.3l** Spike **Web Serial Android** + USB/BLE-Doku **`HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** (Mesh/BLE zuerst); **§ H.3m** LoRa/Notfall: **keine** volle IOTA-TX über Funk, Gateway **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**; **§ H.3k** modularer Kern/Adapter/Interop **`MODULAR-KERN-ADAPTER-INTEROP.md`**; **§ H.3j** EU-Funk/Hardware/Einsatzprofile **`LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`**; **§ G** Verweis **`NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**; Lite-Messenger **Boss-Ausnahme** in **§ H.0 #1** / **`UI-ROLLEN-WORKSPACES.md`** § 5; **§ H.9** ATAK/CoT-Backlog (**`ATAK-COT-INTEGRATION-ZIELBILD.md`**); Backend vs. IOTA-RPC + **kein Hybrid-Signatur-Pfad** **`BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6; **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**; **Team-Rollenwechsel (Ist vs. Narrativ):** **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**; **§ H.8:** zwei Installationen Dienst/Testnet (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**), Weiterarbeit **A→B**, Aufräumen = fortlaufend (**§ H.5**); **§ H.1a** Qualität/Baseline/Vitest/AppError **`PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**; **§ H.14** Hardening V3 (**`docs/MORGENDROT-HARDENING-V3-PRECISION.md`**: PWA-Speicher, Lite-UI L2, Wipe, Idempotenz, PTB-Audit).  
+**Stand:** 2026-03 / **aktualisiert 2026-11-08** (H.23 B2 Token-Spend + TBA-Index + Mint-Modi; Fortschrittstabelle unten) / zuvor **2026-07-07** (Nachtrag **2026-07-07:** Block-2-Feldtest **teil-PASS** — Modus A **PASS 2026-07-03**; Standalone **4b–4d** + Helfer→Boss CDP **PASS** (1 Gerät); Boss-Inbox **ohne Flackern**; APK **Mobile-Shell** Bottom-Nav + 2×2-Sendepfad; Handoff-ZIP **Globals-Reconcile**; **4e/4f** + Block-2 §3 Simple-Checks **offen**; zuvor **2026-06-17:** Messenger-**Sidebar-Navigation**, Telefonbuch/Kontakt-Dialog, Funk-Export-Vorschau, **§ H.36 P0/P1 Teil-Ist**, **§ H.3n B2.5 Teil-Ist**, **§ H.26 B4b Teil-Ist**, Scope-B-**lazy**; zuvor **2026-06-16** **§ H.36** Spec + **§ H.3n §9** Zivil-SOS; zuvor 2026-06-02 **§ H.33** API **`GET /api/einsatz-manifest/*`** — **`docs/API-EINSATZ-MANIFEST.md`**; zuvor **Produkt-Matrix** Abgabe Helfer-APK / Boss-PC / Wanderer / Installer; zuvor **§ H.33** Einsatz-On-Chain — **Mainnet direkt** + Testnet→Anker — **`docs/EINSATZ-MANIFEST-MOVE-SKIZZE.md`**; zuvor **§ H.32** Posteingang **„Antworten“** + **„Einsatz beenden“**; zuvor Einsatzleitung **Helfer einrichten** compact — **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`**; zuvor 2026-05-20 Strategie-Pivot **§ H.0-SIMPLE**: Mesh-First, IOTA optional, Simple Mode; zuvor 2026-05-21 Move-Deploy) (Move-Deploy **`create_team_mailbox`** + **`create_globals`**; § **H.28** Discord/Matrix Backlog; § **H.27** Handshake; § **H.26** Telegram Runtime **Ist-Code**; § **H.25a** Flüchtig-LoRa-Bild) — **§ H.22** Messenger-Kanäle & Mailbox **M1–M4** (`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`); zuvor 2026-03-28 — **§ H.18** TTS/STT (Barrierefreiheit / Freihand, Backlog); **§ H.17** Dashboard/Volldashboard vs. Boss-Ansicht (**Nachtrag**); **§ H.16** Telefonbuch / QR-Onboarding / Boss-LAN (**Nachtrag**); zuvor **2026-04-28** — **§ H.15** Handy-first / Client-IOTA / optionaler Node (**`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6) — **§ H.6b–H.6f** Resilience, Cold-Start, Umzug-Zeitfenster, **Konfiguration (.env vs. Runtime)**, **Android FG-Service + minimale Sync-Ehrlichkeit** (**`docs/ANDROID-FOREGROUND-SERVICE-MINIMAL-SYNC.md`**, **§ H.6f**) — **§ C.0/C.0b** Gliederung + **kanonische Ausführungsreihenfolge** — **§ H.3n** SOS / **`MORG_EMERGENCY_V1`** **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** — **§ H.1b** Messenger-UI-Modularität **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**; **§ H.12** Sync/Source-of-Truth **`SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**; **§ H.11** Offline-Karten **`OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`**; **§ H.10** Sicherheit/Vertrauen **`ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`**; **§ H.10b** Boss/Arbeiter-Seed (Team vs. dezentral) **`docs/BOSS-WORKER-SEED-CUSTODY.md`**; **§ H.3l** Spike **Web Serial Android** + USB/BLE-Doku **`HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** (Mesh/BLE zuerst); **§ H.3m** LoRa/Notfall: **keine** volle IOTA-TX über Funk, Gateway **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**; **§ H.3k** modularer Kern/Adapter/Interop **`MODULAR-KERN-ADAPTER-INTEROP.md`**; **§ H.3j** EU-Funk/Hardware/Einsatzprofile **`LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`**; **§ G** Verweis **`NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**; Lite-Messenger **Boss-Ausnahme** in **§ H.0 #1** / **`UI-ROLLEN-WORKSPACES.md`** § 5; **§ H.9** ATAK/CoT-Backlog (**`ATAK-COT-INTEGRATION-ZIELBILD.md`**); Backend vs. IOTA-RPC + **kein Hybrid-Signatur-Pfad** **`BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6; **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**; **Team-Rollenwechsel (Ist vs. Narrativ):** **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**; **§ H.8:** zwei Installationen Dienst/Testnet (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**), Weiterarbeit **A→B**, Aufräumen = fortlaufend (**§ H.5**); **§ H.1a** Qualität/Baseline/Vitest/AppError **`PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**; **§ H.14** Hardening V3 (**`docs/MORGENDROT-HARDENING-V3-PRECISION.md`**: PWA-Speicher, Lite-UI L2, Wipe, Idempotenz, PTB-Audit).  
 **QR-Kontakt v2:** Spezifikation (optional Anchor, API-Basis, Gateway) → **`docs/QR-CONTACT-SCHEMA-V2.md`** (Implementierung später; siehe **H.3b**).  
 
 **Nachtrag 2026-04-15:** Messenger-Realworld **`test:messages*`** — Abschnitt **`/vault-save`** nutzt Server-Sitzung nach UI-Unlock (kein `UNLOCK_PASSWORD_*` nötig); **`purge-handshake`**-Log bei fehlendem **`MAILBOX_ID`** als erwartbarer Noop gekennzeichnet; npm **`test:tickets-accesskey-realworld`** = Tickets/Keys (Alias zu **`test:realworld`**); Chain **`hasValidTicket`** / **`hasValidAccessKey`** mit **`normalizeAddress`** + Pagination, normalisierte IDs in **`getOwnedTickets`** / **`getOwnedAccessKeys`**; Ticket-Realworld-Skript Retries + ECONNREFUSED-Hinweis; **`npm run check:pwa-desk`** (**§ H.2** A+B). Siehe **`docs/CHAT-PROTOKOLL-2026-03-28.md`**.
@@ -66,6 +66,104 @@
 **Nachtrag 2026-11-06 (Token-Spend wählbar):** UI-Radio **Nur NFT (Bearer)** vs **NFT+Wallet (Guarded)** unter NFT-Galerie (`NftTokenSpendPanel`). Beide Move-Pfade Ist; nicht fest verdrahtet. Orthogonal zu P4b.
 
 **Nachtrag 2026-11-08 (Guthaben sichtbar + Tabs):** Tabs **Galerie / Guthaben / Zeitkapsel**; Live-Balance; Wallet **Frei vs. Gesichert**; IOTA-Aktivität loggt Purse/Treasury; optional Anzeigename; Package-IDs benannt unter Erweitert. **Joint-Feldtest** als Nächstes (Checkliste Logbuch).
+
+**Nachtrag 2026-11-09 (Zeitkapsel Soll-Ablauf Joint gestartet):**
+- UX ehrlich: Tab **Zeitkapsel (Leserecht)** + 3-Schritt; Spec/Anleitung Fehlannahme (NFT≠Text; PW-Reuse≠Bind).
+- Smoke-Skript `scripts/smoke-nft-time-lease-joint.mjs` (status/create/return_early/cancel/reclaim; `MORG_BORROWER` Override).
+- **Chain PASS:** kurze Reclaim `0x4a82…`; cancel→reclaim **Abort 4** `0xdd1e…` (UI-Text).
+- Enc-Lease `0xa802…` / W2-`return_early`: **verschoben** — W2 vorerst nur IOTA-Wallet, noch kein Morgendrot.
+
+**Nachtrag 2026-11-09 (Composer Zeitkapsel-Nachricht):**
+- Modus **Zeitkapsel-Nachricht (NFT-Leserecht)** = NFTGATE + gewähltes NFT (mutual exclusive mit Passphrase/ECDH).
+- CTA **Dieses NFT verleihen…** öffnet Tab Zeitkapsel mit Object-ID.
+- **Als Nächstes:** Solo-Feldtest Composer→CTA→Leihe (W1); Session C / P5d / Enc-return_early weiter danach.
+
+**Nachtrag 2026-11-12 (Messenger-Durchgang UX + Docs):**
+- **PWA „App installieren“:** nur noch **Einstellungen → Allgemein** (Dashboard-Kachel entfernt).
+- **Vault-Scope / Soft vs Hard / Double-Ratchet-Ist** in Anleitung + `VAULT-BEGRIFFE` §8.
+- **§ H.37 Multi-Profil beim Login (Backlog):** mehrere lokale Accounts mit eigenem Seed/Vault; **Auswahl beim Unlock**; **nie parallel**. Ist: eine Identität pro Instanz; Vault-Datei laden = grober Wechsel. Spec/Umsetzung **nach** aktuellem Messenger-Durchgang, nicht parallel zu Session C.
+
+**Nachtrag 2026-11-09 (Messenger UX — Sendepfad-Optionen + Entity-Info):**
+- **Posteingang „Optionen“** vs Chat-⋮ getrennt: ⋮ = Burn/Schlüssel/Ratchet (nur Chain/Online); Optionen = Wire/Pakete/Verlauf (pfadgefiltert).
+- **Sendepfad-Fit:** Funk/Telegram ohne Wire/Pakete/On-Chain; Online/IOTA behalten Chain-Tools; Kanal-Filter nur Online (sonst steuert der Sendepfad).
+- **Filter-Zeile** gestrafft: Auswahl + ein Filter-Dropdown (Inhalt/Partner; Kanal nur Online).
+- **Entity-Info:** einheitliche kopierbare IDs (Kontakt/Gruppe/Telegram-Alarm/Self/NFT) — kein Gruppen-Passwort, keine Klartext-Secrets; Gruppe: Titel/⋮ → Info → CTA Verwalten.
+- **Code:** `send-path-inbox-source-filter.ts`, `messenger-entity-info-model.ts`, `MessengerEntityInfoDialog`, Contact-Detail Technics, Self-Profile Mailbox-Block, NFT Objekt-Info im Evidence-Viewer.
+
+**Nachtrag 2026-11-09 (Sendepfad IOTA + Telegram-Alarmkarte):**
+- **Ad-hoc** aus SENDPFAD entfernt (Capability `showAdhocTransport: false`); Platz durch **IOTA**-Pfad ersetzt — filtert Posteingang auf Chain/Mailbox (inkl. Gruppe/Pinnwand), Kontakte = IOTA-Adressen, Telegram-Alarmzeile in Sidebar ausgeblendet.
+- **Telegram „Neue Alarmgruppe“:** Invite-Karte bleibt nach Beitritt (`membership` / applied `tgSeq`) weg; Confirm markiert pending `tgSeq` mit.
+- **Ad-hoc / BLE-Direct:** bewusst **ganz hinten** in der Roadmap (nach allen aktuellen Wellen) — siehe Schluss-Backlog.
+
+**Nachtrag 2026-11-09 (B2-S6 Smoke PASS / Feature-Freeze):**
+- Session A+B inkl. Offline Index-Paste + Zeitkapsel Create/return_early-UX grün → **Freeze dieser Welle**.
+- **Als Nächstes:** **Session C** (2 Geräte) + Zeitkapsel W2 Joint. Explorer-Spiegel weiter hinten.
+
+**Nachtrag 2026-11-08 (B2-S4 TBA-Index + Discovery + Mint-Modi — Code-Ist; Smoke → B2-S6 PASS 2026-11-09):**
+- **Wallet „Gesichert auszahlen“:** Empfänger immer sichtbar; Refresh → On-chain-Discovery; Index im Tresor-Sidecar + `boundVault`.
+- **Park/Restore** bei NFT-Transfer; Digest/Handoff-Fallback.
+- **1 Vault / NFT+Modus** hart in Create (`nft-vault-one-per-mode`); Bearer **destroy_empty** UI.
+- **Optional Mint-Modi:** One-Time-Use (App-Consume + Burn in derselben Spend-TX; Fallback 2. TX mit Version-Retry) · Offline-Handoff Compact/QR/signiert (`MORG_NFT_V1C` / `V1S`).
+- **Nicht Ist:** Move `spend_and_consume`; Mesh-Auto-Send; on-chain Multisig.
+- Spec: **`docs/NFT-GUARDED-SPEND-SPEC.md`**. **Als Nächstes:** Session C (2 Geräte) — nicht P5d.
+
+### Fortschritt — aktuelle Tranche H.23 B2 / NFT-Token (grob, 2026-11-09)
+
+| Baustein | ~% | Kommentar |
+|----------|----|-----------|
+| **B2 Schlüsselkarte P0–P3** | **95** | Enc-Store, Slots, Mint-Bindung, Marker — 2-Geräte offen |
+| **B2-P4a / P4a2 / P4b Seal** | **80** | PoC Ist; remote/unabhängiger Broker + Claims hart |
+| **B2-P5 Zeitkapsel** | **86** | Create+UI+Reclaim+Abort4 PASS; Composer Zeitkapsel-Nachricht Ist; W2 Enc-return / P5d verschoben (W2 ohne Morgendrot) |
+| **B2-S0–S3 Guarded+Bearer** | **92** | Move+UI; Session-A Feld-Smoke PASS |
+| **B2-S4 Index/Discovery/Park/1-Vault** | **90** | Code+A-Smoke Ist; manuelles Digest nur Sonderfälle |
+| **B2-S5 One-Time + Offline-QR/Mesh-Text** | **88** | Spend+Burn 1 TX + Offline Index-Paste Smoke PASS; Move-Consume + Auto-Mesh Backlog |
+| **B2-S6 Smoke PASS / Feature-Freeze** | **100** | **2026-11-09** — Welle eingefroren; kein neues Feature parallel |
+| **C1 Double Ratchet** | **40** | Spec+Codec; **kein** Produktiv-Default |
+| **2-Geräte-Feldtest (Privacy/NFT)** | **5** | **Session C** = nächster gemeinsamer Schritt |
+| **Tranche gesamt (Code → nutzbar)** | **~85** | Freeze dieser Welle |
+| **Tranche gesamt (inkl. Smoke/Abnahme)** | **~78** | B2-S6 PASS; Session C / Feld offen |
+
+### Fortschritt — Gesamtprojekt (sehr grob, nicht Verkaufszusage)
+
+| Ebene | ~% | Kommentar |
+|-------|----|-----------|
+| **Phase A** (Stabilität, Messenger-UI, Simple Mode) | **~85** | Kern weitgehend; Retests/Cleanup |
+| **Phase B** (Mesh-Kern, Delayed LoRa→IOTA, Feld) | **~45** | viel Code; Feldteil-PASS, 4e/4f + 2. Gerät offen |
+| **Phase C** (Gateway/Makros/Custody/MeshSleepy) | **~15** | Specs/Backlog |
+| **Produkt-Matrix Abgabe** (Boss/APK/Installer) | **siehe Tabelle § Produkt-Matrix** | Boss ~85 · APK-Code ~75 / Abnahme ~30 · Installer niedrig |
+| **Gesamt Richtung „einsatzfähige v1“** | **~55–60** | Messenger+IOTA stark; Feld/2-Geräte/Installer ziehen runter |
+
+### Nächster gemeinsamer Durchgang + Zeitschätzung (2026-11-09)
+
+**Leitplanken (Sinnhaftigkeit / Sicherheit / Praktikabilität):**  
+- **Feature-Freeze dieser Welle (B2-S6):** kein neues Großfeature parallel zu Session C.  
+- **Sicherheit ehrlich:** One-Time = App+Burn, nicht Move-Consume; Seal = ein Broker; lose Coins = ungeschützt.  
+- **Praktikabel:** 1 Vault/NFT+Modus; Discovery vor Digest; Offline = QR/Text, kein Mesh-Auto.  
+- **Backlog bewusst:** Move `spend_and_consume`, Multisig, MeshSleepy, C1-Default — **nach** Session C.  
+- **Ganz hinten (nicht jetzt):** Zeitkapsel-**Soll-Ablauf**-Retest + P5d; IOTA-Aktivität Explorer-Spiegel; **danach ganz zuletzt Ad-hoc/BLE**.
+
+| Ziel | Aufwand (Schätzung) | Wer |
+|------|---------------------|-----|
+| ~~**Session A**~~ | ~~60–90 Min~~ | **PASS 2026-11-08** |
+| ~~**Session B**~~ | ~~45–75 Min~~ | **PASS 2026-11-09** (inkl. Offline-Paste + return_early UX) |
+| ~~**Tranche B2-S6 „Smoke PASS“**~~ | ~~2–4 AT~~ | **PASS / Feature-Freeze 2026-11-09** |
+| **Composer Zeitkapsel-Nachricht Solo-Feldtest** (NFTGATE→CTA→Leihe W1) | **15–30 Min** | **Als Nächstes** |
+| **Session C 2-Geräte** | **½–1 Tag** | danach (W2 braucht Morgendrot) |
+| **Zeitkapsel Enc-return / P5d** (Borrower liest Enc, Ciphertext-Hol-UX) | **1–2 Tage** + Retest | **nach Session C** — jetzt nicht |
+| **Phase C: Explorer-Link + optional gefilterter IOTA-Aktivitäts-Spiegel** | **2–4 Tage** | nach B2-S6 Freeze; Spec vorher |
+| **Phase-B Feld / 2. Gerät / Installer → einsatzfähige v1** | **mehrere Wochen** fokussiert (nicht Tage) | getrennt planen |
+
+**Solo erledigt vor Joint (2026-11-08):** Vitest NFT-Cluster 35/35 (+ früher 59); Move/Seal OK; Klartext `SMOKE-C` PASS; User-Brave **Tresor: bereit** + Purse 0.7 + Bearer-Aktivität sichtbar; Mint One-Time/Offline + Zeitkapsel-UI Smoke.  
+**Joint Session A (2026-11-08):** A1–A6 PASS inkl. Destroy; Offline-Index vereinfacht (Bundle bei NFT-Senden, „Meine Purses finden“, Notfall unter Erweitert).  
+**Session B Code (2026-11-08):** One-Time/Offline-Badges, Empfänger Index-Paste, Consume sperrt Auszahlen, Zeitkapsel Notfall-Labels.  
+**Session B Joint (2026-11-09):** B7a–d Kern PASS; Burn 2. TX + B8 Self-Borrower FAIL → **Fix Code** (Spend+Burn eine TX; Lease Self-Guard). Retest: neues One-Time → Auszahlen; Zeitkapsel an fremde Wallet `0x0bbc…`.  
+**B2-S6 Rest (2026-11-09):** Offline Compact → Index empfangen Self-Paste PASS; Lease `0xa802…` Früh-zurück UX (Signer-Gate); Reclaim skip bis unlock. **Freeze** — **Als Nächstes = Session C**, nicht P5d/Explorer.
+
+**Nachtrag 2026-11-09 (IOTA-Aktivität kritisch + Zeitkapsel-Soll hinten):**
+- **IOTA-Aktivität = lokal kuratiert** (App-Events), **kein** Explorer-Wallet-Feed. Vollhistorie aller TXs + Nachrichten **würde Sinn machen als späteres Produktfeature**, aber **nicht jetzt**: RPC-Query-Last, Failed/Gas-Spam, Privacy (fremde Digests im UI), Duplikat-Risiko vs. Posteingang.
+- **Phase C (kanonisch — IOTA-Aktivität):** (1) **Explorer-Link** pro bekannter Digest + „alle TXs im Explorer“-Shortcut; (2) optional **gefilterter Spiegel** (RPC Query: Erfolg/Fail, Betrag, Typ — ohne Nachrichten-Klartext zu duplizieren). Spec erst nach **B2-S6 Feature-Freeze**; **nicht** die lokale Event-Liste still ersetzen.
+- **Zeitkapsel Soll-Ablauf (W1 Enc → Lease → W2 Ciphertext laden → lesen → reclaim)** + **P5d** Borrower-UX / Fremdmailbox-Scan: **bewusst ganz hinten** — erst nach Session-C 2-Geräte und H.23-Rest; dann eigener Retest. Move P5a/b bleibt Ist; UX/Claims ehrlich („NFT ≠ Nachricht“).
+- **On-Chain/NFT UX (2026-11-09):** Tabs klar **1·Schauen** (Wire/Klartext/Galerie) vs **2·Handeln** (Minten/Guthaben/Zeitkapsel); Schlüsselkarte-Zuordnung nur unter **Galerie** (nicht in Wire/Minten).
 
 **Nachtrag 2026-05-20 (Strategie — korrigiert):** **IOTA bleibt gekoppelt**; **Funk-Default** im Helfer-UI (`TRANSPORT_PROFILE=mesh-first`). **Delayed LoRa → IOTA**, **Offline-TX/Outbox** und **Pfad 4** bleiben — siehe **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**. Keine volle IOTA-TX im LoRa-Frame (**§ H.3m**). **Keine neuen Move-Publishes** in Tranche A; Fokus Runtime + Simple Mode.
 
@@ -139,7 +237,7 @@ Manuelle Checks, die **nach** Handshake-UX-Fix und **Rollen-Retest** folgen — 
 |--------|--------|----------------|
 | **A** | Messenger-UI, Stabilität, PWA, Tests (**§ A**, **§ H.1–H.2**) | **Teils erledigt**, laufend (z. B. Fehlertexte, Regression). |
 | **B** | Mesh v2, **Delayed LoRa → IOTA** (**§ H.3**), **Heltec/Meshtastic**-Integration (**§ A.7**, `meshtastic/`, Firmware) | **Nicht** abgeschlossen — eigenes Engineering (Spec **`LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**). |
-| **C** | Gateway, Makros, erweiterte Custody (**§ E–G**, **§ I**) | **Backlog** — nach stabilem B-Kern. |
+| **C** | Gateway, Makros, erweiterte Custody (**§ E–G**, **§ I**); **IOTA-Aktivität Explorer-Link / gefilterter Spiegel** | **Backlog** — nach stabilem B-Kern / B2-S6 Freeze. |
 
 **Kurz:** Heltec **programmieren** / Firmware / vollständige Funk-Kette sind **Phase B**, nicht „alle Punkte schon grün“ in § A.
 
@@ -389,6 +487,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 | **§ H.34** | **Messenger P10-Light** — Composer-Bindings-Hook, README (optional, nach P9) |
 | **§ H.35** | **ATAK Schichtmodell** — **`docs/ATAK-COT-INTEGRATION-ZIELBILD.md` § 6** (Ideenspec, ggf. nicht umsetzen) |
 | **§ H.36** | **Team-Member-Update & Einstiegs-Wizard** — **P0 Ist**, **P1/P2 Teil-Ist** — **`docs/TEAM-MEMBER-UPDATE-WIZARD-SPEC.md`** (nutzt § H.16 Boss-LAN Ist) |
+| **§ H.37** | **Multi-Profil beim Login** — mehrere lokale Accounts (eigener Seed/Vault/Adresse); Auswahl beim Unlock; **nie parallel** — Backlog nach Messenger-Durchgang; Ist/Ziel **`docs/VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md`** §6 |
 | **§ H.22 M4e** | **Kontakt: 4 Mailbox-Slots + Send-Zielwahl** — **✓ 2026-05-20** — **`docs/KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md`** |
 
 *Übergeordnete Leitplanke:* **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Phasen **A → B → C**).
@@ -1041,7 +1140,7 @@ Code: **`frontend/frontend/components/boss-handoff-export-panel.tsx`**, **`front
 | **Modularer Kern, Adapter, Auto-Modus, Interop (Doku)** | **`docs/MODULAR-KERN-ADAPTER-INTEROP.md`** — Kern vs. Transport- vs. Funk-Adapter; Auto-Detection **mit Override**; realistische „volle“ Interop; BOS/HSM als **Rand**, nicht Kern-Fork-Pflicht |
 | **USB-Serial vs. Web-BT (Doku + später Code)** | **`docs/HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** — Durchsatz/OTG/Web-Serial-Matrix; Meshtastic-Protokoll vs. `lora-bridge`-Rohserial; Transport-Interface statt `if (USB)`-Wildwuchs; **Vorbereitung:** Spike **Web Serial auf Android** (**§ H.3l**, **ohne** Blockade für Mesh/BLE) |
 | **Offline-Karten / Geodaten (Zielbild)** | **`docs/OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`** — Wanderer (Basis) vs. Einsatzpaket; **§ H.11**; **nach** Phase-B-Kern, mit **§ H.9** ATAK verzahnbar |
-| **Ad-hoc / Smartphone-Direct (BLE)** | **Nach** Phase-B-Kern (Mesh/Web-BT zuverlässig): Sendepfad **`adhoc`** in der UI ist **Platzhalter** — **direktes** Handy-zu-Handy-BLE (**nicht** Web-BT→Heltec→LoRa). Konzept/Daten: **`bleUuid`** im Vault, Advertising/Scan; vgl. Hinweise in **`use-chat-view-handle-send.ts`** / Transport-Karte. **Abgrenzung:** **`docs/MESSENGER-CAPABILITIES-OVERVIEW.md`** (**funk** = Meshtastic, **adhoc** = BLE-Direct, noch offen). |
+| **Ad-hoc / Smartphone-Direct (BLE)** | **2026-11-09:** aus SENDPFAD entfernt → **ganz hinten** (Schluss-Backlog). Früher: Platzhalter nach Phase-B-Kern; **`bleUuid`**, Advertising/Scan; Abgrenzung **`docs/MESSENGER-CAPABILITIES-OVERVIEW.md`**. |
 
 ### H.3b Optional (Doku, kein Sprint-Zwang)
 
@@ -1620,7 +1719,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 **Ist heute:** Pairwise **ECDH** über **`/handshake`**, Keys in Shared-Mailbox-`HsKey` / Vault — siehe **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** Leitplanken. **Session:** `restorePeerMapFromHandshakeCache` nach Vault-Laden (API-Start, `/vault-load`, UI-Entsperren) — ersetzt **nicht** H.23-B, nur UX bis zur Architektur-Entscheid.
 
-**Lieferreihenfolge:** (1) ~~Architektur-Entscheid~~ **erledigt 2026-06-16** (Option A). (2) ~~**Modus-A-Feldtest**~~ **PASS 2026-07-03** (`docs/FELDTEST-BOSS-BEI-0.md`). (3) **Session Keys+ A1–A4** **erledigt 2026-06-16**; **Nest-Listener v2** **2026-07-03**. (4) **B1 Team-Key** **Ist 2026-11-06**. (5) **B2 NFT-Schlüsselkarte P0–P3** **Ist 2026-11-06** (`docs/NFT-SCHLUESSELKARTE-B2.md`, Anleitung `docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`). (6) ~~1-Gerät-Smoke~~ **PASS 2026-11-06**. (7) **C1 Double Ratchet** — Spec + C1.1–C1.5 **Ist** (`docs/MESSENGER-DOUBLE-RATCHET-C1-SPEC.md`); **kein** Produktiv-Default. (8) **B2-P4a** + **P4a-dual** + **P4a2** + **P4b Seal PoC** **Ist** (`0x1fb0e9b7…`). (9) **B2-P5a/b** Zeitkapsel **Ist**; optional P5d. (10) **B2-S0–S3** Guarded Purse + Bearer Treasury **Ist**. (11) **MeshSleepyChannel** Phase-C. **2-Geräte verschoben**.
+**Lieferreihenfolge:** (1) ~~Architektur-Entscheid~~ **erledigt 2026-06-16** (Option A). (2) ~~**Modus-A-Feldtest**~~ **PASS 2026-07-03** (`docs/FELDTEST-BOSS-BEI-0.md`). (3) **Session Keys+ A1–A4** **erledigt 2026-06-16**; **Nest-Listener v2** **2026-07-03**. (4) **B1 Team-Key** **Ist 2026-11-06**. (5) **B2 NFT-Schlüsselkarte P0–P3** **Ist 2026-11-06** (`docs/NFT-SCHLUESSELKARTE-B2.md`, Anleitung `docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`). (6) ~~1-Gerät-Smoke (Privacy/B2 Kern)~~ **PASS 2026-11-06**. (7) **C1 Double Ratchet** — Spec + C1.1–C1.5 **Ist** (`docs/MESSENGER-DOUBLE-RATCHET-C1-SPEC.md`); **kein** Produktiv-Default. (8) **B2-P4a** + **P4a-dual** + **P4a2** + **P4b Seal PoC** **Ist** (`0x1fb0e9b7…`). (9) **B2-P5a/b** Zeitkapsel Move+Panel **Ist**; **P5d + Soll-Ablauf-Retest = ganz hinten** (nach 2-Geräte). (10) **B2-S0–S3** Guarded Purse + Bearer Treasury **Ist**. (11) ~~**B2-S4/S5 + B2-S6 Smoke**~~ **PASS / Feature-Freeze 2026-11-09**. (12) **Session C 2-Geräte** (**Als Nächstes**). (13) erst dann Zeitkapsel-End-to-End-Lesen / P5d. (14) **MeshSleepyChannel** Phase-C.
 
 **Verknüpfung:** **§ H.22** (Gruppen-E2EE **M2c**), **`docs/VAULT-EINRICHTEN.md`**, **`docs/MESSAGING-MAILBOX-SSOT-SPEC.md`**, **§ H.15** (Direct-IOTA verschlüsselt).
 
@@ -2524,6 +2623,28 @@ UI: **„Im Einsatz-Anker enthalten“** Badge (Modus A/B Rollup); **„On-chain
 **Verknüpfung Feldtest:** **`docs/FELDTEST-BOSS-BEI-0.md`** Schritt 7 — Checkliste für Bootstrap; Architektur-Offenheit siehe hier.
 
 **Status:** **Offen (Produkt/Architektur)** — Wizard-UX **Ist** für Feldtest; **Grenzziehung Morgendrot ↔ Meshtastic** noch **nicht** beschlossen.
+
+---
+
+## Ganz hinten — letztes Backlog (nach allen Wellen)
+
+| Thema | Hinweis |
+|--------|---------|
+| **Ad-hoc / Smartphone-Direct (BLE)** | **Zuletzt.** Sendepfad-Button bewusst entfernt (2026-11-09); Flag `showAdhocTransport` bleibt für Wiedereinschaltung. Erst nach Phase-B-Mesh/Web-BT, Session C, Zeitkapsel-Rest, Explorer-Spiegel. Ziel: Handy-zu-Handy-BLE (**nicht** Web-BT→Heltec→LoRa); `bleUuid`, Advertising/Scan — **`docs/MESSENGER-CAPABILITIES-OVERVIEW.md`**. |
+
+---
+
+## Am Ende des Messenger-Durchgangs — QA anheften (2026-11-12)
+
+Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezielt prüfen:
+
+| # | Thema | Was prüfen |
+|---|--------|------------|
+| 1 | **i18n / Sprache** | DE↔EN: alle sichtbaren Settings-/Messenger-Strings vollständig und korrekt? Fehlende Keys, Hardcoded DE, falsche Fallbacks. |
+| 2 | **Einstiegs-Wizard** | Up to date mit Ist-Flows (Boss/Helfer/Privat)? Schritte funktional, überspringbar, Resume/Fertig nur in Einstellungen. |
+| 3 | **§ H.37 Multi-Profil** | Spec/Umsetzung erst **nach** diesem Durchgang — Ziel: Profilwahl beim Unlock, eigener Seed, **nie parallel** (`VAULT-BEGRIFFE` §6). |
+
+**Nicht** parallel zu Session C / Zeitkapsel-Feldtest starten.
 
 ---
 

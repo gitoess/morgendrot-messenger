@@ -28,7 +28,11 @@ export type ChatViewSendPathCompactProps = {
   forcedTransport: ForcedTransport
   onForcedTransportChange: (t: ForcedTransport) => void
   onEncryptedChange?: (encrypted: boolean) => void
+  /** Ad-hoc BLE — Default aus (Backlog). */
   showAdhocTransport?: boolean
+  /** Sendepfad „IOTA“: Fokus Posteingang/Kontakte auf Chain. */
+  iotaPathFocus?: boolean
+  onIotaPathFocusChange?: (focus: boolean) => void
   composerDelivery?: ComposerDeliveryChannel
   onComposerDeliveryChange?: (d: ComposerDeliveryChannel) => void
   apiStatus?: ApiStatus | null
@@ -51,7 +55,7 @@ const ONLINE = {
   id: 'internet' as const,
   icon: '🌍',
   short: 'Online',
-  title: 'Online (IOTA/Mailbox)',
+  title: 'Online — alle Nachrichten, Kontakte und Optionen; Senden über Internet',
 }
 
 const FUNK = {
@@ -66,6 +70,12 @@ const ADHOC = {
   icon: '📱',
   short: 'Ad-hoc',
   title: 'Ad-hoc (BLE — Platzhalter)',
+}
+
+const IOTA = {
+  icon: '⛓',
+  short: 'IOTA',
+  title: 'IOTA — nur Chain/Mailbox (Nachrichten, Kontakte, Filter)',
 }
 
 const TELEGRAM = {
@@ -149,7 +159,9 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
     forcedTransport,
     onForcedTransportChange,
     onEncryptedChange,
-    showAdhocTransport = true,
+    showAdhocTransport = false,
+    iotaPathFocus = false,
+    onIotaPathFocusChange,
     composerDelivery = 'chain',
     onComposerDeliveryChange,
     apiStatus,
@@ -164,16 +176,19 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
 
   const showTelegramPath = Boolean(onComposerDeliveryChange)
   const chainActive = composerDelivery === 'chain'
+  const clearIotaFocus = () => onIotaPathFocusChange?.(false)
 
   const onlineChannelOk = isSendPathAllowedForChannel(channelMode, 'internet')
   const funkChannelOk = isSendPathAllowedForChannel(channelMode, 'mesh')
   const adhocChannelOk = showAdhocTransport && isSendPathAllowedForChannel(channelMode, 'adhoc')
   const telegramChannelOk = isSendPathAllowedForChannel(channelMode, 'telegram')
+  const iotaChannelOk = isSendPathAllowedForChannel(channelMode, 'internet')
 
   const onlineCapReason = sendPathCapabilityReason(apiStatus, 'internet')
   const funkCapReason = sendPathCapabilityReason(apiStatus, 'mesh')
   const adhocCapReason = sendPathCapabilityReason(apiStatus, 'adhoc')
   const telegramCapReason = sendPathCapabilityReason(apiStatus, 'telegram')
+  const iotaCapReason = sendPathCapabilityReason(apiStatus, 'internet')
 
   return (
     <div
@@ -192,12 +207,13 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
       >
         <PathButton
           gridLayout={gridLayout}
-          active={chainActive && forcedTransport === ONLINE.id}
+          active={chainActive && forcedTransport === ONLINE.id && !iotaPathFocus}
           disabled={!onlineChannelOk || Boolean(onlineCapReason)}
           disabledTitle={onlineCapReason ?? sendPathDisabledReason(channelMode, 'internet')}
           title={ONLINE.title}
           activeClass={SEND_PATH_ACTIVE_CLASS.online}
           onClick={() => {
+            clearIotaFocus()
             onComposerDeliveryChange?.('chain')
             onForcedTransportChange(ONLINE.id)
           }}
@@ -213,6 +229,7 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
           title={FUNK.title}
           activeClass={SEND_PATH_ACTIVE_CLASS.mesh}
           onClick={() => {
+            clearIotaFocus()
             selectCleartextTransport(
               encrypted,
               FUNK.id,
@@ -225,6 +242,25 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
           <span aria-hidden>{FUNK.icon}</span>
           {FUNK.short}
         </PathButton>
+        <PathButton
+          gridLayout={gridLayout}
+          active={chainActive && forcedTransport === ONLINE.id && iotaPathFocus}
+          disabled={!iotaChannelOk || Boolean(iotaCapReason)}
+          disabledTitle={iotaCapReason ?? sendPathDisabledReason(channelMode, 'internet')}
+          title={IOTA.title}
+          activeClass={SEND_PATH_ACTIVE_CLASS.iota}
+          onClick={() => {
+            /** setIotaPathFocus setzt chain+internet; nicht vorher setForcedTransport (das löscht den Fokus). */
+            if (onIotaPathFocusChange) onIotaPathFocusChange(true)
+            else {
+              onComposerDeliveryChange?.('chain')
+              onForcedTransportChange(ONLINE.id)
+            }
+          }}
+        >
+          <span aria-hidden>{IOTA.icon}</span>
+          {IOTA.short}
+        </PathButton>
         {showAdhocTransport ? (
           <PathButton
             gridLayout={gridLayout}
@@ -234,6 +270,7 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
             title={ADHOC.title}
             activeClass={SEND_PATH_ACTIVE_CLASS.adhoc}
             onClick={() => {
+              clearIotaFocus()
               selectCleartextTransport(
                 encrypted,
                 ADHOC.id,
@@ -256,6 +293,7 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
             title={TELEGRAM.title}
             activeClass={SEND_PATH_ACTIVE_CLASS.telegram}
             onClick={() => {
+              clearIotaFocus()
               if (channelMode !== 'private') onChannelModeChange?.('private')
               onComposerDeliveryChange?.('telegram')
             }}

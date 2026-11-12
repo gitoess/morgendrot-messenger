@@ -13,6 +13,10 @@ frontend/node_modules/
 .env.local
 .env.*.local
 .env.kacheln
+# Joint Zeitkapsel smoke — lokale Mnemonics (nie committen)
+exports/.w1-mnemonic.local
+exports/.w2-mnemonic.local
+*.mnemonic.local
 data/
 dist/
 .next

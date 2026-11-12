@@ -36,6 +36,11 @@ import {
   collectContactsForSendPath,
   sidebarAllSubtitleForSendPath,
 } from '@/frontend/lib/contact-send-path'
+import {
+  contactSidebarSendPathFilter,
+  showChainSidebarExtrasOnSendPath,
+  showTelegramAlarmOnSendPath,
+} from '@/frontend/lib/send-path-inbox-source-filter'
 import { ChatViewSelfProfileDialog } from '@/frontend/components/chat-view-self-profile-dialog'
 import type { ChatViewMyWalletIdInlineProps } from '@/frontend/components/chat-view-my-wallet-id-inline'
 
@@ -61,10 +66,15 @@ export type ChatViewContactSidebarProps = {
   onOpenPhonebook?: () => void
   searchQuery?: string
   activeSendPath?: ActiveSendPath
+  /** Sendepfad IOTA: Telegram-Alarmgruppe in der Sidebar ausblenden. */
+  iotaPathFocus?: boolean
   connectedAddresses?: readonly string[]
   incomingHandshakeOffers?: readonly PendingHandshakeOffer[]
   outgoingHandshakeOffers?: readonly OutgoingHandshakeOffer[]
-  selfProfile?: ChatViewMyWalletIdInlineProps
+  selfProfile?: ChatViewMyWalletIdInlineProps & {
+    packageId?: string
+    onOpenIotaSettings?: () => void
+  }
   className?: string
   /** Native Handy: keine Mindesthöhe — Parent scrollt. */
   compactNative?: boolean
@@ -137,6 +147,15 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
     return () => window.removeEventListener(CONTACT_PHONEBOOK_META_CHANGED_EVENT, sync)
   }, [])
 
+  const sidebarPathFilter = useMemo(
+    () =>
+      contactSidebarSendPathFilter({
+        activeSendPath: p.activeSendPath ?? 'internet',
+        iotaPathFocus: p.iotaPathFocus,
+      }),
+    [p.activeSendPath, p.iotaPathFocus]
+  )
+
   const contacts = useMemo(
     () =>
       buildConversationSidebarContacts({
@@ -145,25 +164,32 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
         favorites,
         lastContacted,
         hidden,
-        sendPath: p.activeSendPath ?? 'internet',
+        sendPath: sidebarPathFilter,
       }),
-    [p.directory, p.partnerOptions, favorites, lastContacted, hidden, p.activeSendPath]
+    [p.directory, p.partnerOptions, favorites, lastContacted, hidden, sidebarPathFilter]
   )
 
   const sendPathContactCount = useMemo(
     () =>
-      p.activeSendPath
+      sidebarPathFilter
         ? collectContactsForSendPath({
             directory: p.directory,
             partnerOptions: p.partnerOptions,
-            path: p.activeSendPath,
+            path: sidebarPathFilter,
             hidden,
           }).length
-        : 0,
-    [p.directory, p.partnerOptions, p.activeSendPath, hidden]
+        : Object.keys(p.directory).length,
+    [p.directory, p.partnerOptions, sidebarPathFilter, hidden]
   )
 
-  const groups = useMemo(() => buildConversationSidebarGroups(readMessengerGroups()), [])
+  const showChainExtras = showChainSidebarExtrasOnSendPath({
+    activeSendPath: p.activeSendPath ?? 'internet',
+    iotaPathFocus: p.iotaPathFocus,
+  })
+  const groups = useMemo(
+    () => (showChainExtras ? buildConversationSidebarGroups(readMessengerGroups()) : []),
+    [showChainExtras, phonebookMetaTick]
+  )
   const telegramAlarm = useMemo(
     () => buildConversationSidebarTelegramAlarm(readTelegramAlarmGroupMembership()),
     [joinMetaTick]
@@ -206,7 +232,12 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
   const filteredContacts = contacts.filter(filterItem)
   const filteredGroups = groups.filter(filterItem)
   const showTelegramAlarm =
-    telegramAlarm && (!q || filterItem(telegramAlarm))
+    showTelegramAlarmOnSendPath({
+      activeSendPath: p.activeSendPath ?? 'internet',
+      iotaPathFocus: p.iotaPathFocus,
+    }) &&
+    telegramAlarm &&
+    (!q || filterItem(telegramAlarm))
   /** Immer sichtbar — sonst findet man „Gruppe verwalten“ nur per Doppelklick (Handy: kaum). */
   /** Immer sichtbar (auch leer), damit „Verwalten“ / Team-Key auffindbar bleibt. */
   const showGroupsSection = !q || filteredGroups.length > 0 || Boolean(showTelegramAlarm) || Boolean(p.onOpenGroupSettings)
@@ -252,10 +283,10 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
                 type="button"
                 onClick={p.onOpenPhonebook}
                 className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-muted/50 px-2.5 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
-                title="Telefonbuch"
+                title="Telefonbuch — Kontakte anlegen, bearbeiten, importieren"
               >
                 <BookUser className="h-4 w-4 shrink-0" aria-hidden />
-                Telefonbuch
+                Kontakte verwalten
               </button>
             ) : null}
           </div>
@@ -276,9 +307,11 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
           <SidebarRow
             title="Alle"
             subtitle={
-              p.activeSendPath
-                ? sidebarAllSubtitleForSendPath(p.activeSendPath, sendPathContactCount)
-                : 'Gesamter Posteingang'
+              sidebarPathFilter
+                ? sidebarAllSubtitleForSendPath(sidebarPathFilter, sendPathContactCount)
+                : sendPathContactCount > 0
+                  ? `${sendPathContactCount} Kontakte — alle Pfade`
+                  : 'Gesamter Posteingang — alle Pfade'
             }
             active={p.showAllActive}
             onClick={p.onSelectAll}
@@ -371,13 +404,13 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
 
           <section className="mt-2">
             <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Kontakte
+              Direktchats
             </p>
             {filteredContacts.length === 0 ? (
               <p className="px-2 py-4 text-xs text-muted-foreground">
-                {p.activeSendPath
-                  ? 'Keine Kontakte mit Adresse für diesen Sendepfad — Telefonbuch ergänzen.'
-                  : 'Keine Kontakte — Telefonbuch öffnen und anlegen.'}
+                {sidebarPathFilter
+                  ? 'Keine Kontakte für diesen Sendepfad — oben „Kontakte verwalten“ öffnen.'
+                  : 'Noch keine Direktchats — oben „Kontakte verwalten“ und anlegen.'}
               </p>
             ) : (
               filteredContacts.map((c) => (
@@ -399,7 +432,7 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
         <div className="border-t border-border px-3 py-2 text-[10px] text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <BookUser className="h-3 w-3" aria-hidden />
-            Kontakt doppelklicken → Details · Gruppe: Zahnrad/„Verwalten“ · „Ich“ → Profil
+            Kontakt doppelklicken → Info · Gruppenname/⋮ → Info · Zahnrad → Verwalten · „Ich“ → Profil
           </span>
         </div>
       </aside>
@@ -409,6 +442,8 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
           {...p.selfProfile}
           open={selfProfileOpen}
           onOpenChange={setSelfProfileOpen}
+          packageId={p.selfProfile.packageId}
+          onOpenIotaSettings={p.selfProfile.onOpenIotaSettings}
         />
       ) : null}
     </>

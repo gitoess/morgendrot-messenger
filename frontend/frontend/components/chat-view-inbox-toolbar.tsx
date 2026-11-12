@@ -1,11 +1,24 @@
 'use client'
 
 /**
- * Posteingang: Kopfzeile (Zähler, Pakete, Nachrichtenverlauf, Aktualisieren).
+ * Posteingang: Kopfzeile — On-Chain/NFT, Optionen (Wire/Pakete/Verlauf), Aktualisieren.
  */
 
-import type { ChangeEvent, ReactNode, RefObject } from 'react'
-import { BookUser, ChevronDown, FileDown, Inbox, KeyRound, Lock, Package, RefreshCw, Trash2 } from 'lucide-react'
+import { useState, type ChangeEvent, type ReactNode, type RefObject } from 'react'
+import {
+  BookUser,
+  Check,
+  ChevronDown,
+  ClipboardPaste,
+  FileDown,
+  Filter,
+  Inbox,
+  KeyRound,
+  Lock,
+  Package,
+  RefreshCw,
+  Settings2,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { exportDataDeniedReason } from '@/frontend/lib/messenger-capability-gates'
@@ -25,12 +38,25 @@ import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
 import { triggerHiddenFileInput } from '@/frontend/lib/trigger-hidden-file-input'
 import {
+  inboxToolbarToolsForSendPath,
+  type InboxToolbarPathTools,
+} from '@/frontend/lib/send-path-inbox-source-filter'
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+
+const DEFAULT_PATH_TOOLS = inboxToolbarToolsForSendPath({
+  activeSendPath: 'internet',
+  iotaPathFocus: false,
+})
 
 export type { MorgPkgExportPartnerOption } from '@/frontend/lib/morg-pkg-export-partners'
 
@@ -94,6 +120,8 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   /** Package-ID (Move) — nur Client-Expertenmodus + IOTA. */
   showInboxPackageExpertMenu?: boolean
   inboxPackageExpertMenu?: ReactNode
+  /** Sichtbarkeit der Werkzeuge je Sendepfad. */
+  pathTools?: InboxToolbarPathTools
 }
 
 function morgPkgImportDisabled(apiStatus: ApiStatus | null): boolean {
@@ -177,8 +205,15 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     showIotaExpertInboxActions = true,
     showInboxPackageExpertMenu = false,
     inboxPackageExpertMenu,
+    pathTools: pathToolsProp,
   } = p
 
+  const pathTools = pathToolsProp ?? DEFAULT_PATH_TOOLS
+  const [wirePasteOpen, setWirePasteOpen] = useState(false)
+  const filterArmedCount =
+    (showWireControls ? 1 : 0) +
+    (showChannelControls && pathTools.showKanalFilterToggle ? 1 : 0) +
+    (showPartnerControls ? 1 : 0)
   const pkgImportDisabled = morgPkgImportDisabled(apiStatus)
   const pkgDeviceDisabled =
     morgPkgDeviceBusy || apiStatus?.locked === true || !(apiStatus?.connectedAddresses?.length ?? 0)
@@ -227,22 +262,12 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               type="button"
               onClick={onOpenPhonebook}
               className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/15"
+              title="Kontakte anlegen, bearbeiten, importieren"
             >
               <BookUser className="h-4 w-4 shrink-0" aria-hidden />
-              Telefonbuch
+              Kontakte verwalten
             </button>
           ) : null}
-          <ChatViewWirePasteImportDialog />
-          <a
-            href="/einsatzbericht-decrypt.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
-            title="Passwortgeschützte Nachrichtenverlauf-Exporte (.json) hier entpacken — nicht Wire-Paste."
-          >
-            <KeyRound className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-            Entschlüsseln
-          </a>
           {inboxRowCount !== messageCount && messageCount > 0 ? (
             <span className="text-xs text-muted-foreground" title="Filter aktiv">
               {inboxRowCount} von {messageCount} sichtbar
@@ -250,7 +275,9 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
           ) : null}
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {showInboxPackageExpertMenu && inboxPackageExpertMenu ? inboxPackageExpertMenu : null}
+          {pathTools.showPakete && showInboxPackageExpertMenu && inboxPackageExpertMenu
+            ? inboxPackageExpertMenu
+            : null}
           <input
             ref={morgPkgFileRef}
             type="file"
@@ -271,206 +298,245 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             onChange={onMorgPkgDeviceFiles}
           />
 
+          {pathTools.showOnChainNft ? (
+            <div className="inline-flex items-center">
+              <ChatViewEvidenceImageViewerButton
+                messages={messages}
+                triggerLabel="On-Chain / NFT"
+                defaultMode="owner"
+                triggerClassName="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              />
+            </div>
+          ) : null}
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                title="Posteingang-Werkzeuge (nicht Chat-⋮: Burn/Schlüssel)"
               >
-                <Package className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-                Pakete
+                <Settings2 className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+                Optionen
                 <ChevronDown className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[18rem]">
-              <p className="px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
-                ECDH-verschlüsselt für einen Handshake-Partner. Import → <strong className="text-foreground">Paket-Archiv</strong>{' '}
-                (nicht Posteingang).
-              </p>
-              {morgPkgExportPartnerOptions.length > 0 && onMorgPkgExportRecipientChange ? (
-                <div className="space-y-1 border-b border-border px-2 py-2">
-                  <label htmlFor="morg-pkg-export-recipient" className="text-[10px] font-medium text-foreground">
-                    Empfänger für Export
-                  </label>
-                  <select
-                    id="morg-pkg-export-recipient"
-                    value={morgPkgExportRecipient}
-                    onChange={(e) => onMorgPkgExportRecipientChange(e.target.value)}
-                    className="h-9 w-full rounded-md border border-border bg-background px-2 text-xs text-foreground"
-                  >
-                    {morgPkgExportPartnerOptions.length > 1 ? (
-                      <option value="">— Partner wählen —</option>
-                    ) : null}
-                    {morgPkgExportPartnerOptions.map((o) => (
-                      <option key={o.address} value={o.address}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <p className="px-2 py-1.5 text-[10px] text-amber-700 dark:text-amber-200">
-                  Export: zuerst Handshake/Connect — dann Empfänger wählbar.
-                </p>
-              )}
-              {onOpenMorgPkgArchive ? (
+            <DropdownMenuContent align="end" className="min-w-[16rem]">
+              <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Posteingang
+              </DropdownMenuLabel>
+              {pathTools.showWirePaste ? (
                 <DropdownMenuItem
                   onSelect={(e) => {
                     e.preventDefault()
-                    onOpenMorgPkgArchive()
+                    setWirePasteOpen(true)
                   }}
                 >
-                  Paket-Archiv{morgPkgImportCount > 0 ? ` (${morgPkgImportCount})` : ''}
+                  <ClipboardPaste className="mr-2 h-4 w-4 opacity-80" aria-hidden />
+                  Wire einfügen
                 </DropdownMenuItem>
               ) : null}
-              <DropdownMenuItem
-                disabled={pkgImportDisabled}
-                title={morgPkgImportTitle(apiStatus)}
-                onSelect={(e) => {
-                  e.preventDefault()
-                  if (pkgImportDisabled) {
-                    setStatus('error')
-                    setStatusMsg(morgPkgImportTitle(apiStatus))
-                    setTimeout(() => setStatus('idle'), 7000)
-                    return
-                  }
-                  triggerHiddenFileInput(morgPkgFileRef)
-                }}
-              >
-                Import: .morg-pkg → Archiv
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={pkgDeviceDisabled}
-                title={morgPkgDeviceTitle(apiStatus, morgPkgDeviceBusy)}
-                onSelect={(e) => {
-                  e.preventDefault()
-                  if (pkgDeviceDisabled) {
-                    setStatus('error')
-                    setStatusMsg(morgPkgDeviceTitle(apiStatus, morgPkgDeviceBusy))
-                    setTimeout(() => setStatus('idle'), 8000)
-                    return
-                  }
-                  void onMorgPkgDeviceExportPick()
-                }}
-              >
-                {morgPkgDeviceBusy ? 'Export: Paket wird gebaut…' : 'Export: Dateien → .morg-pkg Download'}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <div className="inline-flex items-center">
-            <ChatViewEvidenceImageViewerButton
-              messages={messages}
-              triggerLabel="On-Chain / NFT"
-              defaultMode="owner"
-              triggerClassName="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted"
-            />
-          </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                disabled={exportBlocked}
-                title={exportDenied ?? undefined}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <FileDown className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-                Nachrichtenverlauf
-                <ChevronDown className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="max-h-[min(70vh,28rem)] w-[min(100vw-2rem,20rem)] overflow-y-auto"
-            >
-              <p className="px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
-                Vollständig: JSON, TXT vollständig, verschlüsseltes Passwort-JSON oder ZIP. TXT kurz = ~200 Zeichen pro
-                Nachricht.
-              </p>
-              <DropdownMenuItem
-                disabled={messageCount === 0 || exportBlocked}
-                onSelect={() => blockExportAction(() => onExportEinsatzberichtJson())}
-              >
-                Als JSON (vollständig, Klartext)
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={messageCount === 0 || exportBlocked}
-                onSelect={() => blockExportAction(() => void onExportEinsatzberichtTxtFull())}
-              >
-                Als Text (vollständig, Klartext)
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={messageCount === 0 || exportBlocked}
-                onSelect={() => blockExportAction(() => onExportEinsatzberichtTxt())}
-              >
-                Als Text (kurz, ~200 Zeichen)
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={messageCount === 0 || exportBlocked}
-                onSelect={() => blockExportAction(() => void onExportEinsatzberichtEncrypted())}
-              >
-                <Lock className="mr-2 h-4 w-4 opacity-80" aria-hidden />
-                Verschlüsselt (vollständig, Passwort-JSON)
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                disabled={messageCount === 0 || exportBlocked}
-                onSelect={() => blockExportAction(() => void onExportEinsatzprotokoll())}
-              >
-                ZIP + HTML (verschlüsselt)
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={messageCount === 0 || exportBlocked}
-                onSelect={() => blockExportAction(() => void onExportEinsatzprotokollPlainZip())}
-              >
-                ZIP Klartext
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={protokollMarkedCount === 0 || exportBlocked}
-                onSelect={() => blockExportAction(() => void onExportEinsatzprotokollMarked())}
-              >
-                ZIP nur markiert (★ {protokollMarkedCount})
-              </DropdownMenuItem>
-              {showIotaExpertInboxActions ? (
-                <>
+              {pathTools.showDecryptExport ? (
+                <DropdownMenuItem
+                  onSelect={() => {
+                    window.open('/einsatzbericht-decrypt.html', '_blank', 'noopener,noreferrer')
+                  }}
+                  title="Passwortgeschützte Nachrichtenverlauf-Exporte (.json) — nicht Wire-Paste."
+                >
+                  <KeyRound className="mr-2 h-4 w-4 opacity-80" aria-hidden />
+                  Entschlüsseln (Export-JSON)
+                </DropdownMenuItem>
+              ) : null}
+              {pathTools.showPakete || pathTools.showNachrichtenverlauf ? <DropdownMenuSeparator /> : null}
+              {pathTools.showPakete ? (
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Package className="mr-2 h-4 w-4 opacity-80" aria-hidden />
+                  Pakete
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="min-w-[18rem]">
+                  <p className="px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
+                    ECDH-verschlüsselt für einen Handshake-Partner. Import →{' '}
+                    <strong className="text-foreground">Paket-Archiv</strong> (nicht Posteingang).
+                  </p>
+                  {morgPkgExportPartnerOptions.length > 0 && onMorgPkgExportRecipientChange ? (
+                    <div className="space-y-1 border-b border-border px-2 py-2">
+                      <label htmlFor="morg-pkg-export-recipient" className="text-[10px] font-medium text-foreground">
+                        Empfänger für Export
+                      </label>
+                      <select
+                        id="morg-pkg-export-recipient"
+                        value={morgPkgExportRecipient}
+                        onChange={(e) => onMorgPkgExportRecipientChange(e.target.value)}
+                        className="h-9 w-full rounded-md border border-border bg-background px-2 text-xs text-foreground"
+                      >
+                        {morgPkgExportPartnerOptions.length > 1 ? (
+                          <option value="">— Partner wählen —</option>
+                        ) : null}
+                        {morgPkgExportPartnerOptions.map((o) => (
+                          <option key={o.address} value={o.address}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <p className="px-2 py-1.5 text-[10px] text-amber-700 dark:text-amber-200">
+                      Export: zuerst Handshake/Connect — dann Empfänger wählbar.
+                    </p>
+                  )}
+                  {onOpenMorgPkgArchive ? (
+                    <DropdownMenuItem
+                      onSelect={(e) => {
+                        e.preventDefault()
+                        onOpenMorgPkgArchive()
+                      }}
+                    >
+                      Paket-Archiv{morgPkgImportCount > 0 ? ` (${morgPkgImportCount})` : ''}
+                    </DropdownMenuItem>
+                  ) : null}
+                  <DropdownMenuItem
+                    disabled={pkgImportDisabled}
+                    title={morgPkgImportTitle(apiStatus)}
+                    onSelect={(e) => {
+                      e.preventDefault()
+                      if (pkgImportDisabled) {
+                        setStatus('error')
+                        setStatusMsg(morgPkgImportTitle(apiStatus))
+                        setTimeout(() => setStatus('idle'), 7000)
+                        return
+                      }
+                      triggerHiddenFileInput(morgPkgFileRef)
+                    }}
+                  >
+                    Import: .morg-pkg → Archiv
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={pkgDeviceDisabled}
+                    title={morgPkgDeviceTitle(apiStatus, morgPkgDeviceBusy)}
+                    onSelect={(e) => {
+                      e.preventDefault()
+                      if (pkgDeviceDisabled) {
+                        setStatus('error')
+                        setStatusMsg(morgPkgDeviceTitle(apiStatus, morgPkgDeviceBusy))
+                        setTimeout(() => setStatus('idle'), 8000)
+                        return
+                      }
+                      void onMorgPkgDeviceExportPick()
+                    }}
+                  >
+                    {morgPkgDeviceBusy ? 'Export: Paket wird gebaut…' : 'Export: Dateien → .morg-pkg Download'}
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              ) : null}
+              {pathTools.showNachrichtenverlauf ? (
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger
+                  disabled={exportBlocked}
+                  title={exportDenied ?? undefined}
+                  className={cn(exportBlocked && 'opacity-50')}
+                >
+                  <FileDown className="mr-2 h-4 w-4 opacity-80" aria-hidden />
+                  Nachrichtenverlauf
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="max-h-[min(70vh,28rem)] w-[min(100vw-2rem,20rem)] overflow-y-auto">
+                  <p className="px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
+                    Vollständig: JSON, TXT, verschlüsseltes Passwort-JSON oder ZIP. TXT kurz = ~200 Zeichen pro
+                    Nachricht.
+                  </p>
+                  <DropdownMenuItem
+                    disabled={messageCount === 0 || exportBlocked}
+                    onSelect={() => blockExportAction(() => onExportEinsatzberichtJson())}
+                  >
+                    Als JSON (vollständig, Klartext)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={messageCount === 0 || exportBlocked}
+                    onSelect={() => blockExportAction(() => void onExportEinsatzberichtTxtFull())}
+                  >
+                    Als Text (vollständig, Klartext)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={messageCount === 0 || exportBlocked}
+                    onSelect={() => blockExportAction(() => onExportEinsatzberichtTxt())}
+                  >
+                    Als Text (kurz, ~200 Zeichen)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={messageCount === 0 || exportBlocked}
+                    onSelect={() => blockExportAction(() => void onExportEinsatzberichtEncrypted())}
+                  >
+                    <Lock className="mr-2 h-4 w-4 opacity-80" aria-hidden />
+                    Verschlüsselt (vollständig, Passwort-JSON)
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <div className="px-2 py-1">
-                    <LazyChatViewProtokollAnchorButton
-                      messageCount={messageCount}
-                      messages={messages}
-                      myAddress={myAddress}
-                      recipient={recipient}
-                      vaultLocked={vaultLocked}
-                      messagingPersistenceMode={messagingPersistenceMode}
-                      setStatus={setStatus}
-                      setStatusMsg={setStatusMsg}
-                      onOpenPartnerSetup={onOpenPartnerSetup}
-                      triggerClassName="w-full justify-start rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent"
-                      triggerLabel="Auf Chain verankern"
-                    />
-                  </div>
-                  <div className="px-2 py-1">
-                    <LazyChatViewTangleInventoryButton
-                      inventoryScope="anchored"
-                      messages={messages}
-                      packageId={apiStatus?.packageId?.trim() || undefined}
-                    />
-                  </div>
-                  <div className="px-2 py-1">
-                    <ChatViewPendingSendsButton
-                      offlineMailboxQueuePending={offlineMailboxQueuePending}
-                      offlineMailboxQueueItems={offlineMailboxQueueItems}
-                      offlineMailboxQueueErrorHint={offlineMailboxQueueErrorHint}
-                      onManualRefresh={onOfflineMailboxQueueRefresh}
-                      onRemoveOfflineMailboxQueueItems={onRemoveOfflineMailboxQueueItems}
-                      showRelayManage={showIotaExpertInboxActions}
-                    />
-                  </div>
-                </>
+                  <DropdownMenuItem
+                    disabled={messageCount === 0 || exportBlocked}
+                    onSelect={() => blockExportAction(() => void onExportEinsatzprotokoll())}
+                  >
+                    ZIP + HTML (verschlüsselt)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={messageCount === 0 || exportBlocked}
+                    onSelect={() => blockExportAction(() => void onExportEinsatzprotokollPlainZip())}
+                  >
+                    ZIP Klartext
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={protokollMarkedCount === 0 || exportBlocked}
+                    onSelect={() => blockExportAction(() => void onExportEinsatzprotokollMarked())}
+                  >
+                    ZIP nur markiert (★ {protokollMarkedCount})
+                  </DropdownMenuItem>
+                  {showIotaExpertInboxActions && pathTools.showIotaExpertInHistory ? (
+                    <>
+                      <DropdownMenuSeparator />
+                      <div className="px-2 py-1">
+                        <LazyChatViewProtokollAnchorButton
+                          messageCount={messageCount}
+                          messages={messages}
+                          myAddress={myAddress}
+                          recipient={recipient}
+                          vaultLocked={vaultLocked}
+                          messagingPersistenceMode={messagingPersistenceMode}
+                          setStatus={setStatus}
+                          setStatusMsg={setStatusMsg}
+                          onOpenPartnerSetup={onOpenPartnerSetup}
+                          triggerClassName="w-full justify-start rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent"
+                          triggerLabel="Auf Chain verankern"
+                        />
+                      </div>
+                      <div className="px-2 py-1">
+                        <LazyChatViewTangleInventoryButton
+                          inventoryScope="anchored"
+                          messages={messages}
+                          packageId={apiStatus?.packageId?.trim() || undefined}
+                        />
+                      </div>
+                      <div className="px-2 py-1">
+                        <ChatViewPendingSendsButton
+                          offlineMailboxQueuePending={offlineMailboxQueuePending}
+                          offlineMailboxQueueItems={offlineMailboxQueueItems}
+                          offlineMailboxQueueErrorHint={offlineMailboxQueueErrorHint}
+                          onManualRefresh={onOfflineMailboxQueueRefresh}
+                          onRemoveOfflineMailboxQueueItems={onRemoveOfflineMailboxQueueItems}
+                          showRelayManage={showIotaExpertInboxActions}
+                        />
+                      </div>
+                    </>
+                  ) : null}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
               ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          <ChatViewWirePasteImportDialog
+            hideTrigger
+            open={wirePasteOpen}
+            onOpenChange={setWirePasteOpen}
+          />
 
           <button
             type="button"
@@ -493,36 +559,67 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
           >
             {inboxSelectMode ? 'Auswahl beenden' : 'Auswahl'}
           </button>
-          <button
-            type="button"
-            onClick={onToggleWireControls}
-            className={cn(
-              'rounded-md border px-2 py-1 font-medium transition-colors',
-              showWireControls ? 'border-primary bg-primary/15 text-primary' : 'border-border hover:bg-muted'
-            )}
-          >
-            Posteingang (Inhalt)
-          </button>
-          <button
-            type="button"
-            onClick={onToggleChannelControls}
-            className={cn(
-              'rounded-md border px-2 py-1 font-medium transition-colors',
-              showChannelControls ? 'border-primary bg-primary/15 text-primary' : 'border-border hover:bg-muted'
-            )}
-          >
-            Kanal
-          </button>
-          <button
-            type="button"
-            onClick={onTogglePartnerControls}
-            className={cn(
-              'rounded-md border px-2 py-1 font-medium transition-colors',
-              showPartnerControls ? 'border-primary bg-primary/15 text-primary' : 'border-border hover:bg-muted'
-            )}
-          >
-            Partner
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  'inline-flex items-center gap-1 rounded-md border px-2 py-1 font-medium transition-colors',
+                  filterArmedCount > 0
+                    ? 'border-primary bg-primary/15 text-primary'
+                    : 'border-border hover:bg-muted'
+                )}
+                title="Inhalt / Partner (Kanal nur bei Online — sonst steuert der Sendepfad)"
+              >
+                <Filter className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                Filter{filterArmedCount > 0 ? ` (${filterArmedCount})` : ''}
+                <ChevronDown className="h-3 w-3 shrink-0 opacity-70" aria-hidden />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[14rem]">
+              <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Anzeige filtern
+              </DropdownMenuLabel>
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault()
+                  onToggleWireControls()
+                }}
+              >
+                <Check
+                  className={cn('mr-2 h-4 w-4', showWireControls ? 'opacity-100' : 'opacity-0')}
+                  aria-hidden
+                />
+                Inhalt (Verschl. / Klartext)
+              </DropdownMenuItem>
+              {pathTools.showKanalFilterToggle ? (
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault()
+                    onToggleChannelControls()
+                  }}
+                >
+                  <Check
+                    className={cn('mr-2 h-4 w-4', showChannelControls ? 'opacity-100' : 'opacity-0')}
+                    aria-hidden
+                  />
+                  Kanal (Quelle)
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault()
+                  onTogglePartnerControls()
+                }}
+              >
+                <Check
+                  className={cn('mr-2 h-4 w-4', showPartnerControls ? 'opacity-100' : 'opacity-0')}
+                  aria-hidden
+                />
+                Partner
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {hasHiddenMessages ? (
             <button
               type="button"

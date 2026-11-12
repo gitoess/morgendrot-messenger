@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Download, Eraser, Flame, FlaskConical, KeyRound, MoreVertical, Settings2, UserCircle, Users } from 'lucide-react'
+import { Download, Eraser, Flame, FlaskConical, Info, KeyRound, MoreVertical, Settings2, Users } from 'lucide-react'
 import { ChatViewEncryptionModeToggle } from '@/frontend/components/chat-view-encryption-mode-toggle'
 import {
   DropdownMenu,
@@ -23,6 +23,9 @@ export type ChatViewConversationMenuProps = {
   subtitle?: string
   canClearHistory: boolean
   canExport: boolean
+  /** Info: IDs / Mailbox / TX / Telegram — nicht Einstellungen. */
+  onViewInfo?: () => void
+  /** @deprecated Prefer onViewInfo */
   onViewProfile?: () => void
   onExportHistory?: () => void
   onClearHistory?: () => void
@@ -41,13 +44,20 @@ export type ChatViewConversationMenuProps = {
     onEncryptedChange: (v: boolean) => void
     forcedTransport?: ForcedTransport
   }
+  /**
+   * Chain-Sicherheit (Burn-on-read, Schlüssel erneuern, Double Ratchet).
+   * Aus bei Funk/Telegram — gehört nicht in den Posteingang-„Optionen“-Menü.
+   */
+  showChainSecurityTools?: boolean
 }
 
 /** Telegram-ähnliches ⋮-Menü — Kernpunkte immer sichtbar (disabled wenn nicht anwendbar). */
 export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
   const enc = p.encryptionToggle
   const burn = p.burnOnRead
+  const chainSecurity = p.showChainSecurityTools !== false
   const hasGroupActions = Boolean(p.onManageGroup || p.onCreateGroup)
+  const onInfo = p.onViewInfo ?? p.onViewProfile
   const [ratchetExp, setRatchetExp] = useState(false)
 
   useEffect(() => {
@@ -61,11 +71,28 @@ export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
     }
   }, [])
 
+  const infoLabel = p.onManageGroup ? 'Gruppen-Info' : 'Info'
+
   return (
     <div className="flex items-center justify-between gap-2 border-b border-border/60 px-3 py-2.5">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-foreground">{p.title}</p>
-        {p.subtitle ? <p className="truncate text-[11px] text-muted-foreground">{p.subtitle}</p> : null}
+        {onInfo ? (
+          <button
+            type="button"
+            className="block w-full min-w-0 rounded-md text-left hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            onClick={() => onInfo()}
+            title={`${infoLabel} öffnen`}
+            aria-label={`${infoLabel} öffnen`}
+          >
+            <p className="truncate text-sm font-semibold text-foreground">{p.title}</p>
+            {p.subtitle ? <p className="truncate text-[11px] text-muted-foreground">{p.subtitle}</p> : null}
+          </button>
+        ) : (
+          <>
+            <p className="truncate text-sm font-semibold text-foreground">{p.title}</p>
+            {p.subtitle ? <p className="truncate text-[11px] text-muted-foreground">{p.subtitle}</p> : null}
+          </>
+        )}
       </div>
       {enc ? (
         <ChatViewEncryptionModeToggle
@@ -83,8 +110,14 @@ export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-[14rem]">
-          {hasGroupActions ? (
+          {onInfo || hasGroupActions ? (
             <>
+              {onInfo ? (
+                <DropdownMenuItem onSelect={() => onInfo()}>
+                  <Info className="mr-2 h-4 w-4" />
+                  {infoLabel}
+                </DropdownMenuItem>
+              ) : null}
               {p.onManageGroup ? (
                 <DropdownMenuItem onSelect={() => p.onManageGroup?.()}>
                   <Settings2 className="mr-2 h-4 w-4" />
@@ -99,16 +132,12 @@ export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
               ) : null}
               <DropdownMenuSeparator />
             </>
-          ) : null}
-
-          <DropdownMenuItem
-            disabled={!p.onViewProfile}
-            title={!p.onViewProfile ? 'Partner in der Liste wählen' : undefined}
-            onSelect={() => p.onViewProfile?.()}
-          >
-            <UserCircle className="mr-2 h-4 w-4" />
-            Profil anzeigen
-          </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem disabled title="Partner in der Liste wählen">
+              <Info className="mr-2 h-4 w-4" />
+              Info
+            </DropdownMenuItem>
+          )}
 
           <DropdownMenuItem
             disabled={!p.onExportHistory || !p.canExport}
@@ -125,50 +154,55 @@ export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
             Verlauf exportieren
           </DropdownMenuItem>
 
-          <DropdownMenuItem
-            disabled={!p.onRenewEncryptionKeys}
-            title={
-              p.onRenewEncryptionKeys
-                ? p.renewEncryptionHint ??
-                  'Session-Epoch erhöhen (Forward Secrecy ab Rotation). Alte Nachrichten bleiben lesbar.'
-                : 'Nur bei 1:1 mit gültiger Partner-0x'
-            }
-            onSelect={() => void p.onRenewEncryptionKeys?.()}
-          >
-            <KeyRound className="mr-2 h-4 w-4" />
-            {p.renewEncryptionLabel ?? 'Schlüssel erneuern'}
-          </DropdownMenuItem>
+          {chainSecurity ? (
+            <>
+              <DropdownMenuItem
+                disabled={!p.onRenewEncryptionKeys}
+                title={
+                  p.onRenewEncryptionKeys
+                    ? p.renewEncryptionHint ??
+                      'Session-Epoch erhöhen (Forward Secrecy ab Rotation). Alte Nachrichten bleiben lesbar.'
+                    : 'Nur bei 1:1 mit gültiger Partner-0x'
+                }
+                onSelect={() => void p.onRenewEncryptionKeys?.()}
+              >
+                <KeyRound className="mr-2 h-4 w-4" />
+                {p.renewEncryptionLabel ?? 'Schlüssel erneuern'}
+              </DropdownMenuItem>
 
-          <DropdownMenuItem
-            disabled={!burn}
-            title={
-              burn
-                ? 'Bei burnbaren Chain-Nachrichten nach dem Lesen Burn vorschlagen (mit Bestätigung).'
-                : 'Burn-on-read hier nicht verfügbar'
-            }
-            onSelect={() => burn?.onEnabledChange(!burn.enabled)}
-          >
-            <Flame className={burn?.enabled ? 'mr-2 h-4 w-4 text-orange-600' : 'mr-2 h-4 w-4'} />
-            {burn?.enabled ? 'Burn-on-read: an' : 'Burn-on-read: aus'}
-          </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={!burn}
+                title={
+                  burn
+                    ? 'Bei burnbaren Chain-Nachrichten nach dem Lesen Burn vorschlagen (mit Bestätigung).'
+                    : 'Burn-on-read hier nicht verfügbar'
+                }
+                onSelect={() => burn?.onEnabledChange(!burn.enabled)}
+              >
+                <Flame className={burn?.enabled ? 'mr-2 h-4 w-4 text-orange-600' : 'mr-2 h-4 w-4'} />
+                {burn?.enabled ? 'Burn-on-read: an' : 'Burn-on-read: aus'}
+              </DropdownMenuItem>
 
-          <DropdownMenuItem
-            title={
-              ratchetExp
-                ? 'Double-Ratchet-Experiment an — Composer bleibt bei v2; Hook nur bei Session (C1.5).'
-                : 'Opt-in Double Ratchet (H.23 C1). Beide Seiten brauchen Flag + Session. Kein Produktiv-Default.'
-            }
-            onSelect={() => {
-              const next = !ratchetExp
-              writeRatchetExperimentEnabled(next)
-              setRatchetExp(next)
-            }}
-          >
-            <FlaskConical className={ratchetExp ? 'mr-2 h-4 w-4 text-amber-700' : 'mr-2 h-4 w-4'} />
-            {ratchetExp ? 'Double Ratchet: an (Exp.)' : 'Double Ratchet (Experiment)'}
-          </DropdownMenuItem>
-
-          <DropdownMenuSeparator />
+              <DropdownMenuItem
+                title={
+                  ratchetExp
+                    ? 'Experiment an — ändert Senden noch nicht (Composer bleibt Envelope v2). FS heute: Schlüssel erneuern.'
+                    : 'Experiment — ändert Senden noch nicht. Opt-in H.23 C1; beide Seiten brauchen Flag, wenn Wire verdrahtet ist.'
+                }
+                onSelect={() => {
+                  const next = !ratchetExp
+                  writeRatchetExperimentEnabled(next)
+                  setRatchetExp(next)
+                }}
+              >
+                <FlaskConical className={ratchetExp ? 'mr-2 h-4 w-4 text-amber-700' : 'mr-2 h-4 w-4'} />
+                {ratchetExp
+                  ? 'Double Ratchet: an (ändert Senden nicht)'
+                  : 'Double Ratchet (Exp. — ändert Senden nicht)'}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          ) : null}
           <DropdownMenuItem
             disabled={!p.onClearHistory || !p.canClearHistory}
             className="text-destructive focus:text-destructive"

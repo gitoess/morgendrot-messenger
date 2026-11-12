@@ -5,6 +5,8 @@ import { toast } from 'sonner'
 import { ChatViewInboxPackageExpertMenu } from '@/frontend/components/chat-view-inbox-package-expert-menu'
 import type { ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
 import type { ChatViewPanelMessengerPorts } from '@/frontend/features/messenger-ports'
+import { resolveActiveSendPath } from '@/frontend/lib/messenger-channel-send-path'
+import { inboxToolbarToolsForSendPath } from '@/frontend/lib/send-path-inbox-source-filter'
 
 export type ChatViewInboxPanelPropsDeps = {
   messengerPorts: Pick<
@@ -16,6 +18,7 @@ export type ChatViewInboxPanelPropsDeps = {
     | 'inboxViewUi'
     | 'handshakeOffersRead'
     | 'composerDraft'
+    | 'composerSendPath'
     | 'sendActions'
     | 'sendTransportChoice'
     | 'attachmentBar'
@@ -48,6 +51,7 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
     inboxViewUi,
     handshakeOffersRead,
     composerDraft,
+    composerSendPath,
     sendActions,
     sendTransportChoice,
     attachmentBar,
@@ -57,6 +61,22 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
     inboxHandshakePanelActions,
     inboxPanelLocalActions,
   } = deps.messengerPorts
+
+  const pathTools = useMemo(
+    () =>
+      inboxToolbarToolsForSendPath({
+        activeSendPath: resolveActiveSendPath(
+          composerSendPath.composerDelivery,
+          sendTransportChoice.forcedTransport
+        ),
+        iotaPathFocus: composerSendPath.iotaPathFocus,
+      }),
+    [
+      composerSendPath.composerDelivery,
+      composerSendPath.iotaPathFocus,
+      sendTransportChoice.forcedTransport,
+    ]
+  )
 
   const onRefresh = useCallback(() => {
     void inboxActions.loadMessages('reset', undefined, { forceLive: true })
@@ -215,6 +235,7 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
     inboxPackageExpertMenu,
     hidePartnerStrip: deps.hidePartnerStrip ?? false,
     hideOverviewChips: deps.hideOverviewChips ?? false,
+    pathTools,
   } satisfies ChatViewInboxPanelProps
 
   return inboxPanelProps

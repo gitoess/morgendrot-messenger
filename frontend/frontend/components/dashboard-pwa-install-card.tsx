@@ -1,29 +1,36 @@
 'use client'
 
 /**
- * PWA-Installation — kurz auf dem Dashboard.
+ * PWA-Installation — nur Einstellungen → Allgemein (nicht Dashboard).
  */
 
 import { useState, useEffect } from 'react'
 import { Smartphone } from 'lucide-react'
 import { shouldShowDashboardPwaInstallCard } from '@/frontend/lib/should-show-pwa-install'
+import {
+  ensureDeferredPwaInstallListener,
+  getDeferredPwaInstall,
+  promptDeferredPwaInstall,
+  subscribeDeferredPwaInstall,
+  type DeferredPwaPrompt,
+} from '@/frontend/lib/deferred-pwa-install'
 import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
-
-type DeferredPwaPrompt = {
-  prompt: () => Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
-}
 
 export function DashboardPwaInstallCard({
   compact = false,
   inline = false,
+  /** DOM-Anker — Settings nutzt settings-pwa-install. */
+  anchorId = 'dashboard-pwa-install',
 }: {
   compact?: boolean
   /** Schmale Kachel in der obersten Zeile neben IOTA Wallet. */
   inline?: boolean
+  anchorId?: string
 }) {
   const { t } = useAppTranslation('dashboard')
-  const [deferredPwaPrompt, setDeferredPwaPrompt] = useState<DeferredPwaPrompt | null>(null)
+  const [deferredPwaPrompt, setDeferredPwaPrompt] = useState<DeferredPwaPrompt | null>(() =>
+    getDeferredPwaInstall()
+  )
   const [pwaStandalone, setPwaStandalone] = useState(false)
 
   useEffect(() => {
@@ -37,25 +44,19 @@ export function DashboardPwaInstallCard({
     syncStandalone()
     mq.addEventListener('change', syncStandalone)
 
-    const onBeforeInstall = (e: Event) => {
-      e.preventDefault()
-      setDeferredPwaPrompt(e as unknown as DeferredPwaPrompt)
-    }
-    window.addEventListener('beforeinstallprompt', onBeforeInstall)
+    const stopListen = ensureDeferredPwaInstallListener()
+    const unsub = subscribeDeferredPwaInstall(() => setDeferredPwaPrompt(getDeferredPwaInstall()))
+    setDeferredPwaPrompt(getDeferredPwaInstall())
+
     return () => {
       mq.removeEventListener('change', syncStandalone)
-      window.removeEventListener('beforeinstallprompt', onBeforeInstall)
+      unsub()
+      stopListen()
     }
   }, [])
 
-  const handlePwaInstallClick = async () => {
-    if (!deferredPwaPrompt) return
-    try {
-      await deferredPwaPrompt.prompt()
-      await deferredPwaPrompt.userChoice
-    } finally {
-      setDeferredPwaPrompt(null)
-    }
+  const handlePwaInstallClick = () => {
+    void promptDeferredPwaInstall()
   }
 
   if (!shouldShowDashboardPwaInstallCard() || pwaStandalone) return null
@@ -63,7 +64,7 @@ export function DashboardPwaInstallCard({
   if (inline) {
     return (
       <div
-        id="dashboard-pwa-install"
+        id={anchorId}
         className="flex w-full shrink-0 flex-col justify-between rounded-xl border border-border/80 bg-card/60 p-2.5 sm:w-[132px]"
       >
         <div className="flex items-center gap-1.5">
@@ -76,7 +77,7 @@ export function DashboardPwaInstallCard({
         {deferredPwaPrompt ? (
           <button
             type="button"
-            onClick={() => void handlePwaInstallClick()}
+            onClick={handlePwaInstallClick}
             className="mt-2 w-full rounded-md bg-primary px-2 py-1 text-[10px] font-medium text-primary-foreground hover:bg-primary/90"
           >
             {t('pwa.install')}
@@ -90,7 +91,7 @@ export function DashboardPwaInstallCard({
 
   if (compact) {
     return (
-      <div id="dashboard-pwa-install" className="rounded-xl border border-border/80 bg-card/60 p-3">
+      <div id={anchorId} className="rounded-xl border border-border/80 bg-card/60 p-3">
         <div className="flex items-start gap-2">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
             <Smartphone className="h-4 w-4" aria-hidden />
@@ -101,12 +102,14 @@ export function DashboardPwaInstallCard({
             {deferredPwaPrompt ? (
               <button
                 type="button"
-                onClick={() => void handlePwaInstallClick()}
+                onClick={handlePwaInstallClick}
                 className="mt-2 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
               >
                 {t('pwa.install')}
               </button>
-            ) : null}
+            ) : (
+              <p className="mt-2 text-[10px] text-muted-foreground">{t('pwa.browserMenu')}</p>
+            )}
           </div>
         </div>
       </div>
@@ -114,7 +117,7 @@ export function DashboardPwaInstallCard({
   }
 
   return (
-    <div id="dashboard-pwa-install" className="rounded-xl border border-border bg-card p-4">
+    <div id={anchorId} className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
           <Smartphone className="h-5 w-5" aria-hidden />
@@ -125,12 +128,14 @@ export function DashboardPwaInstallCard({
           {deferredPwaPrompt ? (
             <button
               type="button"
-              onClick={() => void handlePwaInstallClick()}
+              onClick={handlePwaInstallClick}
               className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
               {t('pwa.installApp')}
             </button>
-          ) : null}
+          ) : (
+            <p className="text-xs text-muted-foreground">{t('pwa.browserMenu')}</p>
+          )}
         </div>
       </div>
     </div>

@@ -22,16 +22,21 @@ import {
   buildSpendGuardedPurseTransaction,
 } from '@/frontend/lib/nft-guarded-purse-txb'
 import { recordNftVaultActivity } from '@/frontend/lib/iota-activity-local-log'
-import { bindVaultToNftKeycard, getNftKeycard } from '@/frontend/lib/nft-keycard-local-store'
+import {
+  bindVaultToNftKeycard,
+  clearBoundVaultFromNftKeycardIfMatches,
+  getNftKeycard,
+} from '@/frontend/lib/nft-keycard-local-store'
 import {
   findNftGuardedPurseById,
   patchNftGuardedPurseLocal,
   removeNftGuardedPurseLocal,
   upsertNftGuardedPurseLocal,
 } from '@/frontend/lib/nft-guarded-purse-local-store'
+import { assertCanCreateVaultForNftModeWithDiscover } from '@/frontend/lib/nft-vault-one-per-mode'
 
 export type NftGuardedPurseActionResult =
-  | { ok: true; digest: string; purseObjectId?: string }
+  | { ok: true; digest: string; purseObjectId?: string; oneTimeNote?: string }
   | { ok: false; error: string }
 
 const GAS_BUDGET = 50_000_000n
@@ -110,6 +115,11 @@ export async function createNftGuardedPurse(input: {
   amountMist: bigint
   imageNftPackageId?: string
 }): Promise<NftGuardedPurseActionResult> {
+  const { assertNftVaultMetaSession } = await import('@/frontend/lib/nft-vault-session-gate')
+  const gate = assertNftVaultMetaSession()
+  if (!gate.ok) return gate
+  const one = await assertCanCreateVaultForNftModeWithDiscover(input.nftObjectId, 'guarded')
+  if (!one.ok) return { ok: false, error: one.error }
   const prep = await prepare()
   if (!prep.ok) return prep
   const { client, signer, sender } = prep
@@ -244,10 +254,18 @@ export async function spendNftGuardedPurse(input: {
   recipientAddress: string
   imageNftPackageId?: string
 }): Promise<NftGuardedPurseActionResult> {
+  const {
+    assertNftSpendCapabilityUsable,
+    finalizeOneTimeNftAfterSuccessfulSpend,
+    shouldBurnNftAfterSpend,
+  } = await import('@/frontend/lib/nft-spend-policy-local-store')
+  const cap = assertNftSpendCapabilityUsable(input.nftObjectId)
+  if (!cap.ok) return cap
   const prep = await prepare()
   if (!prep.ok) return prep
   const { client, signer, sender } = prep
   try {
+    const burnInSameTx = shouldBurnNftAfterSpend(input.nftObjectId)
     const txb = buildSpendGuardedPurseTransaction({
       messagingPackageId: input.messagingPackageId,
       senderAddress: sender,
@@ -257,6 +275,13 @@ export async function spendNftGuardedPurse(input: {
       recipientAddress: input.recipientAddress,
       imageNftPackageId: input.imageNftPackageId,
     })
+    if (burnInSameTx) {
+      const { appendBurnImageNftCall } = await import('@/frontend/lib/evidence-image-nft-txb')
+      appendBurnImageNftCall(txb, {
+        objectId: input.nftObjectId,
+        packageId: input.imageNftPackageId,
+      })
+    }
     await attachGasPaymentForOwner(client, txb, sender, GAS_BUDGET)
     const out = await signAndExecuteTransactionWithSigner({ client, transaction: txb, signer })
     if (!isDirectChainExecutionSuccess(out.digest, out.status) || !out.digest) {
@@ -277,7 +302,17 @@ export async function spendNftGuardedPurse(input: {
       recipient: input.recipientAddress,
       nftLabel: getNftKeycard(input.nftObjectId)?.label,
     })
-    return { ok: true, digest: out.digest, purseObjectId: input.purseObjectId }
+    const one = await finalizeOneTimeNftAfterSuccessfulSpend({
+      nftObjectId: input.nftObjectId,
+      spendDigest: out.digest,
+      burnAlreadyDone: burnInSameTx,
+    })
+    return {
+      ok: true,
+      digest: out.digest,
+      purseObjectId: input.purseObjectId,
+      ...(one.note ? { oneTimeNote: one.note } : {}),
+    }
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }
   }
@@ -306,6 +341,12 @@ export async function destroyEmptyNftGuardedPurse(input: {
     }
     const local = findNftGuardedPurseById(input.purseObjectId)
     removeNftGuardedPurseLocal(input.purseObjectId)
+    if (local?.nftObjectId) {
+      clearBoundVaultFromNftKeycardIfMatches({
+        objectId: local.nftObjectId,
+        vaultObjectId: input.purseObjectId,
+      })
+    }
     recordNftVaultActivity({
       op: 'purse_destroy',
       vaultObjectId: input.purseObjectId,

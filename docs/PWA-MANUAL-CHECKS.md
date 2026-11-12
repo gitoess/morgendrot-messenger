@@ -66,7 +66,7 @@ Vor Feldtest oder Release: dieselbe Logik wie Handbuch-Sync, ohne Install-Prompt
 
 | # | Prüfung | Erwartung |
 |---|---------|-----------|
-| 1 | **Install** | App lässt sich als installierbare PWA hinzufügen (Manifest + SW aktiv; in Dev ggf. nur über Menü — normal). |
+| 1 | **Install** | App lässt sich als installierbare PWA hinzufügen (Manifest + SW aktiv). UI: **Einstellungen → Allgemein → App installieren** (nicht mehr Dashboard-Kachel). In Dev ggf. nur Browser-Menü — normal. |
 | 2 | **Start vom Icon** | Nach Installation öffnet die App **ohne** Adresszeilen-Fokus auf die Messenger-Oberfläche (kein harter Fehler beim Start). |
 | 3 | **Offline-Shell** | Flugmodus / Netz aus: zuvor besuchte **statische** Assets (**`/_next/static/*`**) und App-UI oft noch nutzbar; **`/api/*`** bleibt offline **nicht** zuverlässig (Hinweis „offline“ / Fehler ist ok). |
 | 4 | **Handbuch offline** | Einmal **`/handbook`** mit Netz laden, dann offline: Markdown-Inhalt der in **`HANDBOOK_URLS`** eingetragenen Dateien (u. a. **`BOSS-ORIENTIERUNG.md`**, **`API-EINSATZ-ROLE-TEMPLATES.md`**, **`PWA-HANDBUCH-OFFLINE.md`**) lesbar, sofern SW-Cache greift — siehe **`frontend/public/sw.js`**. |

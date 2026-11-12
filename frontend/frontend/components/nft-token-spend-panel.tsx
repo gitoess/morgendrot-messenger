@@ -13,6 +13,7 @@ import {
   adminSetFrozenNftBearerTreasury,
   createNftBearerTreasury,
   depositNftBearerTreasury,
+  destroyEmptyNftBearerTreasury,
   withdrawNftBearerTreasury,
 } from '@/frontend/lib/nft-bearer-treasury-actions'
 import {
@@ -54,12 +55,33 @@ import {
 import {
   applyNftVaultHandoff,
   buildNftVaultHandoffFromLocal,
-  encodeNftVaultHandoff,
   hydrateLocalIndexFromKeycardBoundVault,
-  parseNftVaultHandoff,
 } from '@/frontend/lib/nft-vault-handoff'
+import {
+  encodeNftVaultHandoffSigned,
+  nftVaultHandoffToQrDataUrl,
+  parseAnyNftVaultHandoff,
+  preferOfflineHandoffText,
+} from '@/frontend/lib/nft-vault-handoff-offline'
+import {
+  getNftSpendPolicy,
+  isNftSpendCapabilityConsumed,
+  NFT_SPEND_POLICY_CHANGED,
+  nftSpendPolicyBadgeParts,
+  upsertNftSpendPolicy,
+} from '@/frontend/lib/nft-spend-policy-local-store'
 import { recoverNftVaultFromDigest } from '@/frontend/lib/nft-vault-recover-from-tx'
+import { syncDiscoveredVaultsIntoLocalIndex } from '@/frontend/lib/nft-vault-discover-onchain'
 import { scheduleNftVaultIndexPersist } from '@/frontend/lib/nft-vault-index-vault'
+import { restoreParkedVaultsForOwnedNfts } from '@/frontend/lib/nft-vault-local-clear'
+import { inferSpendModeForNft } from '@/frontend/lib/nft-secured-spend-options'
+import { copyTextSafe } from '@/frontend/lib/copy-text-safe'
+import { nftVaultSessionHint } from '@/frontend/lib/nft-vault-session-gate'
+import { requestNftVaultBalanceRefresh } from '@/frontend/components/dashboard-nft-secured-balances'
+import {
+  hasVaultPasswordSession,
+  VAULT_PASSWORD_SESSION_CHANGED,
+} from '@/frontend/lib/vault-password-session'
 
 const LS_PKG = 'morgendrot.nftTokenSpend.messagingPackageId.v1'
 const API_BASE =
@@ -106,7 +128,7 @@ function shortId(id: string): string {
 }
 
 export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean }) {
-  const [mode, setMode] = useState<NftTokenSpendMode>('guarded')
+  const [mode, setMode] = useState<NftTokenSpendMode>(() => inferSpendModeForNft(p.nftObjectId))
   const [msgPkg, setMsgPkg] = useState(MESSAGING_MODULES_PACKAGE_ID)
   const [editPkg, setEditPkg] = useState(false)
   const [amountIota, setAmountIota] = useState('0.01')
@@ -125,28 +147,66 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
   const [displayLabel, setDisplayLabel] = useState('')
   const [digestEdit, setDigestEdit] = useState('')
   const [handoffIn, setHandoffIn] = useState('')
+  const [handoffQr, setHandoffQr] = useState('')
+  const [spendPolicyTick, setSpendPolicyTick] = useState(0)
+  const [vaultHint, setVaultHint] = useState(() => nftVaultSessionHint())
 
   const syncLocal = useCallback(() => {
+    restoreParkedVaultsForOwnedNfts([p.nftObjectId])
     hydrateLocalIndexFromKeycardBoundVault(p.nftObjectId)
+    const inferred = inferSpendModeForNft(p.nftObjectId)
+    setMode((prev) => {
+      const pu0 = findNftGuardedPurseByNft(p.nftObjectId)
+      const tr0 = findNftBearerTreasuryByNft(p.nftObjectId)
+      // Nur auto-wechseln, wenn der andere Modus leer ist — sonst „nur Anlegen“-Falle.
+      if (tr0 && !pu0 && prev !== 'bearer') {
+        writeNftTokenSpendMode('bearer')
+        return 'bearer'
+      }
+      if (pu0 && !tr0 && prev !== 'guarded') {
+        writeNftTokenSpendMode('guarded')
+        return 'guarded'
+      }
+      if (!pu0 && !tr0 && prev !== inferred) {
+        writeNftTokenSpendMode(inferred)
+        return inferred
+      }
+      return prev
+    })
     const pu = findNftGuardedPurseByNft(p.nftObjectId)
     const tr = findNftBearerTreasuryByNft(p.nftObjectId)
     setPurse(pu)
     setTreasury(tr)
     const fromVault = pu?.displayLabel || tr?.displayLabel || ''
     const fromCard = getNftKeycard(p.nftObjectId)?.label || ''
-    setDisplayLabel((prev) => prev || fromVault || fromCard || '')
-    const dig = pu?.createDigest || tr?.createDigest || getNftKeycard(p.nftObjectId)?.boundVault?.createDigest || ''
-    setDigestEdit((prev) => prev || dig)
+    setDisplayLabel(fromVault || fromCard || '')
+    const dig =
+      pu?.createDigest ||
+      tr?.createDigest ||
+      getNftKeycard(p.nftObjectId)?.boundVault?.createDigest ||
+      ''
+    setDigestEdit(dig)
   }, [p.nftObjectId])
 
+  // Wenn Global-Default „Guarded“ ist, aber nur Bearer existiert → Bearer nutzen (sonst nur „Anlegen“).
+  const effectiveMode: NftTokenSpendMode =
+    mode === 'guarded' && !purse?.purseObjectId && treasury?.treasuryObjectId
+      ? 'bearer'
+      : mode === 'bearer' && !treasury?.treasuryObjectId && purse?.purseObjectId
+        ? 'guarded'
+        : mode
   const activeId =
-    mode === 'guarded'
-      ? purse?.purseObjectId || manualId.trim()
-      : treasury?.treasuryObjectId || manualId.trim()
+    (effectiveMode === 'guarded'
+      ? purse?.purseObjectId
+      : treasury?.treasuryObjectId)?.trim() ||
+    manualId.trim() ||
+    purse?.purseObjectId ||
+    treasury?.treasuryObjectId ||
+    ''
   const hasVault = Boolean(activeId)
-  const vaultKindLabel = mode === 'guarded' ? 'Guarded-Purse' : 'Bearer-Treasury'
+  const vaultKindLabel = effectiveMode === 'guarded' ? 'Nur ich' : 'Karteninhaber'
   const vaultPkg =
-    (mode === 'guarded' ? purse?.messagingPackageId : treasury?.messagingPackageId)?.trim() ||
+    (effectiveMode === 'guarded' ? purse?.messagingPackageId : treasury?.messagingPackageId)?.trim() ||
     msgPkg
 
   const refreshBalance = useCallback(async (vaultId: string) => {
@@ -174,15 +234,22 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
   useEffect(() => {
     setMsgPkg(readPkg())
     const syncMode = () => setMode(readNftTokenSpendMode())
+    const syncVault = () => setVaultHint(nftVaultSessionHint())
     syncMode()
+    syncVault()
     syncLocal()
     window.addEventListener(NFT_TOKEN_SPEND_MODE_CHANGED, syncMode)
     window.addEventListener(NFT_GUARDED_PURSE_CHANGED, syncLocal)
     window.addEventListener(NFT_BEARER_TREASURY_CHANGED, syncLocal)
+    const syncPolicy = () => setSpendPolicyTick((n) => n + 1)
+    window.addEventListener(VAULT_PASSWORD_SESSION_CHANGED, syncVault)
+    window.addEventListener(NFT_SPEND_POLICY_CHANGED, syncPolicy)
     return () => {
       window.removeEventListener(NFT_TOKEN_SPEND_MODE_CHANGED, syncMode)
       window.removeEventListener(NFT_GUARDED_PURSE_CHANGED, syncLocal)
       window.removeEventListener(NFT_BEARER_TREASURY_CHANGED, syncLocal)
+      window.removeEventListener(VAULT_PASSWORD_SESSION_CHANGED, syncVault)
+      window.removeEventListener(NFT_SPEND_POLICY_CHANGED, syncPolicy)
     }
   }, [syncLocal])
 
@@ -190,8 +257,19 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
     void refreshBalance(activeId)
   }, [activeId, refreshBalance])
 
+  useEffect(() => {
+    if (hasVault) setPayOpen(true)
+  }, [p.nftObjectId, hasVault])
+
   const run = async (
-    fn: () => Promise<{ ok: boolean; error?: string; digest?: string; purseObjectId?: string; treasuryObjectId?: string }>
+    fn: () => Promise<{
+      ok: boolean
+      error?: string
+      digest?: string
+      purseObjectId?: string
+      treasuryObjectId?: string
+      oneTimeNote?: string
+    }>
   ) => {
     setBusy(true)
     setErr('')
@@ -206,20 +284,23 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
       setInfo(
         `OK${r.digest ? ` · ${r.digest.slice(0, 12)}…` : ''}${
           created ? ` · Vault ${created.slice(0, 12)}…` : ''
-        }`
+        }${r.oneTimeNote ? ` · ${r.oneTimeNote}` : ''}`
       )
       syncLocal()
+      setSpendPolicyTick((n) => n + 1)
       const nextId =
         created ||
-        (mode === 'guarded'
-          ? findNftGuardedPurseByNft(p.nftObjectId)?.purseObjectId
-          : findNftBearerTreasuryByNft(p.nftObjectId)?.treasuryObjectId) ||
+        findNftGuardedPurseByNft(p.nftObjectId)?.purseObjectId ||
+        findNftBearerTreasuryByNft(p.nftObjectId)?.treasuryObjectId ||
         activeId
       if (nextId) await refreshBalance(nextId)
     } finally {
       setBusy(false)
     }
   }
+
+  void spendPolicyTick
+  const spendPolicy = getNftSpendPolicy(p.nftObjectId)
 
   const parseMist = (): bigint | null => {
     try {
@@ -246,31 +327,38 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
     setInfo('')
     if (otherVault && !thisVault) {
       setModeNote(
-        next === 'guarded'
-          ? 'Hinweis: Im Bearer-Modus existiert schon eine Treasury — das ist ein anderes Objekt.'
-          : 'Hinweis: Im Guarded-Modus existiert schon eine Purse — das ist ein anderes Objekt.'
+        next === 'bearer'
+          ? 'OK: „Nur ich“-Guthaben bleibt. Im Modus Karteninhaber kannst du zusätzlich anlegen.'
+          : 'OK: „Karteninhaber“-Guthaben bleibt. Im Modus Nur ich kannst du zusätzlich anlegen.'
       )
     } else if (otherVault && thisVault) {
-      setModeNote('Beide Modi haben ein Guthaben-Objekt — getrennt voneinander.')
+      setModeNote('Beide Modi haben je ein Vault — getrennt. Anlegen blockiert nur beim gleichen Modus.')
     } else {
       setModeNote('')
     }
   }
 
   const localFallback =
-    mode === 'guarded'
+    effectiveMode === 'guarded'
       ? formatLocalMistHintAsIota(purse?.balanceMistHint)
       : formatLocalMistHintAsIota(treasury?.balanceMistHint)
 
   const createDigest =
-    (mode === 'guarded' ? purse?.createDigest : treasury?.createDigest) ||
+    (effectiveMode === 'guarded' ? purse?.createDigest : treasury?.createDigest) ||
     getNftKeycard(p.nftObjectId)?.boundVault?.createDigest ||
     ''
+
+  useEffect(() => {
+    if (effectiveMode !== mode) {
+      setMode(effectiveMode)
+      writeNftTokenSpendMode(effectiveMode)
+    }
+  }, [effectiveMode, mode])
 
   const persistDigestMeta = (digest: string) => {
     const d = digest.trim()
     if (!d || !activeId) return
-    if (mode === 'guarded') {
+    if (effectiveMode === 'guarded') {
       patchNftGuardedPurseLocal(activeId, { createDigest: d })
       bindVaultToNftKeycard({
         objectId: p.nftObjectId,
@@ -300,11 +388,72 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
 
   return (
     <div className="space-y-2 text-[11px] text-muted-foreground">
-      <p>
-        Coins hinter die gewählte Karte legen. <span className="text-foreground">Auszahlen</span> = Coins an
-        eine Wallet-Adresse (nicht das NFT). Digest/Vault-ID landen im lokalen Index und — bei entsperrtem
-        Tresor — verschlüsselt im Vault-Sidecar.
-      </p>
+      {vaultHint ? (
+        <p className="rounded border border-amber-800/40 bg-amber-950/20 px-2 py-1.5 text-[10px] text-amber-100/95">
+          {vaultHint}
+          {!hasVaultPasswordSession() ? (
+            <span className="mt-0.5 block text-amber-50/80">
+              Anlegen/Index speichern: Tresor entsperren. Auszahlen: Signer (Wallet-Session).
+            </span>
+          ) : null}
+        </p>
+      ) : null}
+      {(() => {
+        const badges = nftSpendPolicyBadgeParts(p.nftObjectId)
+        if (!badges.length && !isNftSpendCapabilityConsumed(p.nftObjectId)) return null
+        return (
+          <p className="rounded border border-sky-800/30 bg-sky-950/15 px-2 py-1.5 text-[10px] text-sky-100/95">
+            Modi: {badges.join(' · ') || 'One-Time · verbraucht'}
+            {isNftSpendCapabilityConsumed(p.nftObjectId)
+              ? ' — weitere Auszahlungen gesperrt.'
+              : spendPolicy?.oneTimeUse
+                ? ' — nach erstem Spend verbraucht (+ Burn).'
+                : ''}
+          </p>
+        )
+      })()}
+
+      {!hasVault ? (
+        <div className="space-y-1.5 rounded border border-border/50 bg-background/40 px-2 py-2">
+          <p className="text-[10px] font-medium text-foreground">Index empfangen</p>
+          <p className="text-[10px] text-muted-foreground">Bundle einfügen oder Vaults laden.</p>
+          <div className="flex gap-1.5">
+            <Input
+              className="h-7 flex-1 font-mono text-[10px]"
+              value={handoffIn}
+              disabled={p.disabled || busy}
+              onChange={(e) => setHandoffIn(e.target.value)}
+              placeholder="Ctrl+V: Bundle oder MORG_NFT_V1C:…"
+              spellCheck={false}
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="h-7 shrink-0 text-[10px]"
+              disabled={p.disabled || busy || !handoffIn.trim()}
+              onClick={() => {
+                const pack = parseAnyNftVaultHandoff(handoffIn)
+                if (!pack) {
+                  setErr('Ungültiger Index-Text.')
+                  return
+                }
+                if (pack.nftObjectId !== p.nftObjectId.trim().toLowerCase()) {
+                  setErr(`Gehört zu NFT ${pack.nftObjectId.slice(0, 10)}… — andere Karte wählen.`)
+                  return
+                }
+                const r = applyNftVaultHandoff(pack)
+                setHandoffIn('')
+                setInfo(r.note)
+                syncLocal()
+                void refreshBalance(pack.vaultObjectId)
+              }}
+            >
+              Übernehmen
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="rounded border border-border/60 bg-background/40 px-2 py-1.5 space-y-1">
         <p className="text-[10px] text-foreground/90">
@@ -334,9 +483,9 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
             onChange={(e) => setDisplayLabel(e.target.value)}
             onBlur={() => {
               const v = displayLabel.trim()
-              if (mode === 'guarded' && purse) {
+              if (effectiveMode === 'guarded' && purse) {
                 patchNftGuardedPurseLocal(purse.purseObjectId, { displayLabel: v })
-              } else if (mode === 'bearer' && treasury) {
+              } else if (effectiveMode === 'bearer' && treasury) {
                 patchNftBearerTreasuryLocal(treasury.treasuryObjectId, { displayLabel: v })
               }
             }}
@@ -345,10 +494,10 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
       </div>
 
       <label className="flex flex-col gap-0.5">
-        <span className="text-foreground">Wer darf auszahlen?</span>
+        <span className="text-foreground">Auszahl-Modus</span>
         <select
           className="h-8 rounded border border-border bg-background px-2 text-[11px] text-foreground"
-          value={mode}
+          value={effectiveMode}
           disabled={p.disabled || busy}
           onChange={(e) => setModeSafe(e.target.value as NftTokenSpendMode)}
         >
@@ -362,10 +511,91 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
         </p>
       ) : null}
 
+      <details className="rounded border border-border/50 bg-background/40 px-2 py-2">
+        <summary className="cursor-pointer text-[10px] font-medium text-foreground">Optionen</summary>
+        <div className="mt-1.5 space-y-1.5">
+          <label className="flex items-start gap-2 text-[10px] text-foreground">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={Boolean(spendPolicy?.oneTimeUse)}
+              disabled={p.disabled || busy || Boolean(spendPolicy?.consumedAtMs)}
+              onChange={(e) => {
+                upsertNftSpendPolicy({
+                  nftObjectId: p.nftObjectId,
+                  oneTimeUse: e.target.checked,
+                  burnAfterSpend: e.target.checked,
+                  offlineHandoff: spendPolicy?.offlineHandoff,
+                })
+                setSpendPolicyTick((n) => n + 1)
+              }}
+            />
+            <span>
+              One-Time — nach erstem Spend ungültig
+              {spendPolicy?.consumedAtMs ? ' · verbraucht' : ''}
+            </span>
+          </label>
+          <label className="flex items-start gap-2 text-[10px] text-foreground">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={Boolean(spendPolicy?.offlineHandoff)}
+              disabled={p.disabled || busy}
+              onChange={(e) => {
+                upsertNftSpendPolicy({
+                  nftObjectId: p.nftObjectId,
+                  oneTimeUse: spendPolicy?.oneTimeUse,
+                  burnAfterSpend: spendPolicy?.burnAfterSpend,
+                  offlineHandoff: e.target.checked,
+                })
+                setSpendPolicyTick((n) => n + 1)
+              }}
+            />
+            <span>Offline-Weitergabe (Index-Bundle beim NFT-Senden)</span>
+          </label>
+        </div>
+      </details>
+
+      <div className="flex flex-wrap gap-1.5">
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          className="h-8 text-[11px]"
+          disabled={p.disabled || busy}
+          title="Scannt deine Adresse on-chain und schreibt gefundene Purses/Treasuries in den lokalen Index"
+          onClick={() => {
+            void (async () => {
+              setBusy(true)
+              setErr('')
+              try {
+                const r = await syncDiscoveredVaultsIntoLocalIndex()
+                if (!r.ok) {
+                  setErr(r.error || 'Discovery fehlgeschlagen.')
+                  return
+                }
+                syncLocal()
+                requestNftVaultBalanceRefresh()
+                setInfo(
+                  r.guarded + r.bearer > 0
+                    ? `Vaults geladen: ${r.guarded + r.bearer} neu.`
+                    : 'Keine neuen Vaults on-chain.'
+                )
+                if (activeId) void refreshBalance(activeId)
+              } finally {
+                setBusy(false)
+              }
+            })()
+          }}
+        >
+          Vaults laden
+        </Button>
+      </div>
+
       {hasVault ? (
         <div
           className={
-            mode === 'guarded'
+            effectiveMode === 'guarded'
               ? 'space-y-1.5 rounded border border-emerald-800/30 bg-emerald-950/15 px-2.5 py-2'
               : 'space-y-1.5 rounded border border-violet-800/30 bg-violet-950/15 px-2.5 py-2'
           }
@@ -413,40 +643,23 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
           <p className="text-[10px] text-muted-foreground">
             Lose Wallet-Coins außerhalb bleiben ungeschützt.
           </p>
-          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-            {createDigest ? (
+          {createDigest ? (
+            <p className="text-[10px] text-muted-foreground">
+              Create-Digest:{' '}
               <button
                 type="button"
-                className="text-[10px] text-primary underline underline-offset-2"
+                className="font-mono text-foreground underline underline-offset-2"
                 onClick={() => {
-                  void navigator.clipboard.writeText(createDigest)
-                  setInfo('Create-Digest kopiert.')
+                  void (async () => {
+                    const r = await copyTextSafe(createDigest)
+                    setInfo(r.ok ? 'Digest in Zwischenablage.' : r.error)
+                  })()
                 }}
               >
-                Digest {shortId(createDigest)}
+                {shortId(createDigest)}
               </button>
-            ) : (
-              <span className="text-[10px]">Kein Digest — unten speichern oder TX nachtragen</span>
-            )}
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="h-6 px-1.5 text-[10px]"
-              disabled={busy}
-              onClick={() => {
-                const pack = buildNftVaultHandoffFromLocal(p.nftObjectId)
-                if (!pack) {
-                  setErr('Kein Vault zum Teilen.')
-                  return
-                }
-                void navigator.clipboard.writeText(encodeNftVaultHandoff(pack))
-                setInfo('Übergabe-Paket kopiert (für anderes Morgendrot / Empfänger).')
-              }}
-            >
-              Übergabe-Paket
-            </Button>
-          </div>
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -471,7 +684,7 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
             const mist = parseMist()
             if (mist == null) return
             void run(async () => {
-              if (mode === 'guarded') {
+              if (effectiveMode === 'guarded') {
                 return createNftGuardedPurse({
                   messagingPackageId: vaultPkg,
                   nftObjectId: p.nftObjectId,
@@ -489,43 +702,85 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
           Guthaben anlegen
         </Button>
       ) : (
-        <div className="flex flex-wrap gap-1.5">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-8 text-[11px]"
-            disabled={p.disabled || busy}
-            onClick={() => {
-              const mist = parseMist()
-              if (mist == null) return
-              void run(async () => {
-                if (mode === 'guarded') {
-                  return depositNftGuardedPurse({
+        <div className="space-y-1.5">
+          <p className="text-[10px] text-muted-foreground">
+            Pro NFT und Modus nur ein Vault — mehr Guthaben nur per Einzahlen (kein zweites Anlegen).
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 text-[11px]"
+              disabled={p.disabled || busy}
+              onClick={() => {
+                const mist = parseMist()
+                if (mist == null) return
+                void run(async () => {
+                  if (effectiveMode === 'guarded') {
+                    return depositNftGuardedPurse({
+                      messagingPackageId: vaultPkg,
+                      purseObjectId: activeId,
+                      amountMist: mist,
+                    })
+                  }
+                  return depositNftBearerTreasury({
                     messagingPackageId: vaultPkg,
-                    purseObjectId: activeId,
+                    treasuryObjectId: activeId,
                     amountMist: mist,
                   })
-                }
-                return depositNftBearerTreasury({
-                  messagingPackageId: vaultPkg,
-                  treasuryObjectId: activeId,
-                  amountMist: mist,
                 })
-              })
-            }}
-          >
-            Einzahlen
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            className="h-8 text-[11px]"
-            disabled={p.disabled || busy}
-            onClick={() => setPayOpen((v) => !v)}
-          >
-            {payOpen ? 'Auszahlen schließen' : 'Auszahlen…'}
-          </Button>
+              }}
+            >
+              Einzahlen
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="h-8 text-[11px]"
+              disabled={
+                p.disabled || busy || isNftSpendCapabilityConsumed(p.nftObjectId)
+              }
+              title={
+                isNftSpendCapabilityConsumed(p.nftObjectId)
+                  ? 'One-Time bereits verbraucht'
+                  : undefined
+              }
+              onClick={() => setPayOpen((v) => !v)}
+            >
+              {payOpen ? 'Auszahlen schließen' : 'Auszahlen…'}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 text-[11px] text-destructive border-destructive/40"
+              disabled={p.disabled || busy}
+              title="Nur bei Balance 0 — Vault-Objekt on-chain zerstören und lokalen Index räumen"
+              onClick={() => {
+                if (
+                  !window.confirm(
+                    'Leeres Guthaben löschen?\n\nNur möglich bei Balance 0. Zerstört das Purse/Treasury on-chain (destroy_empty) und entfernt den lokalen Index an dieser Karte. Coins vorher auszahlen. NFT bleibt bestehen.'
+                  )
+                ) {
+                  return
+                }
+                void run(() =>
+                  effectiveMode === 'guarded'
+                    ? destroyEmptyNftGuardedPurse({
+                        messagingPackageId: vaultPkg,
+                        purseObjectId: activeId,
+                      })
+                    : destroyEmptyNftBearerTreasury({
+                        messagingPackageId: vaultPkg,
+                        treasuryObjectId: activeId,
+                      })
+                )
+              }}
+            >
+              Leeres Guthaben löschen
+            </Button>
+          </div>
         </div>
       )}
 
@@ -572,7 +827,7 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
               const mist = parseMist()
               if (mist == null) return
               void run(async () => {
-                if (mode === 'guarded') {
+                if (effectiveMode === 'guarded') {
                   return spendNftGuardedPurse({
                     messagingPackageId: vaultPkg,
                     purseObjectId: activeId,
@@ -598,12 +853,157 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
 
       <details className="rounded border border-border/40 px-2 py-1">
         <summary className="cursor-pointer text-[10px] text-muted-foreground">
-          Erweitert · Digest / Übergabe / Package
+          Erweitert / Notfall · Digest · manuelle ID · Index neu senden
         </summary>
         <div className="mt-2 space-y-2">
+          <p className="text-[10px] text-muted-foreground">
+            Nur wenn der Index fehlt: Digest nachtragen, manuelle ID oder Bundle einfügen.
+          </p>
+          <div className="space-y-1.5 rounded border border-amber-800/25 bg-amber-950/10 px-2 py-2">
+            <p className="text-[10px] font-medium text-foreground">Notfall · Index einfügen / neu senden</p>
+            <div className="flex flex-wrap gap-1.5">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="h-8 text-[11px]"
+                disabled={busy || !hasVault}
+                onClick={() => {
+                  void (async () => {
+                    const pack = buildNftVaultHandoffFromLocal(p.nftObjectId)
+                    if (!pack) {
+                      setErr('Kein Vault — zuerst Guthaben anlegen.')
+                      return
+                    }
+                    const { bundle } = preferOfflineHandoffText(pack)
+                    const r = await copyTextSafe(bundle)
+                    if (!r.ok) {
+                      setErr(r.error)
+                      setInfo(`Zum manuellen Kopieren:\n${text}`)
+                      return
+                    }
+                    setErr('')
+                    setInfo(
+                      'Bundle (NFT+Vault) in Zwischenablage — Empfänger: unten einfügen → Übernehmen oder Chat/Mesh.'
+                    )
+                  })()
+                }}
+              >
+                Bundle neu kopieren
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 text-[11px]"
+                disabled={busy || !hasVault}
+                onClick={() => {
+                  void (async () => {
+                    const pack = buildNftVaultHandoffFromLocal(p.nftObjectId)
+                    if (!pack) {
+                      setErr('Kein Vault — zuerst Guthaben anlegen.')
+                      return
+                    }
+                    const { compact } = preferOfflineHandoffText(pack)
+                    try {
+                      const url = await nftVaultHandoffToQrDataUrl(compact)
+                      setHandoffQr(url)
+                      setErr('')
+                      setInfo('QR (Compact = NFT+Vault). Empfänger scannt und fügt Text ein.')
+                    } catch (e) {
+                      setErr(e instanceof Error ? e.message : String(e))
+                    }
+                  })()
+                }}
+              >
+                QR zeigen
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 text-[11px]"
+                disabled={busy || !hasVault}
+                onClick={() => {
+                  void (async () => {
+                    const pack = buildNftVaultHandoffFromLocal(p.nftObjectId)
+                    if (!pack) {
+                      setErr('Kein Vault — zuerst Guthaben anlegen.')
+                      return
+                    }
+                    const signed = await encodeNftVaultHandoffSigned(pack)
+                    if (!signed.ok) {
+                      setErr(signed.error)
+                      return
+                    }
+                    const r = await copyTextSafe(signed.text)
+                    if (!r.ok) {
+                      setErr(r.error)
+                      setInfo(`Zum manuellen Kopieren:\n${signed.text}`)
+                      return
+                    }
+                    setErr('')
+                    setInfo('Signierter Index kopiert (Issuer = Session-Wallet).')
+                  })()
+                }}
+              >
+                Signiert kopieren
+              </Button>
+            </div>
+            {handoffQr ? (
+              <img
+                src={handoffQr}
+                alt="Vault-Index QR"
+                className="mx-auto h-40 w-40 rounded border border-border bg-white p-1"
+              />
+            ) : null}
+            <label className="flex flex-col gap-0.5">
+              <span className="text-[10px] text-muted-foreground">
+                Empfangen: Bundle / Compact / V1 hier einfügen → Übernehmen
+              </span>
+              <div className="flex gap-1.5">
+                <Input
+                  className="h-7 flex-1 font-mono text-[10px]"
+                  value={handoffIn}
+                  disabled={p.disabled || busy}
+                  onChange={(e) => setHandoffIn(e.target.value)}
+                  placeholder="Ctrl+V: Bundle oder MORG_NFT_V1C:…"
+                  spellCheck={false}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 shrink-0 text-[10px]"
+                  disabled={p.disabled || busy || !handoffIn.trim()}
+                  onClick={() => {
+                    const pack = parseAnyNftVaultHandoff(handoffIn)
+                    if (!pack) {
+                      setErr('Ungültiger Index-Text.')
+                      return
+                    }
+                    if (pack.nftObjectId !== p.nftObjectId.trim().toLowerCase()) {
+                      setErr(
+                        `Gehört zu NFT ${pack.nftObjectId.slice(0, 10)}… — andere Karte wählen.`
+                      )
+                      return
+                    }
+                    const r = applyNftVaultHandoff(pack)
+                    setHandoffIn('')
+                    setHandoffQr('')
+                    setInfo(r.note)
+                    syncLocal()
+                    void refreshBalance(pack.vaultObjectId)
+                  }}
+                >
+                  Übernehmen
+                </Button>
+              </div>
+            </label>
+          </div>
           <div className="space-y-1">
             <p className="text-[10px] text-foreground/90">
-              Create-Digest (Tresor-Index / Schlüsselkarte) — beim Anlegen automatisch, sonst nachtragen
+              Notfall · Create-Digest nachtragen (wenn Anlegen den Index nicht gesetzt hat)
             </p>
             <div className="flex gap-1.5">
               <Input
@@ -655,48 +1055,6 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
           </div>
           <div className="space-y-1">
             <p className="text-[10px] text-foreground/90">
-              Übergabe-Paket vom Sender (anderes Gerät) — zeigt den Betrag erst nach Index
-            </p>
-            <div className="flex gap-1.5">
-              <Input
-                className="h-7 flex-1 font-mono text-[10px]"
-                value={handoffIn}
-                disabled={p.disabled || busy}
-                onChange={(e) => setHandoffIn(e.target.value)}
-                placeholder="MORG_NFT_VAULT_V1:{…}"
-                spellCheck={false}
-              />
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-7 shrink-0 text-[10px]"
-                disabled={p.disabled || busy || !handoffIn.trim()}
-                onClick={() => {
-                  const pack = parseNftVaultHandoff(handoffIn)
-                  if (!pack) {
-                    setErr('Ungültiges Übergabe-Paket.')
-                    return
-                  }
-                  if (pack.nftObjectId !== p.nftObjectId.trim().toLowerCase()) {
-                    setErr(
-                      `Paket gehört zu NFT ${pack.nftObjectId.slice(0, 10)}… — andere Karte wählen oder ID anpassen.`
-                    )
-                    return
-                  }
-                  const r = applyNftVaultHandoff(pack)
-                  setHandoffIn('')
-                  setInfo(r.note)
-                  syncLocal()
-                  void refreshBalance(pack.vaultObjectId)
-                }}
-              >
-                Import
-              </Button>
-            </div>
-          </div>
-          <div className="space-y-1">
-            <p className="text-[10px] text-foreground/90">
               Messaging-Module-Package (Guthaben / Zeitkapsel / Seal) — nicht der Chat-Stamm
             </p>
             {!editPkg ? (
@@ -727,8 +1085,8 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
             )}
           </div>
           <label className="flex flex-col gap-0.5">
-            <span>
-              {vaultKindLabel}-Object-ID manuell (nur wenn Auto-Erkennung fehlt)
+            <span className="text-[10px] text-foreground/90">
+              Notfall · {vaultKindLabel}-Object-ID manuell
             </span>
             <Input
               className="h-7 font-mono text-[10px]"
@@ -746,7 +1104,7 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
               className="h-7 text-[10px]"
               disabled={busy}
               onClick={() => {
-                if (mode === 'guarded') {
+                if (effectiveMode === 'guarded') {
                   upsertNftGuardedPurseLocal({
                     purseObjectId: manualId,
                     nftObjectId: p.nftObjectId,
@@ -772,26 +1130,13 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
               Lokal merken
             </Button>
           ) : null}
-          {mode === 'guarded' && hasVault ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="h-7 text-[10px]"
-              disabled={p.disabled || busy}
-              onClick={() =>
-                void run(() =>
-                  destroyEmptyNftGuardedPurse({
-                    messagingPackageId: vaultPkg,
-                    purseObjectId: activeId,
-                  })
-                )
-              }
-            >
-              Leeres Guthaben löschen
-            </Button>
+          {hasVault ? (
+            <p className="text-[10px] text-muted-foreground">
+              „Leeres Guthaben löschen“ (oben): nur bei Balance 0 — zerstört das Vault-Objekt on-chain und
+              räumt den lokalen Index. Coins vorher auszahlen.
+            </p>
           ) : null}
-          {mode === 'bearer' && hasVault ? (
+          {effectiveMode === 'bearer' && hasVault ? (
             <div className="flex flex-wrap gap-1.5">
               <Button
                 type="button"
@@ -834,7 +1179,7 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
       </details>
 
       {err ? <p className="text-destructive">{err}</p> : null}
-      {info ? <p className="text-foreground">{info}</p> : null}
+      {info ? <p className="whitespace-pre-wrap break-all text-foreground">{info}</p> : null}
     </div>
   )
 }

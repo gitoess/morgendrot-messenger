@@ -2,6 +2,8 @@ import { createRef } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { ChatViewInboxToolbar, type ChatViewInboxToolbarProps } from '@/frontend/components/chat-view-inbox-toolbar'
+import { exportDataDeniedReason } from '@/frontend/lib/messenger-capability-gates'
+import { inboxToolbarToolsForSendPath } from '@/frontend/lib/send-path-inbox-source-filter'
 import { TEST_MESSENGER_CAPABILITIES_ALL_WRITE } from '@/frontend/lib/test-fixtures/messenger-capabilities'
 
 function makeProps(overrides: Partial<ChatViewInboxToolbarProps> = {}): ChatViewInboxToolbarProps {
@@ -121,18 +123,48 @@ describe('ChatViewInboxToolbar actions (§ H.1a)', () => {
     expect(updater(false)).toBe(true)
   })
 
-  it('zeigt Telefonbuch-Button wenn aktiviert', () => {
+  it('strafft zweite Zeile: Filter statt Inhalt/Kanal/Partner-Buttons', () => {
+    render(<ChatViewInboxToolbar {...makeProps()} />)
+    expect(screen.getByRole('button', { name: /^Filter$/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Posteingang \(Inhalt\)/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Kanal$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Partner$/i })).not.toBeInTheDocument()
+  })
+
+  it('blendet On-Chain bei Funk-pathTools aus; Optionen bleibt', () => {
+    render(
+      <ChatViewInboxToolbar
+        {...makeProps({
+          pathTools: inboxToolbarToolsForSendPath({ activeSendPath: 'mesh' }),
+        })}
+      />
+    )
+    expect(screen.queryByRole('button', { name: /On-Chain \/ NFT/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Optionen/i })).toBeInTheDocument()
+  })
+
+  it('zeigt Kontakte-verwalten-Button wenn aktiviert', () => {
     const onOpenPhonebook = vi.fn()
     render(
       <ChatViewInboxToolbar
         {...makeProps({ showPhonebookButton: true, onOpenPhonebook })}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Telefonbuch/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Kontakte verwalten/i }))
     expect(onOpenPhonebook).toHaveBeenCalledTimes(1)
   })
 
-  it('blockiert Nachrichtenverlauf-Export ohne Berechtigung', () => {
+  it('bündelt Werkzeuge unter Optionen; On-Chain und Aktualisieren bleiben oben', () => {
+    render(<ChatViewInboxToolbar {...makeProps({ messageCount: 2 })} />)
+    expect(screen.getByRole('button', { name: /Optionen/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /On-Chain \/ NFT/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Aktualisieren/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Pakete$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Nachrichtenverlauf$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Wire einfügen$/i })).not.toBeInTheDocument()
+  })
+
+  it('lässt Optionen offen wenn Export gesperrt (Wire/Pakete bleiben nutzbar)', () => {
     render(
       <ChatViewInboxToolbar
         {...makeProps({
@@ -149,6 +181,15 @@ describe('ChatViewInboxToolbar actions (§ H.1a)', () => {
         })}
       />
     )
-    expect(screen.getByRole('button', { name: /Nachrichtenverlauf/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Optionen/i })).not.toBeDisabled()
+    expect(exportDataDeniedReason({
+      connected: true,
+      locked: false,
+      connectedAddresses: [],
+      capabilities: {
+        ...TEST_MESSENGER_CAPABILITIES_ALL_WRITE,
+        product: { ...TEST_MESSENGER_CAPABILITIES_ALL_WRITE.product, canExportData: false },
+      },
+    })).toBeTruthy()
   })
 })

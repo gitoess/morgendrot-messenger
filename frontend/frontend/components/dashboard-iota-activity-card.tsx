@@ -12,11 +12,30 @@ import {
   listIotaActivity,
   type IotaActivityEntry,
 } from '@/frontend/lib/iota-activity-local-log'
-import { explorerTxUrlFromDigest } from '@/frontend/lib/iota-tx-explorer-hint'
+import {
+  explorerObjectUrlFromId,
+  explorerTxUrlFromDigest,
+} from '@/frontend/lib/iota-tx-explorer-hint'
+import { TechnicalIdRow } from '@/frontend/components/technical-id-row'
+import { copyTextSafe } from '@/frontend/lib/copy-text-safe'
 import { cn } from '@/lib/utils'
+
+function activityCopyBundle(a: IotaActivityEntry): string {
+  return [
+    `kind=${a.kind}`,
+    `summary=${a.summary}`,
+    a.digest ? `tx=${a.digest}` : '',
+    a.objectId ? `object=${a.objectId}` : '',
+    a.counterparty ? `counterparty=${a.counterparty}` : '',
+    a.nonce ? `nonce=${a.nonce}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
 
 export function DashboardIotaActivityCard({ compact = false }: { compact?: boolean }) {
   const [rows, setRows] = useState<IotaActivityEntry[]>(() => listIotaActivity(40))
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   useEffect(() => {
     const sync = () => setRows(listIotaActivity(40))
@@ -45,41 +64,116 @@ export function DashboardIotaActivityCard({ compact = false }: { compact?: boole
           IOTA-Aktivität
         </h3>
       </div>
-      <p className="mb-2 text-[10px] text-muted-foreground">
-        Dieses Gerät: Burn, NFT Ein/Aus, gesichertes Guthaben (Purse/Treasury). Freie Coins-Transfers
-        noch nicht. Explorer behält alle TXs.
-      </p>
+      <details className="mb-2 text-[10px] text-muted-foreground">
+        <summary className="cursor-pointer select-none text-foreground/80 hover:underline">Hinweise</summary>
+        <p className="mt-1">
+          Lokale App-Events auf diesem Gerät (Burn, NFT, gesichertes Guthaben) — kein vollständiger
+          Explorer-Feed. Doppelklick öffnet kopierbare IDs.
+        </p>
+      </details>
       {rows.length === 0 ? (
         <p className="text-xs text-muted-foreground">Noch keine Einträge.</p>
       ) : (
         <ul className={cn('space-y-1.5 overflow-y-auto text-[11px]', compact ? 'max-h-40' : 'max-h-56')}>
           {rows.map((a) => {
             const when = new Date(a.atMs).toLocaleString()
+            const open = expandedId === a.id
+            const txHref = a.digest ? explorerTxUrlFromDigest(a.digest) : ''
+            const objHref = a.objectId ? explorerObjectUrlFromId(a.objectId) : ''
             return (
               <li
                 key={a.id}
-                className="rounded-md border border-border/50 bg-background/50 px-2.5 py-1.5 break-all text-muted-foreground"
+                className="rounded-md border border-border/50 bg-background/50 px-2.5 py-1.5 text-muted-foreground"
               >
-                <span className="font-semibold text-foreground">{iotaActivityKindLabel(a.kind)}</span>
-                {' · '}
-                {when}
-                {' · '}
-                {a.summary}
-                {a.objectId ? ` · ${a.objectId.slice(0, 12)}…` : ''}
-                {a.counterparty ? ` · ${a.counterparty.slice(0, 10)}…` : ''}
-                {a.nonce ? ` · #${a.nonce}` : ''}
-                {a.digest ? (
-                  <>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  className="flex cursor-pointer items-start justify-between gap-2 break-all text-left"
+                  title="Doppelklick: IDs anzeigen"
+                  aria-expanded={open}
+                  onDoubleClick={() => setExpandedId((cur) => (cur === a.id ? null : a.id))}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setExpandedId((cur) => (cur === a.id ? null : a.id))
+                    }
+                  }}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="font-semibold text-foreground">{iotaActivityKindLabel(a.kind)}</span>
                     {' · '}
-                    <a
-                      href={explorerTxUrlFromDigest(a.digest)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary underline underline-offset-2"
-                    >
-                      TX
-                    </a>
-                  </>
+                    {when}
+                    {' · '}
+                    {a.summary}
+                    {a.objectId ? ` · ${a.objectId.slice(0, 12)}…` : ''}
+                    {a.counterparty ? ` · ${a.counterparty.slice(0, 10)}…` : ''}
+                    {a.nonce ? ` · #${a.nonce}` : ''}
+                  </span>
+                  <span className="flex shrink-0 flex-col items-end gap-0.5">
+                    {txHref ? (
+                      <a
+                        href={txHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline underline-offset-2"
+                        onClick={(e) => e.stopPropagation()}
+                        onDoubleClick={(e) => e.stopPropagation()}
+                      >
+                        TX
+                      </a>
+                    ) : null}
+                    {objHref ? (
+                      <a
+                        href={objHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline underline-offset-2"
+                        onClick={(e) => e.stopPropagation()}
+                        onDoubleClick={(e) => e.stopPropagation()}
+                      >
+                        Objekt
+                      </a>
+                    ) : null}
+                  </span>
+                </div>
+                {open ? (
+                  <div
+                    className="mt-1.5 space-y-1.5 border-t border-border/40 pt-1.5"
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => e.stopPropagation()}
+                  >
+                    {a.digest ? (
+                      <TechnicalIdRow
+                        label="TX Digest"
+                        value={a.digest}
+                        href={explorerTxUrlFromDigest(a.digest)}
+                      />
+                    ) : null}
+                    {a.objectId ? (
+                      <TechnicalIdRow
+                        label="Object-ID"
+                        value={a.objectId}
+                        href={explorerObjectUrlFromId(a.objectId)}
+                      />
+                    ) : null}
+                    {a.counterparty ? (
+                      <TechnicalIdRow label="Gegenadresse" value={a.counterparty} />
+                    ) : null}
+                    {a.nonce ? <TechnicalIdRow label="Nonce" value={a.nonce} /> : null}
+                    {!a.digest && !a.objectId && !a.counterparty && !a.nonce ? (
+                      <p className="text-[10px] text-muted-foreground">Keine technischen IDs gespeichert.</p>
+                    ) : (
+                      <button
+                        type="button"
+                        className="text-[10px] text-primary hover:underline"
+                        onClick={() => {
+                          void copyTextSafe(activityCopyBundle(a))
+                        }}
+                      >
+                        Alle IDs kopieren
+                      </button>
+                    )}
+                  </div>
                 ) : null}
               </li>
             )

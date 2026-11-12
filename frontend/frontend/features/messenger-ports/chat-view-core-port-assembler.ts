@@ -84,6 +84,8 @@ export type ChatViewComposerSendPathSlice = {
   isPrivate: boolean
   composerMailboxObjectId: string
   setComposerMailboxObjectId: (v: string) => void
+  iotaPathFocus: boolean
+  setIotaPathFocus: (focus: boolean) => void
 }
 
 export type ChatViewShellRoutingSlice = {
@@ -419,7 +421,9 @@ export function assembleComposerSendPathPort(slice: ChatViewComposerSendPathSlic
     slice.isGroup,
     slice.isPrivate,
     slice.composerMailboxObjectId,
-    slice.setComposerMailboxObjectId
+    slice.setComposerMailboxObjectId,
+    slice.iotaPathFocus,
+    slice.setIotaPathFocus
   )
 }
 

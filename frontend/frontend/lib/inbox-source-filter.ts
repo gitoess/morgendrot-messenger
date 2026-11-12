@@ -11,7 +11,7 @@ import {
 import type { Message } from '@/frontend/lib/types'
 
 /** Quelle im Posteingang — nur aktiv wenn Kanal-Filter eingeschaltet. */
-export type InboxSourceFilter = 'all' | 'mailbox' | 'group' | 'telegram' | 'funk' | 'lagebild'
+export type InboxSourceFilter = 'all' | 'mailbox' | 'group' | 'telegram' | 'funk' | 'lagebild' | 'iota'
 
 export function isGroupBroadcastInboxRow(msg: Message): boolean {
   if (msg.chainPurgeKind === 'team-broadcast') return true
@@ -44,6 +44,17 @@ export function messageMatchesInboxSourceFilter(
     if (match?.broadcastAddress.trim() && messageBelongsToPinnwand(msg, match)) return false
     return messagePureInternetInboxRow(msg)
   }
+  /** Sendepfad „IOTA“: Chain/Mailbox inkl. Gruppe/Pinnwand — ohne Telegram und ohne reinen Funk. */
+  if (filter === 'iota') {
+    if (messageTouchesTelegramTransport(msg)) return false
+    if (messageTouchesMeshTransport(msg) && !messagePureInternetInboxRow(msg)) return false
+    const match = ctx?.pinnwandMatch
+    if (match?.broadcastAddress.trim() && messageBelongsToPinnwand(msg, match)) return true
+    if (isGroupBroadcastInboxRow(msg)) return true
+    const teamMb = ctx?.teamMailboxObjectId?.trim() ?? ''
+    if (teamMb && isTeamBroadcastInboxRow(msg, teamMb)) return true
+    return messagePureInternetInboxRow(msg)
+  }
   return true
 }
 
@@ -61,5 +72,7 @@ export function inboxSourceFilterLabel(filter: InboxSourceFilter): string {
       return 'Funk'
     case 'lagebild':
       return 'Pinnwand'
+    case 'iota':
+      return 'IOTA'
   }
 }

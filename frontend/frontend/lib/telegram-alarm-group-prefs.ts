@@ -210,7 +210,29 @@ export function confirmTelegramAlarmGroupJoined(extra?: {
   } catch {
     /* ignore */
   }
+  /** Beitritt erledigt → Invite-Karte nicht erneut (auch wenn „Beigetreten“ ohne tgSeq-Apply kam). */
+  if (pending?.tgSeq != null && Number.isFinite(pending.tgSeq)) {
+    markTelegramGroupTgSeqApplied(pending.tgSeq)
+  }
   notifyTelegramJoinChanged()
+}
+
+/** Posteingang-Invite nur wenn noch nicht beigetreten / applied / dismissed / snoozed. */
+export function shouldShowTelegramAlarmGroupInvite(p: {
+  tgSeq: number
+  inviteLink: string
+}): boolean {
+  if (!Number.isFinite(p.tgSeq) || p.tgSeq <= 0) return false
+  if (p.tgSeq <= readAppliedTelegramGroupTgSeq()) return false
+  if (isTelegramGroupTgSeqDismissed(p.tgSeq)) return false
+  if (isTelegramGroupCardSnoozed(p.tgSeq)) return false
+  const link = p.inviteLink.trim()
+  if (link && isTelegramAlarmGroupJoinedForLink(link)) return false
+  if (isTelegramAlarmGroupJoined() && link) {
+    const m = readTelegramAlarmGroupMembership()
+    if (m?.inviteLink?.trim() === link) return false
+  }
+  return true
 }
 
 export function saveTelegramAlarmGroupPending(p: Omit<TelegramAlarmGroupPending, 'savedAtMs'>): void {

@@ -21,6 +21,8 @@ import { isBossReady } from '@/frontend/lib/boss-readiness'
 export function OnboardingResumeCard(p: {
   apiSnapshot?: ApiStatus | null
   className?: string
+  /** Fertig-Karte nur in Einstellungen — Dashboard zeigt nur Fortsetzen. */
+  showFinished?: boolean
 }) {
   const [, bump] = useState(0)
   const ctx = useMemo(() => buildOnboardingSkipContext(p.apiSnapshot), [p.apiSnapshot])
@@ -45,6 +47,7 @@ export function OnboardingResumeCard(p: {
     progress.path === 'boss' ? 'Einsatzleitung' : progress.path === 'helper' ? 'Helfer' : 'Privat'
 
   if (finished) {
+    if (!p.showFinished) return null
     return (
       <div
         className={cn(

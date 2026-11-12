@@ -127,6 +127,8 @@ export function testMessengerPorts(over: {
       isPrivate: over.isPrivate ?? true,
       composerMailboxObjectId: '',
       setComposerMailboxObjectId: vi.fn(),
+      iotaPathFocus: false,
+      setIotaPathFocus: vi.fn(),
     },
     transport: {
       encrypted: over.encrypted ?? true,

@@ -8,11 +8,18 @@ import {
   lookupPassphraseMessagePassphrase,
   PASSPHRASE_MESSAGE_ENC_LS_KEY,
   purgePassphraseMessageVault,
+  readPassphraseNftStrongGateEnabled,
+  readPassphraseProtectEnabled,
+  readPassphraseZeitkapselModeEnabled,
+  readZeitkapselLastNftObjectId,
   rememberPassphraseMessagePassphrase,
   resolvePassphraseForProtectSend,
   setDefaultPassphraseMessagePassphrase,
   unlockPassphraseMessageVault,
+  writePassphraseProtectEnabled,
   writePassphraseReuseEnabled,
+  writePassphraseZeitkapselModeEnabled,
+  writeZeitkapselLastNftObjectId,
 } from '@/frontend/lib/passphrase-message-local-store'
 
 describe('fingerprintPassphraseMessageWire', () => {
@@ -123,5 +130,34 @@ describe('passphrase message vault enc', () => {
     lockPassphraseMessageVault()
     const bad = await unlockPassphraseMessageVault('wrong-password')
     expect(bad.ok).toBe(false)
+  })
+})
+
+describe('Zeitkapsel-Nachricht Composer-Flags', () => {
+  afterEach(() => {
+    window.localStorage.clear()
+  })
+
+  it('schaltet Passphrase-Schutz aus und Strong-Gate an', () => {
+    writePassphraseProtectEnabled(true)
+    writePassphraseZeitkapselModeEnabled(true)
+    expect(readPassphraseZeitkapselModeEnabled()).toBe(true)
+    expect(readPassphraseProtectEnabled()).toBe(false)
+    expect(readPassphraseNftStrongGateEnabled()).toBe(true)
+  })
+
+  it('Passphrase-Schutz schaltet Zeitkapsel-Modus aus', () => {
+    writePassphraseZeitkapselModeEnabled(true)
+    writePassphraseProtectEnabled(true)
+    expect(readPassphraseProtectEnabled()).toBe(true)
+    expect(readPassphraseZeitkapselModeEnabled()).toBe(false)
+  })
+
+  it('merkt letzte NFTGATE-Object-ID für CTA', () => {
+    const oid = `0x${'ab'.repeat(32)}`
+    writeZeitkapselLastNftObjectId(oid)
+    expect(readZeitkapselLastNftObjectId()).toBe(oid)
+    writeZeitkapselLastNftObjectId(null)
+    expect(readZeitkapselLastNftObjectId()).toBeNull()
   })
 })

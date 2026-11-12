@@ -15,6 +15,8 @@ export type NftTimeLeaseLocalEntry = {
   reclaimCancelled: boolean
   /** UI-Status-Hinweis */
   status: 'active' | 'cancelled' | 'returned' | 'reclaimed'
+  /** Create-/Lease-Start-TX — oft für Explorer/Info. */
+  createDigest?: string
   updatedAtMs: number
 }
 
@@ -63,7 +65,9 @@ export function upsertNftTimeLeaseLocal(entry: Omit<NftTimeLeaseLocalEntry, 'upd
 
 export function patchNftTimeLeaseLocal(
   leaseObjectId: string,
-  patch: Partial<Pick<NftTimeLeaseLocalEntry, 'reclaimCancelled' | 'status' | 'unlockMs'>>
+  patch: Partial<
+    Pick<NftTimeLeaseLocalEntry, 'reclaimCancelled' | 'status' | 'unlockMs' | 'createDigest'>
+  >
 ): void {
   const s = readStore()
   const id = norm(leaseObjectId)

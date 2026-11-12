@@ -35,6 +35,30 @@ export function explorerTxUrlFromDigest(digest: string): string {
   return `${b}/${encodeURIComponent(d)}${explorerNetworkQuery()}`
 }
 
+/** Object-ID → Explorer (NFT, Purse, Lease, …). */
+export function explorerObjectUrlFromId(objectId: string): string {
+  const id = objectId.trim()
+  const base =
+    (typeof process !== 'undefined' &&
+      typeof process.env?.NEXT_PUBLIC_IOTA_OBJECT_EXPLORER_BASE === 'string' &&
+      process.env.NEXT_PUBLIC_IOTA_OBJECT_EXPLORER_BASE.trim()) ||
+    'https://explorer.iota.org/object'
+  const b = base.replace(/\/$/, '')
+  return `${b}/${encodeURIComponent(id)}${explorerNetworkQuery()}`
+}
+
+/** Wallet-Adresse → Explorer. */
+export function explorerAddressUrlFromAddress(address: string): string {
+  const id = address.trim()
+  const base =
+    (typeof process !== 'undefined' &&
+      typeof process.env?.NEXT_PUBLIC_IOTA_ADDRESS_EXPLORER_BASE === 'string' &&
+      process.env.NEXT_PUBLIC_IOTA_ADDRESS_EXPLORER_BASE.trim()) ||
+    'https://explorer.iota.org/address'
+  const b = base.replace(/\/$/, '')
+  return `${b}/${encodeURIComponent(id)}${explorerNetworkQuery()}`
+}
+
 /** Anhängsel für Statuszeilen (kurz, mit URL). */
 export function formatTxDigestStatusSuffix(digest?: string | null): string {
   if (digest == null || !String(digest).trim()) return ''

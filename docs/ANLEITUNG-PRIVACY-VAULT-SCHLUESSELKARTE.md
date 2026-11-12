@@ -1,6 +1,6 @@
 # Anleitung: Privacy, Vault & NFT-Schlüsselkarte
 
-**Stand:** 2026-11-06  
+**Stand:** 2026-11-08  
 **Für wen:** PC-Test am Schreibtisch (1 Gerät zuerst).  
 **SSOT Claims:** `docs/SECURITY-CLAIMS-CHECK-2026-11.md`  
 **Spec Schlüsselkarte:** `docs/NFT-SCHLUESSELKARTE-B2.md`  
@@ -49,6 +49,8 @@ Unter dem Namen (**ich** / Kontakt) auf **Empfänger leeren / ändern** klicken 
 
 **2-Geräte-Feldtest** (Team-Key-Handoff, Erneut-sperren auf Empfängergerät, NFT-Transfer): bewusst **später** — siehe Fahrplan.
 
+**PWA installieren:** Einstellungen → Allgemein (nicht Startseite). **Mehrere Profile:** Ziel = Auswahl beim Unlock (eigener Seed), nie parallel — Ist/Backlog § H.37, `docs/VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md` §6.
+
 ---
 
 ## 1. Was ist der Secret-Vault?
@@ -61,14 +63,32 @@ Beim Entsperren des Tresors (Vault-Passwort) werden lokale Geheimnisse **entschl
 | Evidence-Sidecar | Passphrasen für verschlüsselte ImageNFTs |
 | `teamKeys.enc.v1` | Team-Broadcast-Keys (Gruppen-Enc) |
 | `nftKeycard.enc.v1` | NFT-Schlüsselkarten (Slots + Bindungen) |
+| `nftVaultIndex.enc.v1` | Purse/Treasury-Index + Digests |
+| `ratchet.enc.v1` | Double-Ratchet Peer-State (Experiment C1) |
 
 | Aktion | Wirkung |
 |--------|---------|
 | **Unlock** | Sidecars → RAM; Auto-Decrypt wo möglich |
-| **Lock** | RAM + Tab-Backup weg; Enc-Sidecars bleiben |
+| **Lock / Privacy sperren** | RAM + Tab-Backup weg; Enc-Sidecars bleiben |
 | **Purge / Einsatz beenden** | Sidecars + Merker weg |
 
-**Grenze:** XSS/Malware mit Vault-Passwort kann Sidecars lesen. Kein Hardware-Fragment, kein „nur RAM, nie Disk“ für den Seed (Vault-Blob liegt verschlüsselt auf Disk/LS).
+### Soft vs Hard vs Sidecar (was sperrt was?)
+
+| | Soft (**Privacy sperren**) | Hard (**Tresor sperren**) | Sidecar-Session (C) |
+|--|--|--|--|
+| Chat **lesen** | ja (Ciphertext/Cache) | eingeschränkt / Unlock | — |
+| Chat **schreiben** | nein | nein | Enc-Merken braucht C |
+| Frei / Gesichert / NFT sehen | ja | ja (soweit Status da) | Index-Persist braucht C |
+| Guthaben **anlegen** / Team-Key **erzeugen** / Schlüsselkarte **merken** | — | — | **nur mit C** |
+| Auszahlen / Mint | Signer nötig (Soft löscht Browser-Signer) | Signer weg | Index speichern braucht C |
+
+Begriffe Datei vs Sidecar: `docs/VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md` §8. **Kein zweiter Passwort-Tresor.**
+
+### Double Ratchet (Experiment)
+
+Chat ⋮ → **Double Ratchet (Experiment)** setzt nur ein LocalStorage-Flag. **Senden bleibt bei Session Keys+ (Envelope v2)** — der Toggle ändert den Wire noch nicht. Forward Secrecy heute: **Schlüssel erneuern**. Wenn C1 verdrahtet ist: beide Peers Flag + Session; State im Sidecar `ratchet.enc.v1`.
+
+**Grenze:** XSS/Malware mit Vault-Passwort kann Sidecars lesen. Kein Hardware-Fragment, kein „nur RAM, nie Disk“ für den Seed (Vault-Blob liegt verschlüsselt auf Disk/LS). Session Keys+ (`directSessionKeys.v1`) sind noch nicht vault-wrapped (bekanntes Backlog).
 
 ---
 
@@ -157,6 +177,20 @@ Nur **lokale Namen** im Vault — on-chain steht nichts davon (außer optionaler
 
 **Wichtig:** Sender/Empfänger brauchen das NFT **nicht** zum Verschlüsseln — nur die Passphrase. NFT-Bindung = Komfort + Soft-Auto bei Besitz. Details: `docs/NFT-SCHLUESSELKARTE-MODI.md`.
 
+### Zeitkapsel / NFT-Leserecht (häufige Fehlannahme)
+
+| Layer | Bedeutung |
+|-------|-----------|
+| **Ciphertext** | Enc-ImageNFT / `MORG_NFTGATE_V1` / PWMSG — sichtbar on-chain, allein kein Klartext |
+| **NFT + Lease** | nur **Leserecht auf Zeit** (Escrow); wandert W1↔W2 |
+| **Klartext** | erst Gate + Decrypt in der App |
+
+**Passphrase wiederverwenden** verbindet mehrere Nachrichten **nur lokal** mit derselben PW — **nicht** on-chain mit dem NFT. Für echte Zeitkapsel-Semantik: Enc-ImageNFT oder `MORG_NFTGATE_V1`. Spec: `docs/NFT-SCHLUESSELKARTE-PUBLIC-VAULT-TIMELOCK.md` §0a.
+
+**Composer (einfach):** Checkbox **Zeitkapsel-Nachricht (NFT-Leserecht)** → NFT wählen → senden (`MORG_NFTGATE_V1`) → Button **Dieses NFT verleihen…** (öffnet Tab Zeitkapsel). Kein Nachrichten-Passwort.
+
+UI-Ablauf Leihe (Tab **Zeitkapsel (Leserecht)**): (1) Enc/NFTGATE anlegen (2) Leihe starten an andere Wallet (3) Borrower: Object laden → lesen → Früh zurück / nach Ablauf Reclaim. W2 braucht Morgendrot (nicht nur IOTA-Wallet).
+
 | Modus | Klartext wenn |
 |-------|----------------|
 | Passphrase | Nutzer kennt / Vault hat Slot |
@@ -220,10 +254,10 @@ Intern heißt der Chain-Call weiter `/purge-msg` — in der UI nur noch **Burn**
 | Dual Wallet∧NFT | P4a-dual | Composer unter Starkes Gate; Klartext danach kopierbar |
 | Pubkey-Wrap | P4a2 | Checkbox unter Dual; ECDH-Peer-Pub der erlaubten Wallet nötig |
 | Seal / Key-Broker | P4b | Checkbox unter Starkes Gate; **ein API-Broker ≠ Mysten-Seal**; remote nötig für „unter Zwang“ |
-| Gesichertes Guthaben | S0–S3 | Tab **Guthaben**; Guarded/Bearer; Live-Balance; Vault-ID; Digest im Index/Tresor-Sidecar; **Wallet: Frei \| Purse Guthaben** gleicher Stil; Übergabe-Paket bei NFT-Transfer; Aktivität loggt Purse/Treasury |
+| Gesichertes Guthaben | S0–S5 Code | Tab **Guthaben**; Discovery; 1 Vault/Modus; One-Time + Offline-QR optional; Digest nur Fallback; Smoke = Joint Session A/B |
 | Zeitkapsel | P5 | Eigener Tab **Zeitkapsel** (nicht in der Galerie-Karte) |
 | NFT-gesichertes Senden (IOTA) | B2-S0–S3 Ist | **nur Token**; Purse ≠ freie Wallet-Balance; lose Coins außerhalb = ungeschützt (`docs/NFT-GUARDED-SPEND-SPEC.md`) |
-| Öffentlicher Ciphertext-Vault + NFT-Timelock („Zeitkapsel“) | **B2-P5a/b Ist** | NFT = Gate, Texte = Ciphertext getrennt. Borrower: optional Object-ID / Besitzer=Archiv unter On-Chain/NFT laden, dann lesen. Spec **`docs/NFT-SCHLUESSELKARTE-PUBLIC-VAULT-TIMELOCK.md`** §0a |
+| Öffentlicher Ciphertext-Vault + NFT-Timelock („Zeitkapsel“) | **B2-P5a/b Ist**; **Soll-Ablauf/P5d hinten** | NFT = Gate, Texte getrennt. End-to-End Borrower-Lesen + UX-Retest **nach** 2-Geräte (Roadmap 2026-11-09). Spec **`docs/NFT-SCHLUESSELKARTE-PUBLIC-VAULT-TIMELOCK.md`** §0a |
 | Rotierende Outboxes / voller Dead-Drop | Claims-Check + Architektur | Nicht gebaut |
 | Handshake mit Decoys | Claims-Check | Nicht gebaut |
 | Hardware-Fragment + Keys nur RAM | Claims-Check | Teilweise Vault-at-rest; kein HW-Fragment |
@@ -236,23 +270,31 @@ Siehe auch Kopf von `docs/ROADMAP-FAHRPLAN.md` (Nachtrag Privacy 2026-11-05): *�
 
 ## 9. Empfohlene Reihenfolge ab hier
 
-1. ~~Anleitung §0 / Epoch+Burn / C1 / P4a / P5a/b / P4a-dual / S0–S3~~ → **Ist**.  
-2. **Jetzt Joint-Feldtest:** Wallet NFT → Guthaben (Balance/Aktivität) → Zeitkapsel → optional P4a2/P4b.  
-3. **Als Nächstes (optional):** 2-Geräte-Feldtest.  
-4. **Später:** MeshSleepyChannel (Phase C).  
-5. **Nicht parallel:** Decoys, Outboxes, HW-Fragment.
+1. ~~Anleitung §0 / Epoch+Burn / C1 / P4a / P5a/b / P4a-dual / S0–S5 Code~~ → **Ist** (Vitest Solo PASS 2026-11-08).  
+2. **Jetzt Joint Session A+B** — Checkliste in **`docs/TEST-RUN-LOGBOOK.md`** (Guthaben/Discovery/1-Vault → One-Time/QR → Zeitkapsel).  
+3. Fixes + Retest → B2-S6 Smoke PASS (~2–4 Tage inkl. Puffer).  
+4. **Danach optional:** 2-Geräte (Session C).  
+5. **Später:** MeshSleepyChannel (Phase C); Move One-Time on-chain.  
+6. **Nicht parallel:** Decoys, Outboxes, HW-Fragment, Feature-Wildwuchs während Joint.
 
 ### Kurz: Gesichertes Guthaben (Nutzer)
 
-1. NFT-Dialog → Tab **Guthaben** → Schlüsselkarte wählen (Bild optional).  
-2. Modus **Guarded** oder **Bearer** → Betrag → **Guthaben anlegen** (Digest + Vault-ID → lokaler Index; bei entsperrtem Tresor → Vault-Sidecar).  
-3. Im Hauptmenü-Wallet rechts neben dem Titel: **Frei:** … IOTA und **Purse Guthaben:** … IOTA (gleicher Stil).  
-4. **Auszahlen:** „Gesichert auszahlen…“ oder Tab Guthaben → Empfänger-**Wallet** (nicht NFT-ID).  
-5. **NFT an anderes Morgendrot:** Zeigt dort den Betrag **nicht automatisch**.  
-   - **Bearer:** Senderecht wandert mit dem NFT — Empfänger braucht **Übergabe-Paket** (oder Digest/Vault-ID) unter Guthaben → Erweitert → Import.  
-   - **Guarded:** Coins bleiben bei der ursprünglichen Wallet; NFT-Transfer allein bewegt kein Guthaben.  
-6. **IOTA-Aktivität** listet Anlegen/Einzahlen/Auszahlen (lokal auf diesem Gerät).  
-7. Digest nachträglich: Wallet-Details / Guthaben → Erweitert → Digest speichern oder TX nachtragen.
+Zwei Einstiege — nicht verwechseln:
+
+| Ort | Zweck |
+|-----|--------|
+| NFT → Tab **Guthaben** | **Anlegen**, Einzahlen, Auszahlen (voller Lifecycle) |
+| Wallet → **Aus Guthaben senden** | Nur **auszahlen** an eine Empfänger-Wallet |
+
+1. NFT-Dialog → Tab **Guthaben** → Schlüsselkarte wählen.  
+2. **Auszahl-Modus:** **Nur ich (Wallet + NFT)** (= Guarded) oder **Karteninhaber** (= Bearer) → Betrag → **Guthaben anlegen**.  
+3. Wallet-Header: **Frei:** … IOTA und **Gesichert:** … IOTA · *n* NFT.  
+4. **Auszahlen:** Tab Guthaben oder Wallet **Aus Guthaben senden** → Empfänger-**Wallet** (nicht NFT-ID).  
+5. **NFT an anderes Gerät:** Betrag erscheint dort nicht automatisch.  
+   - **Karteninhaber (Bearer):** Recht wandert mit dem NFT — Empfänger braucht Index-Bundle unter Guthaben → Erweitert.  
+   - **Nur ich (Guarded):** Coins bleiben bei der ursprünglichen Wallet; NFT-Transfer allein bewegt kein Guthaben.  
+6. **IOTA-Aktivität:** lokale Events; **TX** / **Objekt** öffnen den Explorer; Doppelklick → volle IDs kopieren.  
+7. Digest-Notfall: Guthaben → Erweitert → Create-TX nachtragen.
 
 ---
 

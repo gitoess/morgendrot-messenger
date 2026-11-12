@@ -5,7 +5,7 @@
  * Package-ID unter Erweitert, benannt (Messaging-Module, nicht Chat-Stamm).
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -23,9 +23,16 @@ import {
   type NftTimeLeaseLocalEntry,
 } from '@/frontend/lib/nft-time-lease-local-store'
 
+import { getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { MESSAGING_MODULES_PACKAGE_ID } from '@/frontend/lib/messaging-modules-package'
+import { TechnicalIdRow } from '@/frontend/components/technical-id-row'
+import {
+  explorerObjectUrlFromId,
+  explorerTxUrlFromDigest,
+} from '@/frontend/lib/iota-tx-explorer-hint'
 
 const LS_MSG_PKG = 'morgendrot.nftTimeLease.messagingPackageId.v1'
+const LS_LAST_BORROWER = 'morgendrot.nftTimeLease.lastBorrower.v1'
 export const NFT_TIME_LEASE_PACKAGE_ID_TESTNET = MESSAGING_MODULES_PACKAGE_ID
 
 function readMsgPkg(): string {
@@ -47,10 +54,42 @@ function writeMsgPkg(v: string): void {
   }
 }
 
+function readLastBorrower(): string {
+  if (typeof window === 'undefined') return ''
+  try {
+    return window.localStorage.getItem(LS_LAST_BORROWER)?.trim() || ''
+  } catch {
+    return ''
+  }
+}
+
+function writeLastBorrower(v: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    const t = v.trim().toLowerCase()
+    if (!t) window.localStorage.removeItem(LS_LAST_BORROWER)
+    else window.localStorage.setItem(LS_LAST_BORROWER, t)
+  } catch {
+    /* ignore */
+  }
+}
+
 function shortId(id: string): string {
   const t = id.trim()
   if (t.length < 14) return t
   return `${t.slice(0, 10)}…${t.slice(-4)}`
+}
+
+function formatRemain(ms: number): string {
+  if (ms <= 0) return 'jetzt'
+  const s = Math.ceil(ms / 1000)
+  if (s < 60) return `${s}s`
+  const m = Math.floor(s / 60)
+  const r = s % 60
+  if (m < 60) return r ? `${m}m ${r}s` : `${m}m`
+  const h = Math.floor(m / 60)
+  const hm = m % 60
+  return hm ? `${h}h ${hm}m` : `${h}h`
 }
 
 export function NftTimeLeasePanel(p: {
@@ -60,23 +99,29 @@ export function NftTimeLeasePanel(p: {
   const [msgPkg, setMsgPkg] = useState(MESSAGING_MODULES_PACKAGE_ID)
   const [editPkg, setEditPkg] = useState(false)
   const [borrower, setBorrower] = useState('')
-  const [durationHours, setDurationHours] = useState('24')
+  /** Primär Minuten (Tests); intern → durationMs. */
+  const [durationMinutes, setDurationMinutes] = useState('1')
   const [leaseIdManual, setLeaseIdManual] = useState('')
   const [busy, setBusy] = useState(false)
   const [info, setInfo] = useState('')
   const [err, setErr] = useState('')
   const [lease, setLease] = useState<NftTimeLeaseLocalEntry | null>(null)
-  const [tick, setTick] = useState(0)
+  const [nowMs, setNowMs] = useState(() => Date.now())
 
   useEffect(() => {
     setMsgPkg(readMsgPkg())
+    setBorrower((prev) => prev || readLastBorrower())
     const sync = () => {
       setLease(findNftTimeLeaseByNft(p.nftObjectId))
-      setTick((n) => n + 1)
+      setNowMs(Date.now())
     }
     sync()
     window.addEventListener(NFT_TIME_LEASE_CHANGED, sync)
-    return () => window.removeEventListener(NFT_TIME_LEASE_CHANGED, sync)
+    const t = window.setInterval(() => setNowMs(Date.now()), 1000)
+    return () => {
+      window.removeEventListener(NFT_TIME_LEASE_CHANGED, sync)
+      window.clearInterval(t)
+    }
   }, [p.nftObjectId])
 
   const run = async (fn: () => Promise<{ ok: boolean; error?: string; digest?: string; leaseObjectId?: string }>) => {
@@ -89,9 +134,15 @@ export function NftTimeLeasePanel(p: {
         setErr(r.error || 'Fehlgeschlagen')
         return
       }
+      if (r.leaseObjectId) setLeaseIdManual(r.leaseObjectId)
+      const missingLease = !r.leaseObjectId && !findNftTimeLeaseByNft(p.nftObjectId)
       setInfo(
-        `OK${r.digest ? ` · ${r.digest.slice(0, 12)}…` : ''}${
+        `OK${r.digest ? ` · TX ${r.digest.slice(0, 12)}…` : ''}${
           r.leaseObjectId ? ` · Lease ${r.leaseObjectId.slice(0, 12)}…` : ''
+        }${
+          missingLease
+            ? ' — Lease-ID fehlt lokal: unter Erweitert aus Explorer einfügen, sonst sind Zurückholen-Buttons tot.'
+            : ''
         }`
       )
       setLease(findNftTimeLeaseByNft(p.nftObjectId))
@@ -100,62 +151,99 @@ export function NftTimeLeasePanel(p: {
     }
   }
 
-  const hours = Math.max(0.001, Number(durationHours) || 24)
-  const durationMs = Math.floor(hours * 3_600_000)
-  const activeLeaseId = lease?.leaseObjectId || leaseIdManual.trim()
+  const minutes = Math.max(0.05, Number(durationMinutes) || 1)
+  const durationMs = Math.floor(minutes * 60_000)
+  const activeLeaseId = (lease?.leaseObjectId || leaseIdManual).trim()
+  const me = (getDirectIotaSessionSignerAddress() || '').trim().toLowerCase()
+  const borrowerNorm = borrower.trim().toLowerCase()
+  const borrowerIsSelf = Boolean(me && borrowerNorm && me === borrowerNorm)
+  const unlockMs = lease?.unlockMs ?? 0
+  const remainMs = unlockMs > 0 ? unlockMs - nowMs : 0
+  const reclaimReady = Boolean(activeLeaseId) && (!unlockMs || nowMs >= unlockMs)
+  const badge = useMemo(
+    () => (lease ? nftTimeLeaseBadgeText(lease, nowMs) : ''),
+    [lease, nowMs]
+  )
 
   return (
     <div className="space-y-2 text-[11px] text-muted-foreground">
       <p>
-        NFT = <span className="text-foreground">Leserecht auf Zeit</span>, nicht der Textspeicher. Leihe an eine
-        andere Wallet; nach Ablauf zurückholbar. Texte liegen weiter getrennt (Chat/Mailbox).
+        <span className="text-foreground">NFT zeitlich verleihen (Leserecht)</span> — nicht Chat-Textspeicher.
+        Entschlüsseln braucht zusätzlich Ciphertext (Galerie Object-ID / Enc-ImageNFT oder Wire). Das NFT allein
+        enthält keine Chat-Texte.
       </p>
+      <ol className="list-decimal space-y-0.5 pl-4 text-[10px] text-muted-foreground">
+        <li>Enc-Inhalt anlegen oder an NFT binden (Galerie / NFTGATE / Enc-Mint).</li>
+        <li>
+          Hier <span className="text-foreground">Leihe starten</span> an eine andere Wallet (nicht an dich).
+        </li>
+        <li>
+          NFT zurück: Borrower → <span className="text-foreground">Früh zurück</span> (sofort), oder nach Ablauf
+          du als Lender → <span className="text-foreground">Nach Ablauf zurückholen</span>.
+        </li>
+      </ol>
 
       {lease ? (
-        <div
-          className="space-y-1.5 rounded border border-amber-800/30 bg-amber-950/15 px-2.5 py-2"
-          key={tick}
-        >
-          <p className="text-amber-100/90">{nftTimeLeaseBadgeText(lease)}</p>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[10px] text-foreground/90">
-              Lease-Object-ID: <span className="font-mono">{shortId(lease.leaseObjectId)}</span>
-            </span>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="h-6 px-1.5 text-[10px]"
-              disabled={busy}
-              onClick={() => {
-                void navigator.clipboard.writeText(lease.leaseObjectId)
-                setInfo('Lease-ID kopiert.')
-              }}
-            >
-              Kopieren
-            </Button>
-          </div>
+        <div className="space-y-1.5 rounded border border-amber-800/30 bg-amber-950/15 px-2.5 py-2">
+          <p className="text-amber-100/90">{badge}</p>
+          {unlockMs > 0 && lease.status === 'active' && !lease.reclaimCancelled ? (
+            <p className="text-[10px] text-foreground/90">
+              {reclaimReady
+                ? 'Unlock erreicht — „Nach Ablauf zurückholen“ drücken (TX, kein Auto).'
+                : `Noch ${formatRemain(remainMs)} bis Reclaim freigeschaltet (lokale/Chain-Uhr).`}
+            </p>
+          ) : null}
+          <TechnicalIdRow
+            label="Lease Object-ID"
+            value={lease.leaseObjectId}
+            href={explorerObjectUrlFromId(lease.leaseObjectId)}
+          />
+          <TechnicalIdRow
+            label="NFT Object-ID"
+            value={p.nftObjectId}
+            href={explorerObjectUrlFromId(p.nftObjectId)}
+          />
+          {lease.borrower ? (
+            <TechnicalIdRow label="Borrower" value={lease.borrower} />
+          ) : null}
         </div>
-      ) : null}
+      ) : (
+        <p className="rounded border border-border/50 bg-muted/20 px-2 py-1.5 text-[10px]">
+          Keine aktive Lease lokal. Nach „Leihe starten“ erscheint die ID hier. Fehlt sie: Explorer → TX →
+          created <span className="font-mono">NftTimeLease</span> → unter Erweitert einfügen.
+        </p>
+      )}
 
       <label className="flex flex-col gap-0.5">
-        <span>An wen verleihen? (Wallet-Adresse)</span>
+        <span>An wen verleihen? (andere Wallet-Adresse)</span>
         <Input
           className="h-8 font-mono text-[11px]"
           value={borrower}
           disabled={p.disabled || busy}
-          onChange={(e) => setBorrower(e.target.value)}
-          placeholder="0x…"
+          onChange={(e) => {
+            setBorrower(e.target.value)
+            writeLastBorrower(e.target.value)
+          }}
+          placeholder="0x… (nicht deine eigene)"
         />
+        {borrowerIsSelf ? (
+          <span className="text-[10px] text-amber-200/90">
+            Das ist deine eigene Adresse — Move lehnt ab (Abort 6). Andere Wallet eintragen.
+          </span>
+        ) : null}
       </label>
       <label className="flex flex-col gap-0.5">
-        <span>Dauer (Stunden)</span>
+        <span>Dauer (Minuten)</span>
         <Input
           className="h-7 font-mono text-[10px]"
-          value={durationHours}
+          value={durationMinutes}
           disabled={p.disabled || busy}
-          onChange={(e) => setDurationHours(e.target.value)}
+          onChange={(e) => setDurationMinutes(e.target.value)}
+          inputMode="decimal"
         />
+        <span className="text-[10px] text-muted-foreground">
+          Kurztest: 1 = eine Minute. ({Math.round(durationMs / 1000)}s · früher „Stunden“-Feld → jetzt Minuten)
+        </span>
       </label>
 
       <div className="flex flex-wrap gap-1.5">
@@ -163,8 +251,9 @@ export function NftTimeLeasePanel(p: {
           type="button"
           size="sm"
           className="h-8 text-[11px]"
-          disabled={p.disabled || busy || !msgPkg || !borrower}
-          onClick={() =>
+          disabled={p.disabled || busy || !msgPkg || !borrower || borrowerIsSelf}
+          onClick={() => {
+            writeLastBorrower(borrower)
             void run(() =>
               createNftTimeLease({
                 messagingPackageId: msgPkg,
@@ -173,7 +262,7 @@ export function NftTimeLeasePanel(p: {
                 durationMs,
               })
             )
-          }
+          }}
         >
           Leihe starten
         </Button>
@@ -183,6 +272,11 @@ export function NftTimeLeasePanel(p: {
           variant="outline"
           className="h-8 text-[11px]"
           disabled={p.disabled || busy || !msgPkg || !activeLeaseId}
+          title={
+            !activeLeaseId
+              ? 'Lease-ID fehlt'
+              : 'Nur Borrower-Signer — gibt NFT sofort an dich (Lender) zurück'
+          }
           onClick={() =>
             void run(() =>
               returnEarlyNftTimeLease({
@@ -200,22 +294,51 @@ export function NftTimeLeasePanel(p: {
           variant="secondary"
           className="h-8 text-[11px]"
           disabled={p.disabled || busy || !msgPkg || !activeLeaseId}
-          onClick={() =>
+          title={
+            !activeLeaseId
+              ? 'Lease-ID fehlt — unter Erweitert einfügen'
+              : !reclaimReady
+                ? `Noch ${formatRemain(remainMs)} — danach klicken`
+                : 'NFT aus Escrow an dich (Lender) zurück'
+          }
+          onClick={() => {
+            if (!activeLeaseId) {
+              setErr('Keine Lease-ID — unter Erweitert die Object-ID der NftTimeLease einfügen.')
+              return
+            }
+            if (!reclaimReady && unlockMs > 0) {
+              setErr(
+                `Noch zu früh (lokal ${formatRemain(remainMs)}). Warte den Countdown ab und klicke erneut — oder Borrower „Früh zurück“.`
+              )
+              return
+            }
             void run(() =>
               reclaimNftTimeLease({
                 messagingPackageId: msgPkg,
                 leaseObjectId: activeLeaseId,
               })
             )
-          }
+          }}
         >
-          Nach Ablauf zurückholen
+          {reclaimReady || !unlockMs
+            ? 'Nach Ablauf zurückholen'
+            : `Zurückholen (${formatRemain(remainMs)})`}
         </Button>
       </div>
+      {!activeLeaseId ? (
+        <p className="text-[10px] text-amber-200/90">
+          Zurückholen/Früh-zurück brauchen eine Lease-Object-ID. Ohne ID wirken die Buttons tot.
+        </p>
+      ) : null}
 
-      <details className="rounded border border-border/40 px-2 py-1">
-        <summary className="cursor-pointer text-[10px] text-muted-foreground">Erweitert</summary>
+      <details className="rounded border border-border/40 px-2 py-1" open={!lease?.leaseObjectId}>
+        <summary className="cursor-pointer text-[10px] text-muted-foreground">
+          Erweitert / Notfall · Package · Lease-ID
+        </summary>
         <div className="mt-2 space-y-2">
+          <p className="text-[10px] text-muted-foreground">
+            Normalfall: „Leihe starten“ speichert die Lease-ID lokal. Manuelle ID nur wenn Auto-Erkennung fehlt.
+          </p>
           <div className="space-y-1">
             <p className="text-[10px] text-foreground/90">
               Messaging-Module-Package (Zeitkapsel / Guthaben / Seal) — nicht der Chat-Stamm
@@ -248,13 +371,13 @@ export function NftTimeLeasePanel(p: {
             )}
           </div>
           <label className="flex flex-col gap-0.5">
-            <span>Lease-Object-ID manuell (nur wenn Auto-Erkennung fehlt)</span>
+            <span>Notfall · Lease-Object-ID manuell</span>
             <Input
               className="h-7 font-mono text-[10px]"
               value={leaseIdManual}
               disabled={p.disabled || busy}
               onChange={(e) => setLeaseIdManual(e.target.value)}
-              placeholder="0x…"
+              placeholder="0x… (NftTimeLease aus Explorer/TX)"
             />
           </label>
           <Button
@@ -285,7 +408,7 @@ export function NftTimeLeasePanel(p: {
                 upsertNftTimeLeaseLocal({
                   leaseObjectId: leaseIdManual,
                   nftObjectId: p.nftObjectId,
-                  lender: '0x' + '00'.repeat(32),
+                  lender: me || '0x' + '00'.repeat(32),
                   borrower,
                   unlockMs: Date.now() + durationMs,
                   reclaimCancelled: false,
@@ -303,8 +426,8 @@ export function NftTimeLeasePanel(p: {
           ) : null}
         </div>
       </details>
-      {err ? <p className="text-destructive">{err}</p> : null}
-      {info ? <p className="text-foreground">{info}</p> : null}
+      {err ? <p className="text-destructive whitespace-pre-wrap">{err}</p> : null}
+      {info ? <p className="text-foreground whitespace-pre-wrap">{info}</p> : null}
     </div>
   )
 }

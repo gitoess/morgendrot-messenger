@@ -1,7 +1,8 @@
 # NFT-gesichertes Ausgeben (Guarded Spend) — Spec / Backlog
 
-**Stand:** 2026-11-06  
-**Status:** **B2-S0–S3 Ist** — beide Spend-Modi on-chain + **UI-Wahl** (Radio unter NFT-Galerie). Modules `0x1fb0e9b7…`; Stamm `0x06e099…`.  
+**Stand:** 2026-11-08  
+**Status:** **B2-S0–S5 Code-Ist** (Smoke offen) — beide Spend-Modi on-chain + UI-Wahl; TBA-Index/Discovery/1-Vault; optionale Mint-Modi One-Time + Offline-Handoff. Modules `0x1fb0e9b7…`; Stamm `0x06e099…`.  
+**Fortschritt Tranche (grob):** Code **~78 %** · inkl. Smoke/Abnahme **~62 %** — siehe `docs/ROADMAP-FAHRPLAN.md` (Nachtrag 2026-11-08).  
 **Scope:** **nur Token/Coins (IOTA)** — **kein** Klartext, kein Chat-Leserecht (P4a…P4b).  
 **Verwandt:** Leserecht P4* (`docs/NFT-SCHLUESSELKARTE-MODI.md`, `docs/NFT-GATE-SEAL-P4B-SPEC.md`) · Zeitkapsel P5 · **nicht** MeshSleepyChannel.  
 **Trennung:** Token-Spend-Modus ist **orthogonal** zu P4b Seal — Seal schützt Lesen, nicht Coins.
@@ -37,10 +38,17 @@
 
 **Wallet-Karte:** `Frei:` und `Purse Guthaben:` gleiche Typo rechts am Titel; Summe aus lokalem Index + RPC.  
 
-**TBA-ähnlicher Index:** Vault-Object-ID + Digest + Package an Schlüsselkarte (`boundVault`) und optional verschlüsselt im Tresor-Sidecar (`nft-vault-index-vault`). On-chain Balance = Wahrheit; ohne Index sieht ein Empfänger-Gerät den Betrag in der App nicht.  
+**TBA-ähnlicher Index:** Vault-Object-ID + Digest + Package an Schlüsselkarte (`boundVault`) und **im Tresor-Sidecar** (`nft-vault-index-vault` + geparkte Einträge). **Anlegen verlangt entsperrten Tresor** (wie Chat-Geheimnisse/Schlüsselkarte). On-chain Balance = Wahrheit.  
 
-**NFT-Transfer:** Galerie zeigt Hinweis + **Übergabe-Paket** (`MORG_NFT_VAULT_V1:…`). Bearer: Empfänger importiert Paket → Balance sichtbar. Guarded: Transfer bewegt keine Coins.  
-**Nicht:** Klartext/Chat-Gate; Mesh-Payments; „NFT allein bewegt fremde lose Coins“.
+**NFT-Transfer (eigenes Gerät):** Aktiver Index wird **geparkt** (nicht vernichtet); Besitz-Snapshot aktualisiert → Rückkehr = Aktivität „empfangen“ + Restore. Zusätzlich **On-chain-Discovery** (Guarded = `getOwnedObjects`, Bearer = Create-Events) — kein manueller Digest nötig, wenn Signer/RPC da sind. Fremdes Gerät ohne Events: Index-Text oder Digest.  
+
+**Ein NFT → mehrere Vaults?** On-chain erlaubt mehrere `GuardedPurse`/`Treasury` mit derselben `required_nft_id` (kein Uniqueness-Check). **Produkt:** **hart blockiert** in `createNftGuardedPurse` / `createNftBearerTreasury` (`nft-vault-one-per-mode`, inkl. Discovery-Nachzug). UI: Anlegen nur ohne Vault; Hinweis „nur Einzahlen“. **Bearer** `destroy_empty` wie Guarded in der UI. **Empfehlung bleibt:** 1 aktives Vault pro NFT+Modus.  
+
+**Optional beim Mint / an der Karte (App-Ist, 2026-11):**
+- **One-Time-Use** (`spend_policy=one_time` in `[morg-attrs]` + `nft-spend-policy-local-store`): nach erstem erfolgreichen Spend/Withdraw Capability lokal entzogen; Standard = **Burn** des ImageNFT (2. TX, weil Move `spend`/`withdraw` nur `&T` nimmt). Folge-Spends in der App scheitern. **Starke On-Chain-Garantie** = Backlog Move `spend_and_consume` / Spent-Registry.
+- **Offline-Weitergabe**: Compact `MORG_NFT_V1C:` (Mesh/QR), JSON `MORG_NFT_VAULT_V1:`, optional signiert `MORG_NFT_VAULT_V1S:` — Empfänger importiert Index lokal; Balance on-chain. Kein Mesh-Auto-Send — Text/QR in Chat/Funk einfügen.
+
+**Nicht:** Klartext/Chat-Gate; Mesh-Payments; „NFT allein bewegt fremde lose Coins“; on-chain Multisig-Spend (Backlog).
 
 **Pflicht-Kommunikation:** Lose / freie Coins **außerhalb** Purse/Treasury sind **ungeschützt**.
 
@@ -122,6 +130,10 @@ Passt zu „NFT = Capability, wandert unabhängig“. **Nicht** dasselbe wie A.
 | **B2-S1** | Move Modus A `GuardedPurse` + Vitest/PTB | Messaging-Package Upgrade — **Ist** (`0x0c94e888…`) |
 | **B2-S2** | Messenger-UI Deposit/Spend + Badge | S1 — **Ist** (Panel unter NFT-Galerie) |
 | **B2-S3** | Modus B Bearer Treasury Move+UI | S1 — **Ist** (`0x10b16597…`) |
+| **B2-S4** | TBA-Index, On-chain-Discovery, Park/Restore, 1-Vault/Modus, Bearer destroy UI | S2/S3 — **Code-Ist** (Smoke offen) |
+| **B2-S5** | Optional Mint: One-Time-Use (App+Burn) + Offline Compact/QR/signiert | S4 — **Code-Ist**; Move-Consume / Mesh-Auto = Backlog |
+| **B2-S6** | 1-Gerät-Smoke + Logbuch (Joint Session A/B) | S4/S5 — **als Nächstes**; Solo Vitest 59/59 PASS 2026-11-08 |
+| **B2-S7** | Move `spend_and_consume` / Spent-Registry (starke One-Time) | Package-Upgrade — Backlog |
 
 ### On-Chain (S1 Guarded Purse)
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  appendBurnImageNftCall,
   buildBurnImageNftTransaction,
   buildMintImageNftTransaction,
   buildTransferImageNftTransaction,
@@ -46,6 +47,16 @@ describe('ImageNFT transfer/burn PTB', () => {
       senderAddress: ADDR,
       objectId: OID,
     })
+    expect(txb).toBeTruthy()
+  })
+
+  it('hängt burn an bestehende PTB an', () => {
+    const txb = buildTransferImageNftTransaction({
+      senderAddress: ADDR,
+      objectId: `0x${'ee'.repeat(32)}`,
+      recipientAddress: `0x${'11'.repeat(32)}`,
+    })
+    appendBurnImageNftCall(txb, { objectId: OID })
     expect(txb).toBeTruthy()
   })
 })

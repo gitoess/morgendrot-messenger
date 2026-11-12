@@ -29,12 +29,12 @@ import { SettingsLanguageSection } from '@/frontend/components/settings-language
 import { SettingsAppearanceSection } from '@/frontend/components/settings-appearance-section'
 import { SettingsExpertModeSection } from '@/frontend/components/settings-expert-mode-section'
 import { CapacitorApiBaseCard } from '@/frontend/components/capacitor-api-base-card'
+import { DashboardPwaInstallCard } from '@/frontend/components/dashboard-pwa-install-card'
 import {
   SettingsCategoryNav,
   SettingsCollapsiblePanel,
 } from '@/frontend/components/settings-collapsible-section'
 import { SETTINGS_ACTIVE_CATEGORY_KEY, type SettingsCategoryId } from '@/frontend/lib/settings-navigation'
-import { SettingsHandbookLink } from '@/frontend/components/settings-handbook-link'
 import { SettingsProjectDisclaimerSection } from '@/frontend/components/views/settings-project-disclaimer-section'
 import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
@@ -148,16 +148,13 @@ export function SettingsView({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-            <Settings className="h-6 w-6" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-foreground">{t('views.settings')}</h2>
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+          <Settings className="h-6 w-6" />
         </div>
-        <SettingsHandbookLink label="Handbuch" />
+        <div>
+          <h2 className="text-xl font-bold text-foreground">{t('views.settings')}</h2>
+        </div>
       </div>
 
       <SettingsCategoryNav active={activeCategory} onSelect={selectCategory} categories={categories} />
@@ -166,6 +163,7 @@ export function SettingsView({
         <SettingsLanguageSection />
         <SettingsOnboardingSection apiStatus={advancedIotaStatus} />
         <SettingsAppearanceSection />
+        <DashboardPwaInstallCard compact anchorId="settings-pwa-install" />
         <SettingsExpertModeSection apiStatus={advancedIotaStatus} />
         <ActiveProfilePanel status={advancedIotaStatus} />
         <CapacitorApiBaseCard />

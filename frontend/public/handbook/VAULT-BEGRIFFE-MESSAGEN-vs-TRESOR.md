@@ -69,9 +69,25 @@ Sobald du Nachrichten nutzen willst, **regelmäßig „Lokal sichern“** (und b
 
 ---
 
-## 6. „Benutzer wechseln“ — andere Vault-Datei laden
+## 6. Mehrere Profile / Accounts (Ist vs. Ziel)
 
-**Worum es geht:** Eine **andere** `.morgendrot-vault`-Datei zu laden ersetzt im Backend die **Tresor-Daten in der RAM-Sitzung**: andere **Messaging-Keys**, andere **Notizen**, anderer **Passwortmanager**-Inhalt (sofern in der Datei). Das ist **kein** Wechsel des Windows-/Linux-Benutzerkontos — aber für **Morgendrot** wirkt es wie ein **Wechsel der Tresor-/Chat-Schlüsselidentität** (Partner-Handshake-Logik kann sich unterscheiden).
+### Produktziel (gewünscht)
+
+Beim **Einloggen / Unlock** ein Profil wählen können: mehrere lokale Accounts mit **eigenem Seed/Signer**, eigener Vault, eigener Adresse — **nacheinander**, **nie parallel** in einer UI. Wechsel = Lock → Profil wählen → Unlock.
+
+### Ist (2026-11)
+
+Pro laufender App/API-Instanz gilt **eine** aktive Identität (eine Wallet-Adresse `MY_ADDRESS`, eine entsperrte Vault-Sitzung, eine Rolle). Es gibt **keinen** Profil-Picker beim Unlock.
+
+| Was geht heute | Was nicht |
+|----------------|-----------|
+| Andere `.morgendrot-vault`-Datei laden → andere Messaging-Keys/Notizen/Safe | Zwei Identitäten gleichzeitig in einer UI (bewusst unerwünscht) |
+| Zweite Vault-Datei unter anderem Pfad speichern (Backup/Kopie) | Fertiger „Account anlegen + beim Login wählen“-Flow |
+| Helfer-Gerät: anderer Handoff = andere Rolle/Rechte | Parallele Sessions |
+
+**Worum es geht (Vault laden):** Eine **andere** `.morgendrot-vault`-Datei zu laden ersetzt im Backend die **Tresor-Daten in der RAM-Sitzung**: andere **Messaging-Keys**, andere **Notizen**, anderer **Passwortmanager**-Inhalt (sofern in der Datei). Das ist **kein** Wechsel des Windows-/Linux-Benutzerkontos — aber für **Morgendrot** wirkt es wie ein **Wechsel der Tresor-/Chat-Schlüsselidentität**.
+
+**Roadmap:** Profil-Picker + „Account anlegen“ (eigener Seed) → Backlog **§ H.37** in `docs/ROADMAP-FAHRPLAN.md` (nach Messenger-Durchgang / vor Feature-Wildwuchs).
 
 | Frage | Kurzantwort |
 |--------|--------------|
@@ -96,6 +112,26 @@ Sobald du Nachrichten nutzen willst, **regelmäßig „Lokal sichern“** (und b
 **Warum keine separate Notizendatei im Produkt?** Zusätzliche Dateien würden **zweites** Backup, **zweites** Passwort oder Sync-Konflikte bedeuten. Stattdessen: **kurze** Notizen im Vault; **große** Texte/Journale extern (USB, Cloud außerhalb Morgendrot) — in der UI ist das kurz erklärt.
 
 **Fazit:** Ja, **Größe ist bedacht** (Caps + klare UI-Hinweise); **bewusst keine** getrennte Notiz-Datei im Kern — Tradeoff **Einfachheit** vs. maximale Aufteilung.
+
+---
+
+---
+
+## 8. Drei Lock-Schichten (UI: Soft vs Hard vs Sidecar)
+
+Unter „Tresor/Privacy“ laufen **drei** Mechanismen — nicht drei Passwörter:
+
+| Schicht | Zustand | Wirkung |
+|---------|---------|---------|
+| **A · API-Tresor** | `apiStatus.locked` | Backend-Messaging-Keys / Signer; Hard-Lock → Unlock-Dialog |
+| **B · Privacy Soft-Lock** | Badge „Privacy: gesperrt“ | Secrets + Browser-Signer weg; **Chat bleibt lesbar**; Senden aus |
+| **C · Vault-Password-Session** | RAM-Passwort für Browser-Sidecars | AES-GCM-`localStorage`-Sidecars (Passphrasen, Team-Keys, Keycards, NFT-Index, Ratchet) |
+
+**Policy (kurz):** Secrets und Merken nur bei C; Schreiben bei Soft/Hard gesperrt; **Frei-/Gesichert-Saldo und NFT-Galerie** bleiben sichtbar (on-chain/öffentlich). Einstellungen browsen offen; Exports/Emergency/Keys nur entsperrt oder maskiert. **Kein zweiter Passwort-Tresor.**
+
+**Double Ratchet (Experiment):** Menü ⋮ setzt nur `morgendrot.experiment.doubleRatchet.v1`. **Composer sendet weiter Envelope v2** (Session Keys+) — der Toggle ändert den Wire heute nicht. Echte Ist-FS: **Schlüssel erneuern** (`keyEpoch`). Ratchet-State liegt in Sidecar C (`ratchet.enc.v1`), das Flag nicht.
+
+Details Nutzer: `docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md` §1.
 
 ---
 

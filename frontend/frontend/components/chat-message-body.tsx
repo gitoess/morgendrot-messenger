@@ -170,9 +170,6 @@ function NftGateMessageBody(p: {
             <button type="button" className="underline" onClick={() => { setPlain(null); setHidden(true) }}>
               Ausblenden
             </button>
-            <button type="button" className="underline" disabled={busy} onClick={() => void tryUnlock()}>
-              Besitz erneut prüfen
-            </button>
           </div>
         </div>
       ) : (

@@ -4,12 +4,14 @@ import {
   TEAM_BROADCAST_KEY_MISSING_MSG,
   createTeamBroadcastKey,
 } from '@/frontend/lib/team-broadcast-key-store'
+import { setVaultPasswordSession } from '@/frontend/lib/vault-password-session'
 
 const MB = `0x${'cd'.repeat(32)}`
 
 describe('encryptTeamBroadcastPlaintext', () => {
   afterEach(() => {
     window.localStorage.clear()
+    window.sessionStorage.clear()
   })
 
   it('ohne Key: Fehler statt Auto-Generate', async () => {
@@ -23,6 +25,7 @@ describe('encryptTeamBroadcastPlaintext', () => {
   })
 
   it('mit Key: liefert Ciphertext', async () => {
+    setVaultPasswordSession('vault-pass-99')
     createTeamBroadcastKey(MB)
     const enc = await encryptTeamBroadcastPlaintext({
       teamMailboxObjectId: MB,

@@ -157,3 +157,24 @@ export function buildAdminReclaimBearerTreasuryTransaction(input: {
   })
   return txb
 }
+
+/** Admin: leere Treasury zerstören. */
+export function buildDestroyEmptyBearerTreasuryTransaction(input: {
+  messagingPackageId: string
+  senderAddress: string
+  treasuryObjectId: string
+  coinType?: string
+}): Transaction {
+  const pkg = assertHex64(input.messagingPackageId, 'Messaging-PACKAGE_ID')
+  const sender = assertHex64(input.senderAddress, 'Absender')
+  const treasury = assertHex64(input.treasuryObjectId, 'Treasury Object-ID')
+  const coinType = (input.coinType || IOTA_COIN_TYPE).trim()
+  const txb = new Transaction()
+  txb.setSender(sender)
+  txb.moveCall({
+    target: `${pkg}::nft_bearer_treasury::destroy_empty`,
+    typeArguments: [coinType],
+    arguments: [txb.object(treasury)],
+  })
+  return txb
+}

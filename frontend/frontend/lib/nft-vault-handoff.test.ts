@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildNftVaultTransferBundleText,
   encodeNftVaultHandoff,
   nftVaultTransferHint,
   parseNftVaultHandoff,
@@ -41,7 +42,20 @@ describe('nft-vault-handoff', () => {
   })
 
   it('hints distinguish bearer vs guarded', () => {
-    expect(nftVaultTransferHint('bearer')).toMatch(/Senderecht/)
+    expect(nftVaultTransferHint('bearer')).toMatch(/automatisch mitkopiert/)
     expect(nftVaultTransferHint('guarded')).toMatch(/bleiben/)
+  })
+
+  it('bundle contains NFT + Vault + machine line', () => {
+    const pack: NftVaultHandoffPack = {
+      v: 1,
+      kind: 'guarded',
+      nftObjectId: NFT,
+      vaultObjectId: VAULT,
+    }
+    const b = buildNftVaultTransferBundleText(pack)
+    expect(b).toContain(NFT.toLowerCase())
+    expect(b).toContain(VAULT.toLowerCase())
+    expect(b).toContain('MORG_NFT_VAULT_V1:')
   })
 })

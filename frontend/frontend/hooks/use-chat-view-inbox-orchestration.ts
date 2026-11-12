@@ -43,6 +43,9 @@ import {
 } from '@/frontend/lib/messenger-pinnwand-capabilities'
 import { writeActiveGroupId } from '@/frontend/lib/messenger-group-store'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
+import type { ComposerDeliveryChannel } from '@/frontend/lib/composer-delivery-channel'
+import { resolveActiveSendPath } from '@/frontend/lib/messenger-channel-send-path'
+import { inboxSourceFilterForSendPath } from '@/frontend/lib/send-path-inbox-source-filter'
 import { shouldApplyMeshFirstTransportDefault } from '@/frontend/lib/standalone-onboarding'
 import {
   PACKAGE_PROFILE_REGISTRY_CHANGED,
@@ -69,6 +72,9 @@ export type UseChatViewInboxOrchestrationParams = {
   directory: Record<string, ContactMeshEntryClient>
   refreshContactDirectory: () => void
   isMeshVerifiedForAddress: (address: string) => boolean
+  forcedTransport: ForcedTransport
+  composerDelivery: ComposerDeliveryChannel
+  iotaPathFocus: boolean
 }
 
 export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationParams) {
@@ -92,7 +98,19 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     directory,
     refreshContactDirectory,
     isMeshVerifiedForAddress,
+    forcedTransport,
+    composerDelivery,
+    iotaPathFocus,
   } = p
+
+  const sendPathInboxSourceFilter = useMemo(
+    () =>
+      inboxSourceFilterForSendPath({
+        activeSendPath: resolveActiveSendPath(composerDelivery, forcedTransport),
+        iotaPathFocus,
+      }),
+    [composerDelivery, forcedTransport, iotaPathFocus]
+  )
 
   const {
     inboxPackageFilter,
@@ -323,7 +341,14 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     inboxOverviewEnabled,
     excludePinnwandFromOverviewAlle,
     apiStatus,
+    sendPathInboxSourceFilter,
   })
+
+  /** Kanal-Chip-Filter nur bei Online — sonst steuert der Sendepfad die Quelle. */
+  useEffect(() => {
+    if (sendPathInboxSourceFilter === 'all') return
+    setInboxChannelFiltersArmed(false)
+  }, [sendPathInboxSourceFilter, setInboxChannelFiltersArmed])
 
   useEffect(() => {
     if (!isPinnwandChannel(channelMode)) return

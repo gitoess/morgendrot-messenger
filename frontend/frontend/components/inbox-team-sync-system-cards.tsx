@@ -29,14 +29,14 @@ import {
 } from '@/frontend/lib/team-update-inbox-state'
 import {
   dismissTelegramGroupTgSeq,
-  isTelegramGroupCardSnoozed,
-  isTelegramGroupTgSeqDismissed,
   markTelegramGroupTgSeqApplied,
-  readAppliedTelegramGroupTgSeq,
   saveTelegramAlarmGroupPending,
   snoozeTelegramGroupCard,
   isTelegramAlarmGroupJoinInitiatedForLink,
   confirmTelegramAlarmGroupJoined,
+  isTelegramAlarmGroupJoined,
+  shouldShowTelegramAlarmGroupInvite,
+  TELEGRAM_ALARM_GROUP_JOIN_CHANGED_EVENT,
 } from '@/frontend/lib/telegram-alarm-group-prefs'
 import { openTelegramAlarmGroupInvite } from '@/frontend/lib/telegram-alarm-group-invite'
 import { maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
@@ -178,8 +178,10 @@ export function InboxTeamSyncSystemCards(p: {
       const content = m.content ?? ''
       const ping = parseMorgTeamUpdatePingV1(content)
       if (ping) {
+        const skipTgPing =
+          ping.hint === 'telegram_group' && isTelegramAlarmGroupJoined()
         const key = `${ping.seq ?? 't'}-${ping.tgSeq ?? 's'}-${ping.teamId}`
-        if (!seenPing.has(key)) {
+        if (!skipTgPing && !seenPing.has(key)) {
           seenPing.add(key)
           const receivedVia = collectTeamSyncReceiveChannels(m)
           funkPings.push({ ping, chainFrom: m.from ?? '', receivedVia })
@@ -204,9 +206,7 @@ export function InboxTeamSyncSystemCards(p: {
       if (
         tg &&
         tg.kind === 'invite_link' &&
-        tg.tgSeq > readAppliedTelegramGroupTgSeq() &&
-        !isTelegramGroupTgSeqDismissed(tg.tgSeq) &&
-        !isTelegramGroupCardSnoozed(tg.tgSeq) &&
+        shouldShowTelegramAlarmGroupInvite({ tgSeq: tg.tgSeq, inviteLink: tg.inviteLink }) &&
         !seenTg.has(tg.tgSeq)
       ) {
         seenTg.add(tg.tgSeq)
@@ -222,6 +222,12 @@ export function InboxTeamSyncSystemCards(p: {
     funkPings.sort((a, b) => (b.ping.seq ?? b.ping.tgSeq ?? 0) - (a.ping.seq ?? a.ping.tgSeq ?? 0))
     return { teamUpdates, tgGroups, funkPings }
   }, [p.messages, teamSyncRevision])
+
+  useEffect(() => {
+    const onJoinChanged = () => bumpTeamSyncRevision((n) => n + 1)
+    window.addEventListener(TELEGRAM_ALARM_GROUP_JOIN_CHANGED_EVENT, onJoinChanged)
+    return () => window.removeEventListener(TELEGRAM_ALARM_GROUP_JOIN_CHANGED_EVENT, onJoinChanged)
+  }, [])
 
   useEffect(() => {
     let cancelled = false

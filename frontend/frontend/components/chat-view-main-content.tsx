@@ -42,10 +42,18 @@ import { isPinnwandChannel } from '@/frontend/lib/messenger-chat-channel'
 import { ChatViewNotesTabPanel } from '@/frontend/components/chat-view-notes-tab-panel'
 import { ChatViewContactSidebar } from '@/frontend/components/chat-view-contact-sidebar'
 import { ChatViewContactDetailDialog } from '@/frontend/components/chat-view-contact-detail-dialog'
+import { MessengerEntityInfoDialog } from '@/frontend/components/messenger-entity-info-dialog'
 import { ChatViewMessengerSearch } from '@/frontend/components/chat-view-messenger-search'
 import { resolveContactSidebarDisplayName } from '@/frontend/lib/conversation-sidebar-items'
 import { readMessengerGroups } from '@/frontend/lib/messenger-group-store'
-import { fetchTelegramIntegration } from '@/frontend/lib/api/telegram-integrations'
+import {
+  buildGroupInfoSections,
+  buildTelegramAlarmInfoSections,
+} from '@/frontend/lib/messenger-entity-info-model'
+import {
+  fetchTelegramIntegration,
+  type TelegramIntegrationPublic,
+} from '@/frontend/lib/api/telegram-integrations'
 import { resolveTelegramAlarmGroupPartnerKey } from '@/frontend/lib/telegram-einsatz-group-target'
 import {
   patchTelegramAlarmGroupMembershipChatId,
@@ -64,6 +72,10 @@ import {
   inboxPartnerKeyForContact,
 } from '@/frontend/lib/contact-send-path'
 import { resolveActiveSendPath } from '@/frontend/lib/messenger-channel-send-path'
+import {
+  conversationMenuChainToolsVisible,
+  inboxToolbarToolsForSendPath,
+} from '@/frontend/lib/send-path-inbox-source-filter'
 import {
   contactHandshakeBadgeKind,
   contactHandshakeBadgeLabel,
@@ -192,6 +204,11 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const [phonebookOpen, setPhonebookOpen] = useState(false)
   const [groupSettingsOpen, setGroupSettingsOpen] = useState(false)
+  const [groupInfoOpen, setGroupInfoOpen] = useState(false)
+  const [telegramAlarmInfoOpen, setTelegramAlarmInfoOpen] = useState(false)
+  const [telegramIntegrationInfo, setTelegramIntegrationInfo] = useState<TelegramIntegrationPublic | null>(
+    null
+  )
   const [contactDetailAddress, setContactDetailAddress] = useState<string | null>(null)
   const [contactDetailOpen, setContactDetailOpen] = useState(false)
   const [telegramAlarmSelected, setTelegramAlarmSelected] = useState(false)
@@ -265,6 +282,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     refreshContactDirectory,
     composeReply,
   })
+
+  const iotaPathFocus = composerSendPath.iotaPathFocus === true
 
   const activeSendPath = useMemo(
     () => resolveActiveSendPath(composerDelivery, forcedTransport),
@@ -698,6 +717,43 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setContactDetailOpen(true)
   }, [])
 
+  const handleOpenGroupInfo = useCallback(() => {
+    setGroupInfoOpen(true)
+  }, [])
+
+  const handleOpenTelegramAlarmInfo = useCallback(() => {
+    setTelegramAlarmInfoOpen(true)
+    void fetchTelegramIntegration().then((r) => {
+      if (r.ok === false && !r.botTokenConfigured && !r.einsatzGroupChatId) return
+      setTelegramIntegrationInfo(r)
+    })
+  }, [])
+
+  const activeGroupForInfo = useMemo(() => {
+    if (!inboxConversationGroupId) return null
+    return readMessengerGroups().find((g) => g.id === inboxConversationGroupId) ?? null
+  }, [inboxConversationGroupId, groupInfoOpen, groupSettingsOpen])
+
+  const groupInfoSections = useMemo(
+    () =>
+      activeGroupForInfo
+        ? buildGroupInfoSections({
+            group: activeGroupForInfo,
+            packageId: apiStatus?.packageId,
+          })
+        : [],
+    [activeGroupForInfo, apiStatus?.packageId]
+  )
+
+  const telegramAlarmInfoSections = useMemo(
+    () =>
+      buildTelegramAlarmInfoSections({
+        membership: readTelegramAlarmGroupMembership(),
+        integration: telegramIntegrationInfo,
+      }),
+    [telegramAlarmInfoOpen, telegramIntegrationInfo]
+  )
+
   const handleRenewPeerEncryption = useCallback(
     async (peerOverride?: string) => {
       const peer = (peerOverride || inboxPartnerKey || recipient || partner || '').trim()
@@ -861,7 +917,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const pinnwandSidebarProps = useMemo(
     () =>
-      pinnwandCaps.showChannelTab
+      pinnwandCaps.showChannelTab && activeSendPath === 'internet'
         ? {
             pinnwandLabel: pinnwandSidebarLabel(role, apiStatus),
             pinnwandUnreadCount: inboxOverviewUnreadCounts?.lagebild ?? 0,
@@ -871,6 +927,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         : {},
     [
       pinnwandCaps.showChannelTab,
+      activeSendPath,
       role,
       apiStatus,
       inboxOverviewUnreadCounts?.lagebild,
@@ -926,10 +983,16 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
     const exportHistory = () => panelMessengerPorts.inboxExportActions.onExportEinsatzberichtTxt()
     const clearHistory = () => panelMessengerPorts.inboxActions.onHideAllVisibleLocal()
-    const burnToggle = {
-      enabled: burnOnReadEnabled,
-      onEnabledChange: setBurnOnReadEnabled,
-    }
+    const chainSecurity = conversationMenuChainToolsVisible({
+      activeSendPath,
+      iotaPathFocus,
+    })
+    const burnToggle = chainSecurity
+      ? {
+          enabled: burnOnReadEnabled,
+          onEnabledChange: setBurnOnReadEnabled,
+        }
+      : undefined
     const encToggle = {
       encrypted,
       onEncryptedChange: setEncrypted,
@@ -946,6 +1009,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         onClearHistory: clearHistory,
         onCreateGroup: openGroupSettings,
         burnOnRead: burnToggle,
+        showChainSecurityTools: chainSecurity,
       }
     }
 
@@ -956,12 +1020,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         subtitle: hasActive ? activeConversationSubtitle : 'Gruppe wählen oder anlegen',
         canClearHistory: hasActive,
         canExport: true,
+        onViewInfo: hasActive ? handleOpenGroupInfo : undefined,
         onManageGroup: openGroupSettings,
         onCreateGroup: openGroupSettings,
         encryptionToggle: encToggle,
         onExportHistory: exportHistory,
         onClearHistory: clearHistory,
         burnOnRead: burnToggle,
+        showChainSecurityTools: chainSecurity,
       }
     }
 
@@ -971,10 +1037,12 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         subtitle: activeConversationSubtitle,
         canClearHistory: false,
         canExport: true,
+        onViewInfo: handleOpenTelegramAlarmInfo,
         onExportHistory: exportHistory,
         onClearHistory: clearHistory,
         onCreateGroup: openGroupSettings,
         burnOnRead: burnToggle,
+        showChainSecurityTools: chainSecurity,
       }
     }
 
@@ -995,7 +1063,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         ? activeConversationSubtitle
         : canRenew
           ? 'Partner gesetzt'
-          : 'Kontakt wählen oder Telefonbuch'
+          : 'Kontakt wählen oder Kontakte verwalten'
 
     if (isPrivate && (composerDelivery === 'chain' || inboxPartnerFiltersArmed)) {
       return {
@@ -1003,20 +1071,19 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         subtitle: partnerSubtitle,
         canClearHistory: true,
         canExport: true,
-        onViewProfile: renewPeer ? () => handleOpenContactDetail(renewPeer) : undefined,
+        onViewInfo: renewPeer ? () => handleOpenContactDetail(renewPeer) : undefined,
         onExportHistory: exportHistory,
         onClearHistory: clearHistory,
         onCreateGroup: openGroupSettings,
-        onRenewEncryptionKeys: canRenew
-          ? () => void handleRenewPeerEncryption(renewPeer)
-          : undefined,
-        renewEncryptionLabel: canRenew
-          ? `Schlüssel erneuern (Epoch ${epoch || 1})`
-          : undefined,
+        onRenewEncryptionKeys:
+          chainSecurity && canRenew ? () => void handleRenewPeerEncryption(renewPeer) : undefined,
+        renewEncryptionLabel:
+          chainSecurity && canRenew ? `Schlüssel erneuern (Epoch ${epoch || 1})` : undefined,
         renewEncryptionHint:
           'Session-Epoch erhöhen — Forward Secrecy ab Rotation (nicht pro Nachricht). Alte Nachrichten bleiben lesbar.',
         burnOnRead: burnToggle,
         encryptionToggle: encToggle,
+        showChainSecurityTools: chainSecurity,
       }
     }
 
@@ -1033,9 +1100,13 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     activeConversationTitle,
     activeConversationSubtitle,
     openGroupSettings,
+    handleOpenGroupInfo,
+    handleOpenTelegramAlarmInfo,
     encrypted,
     setEncrypted,
     forcedTransport,
+    activeSendPath,
+    iotaPathFocus,
     inboxPartnerFiltersArmed,
     inboxPartnerKey,
     handleOpenContactDetail,
@@ -1113,6 +1184,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       showAllActive={showAllConversationsActive}
       searchQuery={messengerSearchQuery}
       activeSendPath={activeSendPath}
+      iotaPathFocus={iotaPathFocus}
       onSelectAll={handleSelectSidebarAll}
       onSelectSelf={handleSelectSidebarSelf}
       activeSelfSelected={activeSelfSelected}
@@ -1125,7 +1197,11 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       onOpenGroupSettings={openGroupSettings}
       onOpenContactDetail={handleOpenContactDetail}
       onOpenPhonebook={() => setPhonebookOpen(true)}
-      selfProfile={myDataPanelProps}
+      selfProfile={{
+        ...myDataPanelProps,
+        packageId: apiStatus?.packageId,
+        onOpenIotaSettings: onOpenSettings,
+      }}
       {...pinnwandSidebarProps}
       {...sidebarHandshakeProps}
     />
@@ -1184,6 +1260,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           showAllActive={showAllConversationsActive}
           searchQuery={messengerSearchQuery}
           activeSendPath={activeSendPath}
+      iotaPathFocus={iotaPathFocus}
           onSelectAll={handleSelectSidebarAll}
           onSelectSelf={handleSelectSidebarSelf}
           activeSelfSelected={activeSelfSelected}
@@ -1193,7 +1270,11 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           onOpenGroupSettings={openGroupSettings}
           onOpenContactDetail={handleOpenContactDetail}
           onOpenPhonebook={() => setPhonebookOpen(true)}
-          selfProfile={myDataPanelProps}
+          selfProfile={{
+        ...myDataPanelProps,
+        packageId: apiStatus?.packageId,
+        onOpenIotaSettings: onOpenSettings,
+      }}
           {...pinnwandSidebarProps}
           {...sidebarHandshakeProps}
         />
@@ -1295,6 +1376,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                   query={messengerSearchQuery}
                   onQueryChange={setMessengerSearchQuery}
                   activeSendPath={activeSendPath}
+      iotaPathFocus={iotaPathFocus}
                   onSelectContact={handleMobileSelectContact}
                   onSelectGroup={handleMobileSelectGroup}
                   onSelectTelegramAlarmGroup={() => {
@@ -1351,9 +1433,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             {mobileTab === 'contacts' ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2 px-1">
-                  <p className="text-sm font-semibold text-foreground">Kontakte</p>
-                  <Button type="button" size="sm" variant="outline" onClick={() => setPhonebookOpen(true)}>
-                    Telefonbuch
+                  <p className="text-sm font-semibold text-foreground">Direktchats</p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setPhonebookOpen(true)}
+                    title="Telefonbuch — anlegen, bearbeiten, importieren"
+                  >
+                    Kontakte verwalten
                   </Button>
                 </div>
                 {sharedContactSidebar}
@@ -1390,6 +1478,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               query={messengerSearchQuery}
               onQueryChange={setMessengerSearchQuery}
               activeSendPath={activeSendPath}
+      iotaPathFocus={iotaPathFocus}
               onSelectContact={handleSelectSidebarContact}
               onSelectGroup={handleSelectSidebarGroup}
               onSelectTelegramAlarmGroup={handleSelectSidebarTelegramAlarm}
@@ -1407,6 +1496,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               showAllActive={showAllConversationsActive}
               searchQuery={messengerSearchQuery}
               activeSendPath={activeSendPath}
+      iotaPathFocus={iotaPathFocus}
               onSelectAll={handleSelectSidebarAll}
               onSelectSelf={handleSelectSidebarSelf}
               activeSelfSelected={activeSelfSelected}
@@ -1416,7 +1506,11 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               onOpenGroupSettings={openGroupSettings}
               onOpenContactDetail={handleOpenContactDetail}
               onOpenPhonebook={() => setPhonebookOpen(true)}
-              selfProfile={myDataPanelProps}
+              selfProfile={{
+        ...myDataPanelProps,
+        packageId: apiStatus?.packageId,
+        onOpenIotaSettings: onOpenSettings,
+      }}
               {...pinnwandSidebarProps}
               {...sidebarHandshakeProps}
             />
@@ -1438,6 +1532,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         directory={directory}
         messages={inboxMessages}
         myAddress={myAddress}
+        packageId={apiStatus?.packageId}
         connectedAddresses={phonebookShellProps.connectedAddresses}
         isFavorite={
           contactDetailAddress ? readContactFavorites().has(contactDetailAddress.trim().toLowerCase()) : false
@@ -1455,6 +1550,44 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           setContactDetailOpen(false)
         }}
       />
+      ) : null}
+
+      {groupInfoOpen ? (
+        <MessengerEntityInfoDialog
+          open={groupInfoOpen}
+          onOpenChange={setGroupInfoOpen}
+          title={activeGroupForInfo?.name ? `Info · ${activeGroupForInfo.name}` : 'Gruppen-Info'}
+          description="Technische IDs und Schlüssel-Status — ohne Secrets. Bearbeiten unter „Gruppe verwalten“."
+          sections={groupInfoSections}
+          primaryAction={{
+            label: 'Gruppe verwalten…',
+            onClick: () => {
+              setGroupInfoOpen(false)
+              openGroupSettings()
+            },
+          }}
+        />
+      ) : null}
+
+      {telegramAlarmInfoOpen ? (
+        <MessengerEntityInfoDialog
+          open={telegramAlarmInfoOpen}
+          onOpenChange={setTelegramAlarmInfoOpen}
+          title="Info · Einsatz-Alarmgruppe"
+          description="Bot-, Gruppen- und Chat-IDs. Token-Klartext nur in den Einstellungen."
+          sections={telegramAlarmInfoSections}
+          primaryAction={
+            onOpenSettings
+              ? {
+                  label: 'Telegram-Einstellungen…',
+                  onClick: () => {
+                    setTelegramAlarmInfoOpen(false)
+                    onOpenSettings()
+                  },
+                }
+              : undefined
+          }
+        />
       ) : null}
 
       {(isPrivate || isGroup || onPinnwandTab) && phonebookOpen ? (

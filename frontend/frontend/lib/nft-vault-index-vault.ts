@@ -24,6 +24,11 @@ import {
   upsertNftGuardedPurseLocal,
   type NftGuardedPurseLocalEntry,
 } from '@/frontend/lib/nft-guarded-purse-local-store'
+import {
+  listParkedNftVaults,
+  replaceAllParkedNftVaults,
+  type NftVaultParkedEntry,
+} from '@/frontend/lib/nft-vault-parked-store'
 
 export const NFT_VAULT_INDEX_ENC_LS_KEY = 'morgendrot.nftVaultIndex.enc.v1'
 export const NFT_VAULT_INDEX_ENC_SCHEMA = 'morgendrot.nft-vault-index.enc.v1'
@@ -33,6 +38,8 @@ type StorePlainV1 = {
   v: 1
   purses: NftGuardedPurseLocalEntry[]
   treasuries: NftBearerTreasuryLocalEntry[]
+  /** Bindungen nach NFT-Versand — wiederherstellen wenn NFT zurück. */
+  parked?: NftVaultParkedEntry[]
 }
 
 const SS_TAB = 'morgendrot.nftVaultIndex.tab.v1'
@@ -52,6 +59,7 @@ function snapshotFromLocal(): StorePlainV1 {
     v: 1,
     purses: listNftGuardedPursesLocal().filter((p) => p.status === 'active'),
     treasuries: listNftBearerTreasuriesLocal().filter((t) => t.status === 'active'),
+    parked: listParkedNftVaults(),
   }
 }
 
@@ -124,6 +132,9 @@ function hydrateIntoLocal(plain: StorePlainV1): void {
       ...(t.createDigest ? { createDigest: t.createDigest } : {}),
     })
   }
+  if (Array.isArray(plain.parked)) {
+    replaceAllParkedNftVaults(plain.parked)
+  }
   emit()
 }
 
@@ -146,6 +157,13 @@ export async function unlockNftVaultIndexVault(
         JSON.stringify(snapshotFromLocal()),
         pw
       )
+    }
+    try {
+      const { listNftOwnedSnapshot } = await import('@/frontend/lib/nft-activity-local-log')
+      const { restoreParkedVaultsForOwnedNfts } = await import('@/frontend/lib/nft-vault-local-clear')
+      restoreParkedVaultsForOwnedNfts(listNftOwnedSnapshot())
+    } catch {
+      /* ignore */
     }
     return { ok: true }
   } catch (e) {

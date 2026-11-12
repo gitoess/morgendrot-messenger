@@ -27,12 +27,14 @@ import {
   readPassphraseNftStrongGateEnabled,
   readPassphraseProtectEnabled,
   readPassphraseRememberOnDeviceEnabled,
+  readPassphraseZeitkapselModeEnabled,
   flushPassphraseMessageVaultPersist,
   isPassphraseMessageVaultSessionOpen,
   readPassphraseReuseEnabled,
   resolvePassphraseForProtectSend,
   rememberPassphraseMessagePassphrase,
   rollPassphraseAfterOneShotSend,
+  writeZeitkapselLastNftObjectId,
 } from '@/frontend/lib/passphrase-message-local-store'
 import {
   bindWireToNftKeycard,
@@ -702,16 +704,18 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       textSnaps = textSnaps.map((s) => prependMorgEmergencyV1Marker(s, k))
     }
 
-    /** Passphrase-Schutz: Ciphertext als Klartext-Wire; Key nur off-chain (kein Handshake). */
+    /** Passphrase-Schutz / Zeitkapsel-Nachricht: Ciphertext als Klartext-Wire. */
     let sharedPassphraseNote = ''
+    const zeitkapselMode = readPassphraseZeitkapselModeEnabled()
     const passphraseProtect = readPassphraseProtectEnabled()
-    if (passphraseProtect) {
+    if (zeitkapselMode || passphraseProtect) {
       if (sendEncrypted) {
         applyValidationError(
           {
             ok: false,
-            message:
-              'Passphrase-Schutz braucht Klartext-Transport (Ciphertext on-chain). Oben „Unverschlüsselt“ wählen oder Passphrase-Schutz aus.',
+            message: zeitkapselMode
+              ? 'Zeitkapsel-Nachricht braucht Klartext-Transport (Ciphertext on-chain). Oben „Unverschlüsselt“ wählen oder Modus aus.'
+              : 'Passphrase-Schutz braucht Klartext-Transport (Ciphertext on-chain). Oben „Unverschlüsselt“ wählen oder Passphrase-Schutz aus.',
             idleMs: 9000,
           },
           setStatus,
@@ -722,8 +726,15 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       try {
         const wrapped: string[] = []
         const cardOid = readPassphraseNftKeycardBindObjectId()
+        if (zeitkapselMode && (!cardOid || !getNftKeycard(cardOid))) {
+          throw new Error(
+            'Zeitkapsel-Nachricht: zuerst ein NFT/Schlüsselkarte wählen (Composer).'
+          )
+        }
         const strongGate = Boolean(
-          readPassphraseNftStrongGateEnabled() && cardOid && getNftKeycard(cardOid)
+          (zeitkapselMode || readPassphraseNftStrongGateEnabled()) &&
+            cardOid &&
+            getNftKeycard(cardOid)
         )
 
         if (strongGate) {
@@ -784,13 +795,16 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           }
           textSnaps = wrapped
           await flushNftKeycardVaultPersist()
-          sharedPassphraseNote = p4b
-            ? ' Starkes P4b Seal: DEK nur mit Key-Broker nach NFT-AddressOwner. Wire allein reicht nicht. Klartext danach kopierbar.'
-            : p4a2
-              ? ` Starkes P4a2 (Wallet+NFT+Pubkey): nur ${requiredWallet!.slice(0, 10)}… mit NFT + ECDH-Privatkey. Klartext danach kopierbar.`
-              : dual
-                ? ` Starkes Dual-Gate (Wallet+NFT): nur Adresse ${requiredWallet!.slice(0, 10)}… mit NFT-Leserecht. Klartext danach kopierbar. Kein Blank-DEK im Vault.`
-                : ' Starkes NFT-Gate (P4a): Lesen nur mit Besitz/Leihe der Schlüsselkarte — kein Passphrase-Teilen, kein Blank-DEK im Vault. Klartext danach kopierbar.'
+          if (cardOid) writeZeitkapselLastNftObjectId(cardOid)
+          sharedPassphraseNote = zeitkapselMode
+            ? ' Zeitkapsel-Nachricht (NFTGATE) gesendet — Ciphertext im Wire; Leserecht = NFT. Unten „Dieses NFT verleihen…“ oder On-Chain → Zeitkapsel.'
+            : p4b
+              ? ' Starkes P4b Seal: DEK nur mit Key-Broker nach NFT-AddressOwner. Wire allein reicht nicht. Klartext danach kopierbar.'
+              : p4a2
+                ? ` Starkes P4a2 (Wallet+NFT+Pubkey): nur ${requiredWallet!.slice(0, 10)}… mit NFT + ECDH-Privatkey. Klartext danach kopierbar.`
+                : dual
+                  ? ` Starkes Dual-Gate (Wallet+NFT): nur Adresse ${requiredWallet!.slice(0, 10)}… mit NFT-Leserecht. Klartext danach kopierbar. Kein Blank-DEK im Vault.`
+                  : ' Starkes NFT-Gate (P4a): Lesen nur mit Besitz/Leihe der Schlüsselkarte — kein Passphrase-Teilen, kein Blank-DEK im Vault. Klartext danach kopierbar.'
         } else {
           const { passphrase: batchPass, reused } = resolvePassphraseForProtectSend(
             generatePassphraseMessageSharePassphrase

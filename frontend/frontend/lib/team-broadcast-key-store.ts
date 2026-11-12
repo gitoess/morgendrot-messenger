@@ -246,6 +246,17 @@ export function purgeTeamBroadcastKeyVault(): void {
   emitChanged()
 }
 
+/** Tests: RAM-Keys ohne Vault-Sidecar löschen. */
+export function clearTeamBroadcastKeysForTests(): void {
+  if (persistTimer) {
+    clearTimeout(persistTimer)
+    persistTimer = null
+  }
+  memoryKeys = {}
+  sessionHydrated = true
+  clearTabBackup()
+}
+
 export function hasTeamBroadcastKey(teamMailboxObjectId: string): boolean {
   const id = normMb(teamMailboxObjectId)
   return Boolean(memoryKeys[id]?.keyBase64)
@@ -299,6 +310,12 @@ export function createTeamBroadcastKey(
   teamMailboxObjectId: string,
   opts?: { rotate?: boolean }
 ): { ok: true; created: boolean; rotated: boolean; epoch: number } | { ok: false; error: string } {
+  if (!hasVaultPasswordSession()) {
+    return {
+      ok: false,
+      error: 'Tresor entsperren — Gruppen-Geheimnis wird nur im Vault gespeichert.',
+    }
+  }
   const id = normMb(teamMailboxObjectId)
   if (!/^0x[a-f0-9]{64}$/.test(id)) {
     return { ok: false, error: 'Ungültige Team-Mailbox-Object-ID.' }

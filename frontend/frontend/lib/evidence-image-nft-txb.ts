@@ -69,20 +69,28 @@ export function buildTransferImageNftTransaction(input: {
   return txb
 }
 
+/** Burn-Call an bestehende PTB anhängen (z. B. nach Guarded-Spend in derselben TX). */
+export function appendBurnImageNftCall(
+  txb: Transaction,
+  input: { objectId: string; packageId?: string }
+): void {
+  const pkg = assertHex64(input.packageId || KNOWN_IMAGE_NFT_PACKAGE_IDS[0], 'ImageNFT-PACKAGE_ID')
+  const objectId = assertHex64(input.objectId, 'Object-ID')
+  txb.moveCall({
+    target: `${pkg}::image_nft::burn`,
+    arguments: [txb.object(objectId)],
+  })
+}
+
 /** On-chain vernichten (`image_nft::burn`) — Storage-Rebate an Absender. */
 export function buildBurnImageNftTransaction(input: {
   senderAddress: string
   objectId: string
   packageId?: string
 }): Transaction {
-  const pkg = assertHex64(input.packageId || KNOWN_IMAGE_NFT_PACKAGE_IDS[0], 'ImageNFT-PACKAGE_ID')
   const sender = assertHex64(input.senderAddress, 'Absender-Adresse')
-  const objectId = assertHex64(input.objectId, 'Object-ID')
   const txb = new Transaction()
   txb.setSender(sender)
-  txb.moveCall({
-    target: `${pkg}::image_nft::burn`,
-    arguments: [txb.object(objectId)],
-  })
+  appendBurnImageNftCall(txb, input)
   return txb
 }

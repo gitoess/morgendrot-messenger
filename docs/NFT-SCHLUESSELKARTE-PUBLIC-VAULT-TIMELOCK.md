@@ -52,6 +52,10 @@ Mailbox-Chat an W1: W2 braucht Inbox-Scan der **W1-Mailbox** / geteilte Object-I
 | B NFTGATE-Wire in Mailbox | Posteingang / Wire an W1 | Lease oder Owner | P4a Wire **Ist**; W2-Fremdmailbox-Scan **optional Backlog** |
 | C Nur NFT transferiert | — | — | **Reicht nicht** allein |
 
+**Passphrase wiederverwenden** ≠ NFT-Bindung: gleiche PW für mehrere PWMSG ist nur Komfort; die Leihe ändert daran nichts. Starkes Gate = `MORG_NFTGATE_V1` oder Enc-ImageNFT-Besitz.
+
+**UI (2026-11-09):** Panel heißt „Zeitkapsel (Leserecht)“ mit 3-Schritt-Hinweis — Ciphertext bleibt getrennt.
+
 ---
 
 ## 1. Ziele / Nicht-Ziele
@@ -202,7 +206,7 @@ struct NftTimeLease has key {
 | **B2-P5a** | Move `NftTimeLease` + Unit-Tests (create / return_early / cancel / reclaim) — **Ist** | P4a ✅ |
 | **B2-P5b** | Messenger-UI Zeitkapsel-Panel + Badges + PTB — **Ist**; Chain nach Package-Publish | P5a ✅ |
 | **B2-P5c** / **P4b** | Seal/Policy — marketingfest | optional später |
-| **B2-P5d** | Optional: W2-UX „Ciphertext von W1 holen“ (Object-ID / Besitzer-Galerie + Gate-Hinweis) | P5b ✅; Mailbox-Fremdscan später |
+| **B2-P5d** | Optional: W2-UX „Ciphertext von W1 holen“ (Object-ID / Besitzer-Galerie + Gate-Hinweis) + **Soll-Ablauf-Retest** | **Backlog ganz hinten** (Roadmap 2026-11-09: nach Session C 2-Geräte); P5b ✅; Mailbox-Fremdscan später |
 | **P4a-dual** | Wallet+NFT-Gate parallel zur Leihe (`requiredWallet` = W2) | **Ist** (App) |
 | **P4a2** | Pubkey-Wrap | **Ist** |
 | **P4b** | Seal Policy + Key-Broker PoC | **Ist** (`docs/NFT-GATE-SEAL-P4B-SPEC.md`) |

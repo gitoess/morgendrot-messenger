@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Compass } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { ApiStatus } from '@/frontend/lib/api/status'
-import { SettingsHandbookLink } from '@/frontend/components/settings-handbook-link'
+import { OnboardingResumeCard } from '@/frontend/components/onboarding/onboarding-resume-card'
 import {
   buildOnboardingSkipContext,
   isOnboardingFinished,
@@ -48,41 +48,41 @@ export function SettingsOnboardingSection(p: { apiStatus?: ApiStatus | null }) {
     requestOpenOnboardingWizard()
   }
 
+  /* Fertig-Karte nur hier (nicht Dashboard). */
+  if (finished) {
+    return <OnboardingResumeCard apiSnapshot={p.apiStatus} showFinished />
+  }
+
   return (
     <div className="rounded-xl border border-border bg-card p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500/15 text-sky-300">
-            <Compass className="h-5 w-5" aria-hidden />
-          </div>
-          <div>
-            <h4 className="font-semibold text-foreground">Einstiegs-Wizard</h4>
-            {progress && wizardPath ? (
-              <p className="text-xs text-muted-foreground">
-                {finished
-                  ? 'Abgeschlossen — erneut öffnen oder von vorn starten.'
-                  : showResume
-                    ? `Fortschritt: ${
-                        progress.path === 'boss'
-                          ? 'Einsatzleitung'
-                          : progress.path === 'helper'
-                            ? 'Helfer'
-                            : 'Privat'
-                      }`
-                    : 'Jederzeit wieder aufrufbar.'}
-              </p>
-            ) : null}
-          </div>
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500/15 text-sky-300">
+          <Compass className="h-5 w-5" aria-hidden />
         </div>
-        <SettingsHandbookLink />
+        <div>
+          <h4 className="font-semibold text-foreground">Einstiegs-Wizard</h4>
+          {progress && wizardPath ? (
+            <p className="text-xs text-muted-foreground">
+              {showResume
+                ? `Fortschritt: ${
+                    progress.path === 'boss'
+                      ? 'Einsatzleitung'
+                      : progress.path === 'helper'
+                        ? 'Helfer'
+                        : 'Privat'
+                  }`
+                : 'Jederzeit wieder aufrufbar.'}
+            </p>
+          ) : null}
+        </div>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {wizardPath ? (
           <>
             <Button type="button" size="sm" variant={showResume ? 'default' : 'outline'} onClick={openWizard}>
-              {finished ? 'Wizard öffnen' : showResume ? 'Einrichtung fortsetzen' : 'Wizard öffnen'}
+              {showResume ? 'Einrichtung fortsetzen' : 'Wizard öffnen'}
             </Button>
-            {finished ? (
+            {progress ? (
               <Button type="button" size="sm" variant="outline" onClick={restartWizard}>
                 Erneut starten
               </Button>

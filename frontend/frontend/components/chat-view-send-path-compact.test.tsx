@@ -22,7 +22,7 @@ describe('ChatViewSendPathCompact', () => {
     expect(screen.queryByRole('button', { name: /Ad-hoc/i })).not.toBeInTheDocument()
   })
 
-  it('zeigt adhoc standardmäßig', () => {
+  it('zeigt IOTA statt Ad-hoc standardmäßig', () => {
     render(
       <ChatViewSendPathCompact
         channelMode="private"
@@ -30,9 +30,32 @@ describe('ChatViewSendPathCompact', () => {
         encrypted={false}
         forcedTransport="mesh"
         onForcedTransportChange={noop}
+        onComposerDeliveryChange={noop}
       />
     )
-    expect(screen.getByRole('button', { name: /Ad-hoc/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /IOTA/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Ad-hoc/i })).not.toBeInTheDocument()
+  })
+
+  it('IOTA-Klick setzt nur iotaPathFocus (Transport/Delivery über setIotaPathFocus)', () => {
+    const onTransport = vi.fn()
+    const onFocus = vi.fn()
+    const onDelivery = vi.fn()
+    render(
+      <ChatViewSendPathCompact
+        channelMode="private"
+        visible
+        encrypted={false}
+        forcedTransport="mesh"
+        onForcedTransportChange={onTransport}
+        onComposerDeliveryChange={onDelivery}
+        onIotaPathFocusChange={onFocus}
+      />
+    )
+    screen.getByRole('button', { name: /IOTA/i }).click()
+    expect(onFocus).toHaveBeenCalledWith(true)
+    expect(onTransport).not.toHaveBeenCalled()
+    expect(onDelivery).not.toHaveBeenCalled()
   })
 
   it('zeigt keinen Verschlüsselungs-Hinweis bei funk klartext', () => {
@@ -142,11 +165,13 @@ describe('ChatViewSendPathCompact', () => {
         forcedTransport="mesh"
         onForcedTransportChange={noop}
         onComposerDeliveryChange={noop}
+        showAdhocTransport
       />
     )
     expect(screen.getByRole('button', { name: /funk/i })).not.toBeDisabled()
     expect(screen.getByRole('button', { name: /telegram/i })).toBeDisabled()
     expect(screen.getByRole('button', { name: /Ad-hoc/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /IOTA/i })).not.toBeDisabled()
   })
 
   it('markiert Online aktiv bei Verschlüsselung (Hinweise in Transport-Card, § H.1a)', () => {

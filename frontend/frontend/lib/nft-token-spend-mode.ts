@@ -32,15 +32,11 @@ export function writeNftTokenSpendMode(mode: NftTokenSpendMode): void {
   }
 }
 
-/** Hybrid-Label: Fachname + Alltagssprache. */
+/** Kurzlabel für Normalpfad (Fachjargon unter Erweitert/Handbuch). */
 export function nftTokenSpendModeLabel(mode: NftTokenSpendMode): string {
-  return mode === 'bearer'
-    ? 'Bearer (nur NFT reicht) — wer die Karte hat, darf auszahlen'
-    : 'Guarded (NFT + Wallet) — nur du, Karte muss bei dir liegen'
+  return mode === 'bearer' ? 'Karteninhaber' : 'Nur ich (Wallet + NFT)'
 }
 
 export function nftTokenSpendModeOptionLabel(mode: NftTokenSpendMode): string {
-  return mode === 'bearer'
-    ? 'Bearer (nur NFT reicht) — Recht wandert mit der Karte'
-    : 'Guarded (NFT + Wallet) — nur du mit Karte bei dir'
+  return mode === 'bearer' ? 'Karteninhaber' : 'Nur ich (Wallet + NFT)'
 }

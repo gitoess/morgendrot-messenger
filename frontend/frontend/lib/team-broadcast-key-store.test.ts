@@ -34,7 +34,13 @@ describe('team-broadcast-key-store (H.23 B1)', () => {
     expect(() => requireTeamBroadcastKey(MB)).toThrow(TEAM_BROADCAST_KEY_MISSING_MSG)
   })
 
+  it('createTeamBroadcastKey ohne Vault-Session abgelehnt', () => {
+    const r = createTeamBroadcastKey(MB)
+    expect(r.ok).toBe(false)
+  })
+
   it('createTeamBroadcastKey legt einmal an, erneut ohne rotate bleibt gleich', () => {
+    setVaultPasswordSession('vault-pass-99')
     const a = createTeamBroadcastKey(MB)
     expect(a.ok && a.created).toBe(true)
     expect(hasTeamBroadcastKey(MB)).toBe(true)
@@ -44,6 +50,7 @@ describe('team-broadcast-key-store (H.23 B1)', () => {
   })
 
   it('rotate erhöht Epoch', () => {
+    setVaultPasswordSession('vault-pass-99')
     createTeamBroadcastKey(MB)
     const r = createTeamBroadcastKey(MB, { rotate: true })
     expect(r.ok && r.rotated).toBe(true)

@@ -14,6 +14,26 @@ vi.mock('@/frontend/components/chat-view-evidence-image-viewer', () => ({
   NFT_WALLET_MODES: ['owner', 'object', 'mint', 'guthaben', 'zeitkapsel'],
 }))
 
+vi.mock('@/frontend/components/dashboard-nft-secured-balances', () => ({
+  DashboardNftSecuredBalanceAmount: () => <span>0 IOTA</span>,
+  requestNftVaultBalanceRefresh: vi.fn(),
+  countSecuredNftObjects: () => 0,
+}))
+
+vi.mock('@/frontend/lib/nft-vault-discover-onchain', () => ({
+  syncDiscoveredVaultsIntoLocalIndex: vi.fn().mockResolvedValue({ ok: true, guarded: 0, bearer: 0 }),
+}))
+
+vi.mock('@/frontend/components/dashboard-nft-secured-spend-panel', () => ({
+  DashboardNftSecuredSpendPanel: () => (
+    <div>
+      <span>1. NFT / Schlüsselkarte</span>
+      <input placeholder="0x… Empfänger-Adresse" />
+      <button type="button">Jetzt senden</button>
+    </div>
+  ),
+}))
+
 describe('DashboardIotaTransferCard', () => {
   beforeEach(() => {
     vi.mocked(transferCoins).mockReset()
@@ -82,5 +102,24 @@ describe('DashboardIotaTransferCard', () => {
     })
 
     expect(screen.getByText('Gas')).toBeInTheDocument()
+  })
+
+  it('öffnet Aus Guthaben senden inline mit Empfängerfeld', () => {
+    render(<DashboardIotaTransferCard />)
+    fireEvent.click(screen.getByRole('button', { name: /^Aus Guthaben senden$/i }))
+    expect(screen.getByText('1. NFT / Schlüsselkarte')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('0x… Empfänger-Adresse')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Jetzt senden|Zuerst Guthaben anlegen/i })).toBeInTheDocument()
+  })
+
+  it('Aktualisieren refresht auch ohne onRefreshStatus (Purse-Summe)', async () => {
+    const { requestNftVaultBalanceRefresh } = await import(
+      '@/frontend/components/dashboard-nft-secured-balances'
+    )
+    render(<DashboardIotaTransferCard />)
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Saldo aktualisieren/i }))
+    })
+    expect(requestNftVaultBalanceRefresh).toHaveBeenCalled()
   })
 })

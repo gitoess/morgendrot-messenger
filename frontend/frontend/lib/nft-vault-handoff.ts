@@ -174,10 +174,24 @@ export function hydrateLocalIndexFromKeycardBoundVault(nftObjectId: string): boo
 
 export function nftVaultTransferHint(kind: 'bearer' | 'guarded' | null): string {
   if (kind === 'bearer') {
-    return 'Bearer: Senderecht wandert mit dem NFT. Empfänger braucht Vault-ID oder Digest (Übergabe-Paket), sonst sieht er den Betrag in der App nicht — on-chain liegt er trotzdem in der Treasury.'
+    return 'Karteninhaber: Beim „NFT senden“ wird der Index mitkopiert — Empfänger: Bundle einfügen (Vaults laden allein reicht oft nicht).'
   }
   if (kind === 'guarded') {
-    return 'Guarded: Coins bleiben bei der ursprünglichen Wallet. NFT-Transfer allein bewegt kein Guthaben — Auszahlen nur, wenn NFT wieder bei dieser Wallet ist.'
+    return 'Nur ich: Coins bleiben bei deiner Wallet. NFT-Versand entfernt nur den lokalen Index; Auszahlen wieder, wenn NFT zurück ist (Vaults laden).'
   }
   return 'Kein gebundenes Guthaben an dieser Karte (oder Index fehlt).'
+}
+
+/** Ein Text für Chat/Mesh: NFT + Vault sichtbar + maschinenlesbare Zeile. */
+export function buildNftVaultTransferBundleText(
+  pack: NftVaultHandoffPack,
+  machineLine?: string
+): string {
+  const kindDe = pack.kind === 'bearer' ? 'Bearer-Treasury' : 'Guarded-Purse'
+  return [
+    `Morgendrot Vault-Übergabe (${kindDe})`,
+    `NFT: ${pack.nftObjectId}`,
+    `Vault: ${pack.vaultObjectId}`,
+    machineLine?.trim() || encodeNftVaultHandoff(pack),
+  ].join('\n')
 }

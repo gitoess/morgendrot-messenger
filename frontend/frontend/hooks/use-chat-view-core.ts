@@ -70,6 +70,9 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     directory,
     refreshContactDirectory,
     isMeshVerifiedForAddress,
+    forcedTransport: composer.forcedTransport,
+    composerDelivery: composer.composerDelivery,
+    iotaPathFocus: composer.iotaPathFocus,
   })
 
   const send = useChatViewSendOrchestration({

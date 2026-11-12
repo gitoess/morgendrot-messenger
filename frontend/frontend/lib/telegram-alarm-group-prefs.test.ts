@@ -1,8 +1,11 @@
 import { describe, expect, it, beforeEach } from 'vitest'
 import {
   confirmTelegramAlarmGroupJoined,
+  readAppliedTelegramGroupTgSeq,
   readTelegramAlarmGroupMembership,
   saveTelegramAlarmGroupMembershipChatId,
+  saveTelegramAlarmGroupPending,
+  shouldShowTelegramAlarmGroupInvite,
 } from '@/frontend/lib/telegram-alarm-group-prefs'
 
 describe('telegram-alarm-group chat id', () => {
@@ -20,5 +23,21 @@ describe('telegram-alarm-group chat id', () => {
   it('lehnt leere ID ab', () => {
     confirmTelegramAlarmGroupJoined({ inviteLink: 'https://t.me/+abc' })
     expect(saveTelegramAlarmGroupMembershipChatId('').ok).toBe(false)
+  })
+
+  it('Beitritt markiert pending tgSeq applied und versteckt Invite', () => {
+    saveTelegramAlarmGroupPending({
+      inviteLink: 'https://t.me/+abc',
+      label: 'Einsatz',
+      tgSeq: 3,
+    })
+    expect(shouldShowTelegramAlarmGroupInvite({ tgSeq: 3, inviteLink: 'https://t.me/+abc' })).toBe(
+      true
+    )
+    confirmTelegramAlarmGroupJoined({ inviteLink: 'https://t.me/+abc', label: 'Einsatz' })
+    expect(readAppliedTelegramGroupTgSeq()).toBe(3)
+    expect(shouldShowTelegramAlarmGroupInvite({ tgSeq: 3, inviteLink: 'https://t.me/+abc' })).toBe(
+      false
+    )
   })
 })

@@ -81,6 +81,8 @@ export function buildChatViewCoreMessengerPorts(
       isPrivate: composer.isPrivate,
       composerMailboxObjectId: composer.composerMailboxObjectId,
       setComposerMailboxObjectId: composer.setComposerMailboxObjectId,
+      iotaPathFocus: composer.iotaPathFocus,
+      setIotaPathFocus: composer.setIotaPathFocus,
     },
     transport: {
       encrypted: composer.encrypted,

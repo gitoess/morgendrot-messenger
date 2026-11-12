@@ -17,6 +17,25 @@ export function mistToIotaDecimal(mist: bigint): string {
   return neg ? `-${body}` : body
 }
 
+/**
+ * Wallet-UI wie Frei (`formatWalletNativeIotaForStatusUi`): de-DE, bis 6 Nachkommastellen.
+ * Purse-Summe: `minimumFractionDigits: 6` → z. B. `0,700000`.
+ */
+export function formatMistAsWalletUiIota(
+  mist: bigint,
+  opts?: { minimumFractionDigits?: number; maximumFractionDigits?: number }
+): string {
+  const min = opts?.minimumFractionDigits ?? 0
+  const max = opts?.maximumFractionDigits ?? 6
+  const asNum = Number(mist)
+  if (!Number.isFinite(asNum) || asNum < 0) {
+    return min > 0 ? (0).toLocaleString('de-DE', { minimumFractionDigits: min, maximumFractionDigits: max }) : '0'
+  }
+  const iota = asNum / 1_000_000_000
+  if (iota === 0 && min === 0) return '0'
+  return iota.toLocaleString('de-DE', { minimumFractionDigits: min, maximumFractionDigits: max })
+}
+
 /** Extrahiert Balance-Wert (MIST) aus Move-Object-Content (Purse/Treasury). */
 export function parseMistBalanceFromMoveContent(content: unknown): bigint | null {
   if (!content || typeof content !== 'object') return null
@@ -75,7 +94,15 @@ export async function fetchNftVaultBalance(objectIdRaw: string): Promise<NftVaul
     if (mist == null) {
       return { ok: false, error: 'Kein Balance-Feld am Objekt (falsche ID?).', objectId }
     }
-    return { ok: true, mist, iotaLabel: mistToIotaDecimal(mist), objectId }
+    return {
+      ok: true,
+      mist,
+      iotaLabel: formatMistAsWalletUiIota(mist, {
+        minimumFractionDigits: 6,
+        maximumFractionDigits: 6,
+      }),
+      objectId,
+    }
   } catch (e) {
     return {
       ok: false,
@@ -93,7 +120,11 @@ export function formatLocalMistHintAsIota(hint: string | undefined | null): stri
   const m = t.match(/^[+\-]?(\d+)/)
   if (!m) return null
   try {
-    return `~${mistToIotaDecimal(BigInt(m[1]!))} IOTA (lokal)`
+    const label = formatMistAsWalletUiIota(BigInt(m[1]!), {
+      minimumFractionDigits: 6,
+      maximumFractionDigits: 6,
+    })
+    return `~${label} IOTA (lokal)`
   } catch {
     return null
   }

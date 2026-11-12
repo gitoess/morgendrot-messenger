@@ -53,7 +53,9 @@ export function useChatViewComposerTransportState(p: UseChatViewComposerTranspor
   const [showSetup, setShowSetup] = useState(false)
   const [encrypted, setEncryptedInternal] = useState(true)
   const [forcedTransport, setForcedTransportInternal] = useState<ForcedTransport>('internet')
-  const [composerDelivery, setComposerDelivery] = useState<ComposerDeliveryChannel>('chain')
+  const [composerDelivery, setComposerDeliveryInternal] = useState<ComposerDeliveryChannel>('chain')
+  /** Sendepfad „IOTA“ — Posteingang/Sidebar nur Chain (nicht Online=alles). */
+  const [iotaPathFocus, setIotaPathFocusState] = useState(false)
   const [meshtasticChannelIndex, setMeshtasticChannelIndexState] = useState<number | undefined>(() => {
     if (typeof window === 'undefined') return undefined
     try {
@@ -82,8 +84,22 @@ export function useChatViewComposerTransportState(p: UseChatViewComposerTranspor
     setMeshtasticChannelIndexState((prev) => (prev == null ? groupChannelIndex : prev))
   }, [isGroup, activeGroup])
 
+  const setComposerDelivery = useCallback((d: ComposerDeliveryChannel) => {
+    setComposerDeliveryInternal(d)
+    if (d === 'telegram') setIotaPathFocusState(false)
+  }, [])
+
+  const setIotaPathFocus = useCallback((focus: boolean) => {
+    setIotaPathFocusState(focus)
+    if (focus) {
+      setComposerDeliveryInternal('chain')
+      setForcedTransportInternal('internet')
+    }
+  }, [])
+
   const setForcedTransport = useCallback((t: ForcedTransport) => {
-    setComposerDelivery('chain')
+    setComposerDeliveryInternal('chain')
+    setIotaPathFocusState(false)
     if (t === 'mesh') setEncryptedInternal(false)
     setForcedTransportInternal(t)
   }, [])
@@ -104,8 +120,11 @@ export function useChatViewComposerTransportState(p: UseChatViewComposerTranspor
 
   useEffect(() => {
     const r = reconcileChannelSendPath(channelMode, composerDelivery, forcedTransport)
-    if (r.composerDelivery !== composerDelivery) setComposerDelivery(r.composerDelivery)
-    if (r.forcedTransport !== forcedTransport) setForcedTransportInternal(r.forcedTransport)
+    if (r.composerDelivery !== composerDelivery) setComposerDeliveryInternal(r.composerDelivery)
+    if (r.forcedTransport !== forcedTransport) {
+      setForcedTransportInternal(r.forcedTransport)
+      setIotaPathFocusState(false)
+    }
   }, [channelMode, composerDelivery, forcedTransport])
 
   useEffect(() => {
@@ -115,6 +134,7 @@ export function useChatViewComposerTransportState(p: UseChatViewComposerTranspor
   useEffect(() => {
     if (composerDelivery !== 'telegram') return
     setShowSetup(false)
+    setIotaPathFocusState(false)
     if (forcedTransport === 'mesh' || forcedTransport === 'adhoc') {
       setForcedTransportInternal('internet')
     }
@@ -232,6 +252,8 @@ export function useChatViewComposerTransportState(p: UseChatViewComposerTranspor
     setForcedTransport,
     composerDelivery,
     setComposerDelivery,
+    iotaPathFocus,
+    setIotaPathFocus,
     meshtasticChannelIndex,
     setMeshtasticChannelIndex,
     messagingPersistenceMode,

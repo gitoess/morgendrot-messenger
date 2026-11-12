@@ -30,4 +30,19 @@ describe('messageMatchesInboxSourceFilter', () => {
     expect(messageMatchesInboxSourceFilter(row, 'group')).toBe(true)
     expect(messageMatchesInboxSourceFilter(row, 'mailbox')).toBe(false)
   })
+
+  it('iota: Chain inkl. Gruppe, ohne Telegram/Funk', () => {
+    const mb = m({ source: 'mailbox', transports: ['internet'], chainPurgeable: true })
+    const group = m({
+      chainPurgeKind: 'team-broadcast',
+      recipient: '0xteam',
+      transports: ['internet'],
+    })
+    const tg = m({ source: 'telegram', transports: ['telegram'] })
+    const funk = m({ source: 'mesh', transports: ['mesh'] })
+    expect(messageMatchesInboxSourceFilter(mb, 'iota')).toBe(true)
+    expect(messageMatchesInboxSourceFilter(group, 'iota')).toBe(true)
+    expect(messageMatchesInboxSourceFilter(tg, 'iota')).toBe(false)
+    expect(messageMatchesInboxSourceFilter(funk, 'iota')).toBe(false)
+  })
 })

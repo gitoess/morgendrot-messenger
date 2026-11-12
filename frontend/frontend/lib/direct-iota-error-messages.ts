@@ -83,6 +83,19 @@ export function formatDirectIotaSubmitError(reason: unknown): string {
       'Posteingang aktualisieren; ggf. verschlüsselte Variante bzw. andere Mailbox.'
     )
   }
+  if (
+    lower.includes('e_bad_borrower') ||
+    ((lower.includes('nft_time_lease') || lower.includes('create_lease')) &&
+      (lower.includes('abort code: 6') || lower.includes('abort_code: 6')))
+  ) {
+    return 'Leihe an die eigene Adresse geht nicht (Abort 6) — Borrower muss eine andere Wallet sein.'
+  }
+  if (
+    (lower.includes('is not available') && lower.includes('version')) ||
+    lower.includes('version mismatch')
+  ) {
+    return 'Objekt-Version veraltet (oft direkt nach Spend) — kurz warten und erneut versuchen.'
+  }
   if (lower.includes('locked') && lower.includes('object')) {
     return 'Objekt auf der Kette gesperrt — Mailbox-Version/Deploy prüfen.'
   }

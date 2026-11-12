@@ -89,6 +89,11 @@ export type UseChatViewInboxLocalUiParams = InboxFeedReadPort & {
   inboxOverviewEnabled?: boolean
   excludePinnwandFromOverviewAlle?: boolean
   apiStatus?: ApiStatus | null
+  /**
+   * Hart vom Sendepfad (Online/Funk/IOTA/Telegram) — immer aktiv, unabhängig von Kanal-Filter-Chips
+   * und Capability-Resets der Chip-Quelle.
+   */
+  sendPathInboxSourceFilter?: InboxSourceFilter
 }
 
 export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
@@ -106,6 +111,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     inboxOverviewEnabled = false,
     excludePinnwandFromOverviewAlle = false,
     apiStatus = null,
+    sendPathInboxSourceFilter = 'all',
   } = p
 
   const [inboxChannelFiltersArmed, setInboxChannelFiltersArmedState] = useState(false)
@@ -387,6 +393,12 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
 
   const partnerFilteredMessages = useMemo(() => {
     let rows = displayMessages
+    /** Sendepfad zuerst — Chip-Filter können nicht „alles“ wiederherstellen. */
+    if (sendPathInboxSourceFilter !== 'all') {
+      rows = rows.filter((m) =>
+        messageMatchesInboxSourceFilter(m, sendPathInboxSourceFilter, sourceFilterCtx)
+      )
+    }
     if (inboxPartnerFiltersArmed) {
       if (inboxConversationGroupId) {
         const group = readMessengerGroups().find((g) => g.id === inboxConversationGroupId)
@@ -429,6 +441,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     inboxConversationGroupId,
     sourceFilterCtx,
     contactDirectory,
+    sendPathInboxSourceFilter,
   ])
 
   const wireFilteredMessages = useMemo(() => {
@@ -835,7 +848,9 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     if (inboxChannelFiltersArmed && inboxDirectionFilter !== 'all') {
       reasons.push(`Kanal „${inboxDirectionFilter === 'in' ? 'Eingang' : 'Ausgang'}“`)
     }
-    if (inboxChannelFiltersArmed && inboxSourceFilter !== 'all') {
+    if (sendPathInboxSourceFilter !== 'all') {
+      reasons.push(`Sendepfad „${sendPathInboxSourceFilter}“`)
+    } else if (inboxChannelFiltersArmed && inboxSourceFilter !== 'all') {
       reasons.push(`Quelle „${inboxSourceFilter}“`)
     }
     if (inboxWireFilter === 'encrypted') reasons.push('Inhalt „Verschlüsselt“')
@@ -867,10 +882,13 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     inboxSourceFilter,
     inboxWireFilter,
     inboxWireFiltersArmed,
+    sendPathInboxSourceFilter,
   ])
 
   /** Transport/Partner blockieren Mailbox — zurücksetzen (nicht bei bewusstem Inhalt-Filter Klartext/Verschlüsselt). */
   useEffect(() => {
+    /** Sendepfad-Filter: leerer Posteingang (z. B. Funk ohne Mesh) ist erwartet — nicht zurücksetzen. */
+    if (sendPathInboxSourceFilter !== 'all') return
     if (inboxPartnerFiltersArmed && inboxPartnerKey?.trim()) return
     if (messages.length === 0) return
     if (displayMessages.length === 0) return
@@ -902,6 +920,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     filteredDisplayMessages,
     hiddenInboxIds.size,
     inboxPartnerKey,
+    sendPathInboxSourceFilter,
     inboxChannelFiltersArmed,
     inboxPartnerFiltersArmed,
     inboxDirectionFilter,

@@ -17,9 +17,19 @@ import {
   suggestPassphraseForPastedWire,
 } from '@/frontend/lib/wire-paste-import'
 
+export type ChatViewWirePasteImportDialogProps = {
+  /** Controlled open (z. B. aus Optionen-Menü). */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  /** Kein eigener Trigger-Button — Dialog nur programmatisch. */
+  hideTrigger?: boolean
+}
+
 /** Posteingang: Wire aus Zwischenablage einfügen und lokal entschlüsseln (PWMSG). */
-export function ChatViewWirePasteImportDialog() {
-  const [open, setOpen] = useState(false)
+export function ChatViewWirePasteImportDialog(p: ChatViewWirePasteImportDialogProps = {}) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const open = p.open ?? uncontrolledOpen
+  const setOpen = p.onOpenChange ?? setUncontrolledOpen
   const [wire, setWire] = useState('')
   const [pass, setPass] = useState('')
   const [plain, setPlain] = useState<string | null>(null)
@@ -64,16 +74,18 @@ export function ChatViewWirePasteImportDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <button
-          type="button"
-          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
-          title="Kopiertes Wire (MORG_PWMSG) einfügen und mit Passphrase lokal lesen."
-        >
-          <ClipboardPaste className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-          Wire einfügen
-        </button>
-      </DialogTrigger>
+      {p.hideTrigger ? null : (
+        <DialogTrigger asChild>
+          <button
+            type="button"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+            title="Kopiertes Wire (MORG_PWMSG) einfügen und mit Passphrase lokal lesen."
+          >
+            <ClipboardPaste className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+            Wire einfügen
+          </button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Wire einfügen</DialogTitle>

@@ -65,6 +65,16 @@ function normOid(objectId: string): string {
   return objectId.trim().toLowerCase()
 }
 
+/** 0x + Hex, fehlende führende Nullen auf 64 auffüllen (Explorer-Paste). */
+export function normalizeNftObjectIdInput(raw: string): string {
+  let t = raw.trim().toLowerCase().replace(/\s+/g, '')
+  if (!t) return ''
+  if (!t.startsWith('0x')) t = `0x${t}`
+  const hex = t.slice(2)
+  if (!/^[a-f0-9]+$/.test(hex) || hex.length === 0 || hex.length > 64) return t
+  return `0x${hex.padStart(64, '0')}`
+}
+
 function emitChanged(): void {
   if (typeof window === 'undefined') return
   try {
@@ -231,6 +241,12 @@ export function upsertNftKeycardSlot(opts: {
   passphrase: string
   note?: string
 }): { ok: true } | { ok: false; error: string } {
+  if (!hasVaultPasswordSession()) {
+    return {
+      ok: false,
+      error: 'Tresor entsperren — Schlüsselkarte wird nur im Vault gespeichert.',
+    }
+  }
   const oid = normOid(opts.objectId)
   if (!/^0x[a-f0-9]{64}$/.test(oid)) return { ok: false, error: 'Ungültige Object-ID.' }
   const pass = opts.passphrase.trim()
@@ -295,6 +311,22 @@ export function bindVaultToNftKeycard(opts: {
   return { ok: true }
 }
 
+/** Nach destroy_empty: boundVault entfernen, wenn es auf dieses Vault zeigt. */
+export function clearBoundVaultFromNftKeycardIfMatches(opts: {
+  objectId: string
+  vaultObjectId: string
+}): void {
+  const oid = normOid(opts.objectId)
+  const vid = normOid(opts.vaultObjectId)
+  const card = memoryCards[oid]
+  if (!card?.boundVault) return
+  if (normOid(card.boundVault.vaultObjectId) !== vid) return
+  const { boundVault: _drop, ...rest } = card
+  memoryCards[oid] = rest
+  schedulePersist()
+  emitChanged()
+}
+
 export function removeNftKeycardSlot(opts: {
   objectId: string
   slotId: string
@@ -352,16 +384,31 @@ export function bindObjectToNftKeycard(opts: {
   boundObjectId: string
   slotId?: string
 }): { ok: true } | { ok: false; error: string } {
-  const cardOid = normOid(opts.cardObjectId)
-  const boundOid = normOid(opts.boundObjectId)
-  const card = memoryCards[cardOid]
+  const cardOid = normalizeNftObjectIdInput(opts.cardObjectId)
+  const boundOid = normalizeNftObjectIdInput(opts.boundObjectId)
+  const card = memoryCards[cardOid] || memoryCards[normOid(opts.cardObjectId)]
   if (!card) return { ok: false, error: 'Keine Schlüsselkarte für diese Object-ID.' }
-  if (!/^0x[a-f0-9]{64}$/.test(boundOid)) return { ok: false, error: 'Ungültige gebundene Object-ID.' }
+  if (!/^0x[a-f0-9]{64}$/.test(boundOid)) {
+    return {
+      ok: false,
+      error: 'Ungültige gebundene Object-ID (erwartet 0x + 64 Hex, ggf. aus Galerie wählen).',
+    }
+  }
   const slotId = normalizeNftKeycardSlotId(opts.slotId)
-  if (!card.slots.some((s) => s.id === slotId)) return { ok: false, error: 'Slot fehlt auf der Karte.' }
-  memoryCards[cardOid] = {
+  const slotOk =
+    card.slots.some((s) => s.id === slotId) ||
+    card.slots.some((s) => s.id === 'default') ||
+    card.slots.length > 0
+  if (!slotOk) return { ok: false, error: 'Slot fehlt auf der Karte.' }
+  const resolvedSlot = card.slots.some((s) => s.id === slotId)
+    ? slotId
+    : card.slots.some((s) => s.id === 'default')
+      ? 'default'
+      : card.slots[0]!.id
+  const storeOid = memoryCards[cardOid] ? cardOid : normOid(opts.cardObjectId)
+  memoryCards[storeOid] = {
     ...card,
-    boundObjects: { ...(card.boundObjects || {}), [boundOid]: slotId },
+    boundObjects: { ...(card.boundObjects || {}), [boundOid]: resolvedSlot },
   }
   schedulePersist()
   emitChanged()

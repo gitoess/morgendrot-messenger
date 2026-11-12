@@ -25,10 +25,8 @@ import { SettingsView } from './views/settings-view'
 import { ConfigView } from './views/config-view'
 import { WorkerActionCenterView } from './views/worker-action-center-view'
 import { DeviceRadarView } from './views/device-radar-view'
-import { DashboardPwaInstallCard } from '@/frontend/components/dashboard-pwa-install-card'
 import { DashboardSharedDialogs } from '@/frontend/components/dashboard-shared-dialogs'
 import { WorkspaceProjectsPanel } from './workspace-projects-panel'
-import { shouldShowDashboardPwaInstallCard } from '@/frontend/lib/should-show-pwa-install'
 import { DashboardIotaTransferCard } from '@/frontend/components/dashboard-iota-transfer-card'
 import { DashboardMyAddressPicker } from '@/frontend/components/dashboard-my-address-picker'
 import { MeshStatus } from './mesh-status'
@@ -320,13 +318,7 @@ export function ProjektDashboard() {
           onOpenHandoffImport={s.openSettingsView}
         />
         {!s.locked ? (
-          <div
-            className={cn(
-              'mb-6 grid gap-4',
-              shouldShowDashboardPwaInstallCard() ? 'sm:grid-cols-2' : 'grid-cols-1'
-            )}
-          >
-            {shouldShowDashboardPwaInstallCard() ? <DashboardPwaInstallCard /> : null}
+          <div className="mb-6 grid gap-4 grid-cols-1">
             <DashboardIotaTransferCard
               walletNativeIotaBalance={s.apiSnapshot?.walletNativeIotaBalance ?? undefined}
               walletNativeIotaBalanceFetchFailed={s.apiSnapshot?.walletNativeIotaBalanceFetchFailed}
