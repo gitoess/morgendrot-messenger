@@ -2,33 +2,39 @@
 
 Kurzreferenz: **was** welcher Schalter löscht und **was nicht**.
 
-## UI (Messenger-Frontend) – drei Umfänge
+## UI (Einstellungen → Sicherheit → Notfall-Löschung)
 
-| Option | Chain | Lokale Datei `.morgendrot-vault` (oder `VAULT_FILE`) | Inbox-Klartext-Cache (`.inbox.enc` neben dem Vault) | RAM (Keys / Passwort) |
-|--------|--------|------------------------------------------------------|------------------------------------------------------|-------------------------|
-| **Vollständig** (`emergencyPurge` / `/emergency-purge`) | Ja: Vault-Objekt im Registry wird per PTB entfernt (`enable` + `purge`). | **Bleibt** – wird nicht gelöscht; Inhalt ist weiter verschlüsselt. On-Chain-Backup ist danach weg. | Ja, **geschreddert** (überschreiben + löschen). | Wallet/Session wie nach Neustart ohne Unlock |
-| **Nur lokale Klartext-Spuren** (`clearLocalHistory` mit shred) | Nein | Unverändert | Ja, geschreddert | Unverändert (wenn Tresor offen) |
-| **Nur Sitzung / Tresor sperren** (`/vault-lock`) | Nein | Unverändert | Ja, geschreddert | Keys und Wallet-Passwort aus RAM entfernt |
+| Option | Chain-Tresor | Lokale Datei `.morgendrot-vault` | Inbox-Cache | Browser-Geheimnisse | Telegram Runtime/Journal | RAM |
+|--------|--------------|-----------------------------------|-------------|---------------------|--------------------------|-----|
+| **Nur Nachrichten lokal** | Nein | Bleibt | Ja (Server + Browser) | Nein | Nein | Inbox-RAM |
+| **Nur Browser-Geheimnisse** | Nein | Bleibt | Nein | Ja | Nein | Session-PW |
+| **Telegram lokal löschen** | Nein | Bleibt | Nein | Nein | Ja (Runtime + Journal + Prefs) | — |
+| **Gerät lokal aufräumen** | Nein | Bleibt | Ja + Einsatz-Spuren | Ja | Nein (bewusst getrennt) | wie Einsatz-Ende |
+| **Tresor on-chain löschen** | Ja | **Bleibt** | Ja | Ja | Nein | — |
+| **Lokale Tresor-Datei löschen** | Nein | Ja (nur mit Chain-Backup) | Nein | Nein | Nein | — |
 
-**Wichtig:** Eine vollständige „alles weg vom Datenträger“-Löschung der Vault-Datei passiert **nicht** automatisch. Nach Notfall-Purge die Datei bei Bedarf **manuell** löschen (und ggf. weitere Artefakte: `.morgendrot-partner`, Logs, …).
+**Sperren (kein Tresor-Datei-Löschen):**
 
-## Voraussetzungen (Voll-Purge)
+| Aktion | Inbox-Cache `.inbox.enc` | Keys/RAM | Chat-UI |
+|--------|--------------------------|----------|---------|
+| Badge im Chat (weich) | bleibt | Browser-Signer/Passphrasen weg | bleibt offen |
+| **Sitzung beenden** (Sicherheit / Abmelden) = `/vault-lock` | **geschreddert** (Privacy: Klartext-Cache weg) | Server-Keys weg | Entsperr-Dialog |
 
-- `ENABLE_PURGE=true`
-- `VAULT_REGISTRY_ID` gesetzt
-- Wallet kann signieren (Gas)
-- Implementierung: `src/messenger-nest/messenger-command-handler.ts` (`/emergency-purge`)
+`.inbox.enc` = lokaler Schnellcache entschlüsselter Nachrichten neben dem Tresor — **nicht** die Tresor-Datei und nicht die Chain. Nach Entsperren + Laden wieder da.
 
-## Verwandte Befehle (nicht identisch)
+**Nur Medien:** kein eigener Scope — in Nachrichten bzw. NFT (brennen).
 
-- **`/purge-key`**, **`/purge-ticket`**, **`/purge-handshake`**, **`/purge-msg`**: gezielte Chain-/Mailbox-Löschungen – anderer Zweck als Vault-Notfall-Purge.
-- **`POST /api/clear-local-history`**: wie „nur lokaler Cache“ oben.
+**.env:** Telegram-Bot-Token nur in `.env` wird durch „Telegram lokal“ **nicht** gelöscht — Runtime-Config und Journal schon.
 
-## Aufräum-Status (Projekt)
+## Geplant: Komplett-alles-löschen (Roadmap T56)
 
+Ein Wizard „soweit möglich alles“: Gerät + Chain-Tresor + Vault-Datei + Telegram + optional NFT/Keys brennen. **Nicht** gebaut — Absicht: Checklisten-Dialog mit ehrlichen Grenzen (fremde Chain-Kopien, Telegram-Server, .env).
 
-**Verwandt (operativ, nicht Purge-Technik):** **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`** — wen man im Ernstfall erreicht, Brücken zur professionellen Hilfe.
+## Voraussetzungen (On-Chain-Purge)
+
+- `ENABLE_PURGE=true`, `VAULT_REGISTRY_ID`, Gas
+- `src/messenger-nest/messenger-command-handler.ts` (`/emergency-purge`)
 
 ---
 
-*Technische Quelle: `purgeInboxCache` / `inboxCachePath` in `src/vault-local.ts`, Emergency-Purge in `messenger-command-handler.ts`.*
+*Stand: 2026-11-12 — Telegram-Wipe + ehrliche Scopes.*

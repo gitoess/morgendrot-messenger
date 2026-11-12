@@ -62,6 +62,34 @@ Pro Netz: Package + Postfach. Unter „Globals“: Vault-Registry / Command-Regi
 | Meine Mailboxen | Privat/Team-Postfächer ≠ Deploy-Mailbox unter „Wo senden?“ | bleibt IOTA |
 | Schatten → Main | Einmal-Sweep temporäre Adresse → Main | → Sicherheit (T9) |
 
+### Meine Mailboxen (T3 — genau)
+
+**Pfad:** Einstellungen → **IOTA** → **Meine Mailboxen** (Tresor offen, Backend/RPC erreichbar).
+
+| Was | Bedeutung |
+|-----|-----------|
+| **Deploy- / Server-Mailbox** | Die feste `MAILBOX_ID` aus Setup — erscheint oft unter Composer **„Wo senden?“**. Nicht dasselbe wie deine privaten Postfächer hier. |
+| **Privat** | Dein persönliches On-Chain-Postfach. Anlegen → in der Liste erscheint z. B. `Private #1`. **Aktiv** setzen = Sync/Lesen läuft darüber. |
+| **Team** | Boss/Kommandant: gemeinsames Team-Postfach. Mitglieder kommen über Telefonbuch/Rollen, nicht über „eine Chat-ID tippen“. |
+
+**Ablauf Privat (Smoke):**
+
+1. Tresor entsperren.  
+2. IOTA → Meine Mailboxen öffnen.  
+3. Private Mailbox **anlegen** (oder vorhandene wählen).  
+4. Diese Mailbox **aktiv** setzen.  
+5. Im Chat Composer prüfen: Ziel unter „Wo senden?“ / Persistenz — klar, welches Postfach gemeint ist.  
+6. Testnachricht (Klartext oder Schloss) senden → Posteingang **Aktualisieren** → Eintrag sichtbar.  
+7. Optional zweite Private `#2` anlegen: nur eine kann aktiv sein — Wechsel bewusst testen.
+
+**Ablauf Team (wenn Rolle Boss):**
+
+1. Team-Postfach anlegen oder ID aus Deploy übernehmen.  
+2. Aktiv setzen; Sync-Status / Fehlerhinweise lesen.  
+3. Mitglied mit Telefonbuch-Eintrag; Team-Broadcast vs. 1:1 unterscheiden (Handbuch Messenger-Tabelle).
+
+**Nicht verwechseln:** „Wo senden?“ = Ziel für *diese* Nachricht. Meine Mailboxen = welche Postfächer du *besitzt/liest*. Aufräumen/Purge löscht On-Chain-Inhalt — nur bewusst.
+
 **Helfer ohne Netz-Schalter:** noch „System & Identität“ (Adresse/Package) — Boss nicht mehr.
 
 ---
@@ -88,9 +116,7 @@ Schritt: `TELEGRAM-INTEGRATION-EINRICHTUNG.md` (Schritte Bot/Gruppe). Zielbild/A
 
 ## Sicherheit (Ist)
 
-Nur **Notfall-Löschung** (Scopes: Chain-Vault / lokaler Cache / Sitzung sperren / lokale Geheimnisse).
-
-**Fehlt hier noch (geplant):** Passwort ändern, Backup, Schatten — heute unter IOTA. Privacy Soft-Lock steuert man im Chat-Kopf (Badge), nicht in diesem Tab.
+**Notfall-Löschung** (Scopes: Chain-Vault / lokaler Cache / Sitzung sperren / lokale Geheimnisse), **Passwort ändern**, **Backup**, **Schatten → Main**, **Tresor-Landkarte** (Stand 2026-11-12, T8/T9/T37). Soft-Lock = Chat-Kopf (Badge), kein volles Vault-Shred.
 
 ---
 
@@ -105,10 +131,10 @@ Kurz: Puls/Geräte-Embed. Entscheidung offizielle Meshtastic-App vs. eigene UI =
 | Bereich | Status |
 |---------|--------|
 | IOTA Boss-Netz + Gas + IDs | ausreichend für Alltag |
-| IOTA Passwort/Backup/Schatten | da, aber falscher Tab → umziehen |
+| IOTA Passwort/Backup/Schatten | → **Sicherheit** (T8/T9 erledigt); IOTA nur Hinweis |
 | Telegram Bot + 1:1 + Gruppe | ausreichend |
 | Telegram Journal/Webhook-URL-UI | fehlt / selten nötig |
-| Sicherheit | nur Purge — zu dünn bis T8/T9 |
+| Sicherheit | Purge + PW/Backup/Schatten/Landkarte |
 | Secrets-Landkarte als eigene UI | fehlt (Roadmap T11) |
 
 **Radikal kürzen / aufräumen** der Settings + Handbuch: Roadmap **T12** (am Schluss des Durchgangs oder früher, wenn blockierend).

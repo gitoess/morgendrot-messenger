@@ -236,7 +236,7 @@ Weiter: **`docs/HANDSHAKE-PERSISTENZ-UND-H23.md`**, Abschnitt **Handshake Vertra
 
 Doku: `docs/SENDEWEGE-KANAL-MAILBOX-UEBERSICHT.md`, `docs/TEAM-MAILBOXES.md`, `docs/MAILBOX-BEGRIFFE-UND-NUTZUNG.md`, `docs/DEPLOY-MOVE-M2c-TEAM-BROADCAST.md`.
 
-**Burn: von Chain löschen:** Posteingang → Zeile **⋯** → **Burn: von Chain löschen** — nur bei Mailbox-Zeilen (Badge **Mailbox** oder **Team-Broadcast**). Entfernt den Dynamic-Field-Eintrag on-chain und gibt Storage-Gas zurück (Rebate).
+**Auf Chain löschen (Rebate):** Posteingang → Zeile **⋯** → **Auf Chain löschen (Rebate)** — nur bei Mailbox-Zeilen (Badge **Mailbox** oder **Team-Broadcast**). Entfernt den Dynamic-Field-Eintrag on-chain und gibt Storage-Gas zurück.
 
 | Art | Wer darf purgen? | Hinweis |
 |-----|------------------|---------|
@@ -266,16 +266,6 @@ Ganzes Private-Mailbox-Object: **Einstellungen → Meine Mailboxen** → Aufräu
 | **Export** | Nachrichten-Forensik (JSON/TXT/ZIP) über Posteingang-Menü. |
 
 **Offline-Warteschlange:** Bei fehlender Basis werden Sends lokal gequeued; Status-Streifen im Chat.
-
-### Telegram im Posteingang
-
-| Frage | Antwort (Ist) |
-|-------|----------------|
-| **Export Nachrichtenverlauf** | Optionen → Dialog (kein Untermenü). Enthält Telegram-Journal + Funk. Leer? Aktualisieren; Bot + Chat-ID. |
-| **Auf IOTA speichern/verifizieren?** | **Nicht automatisch.** Telegram = Hinweis/Push. Beweis = Online-Pfad → Hash-Tool → optional **Auf Chain verankern**. |
-| **Nur eine Seite Morgendrot?** | Ja für Senden/Empfangen über Bot. Partner sieht nur Telegram-App — keine IOTA-Forensik dort. |
-| **Löschen wie Telegram-App?** | **Nein** — kein `deleteMessage` an Telegram; lokal ausblenden nur in Morgendrot. |
-| **Snapshot hashen** | Einstellungen → Sicherheit → **Hash & Prüfen**; Journal-JSON exportieren und hashen. Chain-Anker = T39. |
 
 ---
 
@@ -441,16 +431,9 @@ Alle Mitglieder sehen Nachrichten der Gruppe im gefilterten Posteingang (1:1-Dia
 
 **Verschlüsselung umschalten:** Im Sheet **Gruppe verwalten** oder im **Konversations-Menü** (⋮, Verschl./Klar). Wechsel zu Unverschlüsselt bei aktivem Schloss: Warnhinweis (Klartext on-chain).
 
-### Handshake in der Gruppe (verständlich)
+### Handshake in der Gruppe
 
-Im Sheet **Gruppe verwalten** zwei Modi:
-
-| UI-Label | Bedeutung | Handshake? |
-|----------|-----------|------------|
-| **Gemeinsames Postfach** | 1× Team-Broadcast in Team-Mailbox; gemeinsames Geheimnis per Handoff | **Nein** — Kanal einrichten reicht |
-| **1:1 je Person** | Wie Direktchat: Session-Schlüssel **einzeln** mit jedem Mitglied | **Ja** — Liste „Handshake je Person“ (Senden / Annehmen) |
-
-Peering-QR wie bei 1:1 (Sidebar **Ich** oder Handshake-Leiste). **„1:1 je Person“** ist teurer und nur nötig, wenn ihr kein gemeinsames Team-Postfach nutzen wollt/könnt.
+Im Sheet **Gruppe verwalten** unter **Verschlüsselt:** Liste **Handshake pro Mitglied** (Senden / Annehmen). Peering-QR wie bei 1:1 (Sidebar **Ich** oder Handshake-Leiste).
 
 ### Was Gruppenchat **nicht** ist
 
@@ -519,102 +502,18 @@ Bei mehreren Package-IDs in `.env` und **package-id-history** liest der Posteing
 
 ---
 
-## .morg-pkg (Datei-Paket / Archiv)
+## .morg-pkg (Paket-Archiv)
 
-**Posteingang → Optionen → Datei-Paket:** ECDH-verschlüsselte **`.morg-pkg`**-Dateien für Sneakernet / Offline-Übergabe — **nicht** der normale Chat-Posteingang.
+**Posteingang → Pakete:** ECDH-verschlüsselte **`.morg-pkg`**-Dateien für Sneakernet / Offline-Übergabe.
 
 | Aktion | Bedeutung |
 |--------|-----------|
-| **Import: .morg-pkg → Archiv** | Entschlüsselt (Tresor + Handshake zum Absender) → **Paket-Archiv** |
+| **Import: .morg-pkg → Archiv** | Entschlüsselt (Tresor + Handshake zum Absender) → **Paket-Archiv**, nicht Posteingang |
 | **Export: Dateien → .morg-pkg** | Mehrere Dateien zu einem Paket bündeln und herunterladen |
-| **Paket-Archiv** | Sheet mit importierten Bundles |
-| **ECDH .morg-pkg speichern** | Nachrichten-⋮: eine Zeile als Paket |
+| **Paket-Archiv** | Sheet mit importierten Bundles; Einzeldateien öffnen/weiterleiten |
+| **Aus Nachricht exportieren** | Kontextmenü an Mailbox-Zeile (wenn implementiert) |
 
 Voraussetzung Import: **Handshake** zum Absender der Datei (Peer in `peerMap`).
-
----
-
-## Posteingang: Optionen · On-Chain/NFT · Nachrichten-⋮
-
-Drei getrennte Menüs — nicht vermischen:
-
-| Ort | Zweck |
-|-----|--------|
-| **Optionen** (Toolbar) | Wire einfügen · **Hash & Prüfen…** · **Export Nachrichtenverlauf…** · **Datei-Paket (Sneakernet)…** — alles Dialoge. On-Chain/NFT = eigener Button. Experten (Verankern) im Export-Dialog. |
-| **On-Chain / NFT** (Toolbar, nur Online/IOTA) | Bild-NFT: Wire aus geladenem Posteingang, Object-ID laden, Galerie, **Minten**, Schlüsselkarte merken, Guthaben/Zeitkapsel |
-| **Nachrichten-⋮** (pro Zeile) | Wire kopieren, Telefonbuch, Weiterleiten, lokal ausblenden, Burn, .morg-pkg/JSON, Funk-Paket… |
-| **Chat-⋮** (Konversation) | Gruppen-Info, Schlüssel erneuern, Burn-on-read — **nicht** dasselbe wie Nachrichten-⋮ |
-
-**On-Chain/NFT gehört nur teilweise hierher:** Schauen (Wire/Object-ID/Galerie) passt zum Posteingang; Mint/Guthaben/Zeitkapsel sind eher Wallet — gemeinsam testen (Roadmap T32).
-
-### Verschlüsselte Nachricht später lesen
-
-| Wire-Typ | So entsperren |
-|----------|----------------|
-| **Passphrase-Nachricht** (`MORG_PWMSG`) | In der Zeile: Passphrase eingeben → **Entschlüsseln**. Optional: Passphrase im Vault merken oder an **NFT-Schlüsselkarte** binden (nach erfolgreichem Lesen). Später: Auto wenn Key lokal + (bei Bindung) NFT-Besitz. |
-| **NFT-Gate** | In der Zeile: **Mit NFT-Besitz entschlüsseln** (kein Passphrase-Feld). |
-| **ECDH / Handshake-Partner** | Vault entsperrt + Partner verbunden — Server/Client entschlüsselt; **keine** Passphrase-Leiste. |
-
-**Passphrase kopieren / Verbergen / Passphrase anzeigen / Im Vault löschen** erscheinen **nur** bei Passphrase-Nachrichten **nach** erfolgreichem Entschlüsseln (bzw. Verbergen mit lokalem Key). Bei Klartext, ECDH-Mailbox oder NFT-Gate fehlen sie — das ist kein Bug der ⋮-Leiste.
-
-**Wire kopieren:** in der Passphrase-/NFT-UI **und** im Nachrichten-⋮ (Rohinhalt).
-
-**Flow „Nachricht jetzt, NFT später“:** Zeile bleibt gesperrt → Object-ID/Schlüsselkarte unter On-Chain/NFT laden bzw. besitzen → zurück zur Zeile → Entschlüsseln (Passphrase manuell oder Auto über Keycard-Bindung). **Optionen → Wire einfügen:** nur **Passphrase-Wires** (`MORG_PWMSG`) — kein NFT-Gate, kein ECDH.
-
-**T32 Live-Checkliste (Schritt für Schritt):**
-
-1. Sendepfad **Online**.
-2. Posteingang **Optionen** kurz öffnen (Wire / Hash / Export / Datei-Paket) — Dialoge schließen reicht.
-3. Button **On-Chain / NFT** öffnen, Tab **Galerie** oder **Object-ID** — Dialog schließen.
-4. **Passphrase-Nachricht:** Im Posteingang eine Zeile suchen, die nach Passphrase fragt oder `MORG_PWMSG` im Wire hat. Passphrase eingeben → Entschlüsseln. Danach erscheinen Verbergen / Passphrase anzeigen. *Keine solche Zeile?* Composer: Passphrase-Nachricht senden (an dich oder Partner), dann hier zurück.
-5. **NFT-Gate (optional):** Zeile mit Hinweis „NFT-Gate“ / `MORG_NFTGATE` → Entschlüsseln nur mit NFT-Besitz (oder aktiver Leihe). Fehlt Besitz → Fehlertext lesen, nicht Galerie mit Schlüsselkarte verwechseln.
-6. **Wire einfügen:** Optionen → Wire einfügen → nur einen kopierten `MORG_PWMSG_…`-String. NFT-Gate hier nicht.
-
-**Nicht verwechseln:** Toolbar **„Vertrag: 0x…“** = IOTA-Move-Programm (Experten). **Datei-Paket** in Optionen = `.morg-pkg` Sneakernet.
-
----
-
-## Sicherheit: Seed, Passwort, Ordner (SPOF)
-
-**Kurz:** Es gibt **zwei** kritische Geheimnisse — nicht eines.
-
-| Geheimnis | Wofür | Wenn weg |
-|-----------|--------|----------|
-| **Seed / Mnemonic** (Wallet) | Signieren, Adresse, Coins, Chain-Identität | Zugang zu Wallet/Signatur verloren (oder gestohlen = Angreifer steuert) |
-| **Tresor-Passwort** | Entschlüsseln der Vault-Datei (Keys, Notizen, Safe) | Vault-Inhalt **nicht** aus dem Seed allein wiederherstellbar (Ist) |
-
-Der Seed ist also **SPOF für die Wallet-Identität**, das Passwort **SPOF für den Tresor-Inhalt**. Beides **offline** sichern (Papier/Metall/getrenntes Backup) — nicht nur „irgendwo im Projektordner“.
-
-| Speicher | Inhalt | Risiko |
-|----------|--------|--------|
-| `.morgendrot-vault` | Verschlüsselter Tresor | Diebstahl der Datei **ohne** PW = nutzlos; **mit** PW = alles offen |
-| On-Chain-Vault-Backup | Gleicher Blob-Typ | Wie Datei — PW nötig |
-| Browser-Sidecar (`localStorage`) | Passphrasen-Merker, Keycards, Team-Keys | Gerät/Browser-Clear = weg; XSS/Gerätezugriff = Risiko |
-| `.morgendrot-runtime-config.json` / `.env` | Bot-Token, RPC, Package | **Klartext-Ops** — Dateirechte, nicht in Git, nicht in Handoff an Unbekannte |
-| Telegram-Journal | Lokale TG-Zeilen | Kein Chain-Beweis; Gerät sichern |
-| Inbox-Cache / `.inbox.enc` | Nachrichten-Cache | Neben dem Tresor, nicht Ersatz |
-
-**Ordner „sicher“?** Nur so sicher wie Gerät + Passwort + Backups. Kein Cloud-Sync der Vault-Datei ohne eigenes Verschlüsselungskonzept. Handoff-ZIP = vertrauenswürdige Übergabe Boss→Helfer.
-
-**Produkt-Freeze (nicht im Kern-Durchgang):** Abo-NFT als Börsenprodukt, PlanRadar, Zapier-Store, Telegram-Vollforensik ohne Einwilligung — siehe Roadmap T45–T53 / T51–T52.
-
-Einstellungen → **Sicherheit**: Tresor-Landkarte (Kurz) + Notfall-Löschung. Hash & Prüfen: Posteingang → Optionen. Ausführlicher: `VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md`.
-
----
-
-## Tresor-Landkarte {#tresor-landkarte}
-
-**Wozu:** Wissen, **wo** Geheimnisse liegen — bevor du Notfall-Löschung nutzt oder Backup machst. In der App: Einstellungen → **Sicherheit** (Kurzkarte + Link hierher).
-
-| # | Ort | Was | Wo in der UI |
-|---|-----|-----|--------------|
-| 1 | **Tresor-Datei** (`.morgendrot-vault`) | Keys, Notizen, Passwörter | Einstellungen → **Sicherheit** → Tresor |
-| 2 | **Tresor on-chain** | Derselbe Blob als Backup | Sicherheit → Auf Chain sichern / laden |
-| 3 | **Notizen & Passwörter** | Anzeige der Vault-Inhalte | Posteingang → **Notizen** |
-| 4 | **Nur-Browser** (früher „Sidecar“) | Encrypted Merker (Passphrasen, NFT-Liste, Team-Keys) | kein Menü — löschen: Sicherheit → Notfall → Browser-Geheimnisse |
-| 5 | **NFT / Schlüsselkarte** | Objekt on-chain + Merkliste im Browser | Posteingang → **On-Chain / NFT** |
-
-**Chat-Nachrichten** liegen **nicht** in der Tresor-Datei (Posteingang / `.inbox.enc` / Chain-Mailbox). Details Notfall-Scopes: `docs/NOTFALL-PURGE-MESSENGER.md`.
 
 ---
 
@@ -626,15 +525,4 @@ Einstellungen → **Sicherheit**: Tresor-Landkarte (Kurz) + Notfall-Löschung. H
 
 ---
 
-## Meine Mailboxen (T3 — Settings → IOTA)
-
-1. Tresor entsperren, Backend online.  
-2. **Einstellungen → IOTA → Meine Mailboxen**.  
-3. **Privat:** eigene Chat-Mailbox anlegen/wählen — nicht dasselbe wie die Deploy-`MAILBOX_ID` unter „Wo senden?“.  
-4. **Team** (Boss/Kommandant): Team-Postfach + Sync-Status; Mitglieder über Telefonbuch.  
-5. Prüfen: aktive Send-Mailbox im Composer („Wo senden?“) vs. Liste hier — klar getrennt halten.  
-6. Optional: Postfach teilen/löschen nur wenn bewusst (Dialoge).
-
-NFT-Mint: unter On-Chain/NFT → **Minten** → **Anzahl** (1–100) für gleiche Bilder als Serie.
-
-*Stand: 2026-11-12 — T3-Anleitung; Seed/PW-SPOF; Produkt-Freeze Abo/PlanRadar.*
+*Stand: 2026-06-16 — Sidebar-Chat, SOS/Sendepfad im Kopf, Gruppe-verwalten-Sheet, Peering-QR unter Ich, Inbox vor Composer.*

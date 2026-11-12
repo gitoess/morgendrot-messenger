@@ -143,8 +143,8 @@ Details Nutzer: `docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md` §1.
 | SPOF? | **Ja** für Identität/Signatur | **Ja** für Keys/Notizen/Safe im Tresor |
 | Reicht allein? | **Nein** für Vault-Inhalt (Ist: PW getrennt) | **Nein** für Coins ohne Seed/Signer |
 
-**Ordner:** `.morgendrot-vault`, Sidecars, Runtime-JSON, `.env`, Journal, Inbox-Cache — Sicherheit = Gerät + Rechte + Backups. Roadmap **T54**.
+**Ordner:** `.morgendrot-vault`, Sidecars, Runtime-JSON, `.env`, Journal, Inbox-Cache — Sicherheit = Gerät + Rechte + Backups, nicht „liegt im Repo-Ordner = ok“. Roadmap **T54**.
 
 ---
 
-*Stand: 2026-11-12 — §9 Seed/PW-SPOF; Abgleich Soft-Lock / Sidecar.*
+*Stand: 2026-11-12 — §9 Seed/PW-SPOF; Abgleich vault-local / Soft-Lock / Sidecar.*
