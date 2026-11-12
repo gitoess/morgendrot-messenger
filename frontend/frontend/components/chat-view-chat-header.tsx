@@ -325,16 +325,12 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
               {showHandbook || onOpenNotes || showSettingsBtn || showTreasuryBadge ? (
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   {showHandbook ? <MessengerHandbookLink /> : null}
-                  {onOpenNotes ? (
+                  {onOpenNotes && channelMode === 'notes' ? (
                     <HeaderToolbarButton
-                      label={channelMode === 'notes' ? 'Zu Chats' : 'Notizen'}
+                      label="Zu Chats"
                       icon={<StickyNote className="h-4 w-4 shrink-0" aria-hidden />}
                       onClick={onOpenNotes}
-                      title={
-                        channelMode === 'notes'
-                          ? 'Zurück zum Posteingang'
-                          : 'Tresor-Notizen und Passwörter'
-                      }
+                      title="Zurück zum Posteingang"
                     />
                   ) : null}
                   {showSettingsBtn ? (

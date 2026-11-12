@@ -2649,11 +2649,11 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 
 ### Durchgangs-Reihenfolge (verbindlich — Stand 2026-11-12)
 
-1. **Jetzt:** **T33** (Nachrichten-⋮ vs Chat-⋮) — T32 Kern ok, Zeitkapsel später  
-2. **Dann / am Ende:** **T37** Tresor-Landkarte + Ideen **T39–T55** priorisieren  
-3. **Später (nicht blockierend):** T45 Browser-Link · T47 Schnell-Buttons · T51 Abo/Credits · T52 PlanRadar · T53 Settings-Lücken  
+1. **Jetzt:** **T55** Optionen-Hub (nach T32) — T33 später  
+2. **Am Ende:** **T37** Tresor-Landkarte + Ideen **T39–T54** priorisieren  
+3. **Später (nicht blockierend):** T45 · T47 · T51 · T52 · T53  
 4. **Explizit nicht im Messenger-Durchgang:** Abo-NFT-Verkaufsstory, PlanRadar-App, Zapier-Store, TG-Gerichts-Vollforensik  
-5. **Nachholen:** Zeitkapsel-Feldtest (Rest von T32)
+5. **Nachholen:** T33 (⋮-Menüs) · Zeitkapsel-Feldtest (Rest T32)
 
 **Produkt-Freeze (Sicherheit/Sinn):** Telegram = Klingel (T42); Chat-Mailbox ≠ Zahlungsobjekt (T43); Magnet Default aus (T40); Seed/Passwort = Wiederherstellungs-SPOF (siehe Handbuch Sicherheit).
 
@@ -2695,7 +2695,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T30 | **Kontakt-Info = Mehr** | UX | Messenger-Durchgang | Kein Doppelklick-Zwang; Medien klickbar; IDs hinter „Mehr“; nur Namen in Sidebar |
 | T31 | **Posteingang Filter vs Composer** | UX | Messenger-Durchgang | „Nur verschlüsselt“ = Ansichtsfilter; Sendemodus nur Composer; pkg = Offline-Datei-Archiv; Auswahl ≠ Filter |
 | T32 | **On-Chain/NFT + Optionen + Entschlüsseln** | Gemeinsam testen | **teil-done 2026-11-12** | PWMSG + Vault-Notizen ok. Zeitkapsel-Feldtest **später**. Wire-Paste = nur PWMSG. Next: T33 |
-| T33 | **Nachrichten-⋮ vs Chat-⋮** | UX/Doku | mit T32 | Wire kopieren in ⋮; Burn-Label vs Handbuch; Passphrase-Aktionen nur bei PWMSG nach Unlock — Angleichen Anleitung |
+| T33 | **Nachrichten-⋮ vs Chat-⋮** | UX/Doku | **später** (nach T55) | Wire kopieren in ⋮; Burn-Label vs Handbuch; Passphrase-Aktionen nur bei PWMSG nach Unlock — Angleichen Anleitung |
 | T34 | **Magnet Wii-Feel** | UX | Messenger | Hover Scale+Glow+Hover-Ton; Einstellungen Erscheinungsbild; nur Maus/Trackpad |
 | T35 | **Gruppe 1:1 vs gemeinsames Postfach** | Doku/UI | erledigt 2026-11-12, Retest | Labels + Handbuch-Tabelle; Handshake-Liste nur bei 1:1 |
 | T36 | **Telegram-Verlauf-Export** | Dialog statt Submenu 2026-11-12 | **live smoke** | Optionen → Export… → Dialog mit JSON/TXT/ZIP. Nested Submenu entfernt (leerer Scroll). T37 gemeinsam am Ende |
@@ -2703,7 +2703,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T38 | **Hash & Prüfen (SHA-256)** | Feature | **done → live smoke** | Sicherheit: hashen + prüfen; Unit-Test grün |
 | T54 | **Seed / Passwort SPOF** | Sicherheit/Doku | fortlaufend | Mnemonic = Identität/Coins; Vault-PW = Tresor-Inhalt; beides offline sichern; Ordner `.morgendrot-*` / Sidecar / `.env` = Gerät+Backup, nicht „Cloud = sicher“ |
 | T39 | **Telegram↔IOTA Beweis** | Produkt | später / gemeinsam am Ende | Export-JSON enthält Journal-Felder (chatId/Richtung); Beweis-Paket = JSON + SHA-256 (+ optional Chain). Kein TG-Vollforensik/Medien. Mit User am Roadmap-Ende priorisieren |
-| T55 | **Optionen-Hub Online** | UX | nach T32 | Wire · Hash · Export · Decrypt-JSON · pkg klar trennen; Hash bleibt auch unter Sicherheit (gleicher Panel). Keine Nested-Submenus |
+| T55 | **Optionen-Hub Online** | UX | **jetzt** (nach T32) | Wire · Hash · Export · Decrypt-JSON · pkg klar trennen; Hash bleibt auch unter Sicherheit (gleicher Panel). Keine Nested-Submenus. Notizen-Button nur 1× (Posteingang) |
 | T40 | **Magnet/Haptik** | Entscheidung 2026-11-12 | erledigt | Default **aus**; optional lassen. Nicht weiter aufblasen — Affordance statt Pseudo-Wii |
 | T41 | **Klickbarkeit ohne Magnet** | UX | mit Messenger-Polish | Fokusring, Button-vs-Text, Hover-Unterstrich, „⋯ / Mehr“ sichtbar — Telegram-ähnlich |
 | T42 | **IOTA↔Telegram-Brücke Scope** | Produkt-Freeze | vor Feature-Wünschen | Telegram = Hinweis/Inbound/Alarm — **kein** Video/NFT/E2EE über TG. IOTA = Archiv/Beweis |
