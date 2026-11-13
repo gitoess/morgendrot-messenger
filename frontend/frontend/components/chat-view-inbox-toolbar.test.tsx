@@ -104,18 +104,6 @@ describe('ChatViewInboxToolbar actions (§ H.1a)', () => {
     expect(screen.getByTitle(/3 ausstehende Handshake-Anfrage/i)).toHaveTextContent('3')
   })
 
-  it('ruft onRefresh bei Aktualisieren auf', () => {
-    const onRefresh = vi.fn()
-    render(<ChatViewInboxToolbar {...makeProps({ onRefresh })} />)
-    fireEvent.click(screen.getByRole('button', { name: /Aktualisieren/i }))
-    expect(onRefresh).toHaveBeenCalledTimes(1)
-  })
-
-  it('deaktiviert Aktualisieren während loading', () => {
-    render(<ChatViewInboxToolbar {...makeProps({ loading: true })} />)
-    expect(screen.getByRole('button', { name: /Aktualisieren/i })).toBeDisabled()
-  })
-
   it('schaltet Auswahl-Modus um', () => {
     const setInboxSelectMode = vi.fn()
     render(<ChatViewInboxToolbar {...makeProps({ setInboxSelectMode, inboxSelectMode: false })} />)
@@ -181,11 +169,11 @@ describe('ChatViewInboxToolbar actions (§ H.1a)', () => {
     expect(onOpenPhonebook).toHaveBeenCalledTimes(1)
   })
 
-  it('bündelt Werkzeuge unter Optionen; On-Chain und Aktualisieren bleiben oben', () => {
+  it('bündelt Werkzeuge unter Optionen; On-Chain oben; Aktualisieren nicht in der Leiste', () => {
     render(<ChatViewInboxToolbar {...makeProps({ messageCount: 2 })} />)
     expect(screen.getByRole('button', { name: /Optionen/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /On-Chain \/ NFT/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Aktualisieren/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Aktualisieren/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Pakete$/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Nachrichtenverlauf$/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Wire einfügen$/i })).not.toBeInTheDocument()

@@ -16,7 +16,6 @@ import {
   KeyRound,
   Lock,
   Package,
-  RefreshCw,
   Settings2,
   StickyNote,
 } from 'lucide-react'
@@ -195,8 +194,8 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     onMorgPkgDeviceExportPick,
     morgPkgDeviceBusy,
     apiStatus,
-    onRefresh,
-    loading,
+    onRefresh: _onRefresh,
+    loading: _loading,
     onExportEinsatzberichtJson,
     onExportEinsatzberichtTxt,
     onExportEinsatzberichtTxtFull,
@@ -767,16 +766,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             onOpenChange={setWirePasteOpen}
           />
 
-          <button
-            type="button"
-            onClick={onRefresh}
-            disabled={loading}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted/30 text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-            title="Posteingang und Kontakte neu laden"
-            aria-label="Aktualisieren"
-          >
-            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-          </button>
+          {/* Aktualisieren nur noch im Chat-Kopf neben Tresor. */}
         </div>
       </div>
       <div className="border-t border-border/70 px-4 py-2 text-xs">
