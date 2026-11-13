@@ -266,39 +266,6 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   const hasValidMyAddressForBalance =
     /^0x[a-fA-F0-9]{64}$/i.test((apiSnapshot?.myAddressFull ?? '').trim()) === true
 
-  const dashboardTransferRecipientOptions = useMemo(() => {
-    const fav = readContactFavorites()
-    const byAddr = new Map<string, { address: string; label: string; favorite: boolean }>()
-    const add = (address?: string, label?: string, favorite?: boolean) => {
-      const a = (address || '').trim()
-      if (!/^0x[a-fA-F0-9]{64}$/i.test(a)) return
-      const key = a.toLowerCase()
-      const prev = byAddr.get(key)
-      const nextLabel = (label || '').trim() || prev?.label || `${a.slice(0, 10)}…`
-      byAddr.set(key, {
-        address: a,
-        label: nextLabel,
-        favorite: Boolean(favorite || prev?.favorite || fav.has(key)),
-      })
-    }
-    for (const [addr, entry] of Object.entries(contactDirectory)) {
-      add(addr, entry?.label, fav.has(addr.trim().toLowerCase()))
-    }
-    const conn = apiSnapshot?.connectedAddresses
-    if (Array.isArray(conn)) {
-      for (const a of conn) add(a)
-    }
-    return Array.from(byAddr.values()).sort((a, b) => {
-      if (a.favorite !== b.favorite) return a.favorite ? -1 : 1
-      return a.label.localeCompare(b.label, 'de')
-    })
-  }, [contactDirectory, apiSnapshot?.connectedAddresses])
-
-  const dashboardTransferAddressSuggestions = useMemo(
-    () => dashboardTransferRecipientOptions.map((o) => o.address),
-    [dashboardTransferRecipientOptions]
-  )
-
   const setShowAllTilesPersist = (value: boolean) => {
     setShowAllTiles(value)
     writeShowAllTilesPref(value)
@@ -450,6 +417,39 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   }, [checkStatus, activeView?.type, backendReachable])
 
   const { directory: contactDirectory, refresh: refreshContactDirectory } = useContactDirectory()
+
+  const dashboardTransferRecipientOptions = useMemo(() => {
+    const fav = readContactFavorites()
+    const byAddr = new Map<string, { address: string; label: string; favorite: boolean }>()
+    const add = (address?: string, label?: string, favorite?: boolean) => {
+      const a = (address || '').trim()
+      if (!/^0x[a-fA-F0-9]{64}$/i.test(a)) return
+      const key = a.toLowerCase()
+      const prev = byAddr.get(key)
+      const nextLabel = (label || '').trim() || prev?.label || `${a.slice(0, 10)}…`
+      byAddr.set(key, {
+        address: a,
+        label: nextLabel,
+        favorite: Boolean(favorite || prev?.favorite || fav.has(key)),
+      })
+    }
+    for (const [addr, entry] of Object.entries(contactDirectory)) {
+      add(addr, entry?.label, fav.has(addr.trim().toLowerCase()))
+    }
+    const conn = apiSnapshot?.connectedAddresses
+    if (Array.isArray(conn)) {
+      for (const a of conn) add(a)
+    }
+    return Array.from(byAddr.values()).sort((a, b) => {
+      if (a.favorite !== b.favorite) return a.favorite ? -1 : 1
+      return a.label.localeCompare(b.label, 'de')
+    })
+  }, [contactDirectory, apiSnapshot?.connectedAddresses])
+
+  const dashboardTransferAddressSuggestions = useMemo(
+    () => dashboardTransferRecipientOptions.map((o) => o.address),
+    [dashboardTransferRecipientOptions]
+  )
 
   const connectedAddressesForHandshake = useMemo(() => {
     const resolved = resolveConnectedAddresses({
