@@ -339,41 +339,51 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                   ) : null}
                 </div>
               </div>
-              {showHandbook || onOpenNotes || showSettingsBtn || showTreasuryBadge || showHeaderRefresh ? (
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  {showHandbook ? <MessengerHandbookLink /> : null}
-                  {onOpenNotes && channelMode === 'notes' ? (
-                    <HeaderToolbarButton
-                      label="Zu Chats"
-                      icon={<StickyNote className="h-4 w-4 shrink-0" aria-hidden />}
-                      onClick={onOpenNotes}
-                      title="Zurück zum Posteingang"
-                    />
-                  ) : null}
-                  {showSettingsBtn ? (
-                    <HeaderToolbarButton
-                      label="Einstellungen"
-                      icon={<Settings className="h-4 w-4 shrink-0" aria-hidden />}
-                      onClick={onOpenSettings}
-                    />
-                  ) : null}
-                  {showHeaderRefresh ? (
-                    <HeaderToolbarButton
-                      label="Aktualisieren"
-                      icon={<RefreshCw className="h-4 w-4 shrink-0" aria-hidden />}
-                      onClick={() => void onRefreshStatus?.()}
-                      title="Status, Posteingang und Kontakte neu laden"
-                    />
-                  ) : null}
-                  {showTreasuryBadge && apiStatus ? (
-                    <TresorSessionBadge
-                      sessionLocked={!!apiStatus.locked}
-                      hasKeys={isMessengerSessionKeysReady(apiStatus)}
-                      actions={vaultBannerActions}
-                    />
-                  ) : null}
-                </div>
-              ) : null}
+              <div className="flex max-w-full flex-col items-stretch gap-2 sm:max-w-none sm:items-end">
+                {showHeaderRefresh || showTreasuryBadge ? (
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                    {showHeaderRefresh ? (
+                      <button
+                        type="button"
+                        onClick={() => void onRefreshStatus?.()}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-foreground/25 bg-foreground px-3 py-2 text-xs font-bold text-background shadow-sm transition-colors hover:bg-foreground/90"
+                        title="Status, Posteingang und Kontakte neu laden"
+                        aria-label="Aktualisieren"
+                      >
+                        <RefreshCw className="h-4 w-4 shrink-0" aria-hidden />
+                        Aktualisieren
+                      </button>
+                    ) : null}
+                    {showTreasuryBadge && apiStatus ? (
+                      <TresorSessionBadge
+                        sessionLocked={!!apiStatus.locked}
+                        hasKeys={isMessengerSessionKeysReady(apiStatus)}
+                        actions={vaultBannerActions}
+                      />
+                    ) : null}
+                  </div>
+                ) : null}
+                {showHandbook || onOpenNotes || showSettingsBtn ? (
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    {showHandbook ? <MessengerHandbookLink /> : null}
+                    {onOpenNotes && channelMode === 'notes' ? (
+                      <HeaderToolbarButton
+                        label="Zu Chats"
+                        icon={<StickyNote className="h-4 w-4 shrink-0" aria-hidden />}
+                        onClick={onOpenNotes}
+                        title="Zurück zum Posteingang"
+                      />
+                    ) : null}
+                    {showSettingsBtn ? (
+                      <HeaderToolbarButton
+                        label="Einstellungen"
+                        icon={<Settings className="h-4 w-4 shrink-0" aria-hidden />}
+                        onClick={onOpenSettings}
+                      />
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
             </div>
           </div>
 

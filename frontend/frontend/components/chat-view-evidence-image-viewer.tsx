@@ -1029,12 +1029,12 @@ export function ChatViewEvidenceImageViewerButton(p?: {
         setOpen(v)
         p?.onOpenChange?.(v)
         if (!v) {
-          // Cleanup erst nach Close-Animation — sonst extremes Flackern (URL-Revoke mid-exit).
+          /** Kein resetAll während Close-Animation (Flackern). Cleanup erst lange nach Exit. */
           if (closeResetTimerRef.current) clearTimeout(closeResetTimerRef.current)
           closeResetTimerRef.current = setTimeout(() => {
             closeResetTimerRef.current = null
             resetAll()
-          }, 300)
+          }, 600)
           return
         }
         if (closeResetTimerRef.current) {
@@ -1074,9 +1074,12 @@ export function ChatViewEvidenceImageViewerButton(p?: {
         <ImageIcon className="mr-2 h-4 w-4 shrink-0" />
         {p?.triggerLabel ?? 'On-Chain Bild / NFT'}
       </Button>
-      <DialogContent className="flex max-h-[90vh] max-w-lg flex-col overflow-hidden p-0 sm:max-w-lg">
-        <div className="shrink-0 border-b border-border/60 px-6 pb-3 pt-6 pr-14">
-          <DialogHeader>
+      <DialogContent
+        showCloseButton={false}
+        className="flex max-h-[90vh] max-w-lg flex-col overflow-hidden p-0 sm:max-w-lg"
+      >
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border/60 px-6 pb-3 pt-6">
+          <DialogHeader className="flex-1 text-left">
             <DialogTitle>{nftWalletUi ? 'NFT & Schlüsselkarte' : 'On-Chain / NFT'}</DialogTitle>
             <DialogDescription>
               {nftWalletUi
@@ -1084,6 +1087,24 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                 : `Zwei Bereiche: Schauen/suchen (Wire, Klartext, Galerie) vs. Handeln (Minten, Guthaben, Zeitkapsel). Cap ${Math.round(EVIDENCE_IMAGE_MAX_RAW_BYTES / 1024)} KB.`}
             </DialogDescription>
           </DialogHeader>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="mt-0.5 h-8 shrink-0 px-2"
+            aria-label="Schließen"
+            onClick={() => {
+              setOpen(false)
+              p?.onOpenChange?.(false)
+              if (closeResetTimerRef.current) clearTimeout(closeResetTimerRef.current)
+              closeResetTimerRef.current = setTimeout(() => {
+                closeResetTimerRef.current = null
+                resetAll()
+              }, 600)
+            }}
+          >
+            Schließen
+          </Button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
         <div className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-2 border-b border-border/60 bg-background/95 px-1 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -1101,18 +1122,6 @@ export function ChatViewEvidenceImageViewerButton(p?: {
               aria-hidden
             />
             Aktualisieren
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            className="ml-auto h-8 text-[11px]"
-            onClick={() => {
-              setOpen(false)
-              p?.onOpenChange?.(false)
-            }}
-          >
-            Schließen
           </Button>
           {leaseCounts.open > 0 ? (
             <Button

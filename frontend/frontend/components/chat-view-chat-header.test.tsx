@@ -119,6 +119,22 @@ describe('ChatViewChatHeader (§ H.1a)', () => {
     expect(screen.getByRole('button', { name: /Einstellungen/i })).toBeInTheDocument()
   })
 
+  it('zeigt Aktualisieren neben Tresor wenn onRefreshStatus gesetzt', () => {
+    const onRefreshStatus = vi.fn()
+    render(
+      <ChatViewChatHeader
+        {...baseHeader({
+          channelMode: 'private',
+          onRefreshStatus,
+          suppressAppChrome: true,
+        })}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /^Aktualisieren$/i }))
+    expect(onRefreshStatus).toHaveBeenCalledTimes(1)
+    expect(screen.getByText(/Tresor:/i)).toBeInTheDocument()
+  })
+
   it('warnt bei unsicherer Geräte-Uhr (§ H.6c)', () => {
     render(<ChatViewChatHeader {...baseHeader({ deviceTimeTrustWarn: true })} />)
     expect(screen.getByText(/Geräte-Uhr:/)).toBeInTheDocument()

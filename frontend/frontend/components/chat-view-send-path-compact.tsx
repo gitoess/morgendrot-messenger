@@ -6,7 +6,6 @@
 
 import { type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { isCapacitorNativePlatform } from '@/frontend/lib/capacitor-platform'
 import { SEND_PATH_ACTIVE_CLASS } from '@/frontend/lib/messenger-appearance-theme'
 import type { ComposerDeliveryChannel } from '@/frontend/lib/composer-delivery-channel'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
@@ -174,7 +173,8 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
 
   if (!visible) return null
 
-  const gridLayout = layout === 'grid' || (layout == null && isCapacitorNativePlatform())
+  /** Immer Grid — kein horizontaler Schiebebalken bei schmaler Breite. */
+  const gridLayout = layout !== 'row'
 
   const showTelegramPath = Boolean(onComposerDeliveryChange)
   const chainActive = composerDelivery === 'chain'
@@ -202,7 +202,11 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
       <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Sendepfad</p>
       <div
         className={cn(
-          gridLayout ? 'grid grid-cols-2 gap-2' : 'flex flex-nowrap gap-2 overflow-x-auto pb-0.5'
+          gridLayout
+            ? showAdhocTransport
+              ? 'grid grid-cols-2 gap-2 sm:grid-cols-3'
+              : 'grid grid-cols-2 gap-2 sm:grid-cols-4'
+            : 'flex flex-wrap gap-2'
         )}
         role="group"
         aria-label="Sendepfad"

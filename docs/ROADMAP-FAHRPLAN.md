@@ -2696,16 +2696,16 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T26 | **Typo/Farbe überall lesbar** | UX | **done 2026-11-13** (fortlaufend) | Lila-Fließtext in Handoff/Boss/Kacheln/Telegram-Einstieg → foreground/muted/amber/sky. Chip-Akzente (Mailbox) bleiben |
 | T27 | **Telefonbuch entschlacken** | UX | **done 2026-11-13** | Alarmgruppe eingeklappt unten; Team-Entfernen nur im Menü, getrennt vom Telefonbuch; Funk-Backup und Telegram-IDs getrennte Klappen; Notiz nur lokal |
 | T28 | **Handbuch-Platz** | UX | **done 2026-11-13** | Einstellungen → Allgemein: Handbuch-Karte. Chat-Kopf behält Link, Sendepfad bleibt ohne Handbuch |
-| T29 | **Klang & Magnet-Prefs** | UX | **done + Lautstärke 2026-11-12** | Ton an/aus + Lautstärke 0–100; Magnet Default aus |
+| T29 | **Klang & Magnet-Prefs** | UX | **done + Klack 2026-11-13** | Klack (Button) getrennt von Klick-Ton (Piep); Lautstärke 0–100; Magnet Default aus |
 | T30 | **Kontakt-Info = Mehr** | UX | **done 2026-11-13** | Seitenleiste nur Namen; Info öffnet Mehr; Medien springen zur Nachricht; IDs unter „Mehr“ |
 | T31 | **Posteingang Filter vs Composer** | UX | **done 2026-11-13** | Liste: Beides/Eingang/Ausgang + Alles/Verschl./Klartext. Sendemodus nur Composer. .morg-pkg = Offline-Archiv |
 | T32 | **On-Chain/NFT + Optionen + Entschlüsseln** | Gemeinsam testen | **teil-done 2026-11-12** | PWMSG + Vault-Notizen ok. Zeitkapsel-Feldtest **später**. Wire-Paste = nur PWMSG |
 | T33 | **Nachrichten-⋮ vs Chat-⋮** | UX/Doku | **done 2026-11-13** | Chat-⋮ = Modus „Nach Lesen löschen“; Zeilen-⋯ = „Von Chain löschen (Burn)“; Optionen ≠ ⋮; Handbuch-Tabelle |
 | T34 | **Magnet Wii-Feel** | UX | **done 2026-11-13, bewusst klein** | Bleibt aus. Wenn an: nur leichtes Anheben, kein Hover-Ton (der Klickton bleibt). Kein Wii-Scale mehr |
 | T35 | **Gruppe 1:1 vs gemeinsames Postfach** | Doku/UI | erledigt 2026-11-12, Retest | Labels + Handbuch-Tabelle; Handshake-Liste nur bei 1:1 |
-| T36 | **Telegram-Verlauf-Export** | Dialog statt Submenu 2026-11-12 | **ready → live smoke (gemeinsam T38)** | Optionen → Export: Journal-Felder klar (Text/Chat-ID/Richtung), keine TG-Medien. Smoke: Aktualisieren → Export JSON → Felder prüfen |
+| T36 | **Telegram-Verlauf-Export** | Dialog statt Submenu 2026-11-12 | **ready → live smoke (gemeinsam T38) — als Nächstes mit User** | Optionen → Export: Journal + Medien-ZIP (MORG). Keine TG-Server-Medien. Smoke kritisch vor neuen Features |
 | T37 | **Tresor-Landkarte UI** | UX | **done 2026-11-12** | Sicherheit-Kurzkarte + Handbuch `#tresor-landkarte`; Gelb-Affordanz entfernt; Notfall-Scopes ehrlich |
-| T38 | **Hash & Prüfen (SHA-256)** | Feature | **ready → live smoke (gemeinsam T36)** | Optionen → Hash: Export-JSON hashen + prüfen. Copy ehrlich. Smoke direkt nach T36-Export |
+| T38 | **Hash & Prüfen (SHA-256)** | Feature | **ready → live smoke (gemeinsam T36) — als Nächstes mit User** | Optionen → Hash Datei/Text. Smoke direkt nach T36; kein T39/T56 parallel |
 | T56 | **Komplett-alles-löschen** | Feature/UX | **Backlog — überdenken** | Ein Wizard: Gerät + Chain-Tresor + Vault-Datei + Telegram + optional NFT/Keys brennen. Ehrliche Grenzen (fremde Kopien, TG-Server, .env). Nicht als ein blinder Knopf ohne Checkliste. Siehe `NOTFALL-PURGE-MESSENGER.md` |
 | T54 | **Seed / Passwort SPOF** | Sicherheit/Doku | fortlaufend | Mnemonic = Identität/Coins; Vault-PW = Tresor-Inhalt; beides offline sichern; Ordner `.morgendrot-*` / Sidecar / `.env` = Gerät+Backup, nicht „Cloud = sicher“ |
 | T39 | **Telegram↔IOTA Beweis** | Produkt | später / gemeinsam am Ende | Export-JSON enthält Journal-Felder (chatId/Richtung); Beweis-Paket = JSON + SHA-256 (+ optional Chain). Kein TG-Vollforensik/Medien. Mit User am Roadmap-Ende priorisieren |
