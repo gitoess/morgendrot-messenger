@@ -70,7 +70,7 @@ Damit die „Alphabet-Suppe“ der Blockchain-IDs übersichtlich bleibt: **Wer**
 
 ## 5. Was fehlt aktuell?
 
-- **UpgradeCap-ID:** Unter **Erweitert → Chain-Status** (Boss) + `UPGRADE_CAP_ID` in `.env` nach `deploy:move-package`. Upgrade: **`npm run upgrade:move-package`** — siehe **`docs/DEPLOY-MOVE-UPGRADE-VS-PUBLISH.md`**.
+- **UpgradeCap-ID:** Unter **Einstellungen → IOTA → Package & Move-Upgrade** (Boss/Kommandant) + `UPGRADE_CAP_ID` in `.env` nach `deploy:move-package`. Upgrade: **`npm run upgrade:move-package`** — siehe **`docs/DEPLOY-MOVE-UPGRADE-VS-PUBLISH.md`**.
 - **Zentrale „Historie“ für Keys/Mailbox/Vault-Registry:** Es gibt nur Config/Popup – keine Verlaufsliste wie bei Package/Anchor. Für typischen Betrieb reicht die einmalige Konfiguration.
 
 ---

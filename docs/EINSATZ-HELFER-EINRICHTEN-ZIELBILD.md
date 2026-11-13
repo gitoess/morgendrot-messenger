@@ -54,7 +54,7 @@ Gespeicherte Vorlagen = eure Org-Standards (Medic Süd, Reporter LoRa, …).
 Einsatzleitung
 ├── (Titel)
 ├── Helfer einrichten          ← oben
-└── ▼ Erweitert                ← nur Chain / Move-Upgrade
+└── ▼ Erweitert — Archiv & Beweis  ← Chain/Move → Einstellungen → IOTA
 ```
 
 **Kein** Schritt 1/2. **Keine** langen Hilfetexte — Labels kurz, selbsterklärend.

@@ -735,8 +735,8 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
               ) : (
                 <p className="mt-2 text-[10px] text-muted-foreground">
                   Weitere Rechte (Partner, alle Kanäle, Passwort-ZIP):{' '}
-                  <Link href="#einsatz-erweitert" className="text-primary underline hover:no-underline">
-                    Erweitert → Export-Assistent
+                  <Link href="#helfer-handoff" className="text-primary underline hover:no-underline">
+                    Helfer einrichten
                   </Link>
                 </p>
               )}

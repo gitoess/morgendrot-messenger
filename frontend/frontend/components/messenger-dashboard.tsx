@@ -522,7 +522,6 @@ function MessengerDashboardBody({
               vaultBannerActions={s.chatVaultBannerActions}
               pendingHandshakes={s.pendingHandshakes}
               suppressAppChrome={isEinsatzLeadHome}
-              onOpenEinsatzleitung={canAccessEinsatzleitung(s.role) ? s.openEinsatzleitungView : undefined}
               phonebookNavRequest={s.phonebookNavRequest}
               onOpenSettings={s.openSettingsView}
             />

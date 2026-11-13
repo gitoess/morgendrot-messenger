@@ -23,10 +23,10 @@
 
 ### Upgrade (empfohlen bei Bugfixes)
 
-- **Messenger:** Einsatzleitung → **Erweitert** → **Chain** → **Move upgraden**
+- **Messenger:** Einstellungen → **IOTA** → **Package & Move-Upgrade** → **Move upgraden**
 - **Terminal:** `npm run upgrade:move-package`
 - **Ergebnis:** Gleiche `PACKAGE_ID`, gleiche Team-Mailbox-IDs
-- **Danach:** Backend neu starten; Move-Funktionen unter Erweitert prüfen
+- **Danach:** Backend neu starten; Move-Funktionen unter Einstellungen → IOTA prüfen
 - **Handoff:** nicht nötig
 
 **Voraussetzung:** `UPGRADE_CAP_ID` in `.env` + IOTA-CLI + Ordner `move-test`.
@@ -50,7 +50,7 @@ Details: `docs/DEPLOY-MOVE-UPGRADE-VS-PUBLISH.md`.
 | **ENABLE_PURGE** | ✏️ | Ja | Optional mit übernehmen |
 | Profil, ROLE_ID, Capabilities | **Helfer einrichten** (oben) | Ja | — |
 | Transport, Team-MB, Partner | **Helfer einrichten** | Ja | Teilweise |
-| Move-Regeln (wer darf purgen) | **Erweitert → Chain** + Handbuch | Nein | — |
+| Move-Regeln (wer darf purgen) | **Einstellungen → IOTA → Package & Move-Upgrade** + Handbuch | Nein | — |
 
 **Purge ≠ Rechte-Modell:** `ENABLE_PURGE` schaltet Purge-Befehle. Lesen/Schreiben → **Capabilities-Matrix** + `ROLE_ID` → `docs/HANDOFF-PERMISSIONS-MATRIX.md`.
 

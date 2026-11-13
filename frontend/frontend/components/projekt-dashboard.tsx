@@ -150,7 +150,6 @@ export function ProjektDashboard() {
               myAddress={s.myAddress}
               vaultBannerActions={s.chatVaultBannerActions}
               pendingHandshakes={s.pendingHandshakes}
-              onOpenEinsatzleitung={canAccessEinsatzleitung(s.role) ? s.openEinsatzleitungView : undefined}
               phonebookNavRequest={s.phonebookNavRequest}
             />
           )}

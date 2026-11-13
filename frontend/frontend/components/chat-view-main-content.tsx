@@ -132,7 +132,6 @@ export type ChatViewMainContentProps = ChatViewCoreState & {
   vaultBannerActions?: ChatViewVaultBannerActions
   onChannelModeChange?: (c: MessengerChatChannel) => void
   pendingHandshakes?: PendingHandshakesPollState
-  onOpenEinsatzleitung?: () => void
   phonebookNavRequest?: number
   onOpenSettings?: () => void
   suppressAppChrome?: boolean
@@ -144,7 +143,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     vaultBannerActions,
     onChannelModeChange,
     pendingHandshakes,
-    onOpenEinsatzleitung,
     phonebookNavRequest,
     onOpenSettings,
   } = c

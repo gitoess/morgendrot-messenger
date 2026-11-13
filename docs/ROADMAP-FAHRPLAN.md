@@ -45,6 +45,8 @@
 
 **Nachtrag 2026-11-13 (Sicherheit/Konsistenz weiter):** Move-Upgrade-Panel nur Boss/Kommandant; Settings-Header Sprünge Nachrichten+Einsatzleitung; Move-Probe-Fehler nur ~30s cachen; Docs (UpgradeCap, Burn-on-read, Gruppe-Verwalten) an Ist.
 
+**Nachtrag 2026-11-13 (Pfad-Konsistenz):** Falsche Links/Copy „Erweitert → Export-Assistent“ → **Helfer einrichten**; Erweitert-UI-Hinweis Move→IOTA; Boss-Ablauf/ID-Übersicht/Zielbild; toter `onOpenEinsatzleitung`-Prop aus Chat entfernt (Nav nur Header/Home).
+
 **Nachtrag 2026-11-05 (Wire einfügen):** **Optionen → Wire einfügen** — Paste `MORG_PWMSG_V1` + Passphrase → lokaler Klartext (≠ Toolbar **Entschlüsseln** = Einsatzbericht-.json). ECDH-Wires weiter nur mit Handshake.
 
 **Nachtrag 2026-11-06 (H.23 B2 NFT-Schlüsselkarte — aktiv):** Spec **`docs/NFT-SCHLUESSELKARTE-B2.md`**. **Zusätzlicher Zugriffsmodus**, kein Ersatz für Passphrase und nicht für Alltags-Direktchat. Lesen spezieller Enc-Inhalte: **Passphrase und/oder Besitz** eines NFTs (optional **beides**). Nutzen: Evidenz teilen, temporäre Leserechte, Weitergabe per NFT-Transfer. **P0–P3 Ist:** Enc-Store + Multi-Slot + Composer-Bindung + Mint an Slot + öffentlicher `[morg-keycard]`-Marker (kein Move). **2-Geräte-Feldtest** bewusst später.

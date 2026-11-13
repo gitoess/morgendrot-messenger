@@ -23,8 +23,6 @@ interface ChatViewProps {
   vaultBannerActions?: ChatViewVaultBannerActions
   /** App-weites Polling (Dashboard) — Toast/Badge auch ohne geöffneten Posteingang. */
   pendingHandshakes?: PendingHandshakesPollState
-  /** Boss/Kommandant: zentraler Einsatzleitung-Tab. */
-  onOpenEinsatzleitung?: () => void
   /** Bottom-Nav: Telefonbuch-Sheet öffnen. */
   phonebookNavRequest?: number
   onOpenSettings?: () => void
@@ -54,7 +52,6 @@ export function ChatView({
   myAddress = '',
   vaultBannerActions,
   pendingHandshakes,
-  onOpenEinsatzleitung,
   phonebookNavRequest,
   onOpenSettings,
   suppressAppChrome = false,
@@ -90,7 +87,6 @@ export function ChatView({
       myAddress={myAddress}
       vaultBannerActions={vaultBannerActions}
       pendingHandshakes={pendingHandshakes}
-      onOpenEinsatzleitung={onOpenEinsatzleitung}
       phonebookNavRequest={phonebookNavRequest}
       onOpenSettings={onOpenSettings}
       suppressAppChrome={suppressAppChrome}
@@ -104,7 +100,6 @@ function ChatViewLoaded({
   myAddress = '',
   vaultBannerActions,
   pendingHandshakes,
-  onOpenEinsatzleitung,
   phonebookNavRequest,
   onOpenSettings,
   suppressAppChrome = false,
@@ -154,7 +149,6 @@ function ChatViewLoaded({
       vaultBannerActions={vaultBannerActions}
       onChannelModeChange={setChannelWithHistory}
       pendingHandshakes={pendingHandshakes}
-      onOpenEinsatzleitung={onOpenEinsatzleitung}
       phonebookNavRequest={phonebookNavRequest}
       onOpenSettings={onOpenSettings}
       suppressAppChrome={suppressAppChrome}
