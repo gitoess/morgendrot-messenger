@@ -296,7 +296,8 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
       <aside
         className={cn(
           'flex flex-col overflow-hidden rounded-xl border border-border bg-card/40',
-          p.compactNative ? 'min-h-0' : 'min-h-[420px]',
+          /* Kurz wie ~2–3 Posteingang-Zeilen; volle Höhe nur noch Native-Parent-Scroll. */
+          p.compactNative ? 'min-h-0' : 'h-[16rem]',
           p.className
         )}
         aria-label="Konversationen"

@@ -108,7 +108,7 @@ Chat ⋮ → **Double Ratchet (Experiment)** setzt nur ein LocalStorage-Flag. **
 | Absender-Remember | Checkbox **„Auf diesem Gerät merken“** (Default an): nur diese Nachricht auto-Klartext nach Unlock. Aus = nach Lock nur Ciphertext (manuell eingeben). **Wiederverwenden** = Composer-Default bis „Neu würfeln“, entschlüsselt Posteingang **nicht** automatisch |
 | Bubble **Verbergen** | Weich ausblenden |
 | Bubble **Im Vault löschen** | Hart: Merker für diese Nachricht weg (neben Wire kopieren); wieder Eingabe |
-| Posteingang **Wire einfügen** | Paste Wire + Passphrase → lokaler Klartext |
+| Posteingang **Optionen → Wire einfügen** | Paste Wire + Passphrase → lokaler Klartext |
 
 **Nicht:** Forward Secrecy, Ersatz für Alltags-ECDH-Chat, Push der Passphrase an andere Geräte.
 
@@ -116,7 +116,7 @@ Chat ⋮ → **Double Ratchet (Experiment)** setzt nur ein LocalStorage-Flag. **
 
 ## 3. ImageNFT / On-Chain Evidenz
 
-**Wo:** Chat → Posteingang-Menü → **On-Chain / NFT** (Object / Besitzer / Wire / Mint / Klartext-MB).
+**Wo:** Chat → Posteingang-Leiste → **On-Chain / NFT** (Object / Besitzer / Wire / Mint / Klartext-MB). Längere Galerie-/Schlüsselkarte-Erklärung nur hier im Handbuch — Dialog bleibt kurz.
 
 | Funktion | Kurz |
 |----------|------|

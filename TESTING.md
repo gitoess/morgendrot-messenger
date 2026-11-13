@@ -176,7 +176,7 @@ Deckt u. a. `MORG_SEG_V1`/`MORG_NAK_V1`, `MORG_IMG_INIT_V1`, Segment-Cap 12 KB, 
 
 **Posteingang: Richtung & Identität** — technische Referenz **`docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`**, UI-Ort **`docs/UI-NACHRICHTEN-STREAMS-ORT.md`**:
 
-- [ ] **Alle / Eingang / Ausgang:** Gesendete Nachrichten erscheinen unter **Ausgang** und **Alle**; empfangene unter **Eingang** und **Alle** (nach Reload/Aktualisieren).
+- [ ] **Alle / Eingang / Ausgang:** Gesendete Nachrichten erscheinen unter **Ausgang** und **Alle**; empfangene unter **Eingang** und **Alle** (nach Reload bzw. **Aktualisieren** im App-Header neben Tresor).
 - [ ] **Selbstnachrichten** (an die eigene Adresse): in **allen drei** Filtern sichtbar.
 - [ ] **Adresse:** Status liefert `myAddressFull` — Zuordnung Eingang/Ausgang darf nicht durch eine nur maskierte Kurzadresse allein fehlschlagen (siehe Architektur-Doku).
 

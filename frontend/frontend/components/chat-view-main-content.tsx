@@ -1356,7 +1356,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             inboxSearchQuery={messengerSearchQuery}
             conversationMenu={conversationMenuProps}
             inboxHeading={inboxHeading}
-            className={showConversationSidebar ? 'flex h-full min-h-[420px] flex-col' : undefined}
+            className={showConversationSidebar ? 'flex h-[16rem] flex-col' : undefined}
           />
 
           {/* Mit Sidebar: Composer darunter über volle Breite (Chats + Posteingang). */}
@@ -1554,7 +1554,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             />
             <div className="grid gap-3 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-stretch">
               <ChatViewContactSidebar
-                className="hidden h-full min-h-[420px] lg:flex"
+                className="hidden h-[16rem] lg:flex"
                 directory={directory}
                 partnerOptions={inboxPartnerOptions}
                 activePartnerKey={inboxPartnerKey}
@@ -1582,7 +1582,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                 {...pinnwandSidebarProps}
                 {...sidebarHandshakeProps}
               />
-              <div className="flex min-h-[420px] min-w-0 flex-col">{conversationBody}</div>
+              <div className="flex h-[16rem] min-w-0 flex-col">{conversationBody}</div>
             </div>
             {!onNotesTab && !onPinnwandTab ? composerBlock : null}
           </div>

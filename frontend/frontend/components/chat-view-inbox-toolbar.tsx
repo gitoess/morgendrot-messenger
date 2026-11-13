@@ -1,7 +1,8 @@
 'use client'
 
 /**
- * Posteingang: Kopfzeile — On-Chain/NFT, Optionen (Wire/Pakete/Verlauf), Aktualisieren.
+ * Posteingang: Kopfzeile — On-Chain/NFT, Optionen (Wire/Hash/Export/Pakete).
+ * Aktualisieren liegt im App-Header neben Tresor (nicht hier).
  */
 
 import { useState, type ChangeEvent, type ReactNode, type RefObject } from 'react'

@@ -1,6 +1,6 @@
 # Einstellungen — Kurzhandbuch
 
-**Stand:** 2026-11-12 · Eine Seite, Ist-UI. Keine Spez, keine Geschichte.
+**Stand:** 2026-11-13 · Eine Seite, Ist-UI. Keine Spez, keine Geschichte.
 
 ---
 
@@ -8,7 +8,7 @@
 
 | Tab | Für wen | Kern |
 |-----|---------|------|
-| **Allgemein** | alle | Sprache, Wizard, Erscheinungsbild (Standard/Hell + Farben), App installieren, Expertenmodus, Handoff, Einsatz beenden |
+| **Allgemein** | alle | Sprache, Wizard, Erscheinungsbild (Standard/Hell + Farben, **Klack** / Klick-Ton / Magnet / Lautstärke), App installieren, Expertenmodus, Handbuch, Handoff, Einsatz beenden |
 | **IOTA** | alle | Netz (Boss), Gas, Chain-IDs, Tresor-Passwort/Backup, Mailboxen, Schatten (bis Umzug) |
 | **Funk** | Einsatz | Meshtastic/Puls — Strategie später (offizielle App vs. eigene UI) |
 | **Telegram** | Boss (+ Helfer Join) | Bot, Alarme, optional Gruppenalarm, Hinweis nach Online-Send |
@@ -79,7 +79,7 @@ Pro Netz: Package + Postfach. Unter „Globals“: Vault-Registry / Command-Regi
 3. Private Mailbox **anlegen** (oder vorhandene wählen).  
 4. Diese Mailbox **aktiv** setzen.  
 5. Im Chat Composer prüfen: Ziel unter „Wo senden?“ / Persistenz — klar, welches Postfach gemeint ist.  
-6. Testnachricht (Klartext oder Schloss) senden → Posteingang **Aktualisieren** → Eintrag sichtbar.  
+6. Testnachricht (Klartext oder Schloss) senden → **Aktualisieren** im App-Header **neben Tresor** → Eintrag sichtbar.  
 7. Optional zweite Private `#2` anlegen: nur eine kann aktiv sein — Wechsel bewusst testen.
 
 **Ablauf Team (wenn Rolle Boss):**

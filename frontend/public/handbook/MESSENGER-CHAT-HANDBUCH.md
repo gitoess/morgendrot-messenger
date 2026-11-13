@@ -2,7 +2,7 @@
 
 **Zweck:** Ausführliche Hinweise, die früher direkt in der Chat-UI standen — hier gebündelt für Nachlesen (PWA-Handbuch, offline nach erstem Abruf möglich).
 
-**Stand:** 2026-11-12 — Settings-Kurzblatt: `EINSTELLUNGEN-NUTZER-HANDBUCH.md`. Chat-UI: Sidebar, Inbox, Sendepfad, SOS, Peering-QR; § *IOTA vs. Server*.
+**Stand:** 2026-11-13 — Settings-Kurzblatt: `EINSTELLUNGEN-NUTZER-HANDBUCH.md`. Chat-UI: Sidebar | Posteingang (kurz), Composer volle Breite darunter; Sendepfad Alle/IOTA/Funk/Telegram; Aktualisieren im App-Header neben Tresor.
 
 **Verwandt:** `docs/PWA-HANDBUCH-OFFLINE.md`, `docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`, `docs/MESSENGER-CAPABILITIES-OVERVIEW.md`, `docs/GRUPPENCHAT-ZIELBILD.md`, `docs/EXPORT-ASSISTENT-REFERENZ.md`.  
 **Privacy / Vault / NFT-Schlüsselkarte (alle Ist-Funktionen + 1-Gerät-Test):** → **`docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`**.  
@@ -14,14 +14,16 @@
 
 | Bereich | Inhalt |
 |---------|--------|
-| **Chat-Kopf** | Sendepfad (Online / Funk / …), **SOS — Hilferuf** (1:1, nicht Telegram), Kanal-Titel, Tresor, **Handbuch**, **Einstellungen** |
-| **Seitenleiste** (1:1 / Gruppe) | **Ich**, Alle, Kontakte, Gruppen; Suche oben; Doppelklick **Ich** → Profil + Peering-QR; Doppelklick **Gruppe** → Gruppe verwalten |
-| **Mitte** | **Posteingang** (Nachrichten) **über** dem Composer |
+| **App-Header** (Boss/Messenger) | **Tresor**, **Aktualisieren** (Status + Posteingang + Kontakte), Handbuch, Einstellungen — **nicht** in der Posteingang-Leiste |
+| **Chat-Kopf** | Sendepfad (**Alle** / Funk / **IOTA** / Telegram), **SOS — Hilferuf** (1:1, nicht Telegram). Mit Sidebar: **kein** großer Kanal-/Posteingang-Titel |
+| **Seitenleiste** (Desktop) | **Chats:** Ich, Alle, Kontakte, Gruppen; Suche oben; Doppelklick **Ich** → Profil + Peering-QR; Doppelklick **Gruppe** → Gruppe verwalten. Höhe kurz (~2–3 Posteingang-Zeilen), Liste scrollt |
+| **Posteingang** (rechts daneben) | Nachrichten + Toolbar (On-Chain/NFT, **Optionen**, Filter). Gleiche kurze Höhe; Liste scrollt |
+| **Composer** | **Unter** Chats+Posteingang über **volle Breite**: `[+]`, Text, Sprache, Senden; **Verschlüsselt/Klartext** = Sendemodus |
 | **Liste (Filter)** | **Beides / Eingang / Ausgang** und **Alles / Verschl. / Klartext** — nur Anzeige, nicht Sendemodus |
-| **Composer** | `[+]` (Anhang, Telefonbuch, Emoji, …), Text, Sprache, Senden; **Verschlüsselt/Klartext** = wie du sendest |
-| **Optionen** | Posteingang (Wire, Hash, Export, Pakete) **und** Chat (Info, Schlüssel, Nach-Lesen-Modus, Verlauf leeren) |
+| **Optionen** | Wire, Hash & Prüfen, Export Nachrichtenverlauf (Journal + Medien-ZIP), Datei-Paket — **nicht** Chat-⋮ |
 | **Nachrichten-⋯** (pro Zeile) | Kopieren, Telefonbuch, lokal ausblenden, **Von Chain löschen (Burn)** |
 | **Auswahl** | Nur **Ausblenden** (Sichtbarkeit). Von Chain löschen: Nachrichten-⋯ |
+| **Browser** | Zurück/Vor navigiert Dashboard-Ansichten (`morgView`) |
 
 **Dashboard:** Kachel **Nachrichten** öffnet den Chat. **Telefonbuch** zusätzlich über `[+]` im Composer, Sidebar oder Kontakt-Detail.
 
@@ -69,15 +71,15 @@ Ausführlich: **`docs/ROADMAP-FAHRPLAN.md`** § **I.0b** · Krypto: **`docs/MESS
 
 ---
 
-## Sendepfad: Online (IOTA/Mailbox) vs. Funk (LoRa/Meshtastic)
+## Sendepfad: Alle / IOTA / Funk / Telegram
 
-| Kanal | Online (IOTA) | Funk (Meshtastic) | Ad-hoc | Telegram |
-|-------|---------------|-------------------|--------|----------|
-| **1:1** | ✓ | ✓ (DM an Node oder Klartext) | ✓ (Platzhalter) | ✓ (mehrere Chat-IDs) |
-| **Gruppe** | ✓ (Team-Broadcast, siehe unten) | ✓ (Secondary Channel, PSK) | — | — (Boss-Alarm: Roadmap § B4) |
-| **Pinnwand** | ✓ | — | — | — |
+| Kanal | **Alle** (gesamter Posteingang; Senden online) | **IOTA** (nur Chain/Mailbox) | Funk (Meshtastic) | Telegram |
+|-------|-----------------------------------------------|------------------------------|-------------------|----------|
+| **1:1** | ✓ | ✓ | ✓ (DM an Node oder Klartext) | ✓ (mehrere Chat-IDs) |
+| **Gruppe** | ✓ (Team-Broadcast, siehe unten) | ✓ | ✓ (Secondary Channel, PSK) | — (Boss-Alarm: Roadmap § B4) |
+| **Pinnwand** | ✓ | ✓ | — | — |
 
-In der App sind nur sinnvolle Kombinationen wählbar (z. B. kein Ad-hoc + Pinnwand).
+**Ad-hoc** ist im Produkt-Sendepfad **aus** (kein eigener Knopf). Sinnvolle Kombinationen bleiben UI-gefiltert.
 
 ### Meshtastic vs. Morgendrot-Kanäle (Funk)
 
@@ -112,7 +114,7 @@ Laut [Meshtastic Channel Configuration](https://meshtastic.org/docs/configuratio
 
 Der frühere **Mesh-v2-/PRIVATE_APP-Versand** ist im **Produkt abgeschaltet** (nur noch **Empfang** älterer Nachrichten).
 
-**Visuell getrennt:** Oben **Online** = Wallet, Chain, ggf. **Tor** (siehe unten). Unten **Funk / Ad-hoc** = **Heltec** über **Web Bluetooth** im Browser — kein „WLAN-Funk“, sondern BLE zum Gerät.
+**Visuell getrennt:** **Alle** / **IOTA** = Wallet, Chain, ggf. **Tor** (siehe unten). **Funk** = **Heltec** über **Web Bluetooth** im Browser — kein „WLAN-Funk“, sondern BLE zum Gerät.
 
 ---
 
@@ -237,7 +239,7 @@ Weiter: **`docs/HANDSHAKE-PERSISTENZ-UND-H23.md`**, Abschnitt **Handshake Vertra
 
 **Posteingang:** Server-Shared (`.env`) + optional die **aktive** Team- oder Private-Mailbox + Team-Broadcast-Postfächer verknüpfter Gruppen. Gruppen-Filter zeigt Nachrichten **aller Mitglieder** (Union).
 
-**Speicher auf der Chain (online):** **Flüchtig (Event)** = kein Mailbox-Eintrag. **Persistent (Mailbox)** = Ziel unter **Einstellungen → Meine Mailboxen** (Server immer mitgelesen; Team oder Privat **aktiv** setzen), dann Posteingang **Aktualisieren**. Klartext vs. verschlüsselt steuert das Schloss oben.
+**Speicher auf der Chain (online):** **Flüchtig (Event)** = kein Mailbox-Eintrag. **Persistent (Mailbox)** = Ziel unter **Einstellungen → Meine Mailboxen** (Server immer mitgelesen; Team oder Privat **aktiv** setzen), dann **Aktualisieren** im **App-Header neben Tresor**. Klartext vs. verschlüsselt steuert das Schloss im Composer.
 
 | Kanal / Ziel | Persistenz | Wer sieht was? |
 |--------------|------------|----------------|
@@ -266,17 +268,18 @@ Ganzes Private-Mailbox-Object: **Einstellungen → Meine Mailboxen** → Aufräu
 
 ## Posteingang
 
-**Navigation:** Dashboard-Kachel **Nachrichten** → Chat. Im **1:1-/Gruppenmodus** links die **Seitenleiste** (Kontakte/Gruppen); Mitte der **Posteingang**, darunter der **Composer**. **Telefonbuch** über `[+]` im Composer, Sidebar oder Kontakt-Detail — nicht mehr als fester unterer Tab im Chat.
+**Navigation:** Dashboard-Kachel **Nachrichten** → Chat. Desktop: links **Chats**, rechts **Posteingang** (kurze Höhe, scrollt), darunter **Composer** über die volle Breite. **Telefonbuch** über `[+]` im Composer, Sidebar oder Kontakt-Detail.
 
 | Funktion | Beschreibung |
 |----------|--------------|
+| **Aktualisieren** | Nur **App-Header rechts neben Tresor** (nicht in der Posteingang-Leiste). |
 | **Kategorien / Filter** | z. B. Direkt, Klartext (Pinnwand), Gruppe — je nach Kanal und Rolle. |
 | **Antworten** | Menü an der Zeile — übernimmt **Kanal** und **Sendepfad** in den Composer (1:1, Gruppe, Funk, Pinnwand, Telegram). |
 | **Anheften** | Pinnwand-Posts lokal oben halten (`sessionStorage`). |
-| **Handshake-Anfragen** | Grüner Streifen oben: **Annehmen**, **Als Partner**, **Löschen**. |
+| **Handshake-Anfragen** | Grüner Streifen oben: **Annehmen**, **Als Partner**, **Löschen**. Badge in der Posteingang-Toolbar und an der Dashboard-Kachel. |
 | **Badges** | **Mailbox**, **Team-Broadcast** — unterscheidet Speicherart on-chain. |
-| **Pakete** (Dropdown) | ECDH-**.morg-pkg** Import/Export und **Paket-Archiv** — Inhalt landet **nicht** im normalen Posteingang, sondern im Archiv-Sheet. |
-| **Export** | Nachrichten-Forensik (JSON/TXT/ZIP) über Posteingang-Menü. |
+| **Optionen** | Wire einfügen · Hash & Prüfen · Export Nachrichtenverlauf (Journal + Medien-ZIP) · Datei-Paket (.morg-pkg) — Inhalt von Paketen landet im Archiv-Sheet, nicht in der normalen Liste. |
+| **On-Chain / NFT** | Eigener Button in der Posteingang-Leiste (nicht unter Optionen). |
 
 **Offline-Warteschlange:** Bei fehlender Basis werden Sends lokal gequeued; Status-Streifen im Chat.
 
@@ -349,7 +352,7 @@ Wo welche Funktion liegt (Messenger, Boss):
 | **Move-Upgrade / Chain-Status** | **Einsatzleitung → Erweitert** |
 | **Kontakte** anlegen, Import/Export JSON, verschl. Backup | **Telefonbuch** (`[+]` im Composer, Sidebar, Kontakt-Detail) |
 | **Team-/Private-Mailboxen** aktiv setzen | **Einstellungen → Meine Mailboxen** |
-| **Nachrichten-Forensik** (Verlauf JSON/TXT, ZIP) | **Posteingang** → Export-Menü |
+| **Nachrichten-Forensik** (Verlauf JSON/TXT, Medien-ZIP) | **Posteingang → Optionen → Export Nachrichtenverlauf…** |
 | **Handoff importieren** (Helfer-Gerät) | **Einstellungen → Handoff importieren** (oder Posteingang bei IOTA-Zustellung) |
 
 **Nicht verwechseln:** `npm run bundle:messenger` = Entwickler-Standalone auf dem Server — **kein** Ersatz für die Helfer-Handoff-ZIP.
@@ -538,4 +541,4 @@ Voraussetzung Import: **Handshake** zum Absender der Datei (Peer in `peerMap`).
 
 ---
 
-*Stand: 2026-06-16 — Sidebar-Chat, SOS/Sendepfad im Kopf, Gruppe-verwalten-Sheet, Peering-QR unter Ich, Inbox vor Composer.*
+*Stand: 2026-11-13 — Chats|Posteingang kurz zweispaltig, Composer volle Breite darunter; Sendepfad Alle/IOTA/Funk/Telegram; Aktualisieren neben Tresor; Optionen Wire/Hash/Export.*
