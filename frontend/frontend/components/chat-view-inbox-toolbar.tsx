@@ -399,7 +399,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               <button
                 type="button"
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-                title="Posteingang und Chat: Wire, Export, Hash — plus Info/Schlüssel/Nach-Lesen-Modus"
+                title="Optionen: Posteingang (Wire, Export, Hash) und Chat (Info, Schlüssel, Nach-Lesen-Modus). Echter Chain-Burn: Nachrichten-⋯ oder Auswahl."
               >
                 <Settings2 className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
                 Optionen
@@ -408,7 +408,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[16rem]">
               <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Posteingang
+                Posteingang · Tools
               </DropdownMenuLabel>
               {pathTools.showWirePaste ? (
                 <DropdownMenuItem
@@ -457,8 +457,11 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    Chat
+                    Chat · Sicherheit
                   </DropdownMenuLabel>
+                  <p className="px-2 pb-1.5 text-[10px] leading-snug text-muted-foreground">
+                    Nach-Lesen = Modus. Echter Burn: Zeilen-⋯ oder Auswahl.
+                  </p>
                   <ChatConversationMenuItems
                     {...conversationMenu}
                     /* Gruppe verwalten bleibt in Sidebar / Info — nicht doppelt hier */

@@ -20,9 +20,9 @@
 | **Posteingang** (rechts) | Nachrichten + Toolbar; **Auswahl** ≈ Nachrichten-⋯ (Kopieren, Protokoll, Weiterleiten, JSON, Ausblenden, Burn) |
 | **Composer** | **Volle Breite unter beiden Spalten** (eigene Leiste, kein Overlap): `[+]` = Datei, Kamera, STT, Telefonbuch, **An Adresse senden**, **Sprachnachricht**, **Passphrase-Schutz**, **Zeitkapsel-Nachricht**; Text; Senden. Empfänger-Wallet bei aktivem Chat ausgeblendet |
 | **Liste (Filter)** | **Beides / Eingang / Ausgang** und **Alles / Verschl. / Klartext** — nur Anzeige, nicht Sendemodus |
-| **Optionen** | Wire, Hash & Prüfen, Export Nachrichtenverlauf (Journal + Medien-ZIP), Datei-Paket — **nicht** Chat-⋮ |
+| **Optionen** | **Posteingang · Tools** (Wire, Hash, Export, Pakete) + **Chat · Sicherheit** (Info, Schlüssel, Nach-Lesen-**Modus**) — kein separates Chat-⋮ mehr |
 | **Nachrichten-⋯** (pro Zeile) | Kopieren, Telefonbuch, lokal ausblenden, **Von Chain löschen (Burn)** |
-| **Auswahl** | Kopieren, Protokoll markieren, Weiterleiten, JSON-Snapshot, lokal ausblenden, **Burn** (mit Confirm). Nicht: Antworten, Telefonbuch, Handoff, Mesh-Paket, ECDH-pkg |
+| **Auswahl** | Wie ⋯ gebündelt: Kopieren, Protokoll, Weiterleiten, JSON, Ausblenden, **Burn**. Nicht: Antworten, Telefonbuch, Handoff, Mesh-Paket, ECDH-pkg |
 | **Browser** | Zurück/Vor navigiert Dashboard-Ansichten (`morgView`) |
 
 **Dashboard:** Kachel **Nachrichten** öffnet den Chat. **Telefonbuch** zusätzlich über `[+]` im Composer, Sidebar oder Kontakt-Detail.
@@ -31,11 +31,23 @@
 
 | Wo | Was es ist | Was es nicht ist |
 |----|------------|------------------|
-| **Optionen → Chat** | Info, Schlüssel, Nach-Lesen-Modus, Verlauf leeren | Kein sofortiges Chain-Löschen |
-| **Nachrichten-⋯** | Diese eine Zeile (Burn, Kopieren, ausblenden) | Kein Sendemodus |
-| **Auswahl → Ausblenden** | Nur Sichtbarkeit im Posteingang | Kein Löschen / kein Burn |
+| **Optionen → Chat · Sicherheit** | Info, Schlüssel erneuern, **Nach-Lesen-Modus**, Verlauf leeren | Kein sofortiges Chain-Löschen |
+| **Nachrichten-⋯** | Diese eine Zeile (Burn, Kopieren, ausblenden, …) | Kein Sendemodus |
+| **Auswahl** | Dieselben Zeilen-Aktionen für viele Nachrichten | Kein Antworten / Handoff / Mesh-Paket |
 
-Badge **Eingang/Ausgang** oder **Verschlüsselt** anklicken → Liste filtern (wie die Chips oben). Senden bleibt im Composer.
+**Echter Burn** = Zeilen-⋯ oder Auswahl → „Von Chain löschen“. **Nach Lesen löschen** in Optionen ist nur der Modus (Vorschlag nach Lesen).
+
+Badge **Eingang/Ausgang** oder **Verschlüsselt** anklicken → Liste filtern (wie die Chips). Senden bleibt im Composer.
+
+### Drei „Entschlüsseln“ — Lernpfad
+
+| Ort | Wofür |
+|-----|--------|
+| **Nachrichtenzeile** | PWMSG / NFT-Gate: Passphrase bzw. Schlüsselkarte → Klartext in der Bubble |
+| **Optionen → Wire einfügen** | Paste `MORG_PWMSG_V1` + Passphrase (nur PWMSG; ECDH braucht Handshake) |
+| **Optionen → Export / Decrypt-JSON** | Passwort-geschützte Einsatzbericht-JSON wieder öffnen (eigene HTML-Seite) |
+
+**Zeitkapsel:** **Senden** = Composer **+** → Zeitkapsel-Nachricht. **Verleihen / Reclaim** = Posteingang → **On-Chain / NFT** → Tab Zeitkapsel.
 
 ---
 
