@@ -17,10 +17,23 @@
 | **Chat-Kopf** | Sendepfad (Online / Funk / …), **SOS — Hilferuf** (1:1, nicht Telegram), Kanal-Titel, Tresor, **Handbuch**, **Einstellungen** |
 | **Seitenleiste** (1:1 / Gruppe) | **Ich**, Alle, Kontakte, Gruppen; Suche oben; Doppelklick **Ich** → Profil + Peering-QR; Doppelklick **Gruppe** → Gruppe verwalten |
 | **Mitte** | **Posteingang** (Nachrichten) **über** dem Composer |
-| **Composer** | `[+]` (Anhang, Telefonbuch, Emoji, …), Text, Sprache, Senden |
-| **Konversation ⋮** | Profil, Export, Verlauf leeren, **Verschlüsselt/Klartext**, **Gruppe verwalten** |
+| **Liste (Filter)** | **Beides / Eingang / Ausgang** und **Alles / Verschl. / Klartext** — nur Anzeige, nicht Sendemodus |
+| **Composer** | `[+]` (Anhang, Telefonbuch, Emoji, …), Text, Sprache, Senden; **Verschlüsselt/Klartext** = wie du sendest |
+| **Chat-⋮** (Posteingang-Zeile) | Info, Export, Verlauf leeren, **Schlüssel erneuern**, **Nach Lesen löschen (Modus)** — kein sofortiger Burn |
+| **Nachrichten-⋯** (pro Zeile) | Kopieren, Telefonbuch, lokal ausblenden, **Von Chain löschen (Burn)** |
+| **Optionen** | Wire, Hash, Export, Pakete — Werkzeuge, kein Chat-⋮ |
 
 **Dashboard:** Kachel **Nachrichten** öffnet den Chat. **Telefonbuch** zusätzlich über `[+]` im Composer, Sidebar oder Kontakt-Detail.
+
+### Drei Menüs — nicht verwechseln
+
+| Wo | Was es ist | Was es nicht ist |
+|----|------------|------------------|
+| **Chat-⋮** | Konversation / Sicherheit (Modus „Nach Lesen löschen“) | Kein Wire-Paste, kein sofortiges Chain-Löschen |
+| **Nachrichten-⋯** | Diese eine Zeile (Burn, Kopieren, ausblenden) | Kein Sendemodus |
+| **Optionen** | Posteingang-Werkzeuge (Wire/Export/Hash) | Kein Schlüssel erneuern |
+
+Badge **Eingang/Ausgang** oder **Verschlüsselt** anklicken → Liste filtern (wie die Chips oben). Senden bleibt im Composer.
 
 ---
 
@@ -32,7 +45,7 @@
 
 **Unverschlüsselt · funk:** Meshtastic-**Klartext** (LongFast). Für **Ende-zu-Ende** den Transport **online** wählen (oder Verschlüsselung aktivieren — wechselt bei Bedarf automatisch zu online).
 
-**Schloss / Verschlüsselung:** Gilt für **Sendepfad online** (Morgendrot-E2E). Umschalten im **Konversations-Menü** (⋮, Verschl./Klar) oder im erweiterten Setup (**Verschlüsselt**-Karte, wenn sichtbar). Bei **funk** steuert die Meshtastic-Kanalwahl (Primary/Secondary + PSK) die Funkverschlüsselung auf dem Radio — nicht der App-Schalter.
+**Schloss / Verschlüsselung:** Gilt für **Sendepfad online** (Morgendrot-E2E). Umschalten im **Composer** (Verschlüsselt / Klartext). Die Listen-Chips **Verschl. / Klartext** filtern nur die Anzeige. Bei **funk** steuert die Meshtastic-Kanalwahl (Primary/Secondary + PSK) die Funkverschlüsselung auf dem Radio — nicht der Composer-Schalter.
 
 ---
 

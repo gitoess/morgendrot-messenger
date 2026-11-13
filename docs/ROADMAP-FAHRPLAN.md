@@ -2650,12 +2650,12 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 ### Durchgangs-Reihenfolge (verbindlich — Stand 2026-11-12)
 
 1. **Erledigt:** **T37** Landkarte · **T8/T9** Passwort/Backup/Schatten → Sicherheit · Telegram-Wipe-Scope · Klick-Lautstärke  
-2. **Als Nächstes:** **T4** Schatten→Main gemeinsam mit **T3** später testen. Done 2026-11-13: T10, T13, T19, T22, T25, T27–T31, T34, T41, T28; Filter = Beides/Eingang/Ausgang (kein zweites Postfach); T12/T33 teil-done |  
+2. **Als Nächstes:** **T4** Schatten→Main gemeinsam mit **T3** später testen. Done 2026-11-13: T10, T13, T19, T22, T23, T25, T27–T31, T33, T34, T41, T28; Liste = Richtung+Inhalt-Chips; T12 teil-done |  
 3. **Backlog (überdenken, nicht jetzt bauen):** **T56** Komplett-alles-löschen (Wizard inkl. optional NFT)  
-4. **Dann am Ende:** Ideen **T39–T54** priorisieren; T33 + Zeitkapsel nachholen  
+4. **Dann am Ende:** Ideen **T39–T54** priorisieren; Zeitkapsel (Rest T32) nachholen  
 5. **Später (nicht blockierend):** T45 · T47 · T51 · T52 · T53  
 6. **Explizit nicht im Messenger-Durchgang:** Abo-NFT-Verkaufsstory, PlanRadar-App, Zapier-Store, TG-Gerichts-Vollforensik  
-7. **Nachholen:** T33 (⋮-Menüs) · Zeitkapsel-Feldtest (Rest T32)
+7. **Nachholen:** Zeitkapsel-Feldtest (Rest T32)
 
 **Produkt-Freeze (Sicherheit/Sinn):** Telegram = Klingel (T42); Chat-Mailbox ≠ Zahlungsobjekt (T43); Magnet Default aus (T40); Seed/Passwort = Wiederherstellungs-SPOF (siehe Handbuch Sicherheit).
 
@@ -2690,7 +2690,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T20 | **Coins aus Composer** | Produkt/Recht | Entscheidung später | Chat+Zahlung mischen oft verwirrend/regulierungsnah — Default: **getrennt** im Wallet; Composer nur wenn klar als optionaler Hinweis |
 | T21 | **PTB / Notarization** | Architektur | Backlog | Chain-Ops (Mailbox, NFT, Manifest) schon oft **PTB**; Chat/Funk/Telegram nicht. IOTA Notarization Framework evaluieren — was es vs. unser Mailbox/Attestation-Pfad bringt |
 | T22 | **Doppelklick-Erkennbarkeit** | UX | **done 2026-11-13** | IOTA-Aktivität: ein Klick öffnet IDs. NFT-Zeile: Knopf „IDs“, nicht nur Doppelklick |
-| T23 | **Move-Upgrade / Chain-Panel → IOTA** | UI-Verschiebung | nach Einsatzleitung-Durchgang | Aus „Erweitert“ entfernt 2026-11-12; gehört zu Einstellungen → IOTA |
+| T23 | **Move-Upgrade / Chain-Panel → IOTA** | UI-Verschiebung | **done 2026-11-13** | `DashboardEinsatzChainPanel` unter Einstellungen → IOTA (Package & Move-Upgrade). Erweitert bleibt Archiv/Beweis |
 | T24 | **Nachrichten-Archiv UX** | Feature | später | Auswahl/alle archivieren (nicht nur „neu“); Verschlüsselung klar (Chain-Envelope ≠ NFT-PW); Mainnet-only Guard wenn Testnet sinnlos |
 | T25 | **„Team einrichten“ Rename** | UX | **done 2026-11-13** | Sichtbar: „Helfer-Geräte einrichten“. Provision-Registry bleibt im Export-Flow, nicht parallel unter Mein Team |
 | T26 | **Typo/Farbe überall lesbar** | UX | fortlaufend | Kein Lila als Fließtext; einheitliche foreground/muted — Start Einsatzleitung 2026-11-12 |
@@ -2698,9 +2698,9 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T28 | **Handbuch-Platz** | UX | **done 2026-11-13** | Einstellungen → Allgemein: Handbuch-Karte. Chat-Kopf behält Link, Sendepfad bleibt ohne Handbuch |
 | T29 | **Klang & Magnet-Prefs** | UX | **done + Lautstärke 2026-11-12** | Ton an/aus + Lautstärke 0–100; Magnet Default aus |
 | T30 | **Kontakt-Info = Mehr** | UX | **done 2026-11-13** | Seitenleiste nur Namen; Info öffnet Mehr; Medien springen zur Nachricht; IDs unter „Mehr“ |
-| T31 | **Posteingang Filter vs Composer** | UX | **done 2026-11-13** | Listenfilter Verschlüsselt/Klartext **entfernt** (verwirrend). Sendemodus nur Chat-Kopf/Composer. Partner/Kanal-Filter bleiben. .morg-pkg = Offline-Archiv |
-| T32 | **On-Chain/NFT + Optionen + Entschlüsseln** | Gemeinsam testen | **teil-done 2026-11-12** | PWMSG + Vault-Notizen ok. Zeitkapsel-Feldtest **später**. Wire-Paste = nur PWMSG. Next: T33 |
-| T33 | **Nachrichten-⋮ vs Chat-⋮** | UX/Doku | **teil-done 2026-11-13** | Chat-⋮: „Nach Lesen löschen“ statt Burn-on-read. Wire-Kopieren bleibt an der Nachrichten-Zeile (PWMSG-Label). Rest (Handbuch-Angleich) später |
+| T31 | **Posteingang Filter vs Composer** | UX | **done 2026-11-13** | Liste: Beides/Eingang/Ausgang + Alles/Verschl./Klartext. Sendemodus nur Composer. .morg-pkg = Offline-Archiv |
+| T32 | **On-Chain/NFT + Optionen + Entschlüsseln** | Gemeinsam testen | **teil-done 2026-11-12** | PWMSG + Vault-Notizen ok. Zeitkapsel-Feldtest **später**. Wire-Paste = nur PWMSG |
+| T33 | **Nachrichten-⋮ vs Chat-⋮** | UX/Doku | **done 2026-11-13** | Chat-⋮ = Modus „Nach Lesen löschen“; Zeilen-⋯ = „Von Chain löschen (Burn)“; Optionen ≠ ⋮; Handbuch-Tabelle |
 | T34 | **Magnet Wii-Feel** | UX | **done 2026-11-13, bewusst klein** | Bleibt aus. Wenn an: nur leichtes Anheben, kein Hover-Ton (der Klickton bleibt). Kein Wii-Scale mehr |
 | T35 | **Gruppe 1:1 vs gemeinsames Postfach** | Doku/UI | erledigt 2026-11-12, Retest | Labels + Handbuch-Tabelle; Handshake-Liste nur bei 1:1 |
 | T36 | **Telegram-Verlauf-Export** | Dialog statt Submenu 2026-11-12 | **live smoke** | Optionen → Export… → Dialog mit JSON/TXT/ZIP. Nested Submenu entfernt (leerer Scroll). T37 gemeinsam am Ende |
@@ -2711,7 +2711,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T39 | **Telegram↔IOTA Beweis** | Produkt | später / gemeinsam am Ende | Export-JSON enthält Journal-Felder (chatId/Richtung); Beweis-Paket = JSON + SHA-256 (+ optional Chain). Kein TG-Vollforensik/Medien. Mit User am Roadmap-Ende priorisieren |
 | T55 | **Optionen-Hub Online** | UX | **done 2026-11-12** | Wire · Hash · Export · Decrypt-JSON · pkg getrennt; Hash nur Optionen. Notizen-Button 1× (Posteingang) |
 | T40 | **Magnet/Haptik** | Entscheidung 2026-11-12 | erledigt | Default **aus**; optional lassen. Nicht weiter aufblasen — Affordance statt Pseudo-Wii |
-| T41 | **Klickbarkeit ohne Magnet** | UX | **done 2026-11-13** | Fokusring an Buttons/Links. „Verschlüsselt“/„Klartext“ an einer Zeile sind Knöpfe und filtern die Liste |
+| T41 | **Klickbarkeit ohne Magnet** | UX | **done 2026-11-13** | Fokusring. Badge **Eingang/Ausgang** und **Verschlüsselt** setzen Listenfilter; Sendemodus bleibt Composer |
 | T42 | **IOTA↔Telegram-Brücke Scope** | Produkt-Freeze | vor Feature-Wünschen | Telegram = Hinweis/Inbound/Alarm — **kein** Video/NFT/E2EE über TG. IOTA = Archiv/Beweis |
 | T43 | **Mailbox-Chat ≠ Zahlungs-Objekt** | Doku | Backlog | Chat-Mailbox = Nachrichten-DF; Escrow/DAO/Abo = andere Move-Objekte (Purse/Treasury). Nicht vermischen |
 | T44 | **Mesh + SignPersonalMessage** | Feature | nach Funk-Strategie T6 | Offline Text+Sig verifizieren (Ist teils Team-Wire); Replay/Nonce; optional später Anker — nicht volle Offline-TX |

@@ -164,7 +164,7 @@ export function DashboardEinsatzParameterPanel(p: EinsatzPanelProps) {
   )
 }
 
-/** Chain-Status, Package-Infos und Move-Upgrade — unter Erweitert. */
+/** Chain-Status, Package-Infos und Move-Upgrade — Einstellungen → IOTA (T23). */
 export function DashboardEinsatzChainPanel(p: Pick<EinsatzPanelProps, 'apiStatus' | 'onRefreshStatus' | 'className'>) {
   const cfg = p.apiStatus?.einsatzConfig
   const packageId = p.apiStatus?.packageId?.trim() || ''

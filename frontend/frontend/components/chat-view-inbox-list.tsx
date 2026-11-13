@@ -140,6 +140,9 @@ export type ChatViewInboxListProps = InboxFeedReadPort & {
   einsatzRpcHint?: string
   /** Composer/Connect läuft — Antworten-Button sperren. */
   sending?: boolean
+  /** Badge-Klick → Listenfilter (nicht Sendemodus). */
+  onApplyDirectionFilter?: (d: 'all' | 'in' | 'out') => void
+  onApplyWireFilter?: (f: 'all' | 'encrypted' | 'plaintext') => void
 }
 
 export function ChatViewInboxList(p: ChatViewInboxListProps) {
@@ -179,6 +182,8 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
     isPinnwandInboxMessage,
     einsatzRpcHint = '',
     sending = false,
+    onApplyDirectionFilter,
+    onApplyWireFilter,
   } = p
 
   const { getBadgesForMessage, getTxDigestForMessage, chainMode: einsatzChainMode } =
@@ -449,11 +454,25 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                       )
                     }
                     if (row.msg.encrypted) {
+                      const encClass =
+                        'inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400'
+                      const encTitle =
+                        'Verschlüsselt empfangen/gesendet. Klick: Liste nur Verschlüsselte. Senden stellst du im Composer ein.'
+                      if (onApplyWireFilter) {
+                        return (
+                          <button
+                            type="button"
+                            className={cn(encClass, 'hover:bg-emerald-500/25')}
+                            title={encTitle}
+                            onClick={() => onApplyWireFilter('encrypted')}
+                          >
+                            <Lock className="h-3 w-3" aria-hidden />
+                            Verschlüsselt
+                          </button>
+                        )
+                      }
                       return (
-                        <span
-                          className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400"
-                          title="Diese Nachricht ist verschlüsselt. Ob du verschlüsselt sendest, stellst du im Chat-Kopf ein."
-                        >
+                        <span className={encClass} title={encTitle}>
                           <Lock className="h-3 w-3" aria-hidden />
                           Verschlüsselt
                         </span>
@@ -469,7 +488,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   {burnOnReadEnabled && row.msg.chainPurgeable ? (
                     <span
                       className="inline-flex items-center gap-0.5 rounded-full bg-orange-500/20 px-2 py-0.5 text-[10px] font-semibold text-orange-900 dark:text-orange-100"
-                      title="Mailbox-Objekt — ⋮ → Burn: von Chain löschen. Nicht dasselbe wie lokal ausblenden."
+                      title="Mailbox-Objekt — Nachrichten-⋯ → Von Chain löschen (Burn). Nicht lokal ausblenden."
                     >
                       Burnbar
                     </span>
@@ -508,16 +527,36 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     {new Date(row.msg.timestamp).toLocaleString('de-DE')}
                   </time>
                   {myAddress.trim() ? (
-                    <span
-                      className={cn(
-                        'rounded-md px-2 py-0.5 font-medium',
-                        isMessageOutgoing(row.msg, myAddress)
-                          ? 'bg-sky-500/15 text-sky-800 dark:text-sky-200'
-                          : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
-                      )}
-                    >
-                      {isMessageOutgoing(row.msg, myAddress) ? 'Ausgang' : 'Eingang'}
-                    </span>
+                    onApplyDirectionFilter ? (
+                      <button
+                        type="button"
+                        className={cn(
+                          'rounded-md px-2 py-0.5 font-medium hover:opacity-90',
+                          isMessageOutgoing(row.msg, myAddress)
+                            ? 'bg-sky-500/15 text-sky-800 dark:text-sky-200'
+                            : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
+                        )}
+                        title="Liste filtern: nur diese Richtung"
+                        onClick={() =>
+                          onApplyDirectionFilter(
+                            isMessageOutgoing(row.msg, myAddress) ? 'out' : 'in'
+                          )
+                        }
+                      >
+                        {isMessageOutgoing(row.msg, myAddress) ? 'Ausgang' : 'Eingang'}
+                      </button>
+                    ) : (
+                      <span
+                        className={cn(
+                          'rounded-md px-2 py-0.5 font-medium',
+                          isMessageOutgoing(row.msg, myAddress)
+                            ? 'bg-sky-500/15 text-sky-800 dark:text-sky-200'
+                            : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
+                        )}
+                      >
+                        {isMessageOutgoing(row.msg, myAddress) ? 'Ausgang' : 'Eingang'}
+                      </span>
+                    )
                   ) : null}
                   {row.msg.recipient ? (
                     <span className="rounded-md bg-muted px-2 py-0.5 font-medium text-foreground/80">
@@ -681,7 +720,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     }}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Burn: von Chain löschen
+                    Von Chain löschen (Burn)
                   </DropdownMenuItem>
                   {parseHandoffZipWire(row.msg.content ?? '') ? (
                     <DropdownMenuItem

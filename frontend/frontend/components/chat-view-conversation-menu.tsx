@@ -140,13 +140,13 @@ export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
               disabled={!burn}
               title={
                 burn
-                  ? 'Bei löschbaren Chain-Nachrichten nach dem Lesen Löschen vorschlagen (mit Bestätigung).'
+                  ? 'Modus: nach dem Lesen Löschen vorschlagen (Confirm). Löscht nicht sofort — echter Burn ist am Nachrichten-⋯.'
                   : 'Nach-Lesen-Löschen hier nicht verfügbar'
               }
               onSelect={() => burn?.onEnabledChange(!burn.enabled)}
             >
               <Flame className={burn?.enabled ? 'mr-2 h-4 w-4 text-orange-600' : 'mr-2 h-4 w-4'} />
-              {burn?.enabled ? 'Nach Lesen löschen: an' : 'Nach Lesen löschen: aus'}
+              {burn?.enabled ? 'Nach Lesen löschen: an (Modus)' : 'Nach Lesen löschen: aus (Modus)'}
             </DropdownMenuItem>
 
             <DropdownMenuItem

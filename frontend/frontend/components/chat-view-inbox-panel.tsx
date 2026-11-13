@@ -391,6 +391,11 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           inboxVisibilityHint={inboxVisibilityHint}
           onReplyToMessage={onReplyToMessage}
           sending={sending}
+          onApplyDirectionFilter={setInboxDirectionFilter}
+          onApplyWireFilter={(f) => {
+            setInboxWireFilter(f)
+            if (f !== 'all') setInboxWireFiltersArmed(true)
+          }}
         />
       </div>
     </div>

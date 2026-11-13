@@ -18,6 +18,7 @@ import { SettingsTelegramNotifyOnSend } from '@/frontend/components/views/settin
 import { SettingsSystemIdentitySection } from '@/frontend/components/views/settings-system-identity-section'
 import { SettingsNetworkProfilesSection } from '@/frontend/components/settings-network-profiles-section'
 import { SettingsMyMailboxesSection } from '@/frontend/components/views/settings-my-mailboxes-section'
+import { DashboardEinsatzChainPanel } from '@/frontend/components/dashboard-einsatz-konfiguration'
 import { SettingsVaultBackupSection } from '@/frontend/components/views/settings-vault-backup-section'
 import { SettingsVaultPasswordSection } from '@/frontend/components/views/settings-vault-password-section'
 import { SettingsEmergencyPurgeSection } from '@/frontend/components/views/settings-emergency-purge-section'
@@ -240,6 +241,17 @@ export function SettingsView({
             (advancedIotaStatus?.myAddressFull || advancedIotaStatus?.myAddress || status?.address || '').trim()
           }
         />
+        <div className="rounded-xl border border-border bg-card p-4">
+          <p className="mb-1 text-sm font-semibold text-foreground">Package &amp; Move-Upgrade</p>
+          <p className="mb-3 text-[12px] text-muted-foreground">
+            Chain-Status und In-Place-Upgrade (gleiche Package-ID). Früher unter Einsatzleitung → Erweitert —
+            hier unter IOTA, weil es das Move-Package betrifft, nicht den Einsatz-Alltag.
+          </p>
+          <DashboardEinsatzChainPanel
+            apiStatus={advancedIotaStatus}
+            onRefreshStatus={() => void loadStatus()}
+          />
+        </div>
         {!slimMessengerEinsatz && status?.backendOnline && status.signer === 'sdk' ? (
           <div className="rounded-xl border border-border bg-card p-4">
             <div className="mb-3 flex items-start gap-3">
