@@ -16,7 +16,7 @@
 |---------|--------|
 | **App-Header** (Boss/Messenger) | **Tresor**, **Aktualisieren** (Status + Posteingang + Kontakte), Handbuch, Einstellungen — **nicht** in der Posteingang-Leiste |
 | **Chat-Kopf** | Sendepfad (**Alle** / Funk / **IOTA** / Telegram), **SOS — Hilferuf** (1:1, nicht Telegram). Mit Sidebar: **kein** großer Kanal-/Posteingang-Titel |
-| **Seitenleiste** (Desktop) | **Chats** gleiche Höhe wie Posteingang-Liste (~14rem–50vh), scrollt |
+| **Seitenleiste** (Desktop) | **Chats** gleiche Höhe wie Posteingang (`min(70vh,44rem)`), scrollt |
 | **Posteingang** (rechts) | Nachrichten + Toolbar; **Auswahl** ≈ Nachrichten-⋯ (Kopieren, Protokoll, Weiterleiten, JSON, Ausblenden, Burn) |
 | **Composer** | **Volle Breite unter beiden Spalten** (eigene Leiste, kein Overlap): `[+]` = Datei, Kamera, STT, Telefonbuch, **An Adresse senden**, **Sprachnachricht**, **Passphrase-Schutz**, **Zeitkapsel-Nachricht**; Text; Senden. Empfänger-Wallet bei aktivem Chat ausgeblendet |
 | **Liste (Filter)** | **Beides / Eingang / Ausgang** und **Alles / Verschl. / Klartext** — nur Anzeige, nicht Sendemodus |

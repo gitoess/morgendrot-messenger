@@ -1566,7 +1566,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             />
             <div className="grid gap-3 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-stretch">
               <ChatViewContactSidebar
-                className="hidden h-[min(42vh,22rem)] overflow-hidden lg:flex"
+                className="hidden h-[min(70vh,44rem)] overflow-hidden lg:flex"
                 directory={directory}
                 partnerOptions={inboxPartnerOptions}
                 activePartnerKey={inboxPartnerKey}
@@ -1594,7 +1594,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                 {...pinnwandSidebarProps}
                 {...sidebarHandshakeProps}
               />
-              <div className="flex h-[min(42vh,22rem)] min-w-0 flex-col overflow-hidden">
+              <div className="flex h-[min(70vh,44rem)] min-w-0 flex-col overflow-hidden">
                 {conversationBody}
               </div>
             </div>

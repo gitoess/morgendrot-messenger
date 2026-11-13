@@ -37,7 +37,7 @@
 
 **Nachtrag 2026-11-05 (Burn/Mailbox + Passphrase-Reuse):** Burn-on-read erzwingt Composer-**Mailbox** (Event-Pfad nicht purgebar; Explorer behält TX/Events). Direktchat-⋮ mit **Scope-Hinweis**. Chat-**Passphrase-Schutz**: optional **Passphrase wiederverwenden**. Feldtest: Epoch-Renew Self **PASS**; Burn + Passphrase-Reuse Retest offen.
 
-**Nachtrag 2026-11-13 (Messenger-Layout + Doku-Sync):** Desktop **Telegram-Muster:** links Chats, rechts Posteingang + Composer nur unter dem Thread; Nachrichtenliste **min-h ~14rem / max ~50vh** (kein flex-1→0). Sendepfad **Alle**/Funk/**IOTA**/Telegram; **Aktualisieren** neben Tresor; **Optionen** Wire/Hash/Export. **T36/T38** Agent-Unit PASS; **Live-Smoke + T3 + T4** gemeinsam später (Roadmap Durchgang §3). **[+]** Passphrase/Zeitkapsel später.
+**Nachtrag 2026-11-13 (Messenger-Layout + Doku-Sync):** Desktop **Telegram-Muster:** Chats|Posteingang feste Höhe **`min(70vh,44rem)`** (~doppelt), Composer darunter volle Breite ohne Overlap; **+** = Passphrase/Zeitkapsel/Sprachnachricht/An Adresse. Gemeinsame Live-Rituale (T3/T4/T36/T38) und Besprechungen (T23/T33/T41/T32) **nach hinten**.
 
 **Nachtrag 2026-11-05 (Wire einfügen):** **Optionen → Wire einfügen** — Paste `MORG_PWMSG_V1` + Passphrase → lokaler Klartext (≠ Toolbar **Entschlüsseln** = Einsatzbericht-.json). ECDH-Wires weiter nur mit Handshake.
 
@@ -2652,9 +2652,9 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 ### Durchgangs-Reihenfolge (verbindlich — Stand 2026-11-12)
 
 1. **Erledigt:** **T37** Landkarte · **T8/T9** Passwort/Backup/Schatten → Sicherheit · Telegram-Wipe-Scope · Klack/Klick-Ton (T29) · Sendepfad/Layout-Polish 2026-11-13  
-2. **Agent 2026-11-13 (Code/Unit):** Layout ohne Overlap (feste Thread-Höhe + Composer darunter); Auswahl≈⋯; **+** = Sprachnachricht, An Adresse, **Passphrase**, **Zeitkapsel**; T3/T4/T36/T38 Unit-Smoke — **kein** Live-Feld.  
-3. **Gemeinsam später (verbindlich):** Live **T3** Mailboxen → **T4** Schatten→Main → **T36/T38** Export+Hash.  
-4. **Besprechen:** **T23/T33/T41**; **T12**-Rest; **T32** Zeitkapsel-Feldtest (UI-Einstieg jetzt im **+**).  
+2. **Jetzt (Agent allein):** Layout/UX fertig polieren (Chats|Posteingang ~doppelt so hoch `min(70vh,44rem)`, Composer darunter); Unit + eigener Live-Check.  
+3. **Gemeinsame Rituale — nach hinten** (erst wenn Agent-Layout stabil): Live **T3** → **T4** → **T36/T38**. Nicht parallel zu Layout-Feinschliff.  
+4. **Danach besprechen (nicht bauen):** **T23/T33/T41** Kurz-Retest-Umfang; **T32** Zeitkapsel-Feldtest (+-Einstieg schon da); optional T12-Rest.  
 5. **Backlog (überdenken, nicht jetzt bauen):** **T56** Komplett-alles-löschen; **T39** Beweis-Paket  
 6. **Dann am Ende:** Ideen **T39–T54** priorisieren  
 7. **Später (nicht blockierend):** T45 · T47 · T51 · T52 · T53  
@@ -2673,8 +2673,8 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 |---|--------|-----|------|-------|
 | T1 | **Mainnet einrichten** | Feld/UI-Test | **am Schluss** dieses Durchgangs | Deploy / Gas / Schalter Produktion / Signer-Strip — zusammen klicken |
 | T2 | **Passwort ändern** | Durchgang + ggf. Smoke | **done 2026-11-12** | Unter **Sicherheit**; Session-PW nach Ändern sync; Header vs. voller Lock erklärt |
-| T3 | **Meine Mailboxen** | Durchgang | **Agent Unit/Code 2026-11-13; Live gemeinsam später** | Settings → IOTA „Meine Mailboxen“. Unit: `my-mailbox-active`, `composer-mailbox-*`, Contact-Send-Mailbox. Live: Privat/Team vs Deploy unter „Wo senden?“ |
-| T4 | **Schatten → Main (Sweep)** | Durchgang | **Agent UI-Ist 2026-11-13; Live gemeinsam nach T3** | `chat-view-shadow-sweep` + API. Live: Quelle=Schatten-Seed; Ziel=0x oder neu; altes Wallet=Seed importieren |
+| T3 | **Meine Mailboxen** | Durchgang | **Live gemeinsam — nach hinten** (nach Agent-Layout-Stabil) | Settings → IOTA. Unit schon grün; Live mit User erst nach Layout-Freeze |
+| T4 | **Schatten → Main (Sweep)** | Durchgang | **Live gemeinsam — nach hinten** (nach T3) | UI-Ist da; Live mit User erst nach T3 |
 | T5 | **§ H.32b Einsatz beenden** | Retest | bewusst später | = QA #3 |
 | T6 | **Funk / Meshtastic** | Strategie-Entscheid | **verschoben** (nach Settings-Durchgang) | Offizielle Meshtastic-App vs. eigene UI — **noch nicht entscheiden**; Ist: Puls/Geräte-Embed |
 | T7 | **Vault-Registry / Chain-Globals** | Durchgang | später | bewusst zurückgestellt |
@@ -2693,7 +2693,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T20 | **Coins aus Composer** | Produkt/Recht | Entscheidung später | Chat+Zahlung mischen oft verwirrend/regulierungsnah — Default: **getrennt** im Wallet; Composer nur wenn klar als optionaler Hinweis |
 | T21 | **PTB / Notarization** | Architektur | Backlog | Chain-Ops (Mailbox, NFT, Manifest) schon oft **PTB**; Chat/Funk/Telegram nicht. IOTA Notarization Framework evaluieren — was es vs. unser Mailbox/Attestation-Pfad bringt |
 | T22 | **Doppelklick-Erkennbarkeit** | UX | **done 2026-11-13** | IOTA-Aktivität: ein Klick öffnet IDs. NFT-Zeile: Knopf „IDs“, nicht nur Doppelklick |
-| T23 | **Move-Upgrade / Chain-Panel → IOTA** | UI-Verschiebung | **done 2026-11-13** | `DashboardEinsatzChainPanel` unter Einstellungen → IOTA (Package & Move-Upgrade). Erweitert bleibt Archiv/Beweis |
+| T23 | **Move-Upgrade / Chain-Panel → IOTA** | UI-Verschiebung | **done; gemeinsamer Retest nach hinten (mit T33/T41)** | `DashboardEinsatzChainPanel` unter Einstellungen → IOTA. Retest-Umfang später besprechen |
 | T24 | **Nachrichten-Archiv UX** | Feature | später | Auswahl/alle archivieren (nicht nur „neu“); Verschlüsselung klar (Chain-Envelope ≠ NFT-PW); Mainnet-only Guard wenn Testnet sinnlos |
 | T25 | **„Team einrichten“ Rename** | UX | **done 2026-11-13** | Sichtbar: „Helfer-Geräte einrichten“. Provision-Registry bleibt im Export-Flow, nicht parallel unter Mein Team |
 | T26 | **Typo/Farbe überall lesbar** | UX | **done 2026-11-13** (fortlaufend) | Lila-Fließtext in Handoff/Boss/Kacheln/Telegram-Einstieg → foreground/muted/amber/sky. Chip-Akzente (Mailbox) bleiben |
@@ -2702,19 +2702,19 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T29 | **Klang & Magnet-Prefs** | UX | **done + Klack 2026-11-13** | Klack (Button) getrennt von Klick-Ton (Piep); Lautstärke 0–100; Magnet Default aus |
 | T30 | **Kontakt-Info = Mehr** | UX | **done 2026-11-13** | Seitenleiste nur Namen; Info öffnet Mehr; Medien springen zur Nachricht; IDs unter „Mehr“ |
 | T31 | **Posteingang Filter vs Composer** | UX | **done 2026-11-13** | Liste: Beides/Eingang/Ausgang + Alles/Verschl./Klartext. Sendemodus nur Composer. .morg-pkg = Offline-Archiv |
-| T32 | **On-Chain/NFT + Optionen + Entschlüsseln** | Gemeinsam testen | **teil-done 2026-11-12** | PWMSG + Vault-Notizen ok. Zeitkapsel-Feldtest **später**. Wire-Paste = nur PWMSG |
-| T33 | **Nachrichten-⋮ vs Chat-⋮** | UX/Doku | **done 2026-11-13** | Chat-⋮ = Modus „Nach Lesen löschen“; Zeilen-⋯ = „Von Chain löschen (Burn)“; Optionen ≠ ⋮; Handbuch-Tabelle |
+| T32 | **On-Chain/NFT + Optionen + Entschlüsseln** | Gemeinsam testen | **teil-done; Feldtest nach hinten (besprechen nach Agent-Live)** | PWMSG ok. Zeitkapsel-UI im **+**; Feldtest/Leihe **besprechen**, nicht jetzt |
+| T33 | **Nachrichten-⋮ vs Chat-⋮** | UX/Doku | **done 2026-11-13; Retest mit T23/T41 nach hinten** | Chat-⋮ = Nach-Lesen; Zeilen-⋯ = Burn; Auswahl≈⋯. Gemeinsamer Kurz-Retest später besprechen |
 | T34 | **Magnet Wii-Feel** | UX | **done 2026-11-13, bewusst klein** | Bleibt aus. Wenn an: nur leichtes Anheben, kein Hover-Ton (der Klickton bleibt). Kein Wii-Scale mehr |
 | T35 | **Gruppe 1:1 vs gemeinsames Postfach** | Doku/UI | erledigt 2026-11-12, Retest | Labels + Handbuch-Tabelle; Handshake-Liste nur bei 1:1 |
-| T36 | **Telegram-Verlauf-Export** | Dialog statt Submenu 2026-11-12 | **Agent Unit/UI PASS; Live gemeinsam später (nach T3/T4)** | Optionen → Export + Auswahl→JSON-Snapshot. Keine TG-Server-Medien. Kein T39 parallel |
+| T36 | **Telegram-Verlauf-Export** | Dialog statt Submenu 2026-11-12 | **Agent Unit PASS; Live gemeinsam — nach hinten** | Optionen → Export. Live erst nach Layout-Freeze + T3/T4-Block |
 | T37 | **Tresor-Landkarte UI** | UX | **done 2026-11-12** | Sicherheit-Kurzkarte + Handbuch `#tresor-landkarte`; Gelb-Affordanz entfernt; Notfall-Scopes ehrlich |
-| T38 | **Hash & Prüfen (SHA-256)** | Feature | **Agent Unit PASS; Live gemeinsam später (mit T36)** | Optionen → **Hash & Prüfen**. Gebündelt mit T36 |
+| T38 | **Hash & Prüfen (SHA-256)** | Feature | **Agent Unit PASS; Live gemeinsam — nach hinten (mit T36)** | Optionen → Hash. Gebündelt mit T36, nach hinten |
 | T56 | **Komplett-alles-löschen** | Feature/UX | **Backlog — überdenken** | Ein Wizard: Gerät + Chain-Tresor + Vault-Datei + Telegram + optional NFT/Keys brennen. Ehrliche Grenzen (fremde Kopien, TG-Server, .env). Nicht als ein blinder Knopf ohne Checkliste. Siehe `NOTFALL-PURGE-MESSENGER.md` |
 | T54 | **Seed / Passwort SPOF** | Sicherheit/Doku | fortlaufend | Mnemonic = Identität/Coins; Vault-PW = Tresor-Inhalt; beides offline sichern; Ordner `.morgendrot-*` / Sidecar / `.env` = Gerät+Backup, nicht „Cloud = sicher“ |
 | T39 | **Telegram↔IOTA Beweis** | Produkt | später / gemeinsam am Ende | Export-JSON enthält Journal-Felder (chatId/Richtung); Beweis-Paket = JSON + SHA-256 (+ optional Chain). Kein TG-Vollforensik/Medien. Mit User am Roadmap-Ende priorisieren |
 | T55 | **Optionen-Hub Online** | UX | **done 2026-11-12** | Wire · Hash · Export · Decrypt-JSON · pkg getrennt; Hash nur Optionen. Notizen-Button 1× (Posteingang) |
 | T40 | **Magnet/Haptik** | Entscheidung 2026-11-12 | erledigt | Default **aus**; optional lassen. Nicht weiter aufblasen — Affordance statt Pseudo-Wii |
-| T41 | **Klickbarkeit ohne Magnet** | UX | **done 2026-11-13** | Fokusring. Badge **Eingang/Ausgang** und **Verschlüsselt** setzen Listenfilter; Sendemodus bleibt Composer |
+| T41 | **Klickbarkeit ohne Magnet** | UX | **done; Retest nach hinten (mit T23/T33)** | Fokusring; Badge setzt Listenfilter. Gemeinsamer Kurz-Retest später besprechen |
 | T42 | **IOTA↔Telegram-Brücke Scope** | Produkt-Freeze | **done 2026-11-13** | Freeze-Hinweis in Einstellungen → Telegram + Notify-Copy. TG = Klingel; IOTA = Archiv/Beweis |
 | T43 | **Mailbox-Chat ≠ Zahlungs-Objekt** | Doku | Backlog | Chat-Mailbox = Nachrichten-DF; Escrow/DAO/Abo = andere Move-Objekte (Purse/Treasury). Nicht vermischen |
 | T44 | **Mesh + SignPersonalMessage** | Feature | nach Funk-Strategie T6 | Offline Text+Sig verifizieren (Ist teils Team-Wire); Replay/Nonce; optional später Anker — nicht volle Offline-TX |
