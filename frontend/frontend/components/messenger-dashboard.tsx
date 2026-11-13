@@ -374,6 +374,7 @@ function MessengerDashboardBody({
             vaultBannerActions={showHomeVaultBadge ? homeVaultActions : undefined}
             sessionLocked={vaultSessionLocked}
             hasKeys={browserSignerReady}
+            onRefreshStatus={s.checkStatus}
             subNav={{
               viewTitle:
                 s.activeView.type === 'settings'
@@ -417,15 +418,24 @@ function MessengerDashboardBody({
                       ? t('views.einsatzleitung')
                       : featureTitle(s.activeView.type, messengerFeaturesI18n)}
               </span>
-              {showHomeVaultBadge ? (
-                <div className="ml-auto">
+              <div className="ml-auto flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => void s.checkStatus()}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-foreground/25 bg-foreground px-2.5 py-1.5 text-xs font-bold text-background shadow-sm transition-colors hover:bg-foreground/90"
+                  title="Status neu laden"
+                  aria-label="Aktualisieren"
+                >
+                  Aktualisieren
+                </button>
+                {showHomeVaultBadge ? (
                   <TresorSessionBadge
                     sessionLocked={vaultSessionLocked}
                     hasKeys={browserSignerReady}
                     actions={homeVaultActions}
                   />
-                </div>
-              ) : null}
+                ) : null}
+              </div>
             </div>
           </header>
         ) : null}
@@ -534,6 +544,7 @@ function MessengerDashboardBody({
           vaultBannerActions={showHomeVaultBadge ? homeVaultActions : undefined}
           sessionLocked={vaultSessionLocked}
           hasKeys={browserSignerReady}
+          onRefreshStatus={s.checkStatus}
         />
       ) : (
       <header className="border-b border-border bg-card/90 backdrop-blur-sm">
@@ -575,6 +586,15 @@ function MessengerDashboardBody({
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void s.checkStatus()}
+              className="inline-flex items-center gap-1.5 rounded-md border border-foreground/25 bg-foreground px-2.5 py-1.5 text-xs font-bold text-background shadow-sm transition-colors hover:bg-foreground/90"
+              title="Status neu laden"
+              aria-label="Aktualisieren"
+            >
+              Aktualisieren
+            </button>
             {showHomeVaultBadge ? (
               <TresorSessionBadge
                 sessionLocked={vaultSessionLocked}

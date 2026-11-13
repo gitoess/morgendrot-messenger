@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { BookOpen, ChevronLeft, LogOut, Settings } from 'lucide-react'
+import { BookOpen, ChevronLeft, LogOut, RefreshCw, Settings } from 'lucide-react'
 import { DashboardRolePill } from '@/frontend/components/dashboard-role-pill'
 import { ChatNetworkBadge } from '@/frontend/components/chat-network-badge'
 import { DashboardHeaderAddress } from '@/frontend/components/dashboard-header-address'
@@ -19,6 +19,8 @@ export function DashboardMessengerBossHeader(p: {
   vaultBannerActions?: ChatViewVaultBannerActions
   sessionLocked?: boolean
   hasKeys?: boolean
+  /** Status / Posteingang neu laden — neben Tresor. */
+  onRefreshStatus?: () => void | Promise<void>
   /** Unteransicht: Zurück / Hauptmenü / Titel im festen Header. */
   subNav?: {
     viewTitle: string
@@ -38,6 +40,18 @@ export function DashboardMessengerBossHeader(p: {
             <h1 className="text-lg font-bold tracking-tight text-foreground">{t('brand.morgendrot')}</h1>
             <DashboardRolePill role={p.role} />
             <ChatNetworkBadge />
+            {p.onRefreshStatus ? (
+              <button
+                type="button"
+                onClick={() => void p.onRefreshStatus?.()}
+                className="inline-flex items-center gap-1.5 rounded-md border border-foreground/25 bg-foreground px-2.5 py-1.5 text-xs font-bold text-background shadow-sm transition-colors hover:bg-foreground/90"
+                title="Status, Posteingang und Kontakte neu laden"
+                aria-label="Aktualisieren"
+              >
+                <RefreshCw className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                Aktualisieren
+              </button>
+            ) : null}
             {showVaultBadge ? (
               <TresorSessionBadge
                 sessionLocked={!!p.sessionLocked}

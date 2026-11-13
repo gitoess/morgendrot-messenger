@@ -126,13 +126,25 @@ describe('ChatViewChatHeader (§ H.1a)', () => {
         {...baseHeader({
           channelMode: 'private',
           onRefreshStatus,
-          suppressAppChrome: true,
         })}
       />
     )
     fireEvent.click(screen.getByRole('button', { name: /^Aktualisieren$/i }))
     expect(onRefreshStatus).toHaveBeenCalledTimes(1)
     expect(screen.getByText(/Tresor:/i)).toBeInTheDocument()
+  })
+
+  it('blendet Aktualisieren aus wenn App-Header darüber (suppressAppChrome)', () => {
+    render(
+      <ChatViewChatHeader
+        {...baseHeader({
+          channelMode: 'private',
+          onRefreshStatus: vi.fn(),
+          suppressAppChrome: true,
+        })}
+      />
+    )
+    expect(screen.queryByRole('button', { name: /^Aktualisieren$/i })).not.toBeInTheDocument()
   })
 
   it('warnt bei unsicherer Geräte-Uhr (§ H.6c)', () => {

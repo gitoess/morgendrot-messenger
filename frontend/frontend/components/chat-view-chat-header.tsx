@@ -269,13 +269,14 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
 
   const channelSubtitle = conversationSubtitle?.trim() || null
   const showHandbook = channelMode !== 'notes' && !compactNative && !suppressAppChrome
-  /** Vault neben Aktualisieren — auch wenn App-Header darüber (Einsatz). */
-  const showTreasuryBadge = Boolean(apiStatus) && channelMode !== 'pinnwand'
+  /** Bei Einsatz-App-Header: Tresor/Aktualisieren nur dort — hier nicht doppelt. */
+  const showTreasuryBadge =
+    !suppressAppChrome && Boolean(apiStatus) && channelMode !== 'pinnwand'
   const showProfileBadges = !suppressAppChrome && !compactNative
   const showSendPathInHeader = sendPath?.visible && !compactNative
   const showSettingsBtn = Boolean(onOpenSettings) && !suppressAppChrome
-  /** Neben Tresor — auch bei suppressAppChrome (Einsatz-Header darüber), sonst nur Inbox-Leiste. */
-  const showHeaderRefresh = Boolean(onRefreshStatus)
+  /** App-Header hat Aktualisieren bei suppressAppChrome; sonst hier neben Tresor. */
+  const showHeaderRefresh = Boolean(onRefreshStatus) && !suppressAppChrome
   const useInboxIcon = conversationIcon === 'inbox' || channelMode === 'pinnwand' || channelMode === 'notes'
 
   const queuePending = offlineStatus?.queuePending ?? 0
