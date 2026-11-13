@@ -2650,7 +2650,7 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 ### Durchgangs-Reihenfolge (verbindlich — Stand 2026-11-12)
 
 1. **Erledigt:** **T37** Landkarte · **T8/T9** Passwort/Backup/Schatten → Sicherheit · Telegram-Wipe-Scope · Klick-Lautstärke  
-2. **Als Nächstes:** **T4** Schatten→Main gemeinsam mit **T3** später testen. Done 2026-11-13: T10, T13, T19, T22, T23, T25, T27–T31, T33, T34, T41, T28; Liste = Richtung+Inhalt-Chips; T12 teil-done |  
+2. **Als Nächstes:** **T4** Schatten→Main gemeinsam mit **T3** später testen. Done 2026-11-13: T10, T13, T19, T22, T23, T25–T31, T33, T34, T41, T28; T23/T33/T41 **gemeinsam reviewen**; Liste-Chips; T12 teil-done |  
 3. **Backlog (überdenken, nicht jetzt bauen):** **T56** Komplett-alles-löschen (Wizard inkl. optional NFT)  
 4. **Dann am Ende:** Ideen **T39–T54** priorisieren; Zeitkapsel (Rest T32) nachholen  
 5. **Später (nicht blockierend):** T45 · T47 · T51 · T52 · T53  
@@ -2693,7 +2693,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T23 | **Move-Upgrade / Chain-Panel → IOTA** | UI-Verschiebung | **done 2026-11-13** | `DashboardEinsatzChainPanel` unter Einstellungen → IOTA (Package & Move-Upgrade). Erweitert bleibt Archiv/Beweis |
 | T24 | **Nachrichten-Archiv UX** | Feature | später | Auswahl/alle archivieren (nicht nur „neu“); Verschlüsselung klar (Chain-Envelope ≠ NFT-PW); Mainnet-only Guard wenn Testnet sinnlos |
 | T25 | **„Team einrichten“ Rename** | UX | **done 2026-11-13** | Sichtbar: „Helfer-Geräte einrichten“. Provision-Registry bleibt im Export-Flow, nicht parallel unter Mein Team |
-| T26 | **Typo/Farbe überall lesbar** | UX | fortlaufend | Kein Lila als Fließtext; einheitliche foreground/muted — Start Einsatzleitung 2026-11-12 |
+| T26 | **Typo/Farbe überall lesbar** | UX | **done 2026-11-13** (fortlaufend) | Lila-Fließtext in Handoff/Boss/Kacheln/Telegram-Einstieg → foreground/muted/amber/sky. Chip-Akzente (Mailbox) bleiben |
 | T27 | **Telefonbuch entschlacken** | UX | **done 2026-11-13** | Alarmgruppe eingeklappt unten; Team-Entfernen nur im Menü, getrennt vom Telefonbuch; Funk-Backup und Telegram-IDs getrennte Klappen; Notiz nur lokal |
 | T28 | **Handbuch-Platz** | UX | **done 2026-11-13** | Einstellungen → Allgemein: Handbuch-Karte. Chat-Kopf behält Link, Sendepfad bleibt ohne Handbuch |
 | T29 | **Klang & Magnet-Prefs** | UX | **done + Lautstärke 2026-11-12** | Ton an/aus + Lautstärke 0–100; Magnet Default aus |

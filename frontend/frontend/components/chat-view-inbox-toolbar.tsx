@@ -59,6 +59,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  ChatConversationMenuItems,
+  type ChatViewConversationMenuProps,
+} from '@/frontend/components/chat-view-conversation-menu'
 
 const DEFAULT_PATH_TOOLS = inboxToolbarToolsForSendPath({
   activeSendPath: 'internet',
@@ -104,8 +108,8 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   onToggleChannelControls: () => void
   showPartnerControls: boolean
   onTogglePartnerControls: () => void
-  /** Chat-⋮ in der Posteingang-Zeile (kein separater Direktchat-Banner). */
-  conversationMenuSlot?: ReactNode
+  /** Chat-Aktionen unter Optionen (früher separates ⋮). */
+  conversationMenu?: ChatViewConversationMenuProps
   /** Richtung — immer sichtbar und aktiv. */
   directionFilter?: 'all' | 'in' | 'out'
   onDirectionFilterChange?: (d: 'all' | 'in' | 'out') => void
@@ -205,7 +209,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     onToggleChannelControls: _onToggleChannelControls,
     showPartnerControls,
     onTogglePartnerControls,
-    conversationMenuSlot,
+    conversationMenu,
     directionFilter = 'all',
     onDirectionFilterChange,
     wireFilter = 'all',
@@ -310,7 +314,6 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
           ) : null}
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {conversationMenuSlot}
           {/* Move-Vertrags-ID (IOTA) — nicht .morg-pkg / Datei-Paket */}
           {showInboxPackageExpertMenu && pathTools.showOnChainNft && inboxPackageExpertMenu
             ? inboxPackageExpertMenu
@@ -368,7 +371,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               <button
                 type="button"
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-                title="Posteingang-Werkzeuge: Wire, Export, Hash, Pakete — nicht Chat-⋮ (Schlüssel / Nach-Lesen-Modus)"
+                title="Posteingang und Chat: Wire, Export, Hash — plus Info/Schlüssel/Nach-Lesen-Modus"
               >
                 <Settings2 className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
                 Optionen
@@ -421,6 +424,15 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   <Package className="mr-2 h-4 w-4 opacity-80" aria-hidden />
                   Datei-Paket (Sneakernet)…
                 </DropdownMenuItem>
+              ) : null}
+              {conversationMenu ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Chat
+                  </DropdownMenuLabel>
+                  <ChatConversationMenuItems {...conversationMenu} />
+                </>
               ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
@@ -808,9 +820,10 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               type="button"
               disabled={selectedInboxCount === 0}
               onClick={onBulkHideSelected}
-              className="rounded-md border border-border px-2 py-1 text-left hover:bg-muted disabled:opacity-50"
+              className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1 text-left font-medium text-foreground hover:bg-primary/15 disabled:opacity-50"
+              title="Nur in dieser App aus der Liste nehmen — Chain unverändert"
             >
-              Ausgewählte lokal ausblenden ({selectedInboxCount})
+              Ausblenden ({selectedInboxCount})
             </button>
             <button
               type="button"
@@ -819,21 +832,21 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 const count = selectedInboxCount
                 if (
                   !window.confirm(
-                    `Ausgewählte Nachrichten wirklich auf Chain löschen (Burn)?\n\n` +
+                    `Ausgewählte Nachrichten wirklich auf Chain löschen?\n\n` +
                       `- Anzahl: ${count}\n` +
-                      `- Wirkung auf Chain: Burn der ausgewählten Mailbox-Einträge (sofern burnbar, mit Storage-Rebate)\n` +
-                      `- Lokal: Die ausgewählten Zeilen verschwinden zusätzlich aus deiner Inbox-Ansicht\n` +
-                      `- Nicht betroffen: andere lokale Daten wie Telefonbuch/Kontakte\n\n` +
-                      `Das ist kein reines UI-Ausblenden. Fortfahren?`
+                      `- Wirkung: Mailbox-Einträge on-chain löschen (Burn, Rebate), sofern möglich\n` +
+                      `- Das ist kein Ausblenden — Chain ändert sich\n\n` +
+                      `Fortfahren?`
                   )
                 ) {
                   return
                 }
                 onBulkPurgeSelected()
               }}
-              className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-left text-destructive hover:bg-destructive/20 disabled:opacity-50"
+              className="rounded-md border border-border px-2 py-1 text-left text-muted-foreground hover:bg-muted disabled:opacity-50"
+              title="Selten nötig — löscht Mailbox-Objekte on-chain. Normalfall: Ausblenden."
             >
-              Ausgewählte burnen
+              Von Chain löschen… ({selectedInboxCount})
             </button>
           </div>
         ) : null}

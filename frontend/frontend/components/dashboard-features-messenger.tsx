@@ -35,7 +35,7 @@ export const messengerFeatureShells: MessengerFeatureShell[] = [
   {
     id: 'boss',
     icon: <Crown className="h-6 w-6" />,
-    color: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+    color: 'bg-amber-500/10 text-amber-800 border-amber-500/25 dark:text-amber-200',
     variants: [{ id: 'boss-signer' }, { id: 'pinnwand-admin' }],
   },
 ]

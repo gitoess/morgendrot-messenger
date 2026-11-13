@@ -26,7 +26,7 @@ import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { HandshakeOfferSource } from '@/frontend/lib/handshake-offer-delete'
 import { messageMatchesInboxSearch } from '@/frontend/lib/inbox-unified-search'
 import type { ChatInboxRow } from '@/frontend/features/inbox/chat-view-inbox-rows'
-import { ChatViewConversationMenu, type ChatViewConversationMenuProps } from '@/frontend/components/chat-view-conversation-menu'
+import type { ChatViewConversationMenuProps } from '@/frontend/components/chat-view-conversation-menu'
 import { InboxTeamSyncSystemCards } from '@/frontend/components/inbox-team-sync-system-cards'
 import { InboxTelegramAlarmGroupJoinStrip } from '@/frontend/components/inbox-telegram-alarm-group-join-strip'
 import { syncJoinRequestsFromInboxMessages } from '@/frontend/lib/team-join-request-store'
@@ -247,11 +247,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         onToggleChannelControls={() => setInboxChannelFiltersArmed(!inboxChannelFiltersArmed)}
         showPartnerControls={inboxPartnerFiltersArmed}
         onTogglePartnerControls={() => setInboxPartnerFiltersArmed(!inboxPartnerFiltersArmed)}
-        conversationMenuSlot={
-          conversationMenu ? (
-            <ChatViewConversationMenu {...conversationMenu} variant="toolbar" />
-          ) : undefined
-        }
+        conversationMenu={conversationMenu}
         directionFilter={inboxDirectionFilter}
         onDirectionFilterChange={setInboxDirectionFilter}
         wireFilter={inboxWireFilter}

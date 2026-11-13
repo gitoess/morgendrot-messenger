@@ -19,9 +19,9 @@
 | **Mitte** | **Posteingang** (Nachrichten) **über** dem Composer |
 | **Liste (Filter)** | **Beides / Eingang / Ausgang** und **Alles / Verschl. / Klartext** — nur Anzeige, nicht Sendemodus |
 | **Composer** | `[+]` (Anhang, Telefonbuch, Emoji, …), Text, Sprache, Senden; **Verschlüsselt/Klartext** = wie du sendest |
-| **Chat-⋮** (Posteingang-Zeile) | Info, Export, Verlauf leeren, **Schlüssel erneuern**, **Nach Lesen löschen (Modus)** — kein sofortiger Burn |
+| **Optionen** | Posteingang (Wire, Hash, Export, Pakete) **und** Chat (Info, Schlüssel, Nach-Lesen-Modus, Verlauf leeren) |
 | **Nachrichten-⋯** (pro Zeile) | Kopieren, Telefonbuch, lokal ausblenden, **Von Chain löschen (Burn)** |
-| **Optionen** | Wire, Hash, Export, Pakete — Werkzeuge, kein Chat-⋮ |
+| **Auswahl** | Primär **Ausblenden**; Chain-Löschen nur als zweite, ehrliche Aktion |
 
 **Dashboard:** Kachel **Nachrichten** öffnet den Chat. **Telefonbuch** zusätzlich über `[+]` im Composer, Sidebar oder Kontakt-Detail.
 
@@ -29,9 +29,9 @@
 
 | Wo | Was es ist | Was es nicht ist |
 |----|------------|------------------|
-| **Chat-⋮** | Konversation / Sicherheit (Modus „Nach Lesen löschen“) | Kein Wire-Paste, kein sofortiges Chain-Löschen |
+| **Optionen → Chat** | Info, Schlüssel, Nach-Lesen-Modus, Verlauf leeren | Kein sofortiges Chain-Löschen |
 | **Nachrichten-⋯** | Diese eine Zeile (Burn, Kopieren, ausblenden) | Kein Sendemodus |
-| **Optionen** | Posteingang-Werkzeuge (Wire/Export/Hash) | Kein Schlüssel erneuern |
+| **Auswahl → Ausblenden** | Nur UI | Kein Burn |
 
 Badge **Eingang/Ausgang** oder **Verschlüsselt** anklicken → Liste filtern (wie die Chips oben). Senden bleibt im Composer.
 

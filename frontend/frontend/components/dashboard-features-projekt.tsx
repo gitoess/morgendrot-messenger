@@ -66,7 +66,7 @@ export const projektFeatures: DashboardFeature[] = [
     title: 'Steuerung',
     subtitle: 'Geräte befehligen',
     icon: <Crown className="h-6 w-6" />,
-    color: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+    color: 'bg-sky-500/10 text-sky-900 border-sky-500/25 dark:text-sky-200',
     variants: [
       { id: 'boss-signer', title: 'Boss-Modus', hint: 'Befehle an Geräte' },
       { id: 'pinnwand-admin', title: 'Admin', hint: 'Kanäle verwalten' },

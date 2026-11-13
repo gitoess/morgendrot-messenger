@@ -456,10 +456,10 @@ export function HandoffImportPanel(
   const embedded = p.embedded === true
 
   return (
-    <div className={embedded ? 'space-y-3' : 'rounded-xl border border-purple-500/30 bg-card p-4'}>
+    <div className={embedded ? 'space-y-3' : 'rounded-xl border border-border bg-card p-4'}>
       <div className={embedded ? 'space-y-3' : 'flex items-start gap-3'}>
         {!embedded ? (
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-500/15 text-purple-300">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
             <Package className="h-5 w-5" aria-hidden />
           </div>
         ) : null}
@@ -518,7 +518,7 @@ export function HandoffImportPanel(
               type="button"
               disabled={busy}
               onClick={() => triggerHiddenFileInput(fileRef)}
-              className="inline-flex items-center gap-2 rounded-lg border border-purple-400/45 bg-purple-500/10 px-4 py-2 text-sm font-medium text-foreground hover:bg-purple-500/20 disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-4 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
             >
               <FileUp className="h-4 w-4" aria-hidden />
               {busy ? 'Lese ZIP…' : 'Handoff-ZIP wählen'}

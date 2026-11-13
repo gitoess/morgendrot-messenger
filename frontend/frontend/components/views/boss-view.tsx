@@ -228,7 +228,7 @@ export function BossView({ variant, apiSnapshot }: BossViewProps) {
 
   const getRoleColor = (r: Role) => {
     switch (r) {
-      case 'boss': return 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+      case 'boss': return 'bg-amber-500/10 text-amber-800 border-amber-500/25 dark:text-amber-200'
       case 'commander': return 'bg-blue-500/10 text-blue-400 border-blue-500/20'
       case 'worker': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
     }
@@ -270,7 +270,7 @@ export function BossView({ variant, apiSnapshot }: BossViewProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10 text-amber-800 dark:text-amber-200">
           {variant === 'boss-signer' ? (
             <Crown className="h-6 w-6" />
           ) : (

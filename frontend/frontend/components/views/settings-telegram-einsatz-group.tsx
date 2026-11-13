@@ -167,7 +167,7 @@ export function SettingsTelegramEinsatzGroup(p: SettingsTelegramEinsatzGroupProp
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-violet-300">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
           <MessageCircle className="h-5 w-5" aria-hidden />
         </div>
         <div className="min-w-0 flex-1 space-y-4">
