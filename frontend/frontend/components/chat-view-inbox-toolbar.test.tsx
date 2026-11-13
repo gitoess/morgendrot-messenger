@@ -150,7 +150,7 @@ describe('ChatViewInboxToolbar actions (§ H.1a)', () => {
         {...makeProps({ showPhonebookButton: true, onOpenPhonebook })}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Kontakte verwalten/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Telefonbuch/i }))
     expect(onOpenPhonebook).toHaveBeenCalledTimes(1)
   })
 

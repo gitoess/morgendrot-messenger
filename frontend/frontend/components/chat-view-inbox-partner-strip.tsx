@@ -234,13 +234,13 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
             className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
             title="Nur Listen-Filter oben — unabhängig vom Composer unten (ECDH / Passphrase-Schutz)."
           >
-            Ansicht — nur diese Liste
+            Liste filtern
           </span>
           {(
             [
               ['all', 'Alles'],
-              ['encrypted', 'Nur verschlüsselt'],
-              ['plaintext', 'Nur Klartext'],
+              ['encrypted', 'Verschlüsselte'],
+              ['plaintext', 'Klartext'],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -259,7 +259,7 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
           ))}
         </div>
         <p className="text-[11px] text-muted-foreground">
-          Filtert nur die Liste. Ob du verschlüsselt sendest, stellst du im Composer ein. Eine Auswahl hier ändert den Sendemodus nicht.
+          Blendet Zeilen ein oder aus. Wie du sendest, steht am Schalter „Verschlüsselt / Klartext“ im Chat-Kopf.
         </p>
       </div>
       ) : null}

@@ -34,7 +34,7 @@ describe('ChatViewInboxPartnerStrip (§ H.1a)', () => {
   it('schaltet Wire-Filter um', () => {
     const onWireFilterChange = vi.fn()
     render(<ChatViewInboxPartnerStrip {...makeProps({ onWireFilterChange })} />)
-    fireEvent.click(screen.getByRole('button', { name: /^Nur verschlüsselt$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Verschlüsselte$/i }))
     expect(onWireFilterChange).toHaveBeenCalledWith('encrypted')
   })
 

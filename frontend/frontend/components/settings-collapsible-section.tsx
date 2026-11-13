@@ -16,7 +16,11 @@ type SettingsCategoryNavProps = {
 
 export function SettingsCategoryNav(p: SettingsCategoryNavProps) {
   return (
-    <div className="flex flex-wrap gap-2" role="tablist" aria-label="Einstellungsbereiche">
+    <div
+      className="flex flex-wrap gap-2 lg:sticky lg:top-4 lg:flex-col lg:flex-nowrap"
+      role="tablist"
+      aria-label="Einstellungsbereiche"
+    >
       {p.categories.map((cat) => {
         const selected = p.active === cat.id
         return (
@@ -27,7 +31,7 @@ export function SettingsCategoryNav(p: SettingsCategoryNavProps) {
             aria-selected={selected}
             onClick={() => p.onSelect(cat.id)}
             className={cn(
-              'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
+              'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors lg:w-full',
               selected
                 ? 'border-[var(--path-online)] bg-[color-mix(in_oklab,var(--path-online)_12%,var(--card))] text-foreground'
                 : 'border-border bg-card text-muted-foreground hover:bg-muted/50 hover:text-foreground'
@@ -35,7 +39,7 @@ export function SettingsCategoryNav(p: SettingsCategoryNavProps) {
           >
             {cat.icon}
             {cat.label}
-            <ChevronDown className={cn('h-4 w-4 transition-transform', selected ? 'rotate-180' : '')} aria-hidden />
+            <ChevronDown className={cn('h-4 w-4 transition-transform lg:hidden', selected ? 'rotate-180' : '')} aria-hidden />
           </button>
         )
       })}

@@ -85,10 +85,10 @@ export function DashboardIotaActivityCard({ compact = false }: { compact?: boole
                   role="button"
                   tabIndex={0}
                   className="flex cursor-pointer items-start justify-between gap-2 break-all rounded-sm text-left outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.995]"
-                  title="Doppelklick: IDs anzeigen / kopieren"
+                  title="Tippen: IDs anzeigen / kopieren"
                   aria-expanded={open}
-                  aria-label={`${iotaActivityKindLabel(a.kind)}. Doppelklick für IDs.`}
-                  onDoubleClick={() => setExpandedId((cur) => (cur === a.id ? null : a.id))}
+                  aria-label={`${iotaActivityKindLabel(a.kind)}. Tippen für IDs.`}
+                  onClick={() => setExpandedId((cur) => (cur === a.id ? null : a.id))}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault()
@@ -100,9 +100,9 @@ export function DashboardIotaActivityCard({ compact = false }: { compact?: boole
                     <span className="font-semibold text-foreground">{iotaActivityKindLabel(a.kind)}</span>
                     <span
                       className="ml-1 text-[9px] text-muted-foreground"
-                      title="Doppelklick auf die Zeile: IDs anzeigen"
+                      title="Tippen auf die Zeile: IDs anzeigen"
                     >
-                      · 2× tippen
+                      · IDs
                     </span>
                     {' · '}
                     {when}

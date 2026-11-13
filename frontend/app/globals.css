@@ -170,12 +170,9 @@
   html[data-ui-magnet='1'] [data-tap-feedback]:hover,
   html[data-ui-magnet='1'] .ui-magnet-hover {
     position: relative;
-    z-index: 30;
-    transform: scale(1.14) translateY(-3px) !important;
+    transform: scale(1.03) !important;
     filter: brightness(1.06);
-    box-shadow:
-      0 0 0 2px color-mix(in oklab, var(--primary) 45%, transparent),
-      0 10px 28px color-mix(in oklab, var(--foreground) 22%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 40%, transparent);
   }
 
   html[data-ui-magnet='1'] button:not(:disabled):not([data-no-tap-feedback]):active,
@@ -185,6 +182,17 @@
     filter: none;
     box-shadow: 0 0 0 1px color-mix(in oklab, var(--primary) 35%, transparent);
   }
+}
+
+button:focus-visible,
+[role='button']:focus-visible,
+a[href]:focus-visible,
+summary:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {

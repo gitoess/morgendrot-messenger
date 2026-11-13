@@ -312,7 +312,7 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
                 title="Telefonbuch — Kontakte anlegen, bearbeiten, importieren"
               >
                 <BookUser className="h-4 w-4 shrink-0" aria-hidden />
-                Kontakte verwalten
+                Telefonbuch
               </button>
             ) : null}
           </div>
@@ -422,8 +422,8 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
             {filteredContacts.length === 0 ? (
               <p className="px-2 py-4 text-xs text-muted-foreground">
                 {sidebarPathFilter
-                  ? 'Keine Kontakte für diesen Sendepfad — oben „Kontakte verwalten“ öffnen.'
-                  : 'Noch keine Direktchats — oben „Kontakte verwalten“ und anlegen.'}
+                  ? 'Keine Kontakte für diesen Sendepfad — oben „Telefonbuch“ öffnen.'
+                  : 'Noch keine Direktchats — oben „Telefonbuch“ und anlegen.'}
               </p>
             ) : (
               filteredContacts.map((c) => (

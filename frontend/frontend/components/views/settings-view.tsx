@@ -157,7 +157,9 @@ export function SettingsView({
         </div>
       </div>
 
+      <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)] lg:items-start lg:gap-6">
       <SettingsCategoryNav active={activeCategory} onSelect={selectCategory} categories={categories} />
+      <div className="min-w-0 space-y-4">
 
       <SettingsCollapsiblePanel open={activeCategory === 'general'} title="Allgemein" icon={<Globe className="h-5 w-5" />} onRefresh={() => void loadStatus()}>
         <SettingsLanguageSection />
@@ -323,6 +325,8 @@ export function SettingsView({
           </button>
         </p>
       ) : null}
+      </div>
+      </div>
     </div>
   )
 }

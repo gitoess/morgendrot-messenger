@@ -286,10 +286,10 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               type="button"
               onClick={onOpenPhonebook}
               className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/15"
-              title="Kontakte anlegen, bearbeiten, importieren"
+              title="Telefonbuch — Kontakte anlegen, bearbeiten, importieren"
             >
               <BookUser className="h-4 w-4 shrink-0" aria-hidden />
-              Kontakte verwalten
+              Telefonbuch
             </button>
           ) : null}
           {inboxRowCount !== messageCount && messageCount > 0 ? (

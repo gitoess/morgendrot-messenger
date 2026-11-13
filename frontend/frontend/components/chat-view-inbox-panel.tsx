@@ -296,6 +296,15 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           apiStatus={apiStatus}
         />
       ) : null}
+      {inboxWireFiltersArmed && inboxWireFilter !== 'all' ? (
+        <p className="border-b border-border/60 px-3 py-1.5 text-[11px] text-muted-foreground" role="status">
+          {filteredInboxRows.length === 0
+            ? 'Keine Zeile passt. „Alles“ zeigt wieder die ganze Liste.'
+            : `${filteredInboxRows.length} ${filteredInboxRows.length === 1 ? 'Zeile' : 'Zeilen'} — nur ${
+                inboxWireFilter === 'encrypted' ? 'verschlüsselte' : 'Klartext'
+              }. Das ändert nicht, wie du sendest.`}
+        </p>
+      ) : null}
       <InboxTelegramAlarmGroupJoinStrip />
       <div className="max-h-[min(70vh,42rem)] overflow-y-auto">
         {onAcceptPendingHandshake ? (
@@ -333,6 +342,10 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           basisUnreachable={basisUnreachable}
           messages={messages}
           inboxRows={filteredInboxRows}
+          onFilterProtection={(kind) => {
+            setInboxWireFiltersArmed(true)
+            setInboxWireFilter(kind)
+          }}
           myAddress={myAddress}
           contactDirectory={contactDirectory}
           isMeshVerifiedForAddress={isMeshVerifiedForAddress}

@@ -86,11 +86,25 @@ export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
           >
             <p className="truncate text-sm font-semibold text-foreground">{p.title}</p>
             {p.subtitle ? <p className="truncate text-[11px] text-muted-foreground">{p.subtitle}</p> : null}
+            {enc ? (
+              <p className="truncate text-[11px] text-muted-foreground">
+                {enc.forcedTransport === 'internet'
+                  ? `Nächste Nachricht: ${enc.encrypted ? 'verschlüsselt' : 'Klartext'}`
+                  : 'Dieser Pfad sendet Klartext. Verschlüsseln geht auf Online.'}
+              </p>
+            ) : null}
           </button>
         ) : (
           <>
             <p className="truncate text-sm font-semibold text-foreground">{p.title}</p>
             {p.subtitle ? <p className="truncate text-[11px] text-muted-foreground">{p.subtitle}</p> : null}
+            {enc ? (
+              <p className="truncate text-[11px] text-muted-foreground">
+                {enc.forcedTransport === 'internet'
+                  ? `Nächste Nachricht: ${enc.encrypted ? 'verschlüsselt' : 'Klartext'}`
+                  : 'Dieser Pfad sendet Klartext. Verschlüsseln geht auf Online.'}
+              </p>
+            ) : null}
           </>
         )}
       </div>

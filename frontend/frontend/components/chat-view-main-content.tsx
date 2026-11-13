@@ -1089,7 +1089,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         ? activeConversationSubtitle
         : canRenew
           ? 'Partner gesetzt'
-          : 'Kontakt wählen oder Kontakte verwalten'
+          : 'Kontakt wählen oder Telefonbuch öffnen'
 
     if (isPrivate && (composerDelivery === 'chain' || inboxPartnerFiltersArmed)) {
       return {
@@ -1469,7 +1469,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                     onClick={() => setPhonebookOpen(true)}
                     title="Telefonbuch — anlegen, bearbeiten, importieren"
                   >
-                    Kontakte verwalten
+                    Telefonbuch
                   </Button>
                 </div>
                 {sharedContactSidebar}

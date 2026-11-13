@@ -247,7 +247,7 @@ export function SettingsAppearanceSection() {
         </div>
         <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
           <Label htmlFor="ui-magnet" className="text-sm text-foreground">
-            Magnet / Widerstand (Hover)
+            Magnet beim Darüberfahren (aus, nur Maus)
           </Label>
           <Switch
             id="ui-magnet"

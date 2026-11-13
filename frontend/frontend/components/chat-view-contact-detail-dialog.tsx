@@ -284,8 +284,29 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{displayName}</DialogTitle>
-          <DialogDescription>Medien, Chat öffnen — technische IDs unter Mehr.</DialogDescription>
+          <DialogDescription>Adresse, Sendepfade und Medien. Technische Mailbox-IDs unter Mehr.</DialogDescription>
         </DialogHeader>
+
+        <section className="space-y-2 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Adresse</p>
+          <p className="break-all font-mono text-xs text-foreground">{address}</p>
+          <p className="pt-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Sendepfade
+          </p>
+          <ul className="space-y-1 text-sm text-foreground">
+            <li>Online / IOTA — diese 0x-Adresse</li>
+            <li>
+              {entry?.meshNodeId?.trim()
+                ? `Funk — Node ${entry.meshNodeId.trim()}`
+                : 'Funk — keine Node-ID im Telefonbuch'}
+            </li>
+            <li>
+              {entry?.telegramChatId?.trim()
+                ? `Telegram — Chat-ID ${entry.telegramChatId.trim()}`
+                : 'Telegram — keine Chat-ID im Telefonbuch'}
+            </li>
+          </ul>
+        </section>
 
         {entry ? (
           <ContactPhonebookCard
