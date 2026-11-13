@@ -6,6 +6,7 @@
  */
 
 import { useEffect, type ComponentProps } from 'react'
+import { cn } from '@/lib/utils'
 import { ChatViewInboxList } from '@/frontend/components/chat-view-inbox-list'
 import {
   ChatViewInboxPartnerStrip,
@@ -119,6 +120,7 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
     pinnwandOverviewConfigured?: boolean
     isInboxMessageUnread?: (msg: Message) => boolean
     isPinnwandInboxMessage?: (msg: Message) => boolean
+    className?: string
 }
 
 export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
@@ -205,6 +207,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     pinnwandOverviewConfigured = false,
     isInboxMessageUnread,
     isPinnwandInboxMessage,
+    className,
     ...toolbarProps
   } = props
 
@@ -233,7 +236,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
   }, [messages, myAddress, apiStatus?.role, apiStatus?.myAddress, apiStatus?.myAddressFull])
 
   return (
-    <div className="rounded-xl border border-border bg-card">
+    <div className={cn('flex flex-col rounded-xl border border-border bg-card', className)}>
       <ChatViewInboxToolbar
         {...toolbarProps}
         messages={messages}
@@ -325,7 +328,12 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         </p>
       ) : null}
       <InboxTelegramAlarmGroupJoinStrip />
-      <div className="max-h-[min(70vh,42rem)] overflow-y-auto">
+      <div
+        className={cn(
+          'overflow-y-auto',
+          className ? 'min-h-0 flex-1' : 'max-h-[min(70vh,42rem)]'
+        )}
+      >
         {onAcceptPendingHandshake ? (
           <ChatViewInboxHandshakeRequests
             offers={pendingHandshakeOffers}

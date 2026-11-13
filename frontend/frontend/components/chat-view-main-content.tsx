@@ -1356,9 +1356,11 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             inboxSearchQuery={messengerSearchQuery}
             conversationMenu={conversationMenuProps}
             inboxHeading={inboxHeading}
+            className={showConversationSidebar ? 'flex h-full min-h-[420px] flex-col' : undefined}
           />
 
-          {composerBlock}
+          {/* Mit Sidebar: Composer darunter über volle Breite (Chats + Posteingang). */}
+          {!showConversationSidebar ? composerBlock : null}
         </>
       )}
 
@@ -1551,37 +1553,38 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               {...sidebarHandshakeProps}
             />
             <div className="grid gap-3 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-stretch">
-            <ChatViewContactSidebar
-              className="hidden lg:flex"
-              directory={directory}
-              partnerOptions={inboxPartnerOptions}
-              activePartnerKey={inboxPartnerKey}
-              activeGroupId={inboxConversationGroupId}
-              activeTelegramAlarmSelected={activeTelegramAlarmSelected}
-              showAllActive={showAllConversationsActive}
-              searchQuery={messengerSearchQuery}
-              activeSendPath={activeSendPath}
-      iotaPathFocus={iotaPathFocus}
-              onSelectAll={handleSelectSidebarAll}
-              onSelectSelf={handleSelectSidebarSelf}
-              activeSelfSelected={activeSelfSelected}
-              onSelectContact={handleSelectSidebarContact}
-              onSelectGroup={handleSelectSidebarGroup}
-              onSelectTelegramAlarmGroup={handleSelectSidebarTelegramAlarm}
-              onOpenGroupSettings={openGroupSettings}
-              onOpenContactDetail={handleOpenContactDetail}
-              onOpenPhonebook={() => setPhonebookOpen(true)}
-              myAddress={myAddress}
-              selfProfile={{
-        ...myDataPanelProps,
-        packageId: apiStatus?.packageId,
-        onOpenIotaSettings: onOpenSettings,
-      }}
-              {...pinnwandSidebarProps}
-              {...sidebarHandshakeProps}
-            />
-            <div className={isNativeMobile ? 'min-w-0 space-y-3' : 'min-w-0 space-y-8'}>{conversationBody}</div>
+              <ChatViewContactSidebar
+                className="hidden h-full min-h-[420px] lg:flex"
+                directory={directory}
+                partnerOptions={inboxPartnerOptions}
+                activePartnerKey={inboxPartnerKey}
+                activeGroupId={inboxConversationGroupId}
+                activeTelegramAlarmSelected={activeTelegramAlarmSelected}
+                showAllActive={showAllConversationsActive}
+                searchQuery={messengerSearchQuery}
+                activeSendPath={activeSendPath}
+                iotaPathFocus={iotaPathFocus}
+                onSelectAll={handleSelectSidebarAll}
+                onSelectSelf={handleSelectSidebarSelf}
+                activeSelfSelected={activeSelfSelected}
+                onSelectContact={handleSelectSidebarContact}
+                onSelectGroup={handleSelectSidebarGroup}
+                onSelectTelegramAlarmGroup={handleSelectSidebarTelegramAlarm}
+                onOpenGroupSettings={openGroupSettings}
+                onOpenContactDetail={handleOpenContactDetail}
+                onOpenPhonebook={() => setPhonebookOpen(true)}
+                myAddress={myAddress}
+                selfProfile={{
+                  ...myDataPanelProps,
+                  packageId: apiStatus?.packageId,
+                  onOpenIotaSettings: onOpenSettings,
+                }}
+                {...pinnwandSidebarProps}
+                {...sidebarHandshakeProps}
+              />
+              <div className="flex min-h-[420px] min-w-0 flex-col">{conversationBody}</div>
             </div>
+            {!onNotesTab && !onPinnwandTab ? composerBlock : null}
           </div>
         ) : (
           <div className={isNativeMobile ? 'space-y-3' : 'space-y-8'}>{conversationBody}</div>
