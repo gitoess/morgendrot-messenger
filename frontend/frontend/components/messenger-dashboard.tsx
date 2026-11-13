@@ -703,6 +703,7 @@ function MessengerDashboardBody({
             hasValidMyAddressForBalance={s.hasValidMyAddressForBalance}
             onRefreshStatus={s.checkStatus}
             addressSuggestions={s.dashboardTransferAddressSuggestions}
+            recipientOptions={s.dashboardTransferRecipientOptions}
             onOpenMessages={s.openMessengerChatView}
             onOpenEinsatzleitung={s.openEinsatzleitungView}
           />
@@ -716,6 +717,7 @@ function MessengerDashboardBody({
               hasValidMyAddressForBalance={s.hasValidMyAddressForBalance}
               onRefreshStatus={s.checkStatus}
               addressSuggestions={s.dashboardTransferAddressSuggestions}
+              recipientOptions={s.dashboardTransferRecipientOptions}
               mailboxIds={[
                 ...(s.apiSnapshot?.mailboxId ? [s.apiSnapshot.mailboxId] : []),
                 ...(s.apiSnapshot?.inboxUnionMailboxIds ?? []),

@@ -39,6 +39,8 @@ function makeProps(overrides: Partial<ChatViewInboxToolbarProps> = {}): ChatView
     onToggleChannelControls: vi.fn(),
     showPartnerControls: false,
     onTogglePartnerControls: vi.fn(),
+    directionFilter: 'all',
+    onDirectionFilterChange: vi.fn(),
     onSelectAllVisible: vi.fn(),
     onClearInboxSelection: vi.fn(),
     onBulkHideSelected: vi.fn(),
@@ -123,12 +125,20 @@ describe('ChatViewInboxToolbar actions (§ H.1a)', () => {
     expect(updater(false)).toBe(true)
   })
 
-  it('strafft zweite Zeile: Filter statt Inhalt/Kanal/Partner-Buttons', () => {
+  it('zeigt Richtung Beides/Eingang/Ausgang und Partner', () => {
     render(<ChatViewInboxToolbar {...makeProps()} />)
-    expect(screen.getByRole('button', { name: /^Filter$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Beides$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Eingang$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Ausgang$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Partner$/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Posteingang \(Inhalt\)/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^Kanal$/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^Partner$/i })).not.toBeInTheDocument()
+  })
+
+  it('Richtung-Klick filtert die Liste', () => {
+    const onDirectionFilterChange = vi.fn()
+    render(<ChatViewInboxToolbar {...makeProps({ onDirectionFilterChange })} />)
+    fireEvent.click(screen.getByRole('button', { name: /^Eingang$/i }))
+    expect(onDirectionFilterChange).toHaveBeenCalledWith('in')
   })
 
   it('blendet On-Chain bei Funk-pathTools aus; Optionen bleibt', () => {

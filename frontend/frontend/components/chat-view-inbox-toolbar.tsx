@@ -105,6 +105,15 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   onToggleChannelControls: () => void
   showPartnerControls: boolean
   onTogglePartnerControls: () => void
+  /** Richtung immer sichtbar — filtert die Liste sofort. */
+  directionFilter?: 'all' | 'in' | 'out'
+  onDirectionFilterChange?: (d: 'all' | 'in' | 'out') => void
+  sourceFilter?: string
+  onSourceFilterChange?: (s: string) => void
+  showSourceFilterChips?: boolean
+  sourceFilterOptions?: { id: string; label: string; disabled?: boolean; title?: string }[]
+  /** Partner-Schnellliste — aus wenn die Chat-Seitenleiste Partner schon wählt. */
+  showPartnerFilterMenu?: boolean
   onSelectAllVisible: () => void
   onClearInboxSelection: () => void
   onBulkHideSelected: () => void
@@ -196,6 +205,13 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     onToggleChannelControls,
     showPartnerControls,
     onTogglePartnerControls,
+    directionFilter = 'all',
+    onDirectionFilterChange,
+    sourceFilter = 'all',
+    onSourceFilterChange,
+    showSourceFilterChips = false,
+    sourceFilterOptions = [],
+    showPartnerFilterMenu = true,
     onSelectAllVisible,
     onClearInboxSelection,
     onBulkHideSelected,
@@ -225,7 +241,9 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
   const [pkgToolsOpen, setPkgToolsOpen] = useState(false)
   const [hashToolsOpen, setHashToolsOpen] = useState(false)
   const filterArmedCount =
-    (showChannelControls && pathTools.showKanalFilterToggle ? 1 : 0) + (showPartnerControls ? 1 : 0)
+    (directionFilter !== 'all' ? 1 : 0) +
+    (showSourceFilterChips && sourceFilter !== 'all' ? 1 : 0) +
+    (showPartnerControls ? 1 : 0)
   const pkgImportDisabled = morgPkgImportDisabled(apiStatus)
   const pkgDeviceDisabled =
     morgPkgDeviceBusy || apiStatus?.locked === true || !(apiStatus?.connectedAddresses?.length ?? 0)
@@ -684,55 +702,93 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
           >
             {inboxSelectMode ? 'Auswahl beenden' : 'Auswahl'}
           </button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  'inline-flex items-center gap-1 rounded-md border px-2 py-1 font-medium transition-colors',
-                  filterArmedCount > 0
-                    ? 'border-primary bg-primary/15 text-primary'
-                    : 'border-border hover:bg-muted'
-                )}
-                title="Inhalt / Partner (Kanal nur bei Online — sonst steuert der Sendepfad)"
-              >
-                <Filter className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                Filter{filterArmedCount > 0 ? ` (${filterArmedCount})` : ''}
-                <ChevronDown className="h-3 w-3 shrink-0 opacity-70" aria-hidden />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="min-w-[14rem]">
-              <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Anzeige filtern
-              </DropdownMenuLabel>
-              {pathTools.showKanalFilterToggle ? (
-                <DropdownMenuItem
-                  onSelect={(e) => {
-                    e.preventDefault()
-                    onToggleChannelControls()
-                  }}
+          {onDirectionFilterChange ? (
+            <div
+              className="inline-flex flex-wrap items-center gap-1 rounded-md border border-border bg-background p-0.5"
+              role="group"
+              aria-label="Richtung in der Liste"
+            >
+              {(
+                [
+                  ['all', 'Beides'],
+                  ['in', 'Eingang'],
+                  ['out', 'Ausgang'],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => onDirectionFilterChange(id)}
+                  className={cn(
+                    'rounded px-2 py-1 text-xs font-medium transition-colors',
+                    directionFilter === id
+                      ? 'bg-primary/15 text-primary'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  )}
                 >
-                  <Check
-                    className={cn('mr-2 h-4 w-4', showChannelControls ? 'opacity-100' : 'opacity-0')}
-                    aria-hidden
-                  />
-                  Kanal (Quelle)
-                </DropdownMenuItem>
-              ) : null}
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault()
-                  onTogglePartnerControls()
-                }}
-              >
-                <Check
-                  className={cn('mr-2 h-4 w-4', showPartnerControls ? 'opacity-100' : 'opacity-0')}
-                  aria-hidden
-                />
-                Partner
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  {label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {showSourceFilterChips && onSourceFilterChange && sourceFilterOptions.length > 0 ? (
+            <div
+              className="inline-flex flex-wrap items-center gap-1"
+              role="group"
+              aria-label="Quelle in der Liste"
+            >
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Quelle
+              </span>
+              {sourceFilterOptions.map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  disabled={o.disabled}
+                  title={o.title}
+                  onClick={() => onSourceFilterChange(o.id)}
+                  className={cn(
+                    'rounded-md border px-2 py-1 text-xs font-medium transition-colors',
+                    o.disabled && 'cursor-not-allowed opacity-40',
+                    sourceFilter === o.id && !o.disabled
+                      ? 'border-primary bg-primary/15 text-primary'
+                      : 'border-border bg-background text-muted-foreground hover:bg-muted'
+                  )}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {showPartnerFilterMenu ? (
+            <button
+              type="button"
+              onClick={() => onTogglePartnerControls()}
+              className={cn(
+                'inline-flex items-center gap-1 rounded-md border px-2 py-1 font-medium transition-colors',
+                showPartnerControls
+                  ? 'border-primary bg-primary/15 text-primary'
+                  : 'border-border hover:bg-muted'
+              )}
+              title="Partner-Schnellliste unter der Leiste ein- oder ausblenden"
+            >
+              <Filter className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              Partner
+            </button>
+          ) : null}
+          {directionFilter !== 'all' || (showSourceFilterChips && sourceFilter !== 'all') ? (
+            <span className="text-[11px] text-muted-foreground" role="status">
+              Liste:{' '}
+              {directionFilter === 'in'
+                ? 'nur Eingang'
+                : directionFilter === 'out'
+                  ? 'nur Ausgang'
+                  : 'Beides'}
+              {showSourceFilterChips && sourceFilter !== 'all'
+                ? ` · Quelle ${sourceFilterOptions.find((o) => o.id === sourceFilter)?.label ?? sourceFilter}`
+                : ''}
+            </span>
+          ) : null}
           {hasHiddenMessages ? (
             <button
               type="button"

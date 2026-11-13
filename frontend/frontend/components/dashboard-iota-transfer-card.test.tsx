@@ -68,7 +68,7 @@ describe('DashboardIotaTransferCard', () => {
 
   it('ruft transferCoins auf und zeigt Erfolg', async () => {
     render(<DashboardIotaTransferCard />)
-    fireEvent.change(screen.getByPlaceholderText('0x…'), { target: { value: '0xabc' } })
+    fireEvent.change(screen.getByPlaceholderText(/0x/i), { target: { value: '0xabc' } })
     fireEvent.change(screen.getByPlaceholderText('0.1'), { target: { value: '1.5' } })
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Überweisen/i }))
@@ -81,7 +81,7 @@ describe('DashboardIotaTransferCard', () => {
   it('ruft nach erfolgreichem Transfer onRefreshStatus auf', async () => {
     const onRefresh = vi.fn().mockResolvedValue(undefined)
     render(<DashboardIotaTransferCard onRefreshStatus={onRefresh} />)
-    fireEvent.change(screen.getByPlaceholderText('0x…'), { target: { value: '0xabc' } })
+    fireEvent.change(screen.getByPlaceholderText(/0x/i), { target: { value: '0xabc' } })
     fireEvent.change(screen.getByPlaceholderText('0.1'), { target: { value: '1.5' } })
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Überweisen/i }))
@@ -95,7 +95,7 @@ describe('DashboardIotaTransferCard', () => {
   it('zeigt Fehlermeldung bei Fehlschlag', async () => {
     vi.mocked(transferCoins).mockResolvedValue({ ok: false, error: 'Gas' })
     render(<DashboardIotaTransferCard />)
-    fireEvent.change(screen.getByPlaceholderText('0x…'), { target: { value: '0x1' } })
+    fireEvent.change(screen.getByPlaceholderText(/0x/i), { target: { value: '0x1' } })
     fireEvent.change(screen.getByPlaceholderText('0.1'), { target: { value: '2' } })
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Überweisen/i }))
@@ -104,9 +104,9 @@ describe('DashboardIotaTransferCard', () => {
     expect(screen.getByText('Gas')).toBeInTheDocument()
   })
 
-  it('öffnet Gesichert (NFT) senden inline mit Empfängerfeld', () => {
+  it('öffnet Gesichert hinter NFT inline mit Empfängerfeld', () => {
     render(<DashboardIotaTransferCard />)
-    fireEvent.click(screen.getByRole('button', { name: /^Gesichert \(NFT\) senden$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Gesichert hinter NFT$/i }))
     expect(screen.getByText('1. NFT / Schlüsselkarte')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('0x… Empfänger-Adresse')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Jetzt senden|Zuerst Guthaben anlegen/i })).toBeInTheDocument()

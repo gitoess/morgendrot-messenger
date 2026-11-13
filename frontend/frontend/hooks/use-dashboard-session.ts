@@ -92,6 +92,7 @@ import { wipeLocalPassphraseStoresOnLock } from '@/frontend/lib/privacy-lock-wip
 import { unlockLocalSecretVaults } from '@/frontend/lib/local-secret-vaults'
 import { setPrivacySoftLocked } from '@/frontend/lib/privacy-soft-lock'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
+import { readContactFavorites } from '@/frontend/lib/contact-phonebook-meta-store'
 import { useChatViewPendingHandshakes, OPEN_MESSENGER_INBOX_EVENT } from '@/frontend/hooks/use-chat-view-pending-handshakes'
 import { useOfflineStatus } from '@/frontend/hooks/use-offline-status'
 import type { ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
@@ -265,20 +266,38 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   const hasValidMyAddressForBalance =
     /^0x[a-fA-F0-9]{64}$/i.test((apiSnapshot?.myAddressFull ?? '').trim()) === true
 
-  const dashboardTransferAddressSuggestions = useMemo(() => {
-    const set = new Set<string>()
-    const add = (v?: string) => {
-      const t = (v || '').trim()
-      if (/^0x[a-fA-F0-9]{64}$/.test(t)) set.add(t)
+  const dashboardTransferRecipientOptions = useMemo(() => {
+    const fav = readContactFavorites()
+    const byAddr = new Map<string, { address: string; label: string; favorite: boolean }>()
+    const add = (address?: string, label?: string, favorite?: boolean) => {
+      const a = (address || '').trim()
+      if (!/^0x[a-fA-F0-9]{64}$/i.test(a)) return
+      const key = a.toLowerCase()
+      const prev = byAddr.get(key)
+      const nextLabel = (label || '').trim() || prev?.label || `${a.slice(0, 10)}…`
+      byAddr.set(key, {
+        address: a,
+        label: nextLabel,
+        favorite: Boolean(favorite || prev?.favorite || fav.has(key)),
+      })
     }
-    add(apiSnapshot?.myAddress)
-    add(apiSnapshot?.myAddressFull)
+    for (const [addr, entry] of Object.entries(contactDirectory)) {
+      add(addr, entry?.label, fav.has(addr.trim().toLowerCase()))
+    }
     const conn = apiSnapshot?.connectedAddresses
     if (Array.isArray(conn)) {
       for (const a of conn) add(a)
     }
-    return Array.from(set)
-  }, [apiSnapshot?.myAddress, apiSnapshot?.myAddressFull, apiSnapshot?.connectedAddresses])
+    return Array.from(byAddr.values()).sort((a, b) => {
+      if (a.favorite !== b.favorite) return a.favorite ? -1 : 1
+      return a.label.localeCompare(b.label, 'de')
+    })
+  }, [contactDirectory, apiSnapshot?.connectedAddresses])
+
+  const dashboardTransferAddressSuggestions = useMemo(
+    () => dashboardTransferRecipientOptions.map((o) => o.address),
+    [dashboardTransferRecipientOptions]
+  )
 
   const setShowAllTilesPersist = (value: boolean) => {
     setShowAllTiles(value)
@@ -1204,6 +1223,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     refreshContactDirectory,
     hasValidMyAddressForBalance,
     dashboardTransferAddressSuggestions,
+    dashboardTransferRecipientOptions,
     meshPathMode,
     isBossRole,
     checkStatus,

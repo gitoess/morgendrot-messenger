@@ -2650,7 +2650,7 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 ### Durchgangs-Reihenfolge (verbindlich — Stand 2026-11-12)
 
 1. **Erledigt:** **T37** Landkarte · **T8/T9** Passwort/Backup/Schatten → Sicherheit · Telegram-Wipe-Scope · Klick-Lautstärke  
-2. **Als Nächstes:** **T4** Schatten→Main gemeinsam mit **T3** später testen. Done 2026-11-13: T10, T13, T22, T25, T27–T31, T34, T41, T28; T12/T33 teil-done |  
+2. **Als Nächstes:** **T4** Schatten→Main gemeinsam mit **T3** später testen. Done 2026-11-13: T10, T13, T19, T22, T25, T27–T31, T34, T41, T28; Filter = Beides/Eingang/Ausgang (kein zweites Postfach); T12/T33 teil-done |  
 3. **Backlog (überdenken, nicht jetzt bauen):** **T56** Komplett-alles-löschen (Wizard inkl. optional NFT)  
 4. **Dann am Ende:** Ideen **T39–T54** priorisieren; T33 + Zeitkapsel nachholen  
 5. **Später (nicht blockierend):** T45 · T47 · T51 · T52 · T53  
@@ -2686,7 +2686,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T16 | **Eigenes Logo + Start-Sound** | Branding | **ganz am Ende** | Nicht während Messenger-Durchgang |
 | T17 | **Handbuch radikal** | Doku/UX | **am Schluss** (mit T12) | ≥2 Messenger-Einstiege; Links **Handbuch → Aktion**; keine Settings→Handbuch-Pfeile; Zielbilder aus dem Alltagspfad |
 | T18 | **NFT-Bilder in Fremd-Wallets** | Display-Standard | später | ImageNFT oft ohne IOTA-`Display`/`image_url`. Data-URL `data:image/…;base64,…` hilft **nur** wenn öffentlich im Display — Konflikt mit verschlüsselten Evidence-Bildern. Entscheidung: Preview-Thumbnail vs. Privacy |
-| T19 | **Wallet Send UX** | UI | nach Hauptmenü | NFT/Gesichert im Send-Flow klar; Empfänger-Dropdown Telefonbuch (+ optional Favoriten, **nicht** Vault); optional kurze Notiz bei Token-Send |
+| T19 | **Wallet Send UX** | UI | **done 2026-11-13** | Frei vs. Gesichert hinter NFT klar; Empfänger aus Telefonbuch (Favoriten zuerst); Notiz nur lokal (nicht on-chain) |
 | T20 | **Coins aus Composer** | Produkt/Recht | Entscheidung später | Chat+Zahlung mischen oft verwirrend/regulierungsnah — Default: **getrennt** im Wallet; Composer nur wenn klar als optionaler Hinweis |
 | T21 | **PTB / Notarization** | Architektur | Backlog | Chain-Ops (Mailbox, NFT, Manifest) schon oft **PTB**; Chat/Funk/Telegram nicht. IOTA Notarization Framework evaluieren — was es vs. unser Mailbox/Attestation-Pfad bringt |
 | T22 | **Doppelklick-Erkennbarkeit** | UX | **done 2026-11-13** | IOTA-Aktivität: ein Klick öffnet IDs. NFT-Zeile: Knopf „IDs“, nicht nur Doppelklick |

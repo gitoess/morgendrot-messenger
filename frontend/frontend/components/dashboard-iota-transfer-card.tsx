@@ -46,6 +46,8 @@ export type DashboardIotaTransferCardProps = {
   hasValidMyAddressForBalance?: boolean
   onRefreshStatus?: () => void | Promise<void>
   addressSuggestions?: string[]
+  /** Telefonbuch + Favoriten für Empfängerwahl (T19). */
+  recipientOptions?: { address: string; label: string; favorite?: boolean }[]
   /** Aktive Chat-Mailboxen (Server/Team/Privat) — nur Anzeige beim Empfangen. */
   mailboxIds?: string[]
 }
@@ -58,8 +60,10 @@ export function DashboardIotaTransferCard({
   hasValidMyAddressForBalance = false,
   onRefreshStatus,
   addressSuggestions = [],
+  recipientOptions = [],
   mailboxIds = [],
 }: DashboardIotaTransferCardProps) {
+  const [transferNote, setTransferNote] = useState('')
   const { t } = useAppTranslation('dashboard')
   const [transferOpen, setTransferOpen] = useState(!compact)
   const [securedSpendOpen, setSecuredSpendOpen] = useState(false)
@@ -132,9 +136,15 @@ export function DashboardIotaTransferCard({
     const res = await transferCoins(transferTo, parseFloat(transferAmount))
     if (res.ok) {
       setTransferStatus('success')
-      setTransferMsg(t('iota.transferSuccess'))
+      const note = transferNote.trim()
+      setTransferMsg(
+        note
+          ? `${t('iota.transferSuccess')} · Notiz (nur hier): ${note.slice(0, 80)}`
+          : t('iota.transferSuccess')
+      )
       setTransferTo('')
       setTransferAmount('')
+      setTransferNote('')
       void handleRefreshBalance()
     } else {
       setTransferStatus('error')
@@ -307,6 +317,15 @@ export function DashboardIotaTransferCard({
     </Dialog>
   )
 
+  const recipientSelectOptions =
+    recipientOptions.length > 0
+      ? recipientOptions
+      : addressSuggestions.map((address) => ({
+          address,
+          label: `${address.slice(0, 10)}…`,
+          favorite: false,
+        }))
+
   const freeTransferForm = (
     <>
       {transferStatus !== 'idle' && (
@@ -323,17 +342,38 @@ export function DashboardIotaTransferCard({
       <div className="grid gap-2 sm:grid-cols-2">
         <div>
           <label className="mb-0.5 block text-[11px] text-muted-foreground">{t('iota.recipient')}</label>
+          {recipientSelectOptions.length > 0 ? (
+            <select
+              value={
+                recipientSelectOptions.find(
+                  (o) => o.address.toLowerCase() === transferTo.trim().toLowerCase()
+                )?.address ?? ''
+              }
+              onChange={(e) => setTransferTo(e.target.value)}
+              className="mb-1.5 w-full rounded-md border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+              aria-label="Empfänger aus Telefonbuch"
+            >
+              <option value="">Telefonbuch wählen…</option>
+              {recipientSelectOptions.map((o) => (
+                <option key={o.address} value={o.address}>
+                  {o.favorite ? `★ ${o.label}` : o.label}
+                </option>
+              ))}
+            </select>
+          ) : null}
           <input
             type="text"
             list="dashboard-iota-transfer-recipients"
             value={transferTo}
             onChange={(e) => setTransferTo(e.target.value)}
-            placeholder="0x…"
+            placeholder="0x… oder oben wählen"
             className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
           />
           <datalist id="dashboard-iota-transfer-recipients">
-            {addressSuggestions.map((addr) => (
-              <option key={addr} value={addr} />
+            {recipientSelectOptions.map((o) => (
+              <option key={o.address} value={o.address}>
+                {o.label}
+              </option>
             ))}
           </datalist>
         </div>
@@ -349,6 +389,18 @@ export function DashboardIotaTransferCard({
             className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
           />
         </div>
+      </div>
+      <div>
+        <label className="mb-0.5 block text-[11px] text-muted-foreground">
+          Notiz (nur dieses Gerät, nicht on-chain)
+        </label>
+        <input
+          type="text"
+          value={transferNote}
+          onChange={(e) => setTransferNote(e.target.value.slice(0, 120))}
+          placeholder="optional"
+          className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+        />
       </div>
       <button
         type="button"
@@ -374,7 +426,7 @@ export function DashboardIotaTransferCard({
               : 'border-border bg-muted/40 text-muted-foreground hover:bg-muted'
           )}
         >
-          Frei senden
+          Frei (normales IOTA)
         </button>
         <button
           type="button"
@@ -386,9 +438,14 @@ export function DashboardIotaTransferCard({
               : 'border-border bg-muted/40 text-muted-foreground hover:bg-muted'
           )}
         >
-          Gesichert (NFT) senden
+          Gesichert hinter NFT
         </button>
       </div>
+      <p className="text-[11px] text-muted-foreground">
+        {securedSpendOpen
+          ? 'Coins liegen hinter einer NFT-Schlüsselkarte — Empfänger braucht Freigabe/Pass.'
+          : 'Direkte Wallet-Überweisung. Empfänger aus dem Telefonbuch oder 0x eintippen.'}
+      </p>
       {securedSpendOpen ? (
         <DashboardNftSecuredSpendPanel
           preferredObjectId={securedPreferOid}

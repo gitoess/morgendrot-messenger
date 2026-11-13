@@ -10,6 +10,7 @@ export function DashboardMessengerBossHome(p: {
   hasValidMyAddressForBalance: boolean
   onRefreshStatus: () => void
   addressSuggestions: string[]
+  recipientOptions?: { address: string; label: string; favorite?: boolean }[]
   onOpenMessages: () => void
   onOpenEinsatzleitung: () => void
 }) {
@@ -29,6 +30,7 @@ export function DashboardMessengerBossHome(p: {
           hasValidMyAddressForBalance={p.hasValidMyAddressForBalance}
           onRefreshStatus={p.onRefreshStatus}
           addressSuggestions={p.addressSuggestions}
+          recipientOptions={p.recipientOptions}
           mailboxIds={[
             ...(p.apiSnapshot?.mailboxId ? [p.apiSnapshot.mailboxId] : []),
             ...(p.apiSnapshot?.inboxUnionMailboxIds ?? []),

@@ -403,7 +403,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       if (inboxConversationGroupId) {
         const group = readMessengerGroups().find((g) => g.id === inboxConversationGroupId)
         if (group) {
-          rows = filterInboxMessagesByPartnerAndDirection(rows, myAddress, null, 'all', {
+          rows = filterInboxMessagesByPartnerAndDirection(rows, myAddress, null, inboxDirectionFilter, {
             groupMemberAddresses: group.memberAddresses,
             teamMailboxObjectId: group.teamMailboxObjectId,
           })
@@ -414,20 +414,19 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
         const key = inboxPartnerKey.trim().toLowerCase()
         const meNorm = myAddress.trim().toLowerCase()
         if (meNorm && key === meNorm) {
-          rows = filterInboxMessagesByPartnerAndDirection(rows, myAddress, meNorm, 'all')
+          rows = filterInboxMessagesByPartnerAndDirection(rows, myAddress, meNorm, inboxDirectionFilter)
         } else {
           const contactMatch = resolveContactConversationMatch(key, contactDirectory)
-          rows = filterInboxMessagesForContactConversation(rows, myAddress, key, 'all', {
+          rows = filterInboxMessagesForContactConversation(rows, myAddress, key, inboxDirectionFilter, {
             contactMatch,
           })
         }
       }
-    }
-    if (inboxChannelFiltersArmed) {
+    } else if (inboxDirectionFilter !== 'all') {
       rows = filterInboxMessagesByPartnerAndDirection(rows, myAddress, null, inboxDirectionFilter)
-      if (inboxSourceFilter !== 'all') {
-        rows = rows.filter((m) => messageMatchesInboxSourceFilter(m, inboxSourceFilter, sourceFilterCtx))
-      }
+    }
+    if (inboxSourceFilter !== 'all') {
+      rows = rows.filter((m) => messageMatchesInboxSourceFilter(m, inboxSourceFilter, sourceFilterCtx))
     }
     return rows
   }, [
@@ -436,7 +435,6 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     inboxPartnerKey,
     inboxDirectionFilter,
     inboxSourceFilter,
-    inboxChannelFiltersArmed,
     inboxPartnerFiltersArmed,
     inboxConversationGroupId,
     sourceFilterCtx,

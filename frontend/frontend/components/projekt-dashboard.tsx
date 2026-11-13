@@ -326,6 +326,7 @@ export function ProjektDashboard() {
               hasValidMyAddressForBalance={s.hasValidMyAddressForBalance}
               onRefreshStatus={s.checkStatus}
               addressSuggestions={s.dashboardTransferAddressSuggestions}
+              recipientOptions={s.dashboardTransferRecipientOptions}
               mailboxIds={[
                 ...(s.apiSnapshot?.mailboxId ? [s.apiSnapshot.mailboxId] : []),
                 ...(s.apiSnapshot?.inboxUnionMailboxIds ?? []),
