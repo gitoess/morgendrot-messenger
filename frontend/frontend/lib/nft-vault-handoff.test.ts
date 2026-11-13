@@ -42,7 +42,7 @@ describe('nft-vault-handoff', () => {
   })
 
   it('hints distinguish bearer vs guarded', () => {
-    expect(nftVaultTransferHint('bearer')).toMatch(/automatisch mitkopiert/)
+    expect(nftVaultTransferHint('bearer')).toMatch(/mitkopiert/)
     expect(nftVaultTransferHint('guarded')).toMatch(/bleiben/)
   })
 

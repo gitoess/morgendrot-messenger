@@ -148,7 +148,8 @@ describe('ChatViewMainContent (§ H.1a)', () => {
 
   it('zeigt Privat-Composer und Posteingang', () => {
     render(<ChatViewMainContent {...buildMainContentProps()} />)
-    expect(screen.getByRole('heading', { name: /^Posteingang Alle$/i })).toBeInTheDocument()
+    /* Sidebar-Layout: großer Chat-Titel ausgeblendet; Chats-Spalte + Inbox + Composer. */
+    expect(screen.getAllByRole('heading', { name: /^Chats$/i }).length).toBeGreaterThanOrEqual(1)
     expect(screen.getByRole('region', { name: /Nachricht verfassen/i })).toBeInTheDocument()
     expect(screen.getByTestId('inbox-panel')).toBeInTheDocument()
     expect(screen.getByTestId('send-panel')).toBeInTheDocument()
@@ -169,8 +170,9 @@ describe('ChatViewMainContent (§ H.1a)', () => {
         })}
       />
     )
-    expect(screen.getByRole('heading', { name: /^Gruppenchat$/i })).toBeInTheDocument()
-    expect(screen.queryByTestId('inbox-panel')).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { name: /^Chats$/i }).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByTestId('inbox-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('send-panel')).toBeInTheDocument()
   })
 
   it('zeigt Pinnwand-Composer auf Pinnwand-Tab', () => {
@@ -195,9 +197,9 @@ describe('ChatViewMainContent (§ H.1a)', () => {
         })}
       />
     )
-    expect(screen.getByRole('heading', { name: /^Pinnwand$/i })).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: /Pinnwand/i }).length).toBeGreaterThanOrEqual(1)
     expect(screen.getByTestId('pinnwand-feed')).toBeInTheDocument()
+    expect(screen.getByTestId('send-panel')).toBeInTheDocument()
   })
 
   it('zeigt Package-ID-Banner bei Mismatch', () => {

@@ -1356,13 +1356,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             inboxSearchQuery={messengerSearchQuery}
             conversationMenu={conversationMenuProps}
             inboxHeading={inboxHeading}
-            className={
-              showConversationSidebar ? 'flex min-h-0 flex-1 flex-col' : undefined
+            /** Sidebar: Nachrichtenliste mit fester Mindesthöhe (kein flex-1→0). */
+            messageListMaxClassName={
+              showConversationSidebar ? 'max-h-[min(50vh,28rem)] min-h-[14rem]' : undefined
             }
           />
 
           {/* Telegram-Muster: Composer nur unter dem Posteingang (rechte Spalte). */}
-          {composerBlock}
+          <div className="shrink-0">{composerBlock}</div>
         </>
       )}
 
@@ -1554,9 +1555,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               onSelectMessageHit={handleSelectMessageHit}
               {...sidebarHandshakeProps}
             />
-            <div className="grid h-[min(70vh,36rem)] gap-3 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-stretch">
+            <div className="grid gap-3 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-start">
               <ChatViewContactSidebar
-                className="hidden h-full lg:flex"
+                className="hidden lg:flex lg:min-h-[min(50vh,28rem)] lg:self-stretch"
                 directory={directory}
                 partnerOptions={inboxPartnerOptions}
                 activePartnerKey={inboxPartnerKey}
@@ -1584,9 +1585,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                 {...pinnwandSidebarProps}
                 {...sidebarHandshakeProps}
               />
-              <div className="flex h-full min-h-0 min-w-0 flex-col gap-3">
-                {conversationBody}
-              </div>
+              <div className="flex min-w-0 flex-col gap-3">{conversationBody}</div>
             </div>
           </div>
         ) : (

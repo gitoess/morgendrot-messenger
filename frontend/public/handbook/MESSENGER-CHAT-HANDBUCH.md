@@ -16,8 +16,8 @@
 |---------|--------|
 | **App-Header** (Boss/Messenger) | **Tresor**, **Aktualisieren** (Status + Posteingang + Kontakte), Handbuch, Einstellungen — **nicht** in der Posteingang-Leiste |
 | **Chat-Kopf** | Sendepfad (**Alle** / Funk / **IOTA** / Telegram), **SOS — Hilferuf** (1:1, nicht Telegram). Mit Sidebar: **kein** großer Kanal-/Posteingang-Titel |
-| **Seitenleiste** (Desktop) | **Chats:** Ich, Alle, Kontakte, Gruppen; Suche oben; Doppelklick **Ich** → Profil + Peering-QR; Doppelklick **Gruppe** → Gruppe verwalten. Telegram-ähnlich: volle Spaltenhöhe, Liste scrollt |
-| **Posteingang** (rechts) | Nachrichten + Toolbar (On-Chain/NFT, **Optionen**, Filter). Füllt die rechte Spalte über dem Composer |
+| **Seitenleiste** (Desktop) | **Chats:** Ich, Alle, Kontakte, Gruppen; Suche oben; Doppelklick **Ich** → Profil + Peering-QR; Doppelklick **Gruppe** → Gruppe verwalten. Telegram-ähnlich: eigene Spalte, Liste scrollt |
+| **Posteingang** (rechts) | Nachrichten + Toolbar (On-Chain/NFT, **Optionen**, Filter). Liste mit Mindesthöhe (~14rem) und max. ~50vh — Nachrichten bleiben sichtbar |
 | **Composer** | Nur **unter dem Posteingang** (rechte Spalte, wie Telegram): `[+]`, Text, Sprache, Senden; **Verschlüsselt/Klartext** = Sendemodus. Später: Passphrase/Zeitkapsel eher ins **[+]-Menü** |
 | **Liste (Filter)** | **Beides / Eingang / Ausgang** und **Alles / Verschl. / Klartext** — nur Anzeige, nicht Sendemodus |
 | **Optionen** | Wire, Hash & Prüfen, Export Nachrichtenverlauf (Journal + Medien-ZIP), Datei-Paket — **nicht** Chat-⋮ |

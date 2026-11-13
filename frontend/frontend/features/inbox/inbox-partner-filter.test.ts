@@ -209,8 +209,9 @@ describe('filterInboxMessagesByPartnerAndDirection', () => {
     expect(onlyAlice.map((x) => x.id)).toEqual(['mx-a'])
     const allWithoutPartner = filterInboxMessagesByPartnerAndDirection([meshInAlice, meshInBob], me, null, 'all')
     expect(allWithoutPartner.map((x) => x.id).sort()).toEqual(['mx-a', 'mx-b'])
+    /** Eingehend von Alice ≠ Ausgang — Richtung „out“ filtert sie weg. */
     const outOnly = filterInboxMessagesByPartnerAndDirection([meshInAlice], me, null, 'out')
-    expect(outOnly.map((x) => x.id)).toEqual(['mx-a'])
+    expect(outOnly.map((x) => x.id)).toEqual([])
   })
 })
 

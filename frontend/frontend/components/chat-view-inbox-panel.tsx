@@ -121,6 +121,8 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
     isInboxMessageUnread?: (msg: Message) => boolean
     isPinnwandInboxMessage?: (msg: Message) => boolean
     className?: string
+    /** Überschreibt die max-Höhe der Nachrichtenliste (Sidebar-Layout). */
+    messageListMaxClassName?: string
 }
 
 export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
@@ -208,6 +210,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     isInboxMessageUnread,
     isPinnwandInboxMessage,
     className,
+    messageListMaxClassName,
     ...toolbarProps
   } = props
 
@@ -331,7 +334,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
       <div
         className={cn(
           'overflow-y-auto',
-          className ? 'min-h-0 flex-1' : 'max-h-[min(70vh,42rem)]'
+          messageListMaxClassName ?? 'max-h-[min(70vh,42rem)]'
         )}
       >
         {onAcceptPendingHandshake ? (
