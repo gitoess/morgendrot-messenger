@@ -445,10 +445,11 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     sendPathInboxSourceFilter,
   ])
 
+  /** Inhalt-Chips wirken sofort — „Alles“ = kein Wire-Filter. */
   const wireFilteredMessages = useMemo(() => {
-    if (!inboxWireFiltersArmed || inboxWireFilter === 'all') return partnerFilteredMessages
+    if (inboxWireFilter === 'all') return partnerFilteredMessages
     return partnerFilteredMessages.filter((m) => messageMatchesInboxWireFilter(m, inboxWireFilter))
-  }, [partnerFilteredMessages, inboxWireFilter, inboxWireFiltersArmed])
+  }, [partnerFilteredMessages, inboxWireFilter])
 
   useEffect(() => {
     setPartnerLastSeenMap(readPartnerLastSeenMap(inboxScopeKey(myAddress)))
@@ -849,6 +850,9 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     if (inboxDirectionFilter !== 'all') {
       reasons.push(`Richtung „${inboxDirectionFilter === 'in' ? 'Eingang' : 'Ausgang'}“`)
     }
+    if (inboxWireFilter !== 'all') {
+      reasons.push(inboxWireFilter === 'encrypted' ? 'nur verschlüsselt' : 'nur Klartext')
+    }
     if (sendPathInboxSourceFilter !== 'all') {
       reasons.push(`Sendepfad „${sendPathInboxSourceFilter}“`)
     } else if (inboxChannelFiltersArmed && inboxSourceFilter !== 'all') {
@@ -866,6 +870,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     inboxChannelFiltersArmed,
     inboxPartnerFiltersArmed,
     inboxDirectionFilter,
+    inboxWireFilter,
     inboxSourceFilter,
     sendPathInboxSourceFilter,
   ])

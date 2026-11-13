@@ -125,19 +125,36 @@ describe('ChatViewInboxToolbar actions (§ H.1a)', () => {
     expect(updater(false)).toBe(true)
   })
 
-  it('zeigt Filter-Dropdown und Beides/Eingang/Ausgang', () => {
-    render(<ChatViewInboxToolbar {...makeProps()} />)
-    expect(screen.getByRole('button', { name: /^Filter$/i })).toBeInTheDocument()
+  it('zeigt Liste-Filter: Richtung und Inhalt direkt', () => {
+    render(
+      <ChatViewInboxToolbar
+        {...makeProps({
+          onDirectionFilterChange: vi.fn(),
+          onWireFilterChange: vi.fn(),
+        })}
+      />
+    )
+    expect(screen.getByText(/^Liste$/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^Beides$/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^Eingang$/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^Ausgang$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Alles$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Verschl\.$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Klartext$/i })).toBeInTheDocument()
   })
 
-  it('Richtung-Klick filtert die Liste', () => {
+  it('Richtung- und Inhalt-Klick filtern die Liste', () => {
     const onDirectionFilterChange = vi.fn()
-    render(<ChatViewInboxToolbar {...makeProps({ onDirectionFilterChange })} />)
+    const onWireFilterChange = vi.fn()
+    render(
+      <ChatViewInboxToolbar
+        {...makeProps({ onDirectionFilterChange, onWireFilterChange })}
+      />
+    )
     fireEvent.click(screen.getByRole('button', { name: /^Eingang$/i }))
     expect(onDirectionFilterChange).toHaveBeenCalledWith('in')
+    fireEvent.click(screen.getByRole('button', { name: /^Verschl\.$/i }))
+    expect(onWireFilterChange).toHaveBeenCalledWith('encrypted')
   })
 
   it('blendet On-Chain bei Funk-pathTools aus; Optionen bleibt', () => {

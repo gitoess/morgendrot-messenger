@@ -7,7 +7,6 @@
 import { useState, type ChangeEvent, type ReactNode, type RefObject } from 'react'
 import {
   BookUser,
-  Check,
   ChevronDown,
   ClipboardPaste,
   FileDown,
@@ -110,6 +109,11 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   /** Richtung — immer sichtbar und aktiv. */
   directionFilter?: 'all' | 'in' | 'out'
   onDirectionFilterChange?: (d: 'all' | 'in' | 'out') => void
+  /** Inhalt — immer sichtbar und aktiv (Listenfilter, nicht Sendemodus). */
+  wireFilter?: 'all' | 'encrypted' | 'plaintext'
+  onWireFilterChange?: (f: 'all' | 'encrypted' | 'plaintext') => void
+  /** Partner-Schnellliste — aus wenn die Chat-Seitenleiste Partner schon wählt. */
+  showPartnerFilterMenu?: boolean
   onSelectAllVisible: () => void
   onClearInboxSelection: () => void
   onBulkHideSelected: () => void
@@ -195,15 +199,18 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     inboxSelectMode,
     setInboxSelectMode,
     selectedInboxCount,
-    showWireControls,
-    onToggleWireControls,
-    showChannelControls,
-    onToggleChannelControls,
+    showWireControls: _showWireControls,
+    onToggleWireControls: _onToggleWireControls,
+    showChannelControls: _showChannelControls,
+    onToggleChannelControls: _onToggleChannelControls,
     showPartnerControls,
     onTogglePartnerControls,
     conversationMenuSlot,
     directionFilter = 'all',
     onDirectionFilterChange,
+    wireFilter = 'all',
+    onWireFilterChange,
+    showPartnerFilterMenu = true,
     onSelectAllVisible,
     onClearInboxSelection,
     onBulkHideSelected,
@@ -232,10 +239,6 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
   const [exportHistoryOpen, setExportHistoryOpen] = useState(false)
   const [pkgToolsOpen, setPkgToolsOpen] = useState(false)
   const [hashToolsOpen, setHashToolsOpen] = useState(false)
-  const filterArmedCount =
-    (showWireControls ? 1 : 0) +
-    (showChannelControls && pathTools.showKanalFilterToggle ? 1 : 0) +
-    (showPartnerControls ? 1 : 0)
   const pkgImportDisabled = morgPkgImportDisabled(apiStatus)
   const pkgDeviceDisabled =
     morgPkgDeviceBusy || apiStatus?.locked === true || !(apiStatus?.connectedAddresses?.length ?? 0)
@@ -695,73 +698,16 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
           >
             {inboxSelectMode ? 'Auswahl beenden' : 'Auswahl'}
           </button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  'inline-flex items-center gap-1 rounded-md border px-2 py-1 font-medium transition-colors',
-                  filterArmedCount > 0
-                    ? 'border-primary bg-primary/15 text-primary'
-                    : 'border-border hover:bg-muted'
-                )}
-                title="Inhalt / Partner (Kanal nur bei Online — sonst steuert der Sendepfad)"
-              >
-                <Filter className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                Filter{filterArmedCount > 0 ? ` (${filterArmedCount})` : ''}
-                <ChevronDown className="h-3 w-3 shrink-0 opacity-70" aria-hidden />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="min-w-[14rem]">
-              <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Anzeige filtern
-              </DropdownMenuLabel>
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault()
-                  onToggleWireControls()
-                }}
-              >
-                <Check
-                  className={cn('mr-2 h-4 w-4', showWireControls ? 'opacity-100' : 'opacity-0')}
-                  aria-hidden
-                />
-                Inhalt (Verschl. / Klartext)
-              </DropdownMenuItem>
-              {pathTools.showKanalFilterToggle ? (
-                <DropdownMenuItem
-                  onSelect={(e) => {
-                    e.preventDefault()
-                    onToggleChannelControls()
-                  }}
-                >
-                  <Check
-                    className={cn('mr-2 h-4 w-4', showChannelControls ? 'opacity-100' : 'opacity-0')}
-                    aria-hidden
-                  />
-                  Kanal (Quelle)
-                </DropdownMenuItem>
-              ) : null}
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault()
-                  onTogglePartnerControls()
-                }}
-              >
-                <Check
-                  className={cn('mr-2 h-4 w-4', showPartnerControls ? 'opacity-100' : 'opacity-0')}
-                  aria-hidden
-                />
-                Partner
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <Filter className="h-3.5 w-3.5" aria-hidden />
+            Liste
+          </span>
           {onDirectionFilterChange ? (
             <div
               className="inline-flex flex-wrap items-center gap-1 rounded-md border border-border bg-background p-0.5"
               role="group"
               aria-label="Richtung in der Liste"
-              title="Eingang / Ausgang — filtert die Liste sofort"
+              title="Nur empfangene oder nur gesendete Zeilen"
             >
               {(
                 [
@@ -785,6 +731,51 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 </button>
               ))}
             </div>
+          ) : null}
+          {onWireFilterChange ? (
+            <div
+              className="inline-flex flex-wrap items-center gap-1 rounded-md border border-border bg-background p-0.5"
+              role="group"
+              aria-label="Inhalt in der Liste"
+              title="Nur verschlüsselte oder nur Klartext-Zeilen — ändert nicht, wie du sendest"
+            >
+              {(
+                [
+                  ['all', 'Alles'],
+                  ['encrypted', 'Verschl.'],
+                  ['plaintext', 'Klartext'],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => onWireFilterChange(id)}
+                  className={cn(
+                    'rounded px-2.5 py-1 text-xs font-medium transition-colors',
+                    wireFilter === id
+                      ? 'bg-emerald-500/15 text-emerald-900 dark:text-emerald-100'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {showPartnerFilterMenu ? (
+            <button
+              type="button"
+              onClick={() => onTogglePartnerControls()}
+              className={cn(
+                'inline-flex items-center gap-1 rounded-md border px-2 py-1 font-medium transition-colors',
+                showPartnerControls
+                  ? 'border-primary bg-primary/15 text-primary'
+                  : 'border-border hover:bg-muted'
+              )}
+              title="Partner-Chips unter der Leiste"
+            >
+              Partner
+            </button>
           ) : null}
           {hasHiddenMessages ? (
             <button

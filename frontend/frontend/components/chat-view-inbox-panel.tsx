@@ -254,6 +254,12 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         }
         directionFilter={inboxDirectionFilter}
         onDirectionFilterChange={setInboxDirectionFilter}
+        wireFilter={inboxWireFilter}
+        onWireFilterChange={(f) => {
+          setInboxWireFilter(f)
+          if (f !== 'all') setInboxWireFiltersArmed(true)
+        }}
+        showPartnerFilterMenu={!hidePartnerStrip}
         onBulkHideSelected={onBulkHideSelected}
         onBulkPurgeSelected={() => void onBulkPurgeSelected()}
         hasHiddenMessages={hiddenInboxCount > 0}
@@ -275,8 +281,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           showLagebild={pinnwandOverviewConfigured}
         />
       ) : null}
-      {!hidePartnerStrip &&
-      (inboxWireFiltersArmed || inboxChannelFiltersArmed || inboxPartnerFiltersArmed) ? (
+      {!hidePartnerStrip && inboxPartnerFiltersArmed ? (
         <ChatViewInboxPartnerStrip
           partnerOptions={inboxPartnerOptions}
           myAddressKnown={myAddress.trim().length > 0}
@@ -290,9 +295,9 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           wireFilter={inboxWireFilter}
           onWireFilterChange={setInboxWireFilter}
           onPartnerSelectForSend={selectInboxPartnerForSend}
-          showWireSection={inboxWireFiltersArmed}
-          showChannelSection={inboxChannelFiltersArmed}
-          showPartnerSection={inboxPartnerFiltersArmed}
+          showWireSection={false}
+          showChannelSection={false}
+          showPartnerSection
           onRemoveInboxPartnerFromQuickList={(address, opts) => {
             removeInboxPartnerFromQuickList(address, {
               hideMatchingMessages: opts.hideMatchingMessages,
@@ -302,13 +307,25 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           apiStatus={apiStatus}
         />
       ) : null}
-      {inboxWireFiltersArmed && inboxWireFilter !== 'all' ? (
+      {inboxWireFilter !== 'all' || inboxDirectionFilter !== 'all' ? (
         <p className="border-b border-border/60 px-3 py-1.5 text-[11px] text-muted-foreground" role="status">
           {filteredInboxRows.length === 0
-            ? 'Keine Zeile passt. „Alles“ zeigt wieder die ganze Liste.'
-            : `${filteredInboxRows.length} ${filteredInboxRows.length === 1 ? 'Zeile' : 'Zeilen'} — nur ${
-                inboxWireFilter === 'encrypted' ? 'verschlüsselte' : 'Klartext'
-              }. Das ändert nicht, wie du sendest.`}
+            ? 'Keine Zeile passt — Beides und Alles zeigen wieder die ganze Liste.'
+            : [
+                inboxDirectionFilter === 'in'
+                  ? 'nur Eingang'
+                  : inboxDirectionFilter === 'out'
+                    ? 'nur Ausgang'
+                    : null,
+                inboxWireFilter === 'encrypted'
+                  ? 'nur verschlüsselt'
+                  : inboxWireFilter === 'plaintext'
+                    ? 'nur Klartext'
+                    : null,
+                `${filteredInboxRows.length} sichtbar`,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
         </p>
       ) : null}
       <InboxTelegramAlarmGroupJoinStrip />
