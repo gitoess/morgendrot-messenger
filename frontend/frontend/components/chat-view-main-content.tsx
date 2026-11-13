@@ -1504,7 +1504,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                   {...inboxPanelProps}
                   hidePartnerStrip={false}
                   inboxSearchQuery={messengerSearchQuery}
-                  conversationMenu={undefined}
+                  conversationMenu={conversationMenuProps}
                   inboxHeading={inboxHeading}
                 />
               </>

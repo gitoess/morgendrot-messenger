@@ -104,4 +104,60 @@ describe('ChatViewInboxList reply action', () => {
     expect(screen.getByText(/Morgendrot-Basis nicht erreichbar/)).toBeInTheDocument()
     expect(screen.getByText(/zuletzt per Direkt-RPC/)).toBeInTheDocument()
   })
+
+  it('PWMSG badge click applies encrypted wire filter (T41)', () => {
+    const onApplyWireFilter = vi.fn()
+    render(
+      <ChatViewInboxList
+        {...makeProps({
+          onApplyWireFilter,
+          inboxRows: [
+            {
+              kind: 'message',
+              msg: {
+                id: 'pw1',
+                from: '0x' + '2'.repeat(64),
+                recipient: '0x' + '1'.repeat(64),
+                timestamp: Date.now(),
+                content: 'MORG_PWMSG_V1:abc',
+                source: 'inbox',
+                encrypted: false,
+                transports: ['internet'],
+              },
+            },
+          ] as unknown as ChatViewInboxListProps['inboxRows'],
+        })}
+      />
+    )
+    screen.getByRole('button', { name: /PWMSG/i }).click()
+    expect(onApplyWireFilter).toHaveBeenCalledWith('encrypted')
+  })
+
+  it('NFT-Gate badge click applies encrypted wire filter (T41)', () => {
+    const onApplyWireFilter = vi.fn()
+    render(
+      <ChatViewInboxList
+        {...makeProps({
+          onApplyWireFilter,
+          inboxRows: [
+            {
+              kind: 'message',
+              msg: {
+                id: 'ng1',
+                from: '0x' + '2'.repeat(64),
+                recipient: '0x' + '1'.repeat(64),
+                timestamp: Date.now(),
+                content: 'MORG_NFTGATE_V1:abc',
+                source: 'inbox',
+                encrypted: false,
+                transports: ['internet'],
+              },
+            },
+          ] as unknown as ChatViewInboxListProps['inboxRows'],
+        })}
+      />
+    )
+    screen.getByRole('button', { name: /NFT-Gate/i }).click()
+    expect(onApplyWireFilter).toHaveBeenCalledWith('encrypted')
+  })
 })

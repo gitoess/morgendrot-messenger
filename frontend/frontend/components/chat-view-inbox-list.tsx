@@ -436,22 +436,50 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   {(() => {
                     const content = `${row.msg.content ?? ''}`
                     if (isNftGateMessageWire(content)) {
+                      const gateClass =
+                        'inline-flex items-center gap-0.5 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-800 dark:text-violet-300'
+                      const gateTitle =
+                        'NFT-Gate-Wire (Schlüsselkarte). Klick: Liste nur Verschlüsselte. Senden stellst du im Composer (+ Zeitkapsel) ein.'
+                      if (onApplyWireFilter) {
+                        return (
+                          <button
+                            type="button"
+                            className={cn(gateClass, 'hover:bg-violet-500/25')}
+                            title={gateTitle}
+                            onClick={() => onApplyWireFilter('encrypted')}
+                          >
+                            <Lock className="h-3 w-3" aria-hidden />
+                            NFT-Gate
+                          </button>
+                        )
+                      }
                       return (
-                        <span
-                          className="inline-flex items-center gap-0.5 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-800 dark:text-violet-300"
-                          title="NFT-Gate-Wire (Schlüsselkarte)"
-                        >
+                        <span className={gateClass} title={gateTitle}>
                           <Lock className="h-3 w-3" aria-hidden />
                           NFT-Gate
                         </span>
                       )
                     }
                     if (isPassphraseMessageWire(content)) {
+                      const pwClass =
+                        'inline-flex items-center gap-0.5 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-900 dark:text-amber-200'
+                      const pwTitle =
+                        'Passphrase-Nachricht (PWMSG). Klick: Liste nur Verschlüsselte. Senden stellst du im Composer (+ Passphrase) ein.'
+                      if (onApplyWireFilter) {
+                        return (
+                          <button
+                            type="button"
+                            className={cn(pwClass, 'hover:bg-amber-500/25')}
+                            title={pwTitle}
+                            onClick={() => onApplyWireFilter('encrypted')}
+                          >
+                            <Lock className="h-3 w-3" aria-hidden />
+                            PWMSG
+                          </button>
+                        )
+                      }
                       return (
-                        <span
-                          className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-900 dark:text-amber-200"
-                          title="Passphrase-Nachricht (PWMSG)"
-                        >
+                        <span className={pwClass} title={pwTitle}>
                           <Lock className="h-3 w-3" aria-hidden />
                           PWMSG
                         </span>

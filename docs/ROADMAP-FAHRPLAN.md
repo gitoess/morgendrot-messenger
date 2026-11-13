@@ -39,6 +39,8 @@
 
 **Nachtrag 2026-11-13 (Messenger-Layout + Doku-Sync):** Desktop **Telegram-Muster:** Chats|Posteingang feste Höhe **`min(70vh,44rem)`** (~doppelt), Composer darunter volle Breite ohne Overlap; **+** = Passphrase/Zeitkapsel/Sprachnachricht/An Adresse. Gemeinsame Live-Rituale (T3/T4/T36/T38) und Besprechungen (T23/T33/T41/T32) **nach hinten**.
 
+**Nachtrag 2026-11-13 (Agent-Lücken + gemeinsames Retest am Schluss):** Mobile Posteingang **Optionen→Chat** wieder verdrahtet; Badges **PWMSG/NFT-Gate** filtern wie **Verschlüsselt**; Composer zeigt **Dieses NFT verleihen…** auch ohne aufgeklapptes Privacy-Panel. Agent prüft T23/T33/T41/T32 soweit Unit/UI allein möglich. **Gemeinsames Live-Retest (T3/T4/T36/T38 + T23/T33/T41/T32-Checklisten) bewusst am Schluss dieses Durchgangs** — nicht als Zwischenstopp.
+
 **Nachtrag 2026-11-05 (Wire einfügen):** **Optionen → Wire einfügen** — Paste `MORG_PWMSG_V1` + Passphrase → lokaler Klartext (≠ Toolbar **Entschlüsseln** = Einsatzbericht-.json). ECDH-Wires weiter nur mit Handshake.
 
 **Nachtrag 2026-11-06 (H.23 B2 NFT-Schlüsselkarte — aktiv):** Spec **`docs/NFT-SCHLUESSELKARTE-B2.md`**. **Zusätzlicher Zugriffsmodus**, kein Ersatz für Passphrase und nicht für Alltags-Direktchat. Lesen spezieller Enc-Inhalte: **Passphrase und/oder Besitz** eines NFTs (optional **beides**). Nutzen: Evidenz teilen, temporäre Leserechte, Weitergabe per NFT-Transfer. **P0–P3 Ist:** Enc-Store + Multi-Slot + Composer-Bindung + Mint an Slot + öffentlicher `[morg-keycard]`-Marker (kein Move). **2-Geräte-Feldtest** bewusst später.
@@ -2649,16 +2651,15 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 | 4 | **§ H.37 Multi-Profil** | Spec/Umsetzung erst **nach** diesem Durchgang — Ziel: Profilwahl beim Unlock, eigener Seed, **nie parallel** (`VAULT-BEGRIFFE` §6). |
 | 5 | **Produkt-Split Morgendrot vs IOTA-Messenger** | Entscheiden, was im vollen Morgendrot bleibt und was nur im schlanken IOTA-Messenger (siehe Tabelle unten). Overlay-Ist: `tools/iota-messenger/overlays/product-identity.ts`. |
 
-### Durchgangs-Reihenfolge (verbindlich — Stand 2026-11-12)
+### Durchgangs-Reihenfolge (verbindlich — Stand 2026-11-13)
 
 1. **Erledigt:** **T37** Landkarte · **T8/T9** Passwort/Backup/Schatten → Sicherheit · Telegram-Wipe-Scope · Klack/Klick-Ton (T29) · Sendepfad/Layout-Polish 2026-11-13  
-2. **Jetzt (Agent allein):** Layout/UX fertig polieren (Chats|Posteingang ~doppelt so hoch `min(70vh,44rem)`, Composer darunter); Unit + eigener Live-Check.  
-3. **Gemeinsame Rituale — nach hinten** (erst wenn Agent-Layout stabil): Live **T3** → **T4** → **T36/T38**. Nicht parallel zu Layout-Feinschliff.  
-4. **Danach gemeinsam (Checklisten unten):** **T23/T33/T41** Kurz-Retest; **T32** Solo-Ritual. Agent 2026-11-13: Labels/Burn-Hinweis + Handbuch-Lernpfad.  
-5. **Backlog (überdenken, nicht jetzt bauen):** **T56** Komplett-alles-löschen; **T39** Beweis-Paket  
-6. **Dann am Ende:** Ideen **T39–T54** priorisieren  
-7. **Später (nicht blockierend):** T45 · T47 · T51 · T52 · T53  
-8. **Explizit nicht im Messenger-Durchgang:** Abo-NFT-Verkaufsstory, PlanRadar-App, Zapier-Store, TG-Gerichts-Vollforensik
+2. **Agent allein (Ist):** Layout/UX + Mobile Optionen→Chat + Badge-Filter PWMSG/NFT-Gate + Zeitkapsel-Verleihen-CTA; Unit + eigener Browser-Smoke.  
+3. **Gemeinsame Rituale — am Schluss dieses Durchgangs (ein Block):** Live **T3** → **T4** → **T36/T38** **und** Checklisten **T23/T33/T41** + **T32**. Nicht stückweise dazwischen.  
+4. **Backlog (überdenken, nicht jetzt bauen):** **T56** Komplett-alles-löschen; **T39** Beweis-Paket  
+5. **Dann am Ende:** Ideen **T39–T54** priorisieren  
+6. **Später (nicht blockierend):** T45 · T47 · T51 · T52 · T53  
+7. **Explizit nicht im Messenger-Durchgang:** Abo-NFT-Verkaufsstory, PlanRadar-App, Zapier-Store, TG-Gerichts-Vollforensik
 
 **Produkt-Freeze (Sicherheit/Sinn):** Telegram = Klingel (T42); Chat-Mailbox ≠ Zahlungsobjekt (T43); Magnet Default aus (T40); Seed/Passwort = Wiederherstellungs-SPOF (siehe Handbuch Sicherheit).
 
@@ -2669,7 +2670,7 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 3. **T33:** Optionen zeigt **Posteingang · Tools** und **Chat · Sicherheit**; Hinweis „Nach-Lesen = Modus / Burn = ⋯ oder Auswahl“.  
 4. **T33:** Funk oder Telegram: keine Wire/On-Chain-Tools; Online/IOTA: Wire/Export da.  
 5. **T33:** Eine Mailbox-Zeile → ⋯ → Von Chain löschen; Auswahl → Burn (Confirm) — nicht mit Nach-Lesen-Modus verwechseln.  
-6. **T41:** Badge **Eingang** / **Verschlüsselt** klicken → Liste filtert; Composer-Sendemodus unverändert.  
+6. **T41:** Badge **Eingang** / **Verschlüsselt** / **PWMSG** / **NFT-Gate** klicken → Liste filtert; Composer-Sendemodus unverändert.  
 7. **T41:** Strip-Chips und Badge führen zum gleichen Filter-Verständnis (Shortcut, keine Magie).
 
 ### Ritual T32 (Solo-Feldtest, ~25 Min — kein Parallel-P5d)

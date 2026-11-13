@@ -37,7 +37,7 @@
 
 **Echter Burn** = Zeilen-⋯ oder Auswahl → „Von Chain löschen“. **Nach Lesen löschen** in Optionen ist nur der Modus (Vorschlag nach Lesen).
 
-Badge **Eingang/Ausgang** oder **Verschlüsselt** anklicken → Liste filtern (wie die Chips). Senden bleibt im Composer.
+Badge **Eingang/Ausgang**, **Verschlüsselt**, **PWMSG** oder **NFT-Gate** anklicken → Liste filtern (wie die Chips). Senden bleibt im Composer.
 
 ### Drei „Entschlüsseln“ — Lernpfad
 
@@ -47,7 +47,7 @@ Badge **Eingang/Ausgang** oder **Verschlüsselt** anklicken → Liste filtern (w
 | **Optionen → Wire einfügen** | Paste `MORG_PWMSG_V1` + Passphrase (nur PWMSG; ECDH braucht Handshake) |
 | **Optionen → Export / Decrypt-JSON** | Passwort-geschützte Einsatzbericht-JSON wieder öffnen (eigene HTML-Seite) |
 
-**Zeitkapsel:** **Senden** = Composer **+** → Zeitkapsel-Nachricht. **Verleihen / Reclaim** = Posteingang → **On-Chain / NFT** → Tab Zeitkapsel.
+**Zeitkapsel:** **Senden** = Composer **+** → Zeitkapsel-Nachricht. Nach dem Senden: Composer-Leiste **Dieses NFT verleihen…** (oder Privacy-Panel). **Verleihen / Reclaim** auch Posteingang → **On-Chain / NFT** → Tab Zeitkapsel.
 
 ---
 

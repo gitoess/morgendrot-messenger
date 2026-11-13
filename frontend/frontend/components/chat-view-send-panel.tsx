@@ -51,8 +51,11 @@ import { PassphraseProtectComposerToggle } from '@/frontend/components/chat-view
 import {
   readPassphraseProtectEnabled,
   readPassphraseZeitkapselModeEnabled,
+  readZeitkapselLastNftObjectId,
+  requestOpenZeitkapselLease,
   writePassphraseProtectEnabled,
   writePassphraseZeitkapselModeEnabled,
+  writeZeitkapselLastNftObjectId,
   PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT,
 } from '@/frontend/lib/passphrase-message-local-store'
 import { hasTeamBroadcastKey } from '@/frontend/lib/team-broadcast-key-store'
@@ -473,6 +476,9 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
   const [privacyToolsOpen, setPrivacyToolsOpen] = useState(
     () => readPassphraseProtectEnabled() || readPassphraseZeitkapselModeEnabled()
   )
+  const [lastZeitkapselNft, setLastZeitkapselNft] = useState<string | null>(() =>
+    typeof window !== 'undefined' ? readZeitkapselLastNftObjectId() : null
+  )
   useEffect(() => {
     setManualAddressMode(false)
   }, [partner, activeConversationBar?.displayName, activeConversationBar?.addressLine])
@@ -482,6 +488,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
       if (readPassphraseProtectEnabled() || readPassphraseZeitkapselModeEnabled()) {
         setPrivacyToolsOpen(true)
       }
+      setLastZeitkapselNft(readZeitkapselLastNftObjectId())
     }
     window.addEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, syncPrivacy)
     return () => window.removeEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, syncPrivacy)
@@ -706,6 +713,32 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               onEncryptedChange={onEncryptedChange ?? encryptionModeToggle?.onEncryptedChange}
               onRequestVaultSession={onNavigateHomeWhenLocked}
             />
+          </div>
+        ) : null}
+        {forcedTransport === 'internet' &&
+        lastZeitkapselNft &&
+        !privacyToolsOpen ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/70 bg-muted/15 px-2.5 py-2">
+            <span className="text-[11px] text-foreground">
+              Zeitkapsel-NFT {lastZeitkapselNft.slice(0, 10)}…
+            </span>
+            <button
+              type="button"
+              className="rounded border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
+              onClick={() => requestOpenZeitkapselLease(lastZeitkapselNft)}
+            >
+              Dieses NFT verleihen…
+            </button>
+            <button
+              type="button"
+              className="text-[11px] text-muted-foreground underline hover:no-underline"
+              onClick={() => {
+                writeZeitkapselLastNftObjectId(null)
+                setLastZeitkapselNft(null)
+              }}
+            >
+              Weg
+            </button>
           </div>
         ) : null}
         {showRecipientRow ? (
