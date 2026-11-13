@@ -443,12 +443,6 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
           </section>
         </div>
 
-        <div className="border-t border-border px-3 py-2 text-[10px] text-muted-foreground">
-          <span className="inline-flex items-center gap-1">
-            <Info className="h-3 w-3" aria-hidden />
-            Info → Mehr (Name in der Liste, IDs dort)
-          </span>
-        </div>
       </aside>
 
       {p.selfProfile ? (

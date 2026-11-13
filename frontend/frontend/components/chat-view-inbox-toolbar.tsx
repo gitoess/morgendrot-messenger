@@ -218,7 +218,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     onSelectAllVisible,
     onClearInboxSelection,
     onBulkHideSelected,
-    onBulkPurgeSelected,
+    onBulkPurgeSelected: _onBulkPurgeSelected,
     hasHiddenMessages,
     onToggleHideAllVisibleLocal,
     localPurgeBusy = false,
@@ -431,7 +431,12 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Chat
                   </DropdownMenuLabel>
-                  <ChatConversationMenuItems {...conversationMenu} />
+                  <ChatConversationMenuItems
+                    {...conversationMenu}
+                    /* Gruppe verwalten bleibt in Sidebar / Info — nicht doppelt hier */
+                    onManageGroup={undefined}
+                    onCreateGroup={undefined}
+                  />
                 </>
               ) : null}
             </DropdownMenuContent>
@@ -442,8 +447,9 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               <DialogHeader>
                 <DialogTitle>Nachrichtenverlauf exportieren</DialogTitle>
                 <DialogDescription>
-                  Download auf dieses Gerät. Telegram: Journal-Felder (Text, Chat-ID, Richtung) — keine TG-Medien.
-                  Für Beweis: JSON speichern → Hash &amp; Prüfen (SHA-256 der Datei). Chain-Anker = T39.
+                  Download auf dieses Gerät. Enthält sichtbare Posteingangs-Zeilen (IOTA/Funk/Telegram-Journal:
+                  Text, Chat-ID, Richtung). Keine Telegram-Medien, kein voller TG-Forensik-Dump. Beweis: JSON
+                  speichern → Optionen → Hash &amp; Prüfen (SHA-256). Optionaler Chain-Anker = T39.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-3 text-sm">
@@ -580,10 +586,10 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
           <Dialog open={hashToolsOpen} onOpenChange={setHashToolsOpen}>
             <DialogContent className="max-h-[min(90vh,40rem)] max-w-lg overflow-y-auto sm:max-w-lg">
               <DialogHeader>
-                <DialogTitle>Hash &amp; Prüfen</DialogTitle>
+                <DialogTitle>Hash &amp; Prüfen (SHA-256)</DialogTitle>
                 <DialogDescription>
-                  Lokal SHA-256 — z. B. Export-JSON oder Datei. Gleicher Werkzeugkasten wie unter Einstellungen →
-                  Sicherheit (kein zweiter Algorithmus).
+                  Lokal SHA-256 von Text oder Datei (z. B. Export-JSON). Nur hier unter Optionen — kein zweites
+                  Hash-Panel unter Sicherheit. Optional später Chain-Anker (T39).
                 </DialogDescription>
               </DialogHeader>
               <SettingsContentHashPanel />
@@ -821,33 +827,13 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               disabled={selectedInboxCount === 0}
               onClick={onBulkHideSelected}
               className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1 text-left font-medium text-foreground hover:bg-primary/15 disabled:opacity-50"
-              title="Nur in dieser App aus der Liste nehmen — Chain unverändert"
+              title="Nur Sichtbarkeit in diesem Posteingang — Chain unverändert. Burn bleibt am Nachrichten-⋯."
             >
               Ausblenden ({selectedInboxCount})
             </button>
-            <button
-              type="button"
-              disabled={selectedInboxCount === 0 || apiStatus?.connected !== true}
-              onClick={() => {
-                const count = selectedInboxCount
-                if (
-                  !window.confirm(
-                    `Ausgewählte Nachrichten wirklich auf Chain löschen?\n\n` +
-                      `- Anzahl: ${count}\n` +
-                      `- Wirkung: Mailbox-Einträge on-chain löschen (Burn, Rebate), sofern möglich\n` +
-                      `- Das ist kein Ausblenden — Chain ändert sich\n\n` +
-                      `Fortfahren?`
-                  )
-                ) {
-                  return
-                }
-                onBulkPurgeSelected()
-              }}
-              className="rounded-md border border-border px-2 py-1 text-left text-muted-foreground hover:bg-muted disabled:opacity-50"
-              title="Selten nötig — löscht Mailbox-Objekte on-chain. Normalfall: Ausblenden."
-            >
-              Von Chain löschen… ({selectedInboxCount})
-            </button>
+            <p className="text-[11px] text-muted-foreground">
+              Auswahl steuert nur Ein-/Ausblenden. Von Chain löschen: Nachrichten-⋯.
+            </p>
           </div>
         ) : null}
       </div>

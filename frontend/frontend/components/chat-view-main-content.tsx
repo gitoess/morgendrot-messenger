@@ -1426,6 +1426,29 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
             {mobileTab === 'inbox' ? (
               <>
+                <ChatViewMessengerSearch
+                  className="mb-2"
+                  directory={directory}
+                  partnerOptions={inboxPartnerOptions}
+                  messages={inboxMessages}
+                  myAddress={myAddress}
+                  query={messengerSearchQuery}
+                  onQueryChange={setMessengerSearchQuery}
+                  activeSendPath={activeSendPath}
+                  iotaPathFocus={iotaPathFocus}
+                  placeholder="Posteingang durchsuchen…"
+                  onSelectContact={handleMobileSelectContact}
+                  onSelectGroup={handleMobileSelectGroup}
+                  onSelectTelegramAlarmGroup={() => {
+                    void handleSelectSidebarTelegramAlarm()
+                    setMobileTab('chats')
+                  }}
+                  onSelectMessageHit={(hit) => {
+                    handleSelectMessageHit(hit)
+                    setMobileTab('chats')
+                  }}
+                  {...sidebarHandshakeProps}
+                />
                 {inboxOverviewChipsVisible && (inboxPanelRead.inboxUnreadThreadOptions?.length ?? 0) > 0 ? (
                   <ChatViewInboxUnreadThreadsStrip
                     threads={[...(inboxPanelRead.inboxUnreadThreadOptions ?? [])]}

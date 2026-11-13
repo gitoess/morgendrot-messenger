@@ -36,7 +36,8 @@ export function SettingsTelegramNotifyOnSend() {
             />
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            An = nach erfolgreichem 1:1-IOTA-Send Kurz-Push an den Kontakt (Telegram-ID muss im Telefonbuch
+            Kurz-Hinweis nach IOTA-Send (Telegram-ID im Telefonbuch). Kein Chat-Ersatz, kein E2EE über TG.
+            An = nach erfolgreichem 1:1-IOTA-Send Push an den Kontakt (Telegram-ID muss im Telefonbuch
             stehen). Aus = kein Push. Composer-Tab „telegram“ sendet direkt über Telegram — das ist ein anderer
             Kanal.
           </p>

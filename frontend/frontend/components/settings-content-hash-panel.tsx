@@ -71,7 +71,7 @@ export function SettingsContentHashPanel() {
         <h4 className="font-semibold text-foreground">Hash &amp; Prüfen (SHA-256)</h4>
       </div>
       <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
-        Datei/Text lokal hashen (SHA-256) — z. B. Export-JSON. Prüfen = Datei + bekannter Hash. Einstieg:
+        Datei/Text lokal hashen (SHA-256) — z. B. Export-JSON. Prüfen = Datei + erwarteter Hash. Einstieg nur
         Posteingang → Optionen. Optional Chain-Anker = T39.
       </p>
 

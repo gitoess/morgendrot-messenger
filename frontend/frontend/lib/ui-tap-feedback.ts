@@ -212,7 +212,7 @@ export function playUiTone(kind: UiToneKind): void {
 }
 
 const TAP_SELECTOR =
-  'button, [role="button"], [data-slot="button"], a[href], summary, [data-tap-feedback], input[type="button"], input[type="submit"], input[type="reset"]'
+  'button, [role="button"], [data-slot="button"], a[href], summary, [data-tap-feedback], input[type="button"], input[type="submit"], input[type="reset"], input[type="search"]'
 
 function isInteractiveTapTarget(el: Element | null): Element | null {
   if (!el || !(el instanceof Element)) return null

@@ -309,6 +309,10 @@ export function SettingsView({
       </SettingsCollapsiblePanel>
 
       <SettingsCollapsiblePanel open={activeCategory === 'telegram'} title="Telegram" icon={<Send className="h-5 w-5" />} onRefresh={() => void loadStatus()}>
+        <p className="rounded-lg border border-border bg-muted/25 px-3 py-2 text-[12px] leading-relaxed text-muted-foreground">
+          <span className="font-medium text-foreground">Scope (T42):</span> Telegram = Klingel / Inbound / Alarm —
+          kein Video, kein NFT, kein E2EE über Telegram. Archiv und Beweis laufen über IOTA / Export+Hash.
+        </p>
         {managedNetwork ? (
           <>
             <SettingsTelegramIntegration backendOnline={backendOnline} />

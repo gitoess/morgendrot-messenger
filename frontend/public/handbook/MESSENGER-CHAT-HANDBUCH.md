@@ -21,7 +21,7 @@
 | **Composer** | `[+]` (Anhang, Telefonbuch, Emoji, …), Text, Sprache, Senden; **Verschlüsselt/Klartext** = wie du sendest |
 | **Optionen** | Posteingang (Wire, Hash, Export, Pakete) **und** Chat (Info, Schlüssel, Nach-Lesen-Modus, Verlauf leeren) |
 | **Nachrichten-⋯** (pro Zeile) | Kopieren, Telefonbuch, lokal ausblenden, **Von Chain löschen (Burn)** |
-| **Auswahl** | Primär **Ausblenden**; Chain-Löschen nur als zweite, ehrliche Aktion |
+| **Auswahl** | Nur **Ausblenden** (Sichtbarkeit). Von Chain löschen: Nachrichten-⋯ |
 
 **Dashboard:** Kachel **Nachrichten** öffnet den Chat. **Telefonbuch** zusätzlich über `[+]` im Composer, Sidebar oder Kontakt-Detail.
 
@@ -31,7 +31,7 @@
 |----|------------|------------------|
 | **Optionen → Chat** | Info, Schlüssel, Nach-Lesen-Modus, Verlauf leeren | Kein sofortiges Chain-Löschen |
 | **Nachrichten-⋯** | Diese eine Zeile (Burn, Kopieren, ausblenden) | Kein Sendemodus |
-| **Auswahl → Ausblenden** | Nur UI | Kein Burn |
+| **Auswahl → Ausblenden** | Nur Sichtbarkeit im Posteingang | Kein Löschen / kein Burn |
 
 Badge **Eingang/Ausgang** oder **Verschlüsselt** anklicken → Liste filtern (wie die Chips oben). Senden bleibt im Composer.
 
