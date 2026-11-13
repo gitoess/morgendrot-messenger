@@ -414,7 +414,7 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
                   ? sidebarAllSubtitleForSendPath(sidebarPathFilter, sendPathContactCount)
                   : sendPathContactCount > 0
                     ? `${sendPathContactCount} Kontakte`
-                    : 'Gesamter Posteingang'
+                    : 'Posteingang Alle'
               }
               active={p.showAllActive}
               onClick={p.onSelectAll}

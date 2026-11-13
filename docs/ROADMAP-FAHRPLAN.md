@@ -2703,9 +2703,9 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T33 | **Nachrichten-⋮ vs Chat-⋮** | UX/Doku | **done 2026-11-13** | Chat-⋮ = Modus „Nach Lesen löschen“; Zeilen-⋯ = „Von Chain löschen (Burn)“; Optionen ≠ ⋮; Handbuch-Tabelle |
 | T34 | **Magnet Wii-Feel** | UX | **done 2026-11-13, bewusst klein** | Bleibt aus. Wenn an: nur leichtes Anheben, kein Hover-Ton (der Klickton bleibt). Kein Wii-Scale mehr |
 | T35 | **Gruppe 1:1 vs gemeinsames Postfach** | Doku/UI | erledigt 2026-11-12, Retest | Labels + Handbuch-Tabelle; Handshake-Liste nur bei 1:1 |
-| T36 | **Telegram-Verlauf-Export** | Dialog statt Submenu 2026-11-12 | **ready → live smoke** | Optionen → Export: Journal-Felder klar (Text/Chat-ID/Richtung), keine TG-Medien. Smoke mit User |
+| T36 | **Telegram-Verlauf-Export** | Dialog statt Submenu 2026-11-12 | **ready → live smoke (gemeinsam T38)** | Optionen → Export: Journal-Felder klar (Text/Chat-ID/Richtung), keine TG-Medien. Smoke: Aktualisieren → Export JSON → Felder prüfen |
 | T37 | **Tresor-Landkarte UI** | UX | **done 2026-11-12** | Sicherheit-Kurzkarte + Handbuch `#tresor-landkarte`; Gelb-Affordanz entfernt; Notfall-Scopes ehrlich |
-| T38 | **Hash & Prüfen (SHA-256)** | Feature | **ready → live smoke** | Nur Optionen; Copy ehrlich. Smoke mit User |
+| T38 | **Hash & Prüfen (SHA-256)** | Feature | **ready → live smoke (gemeinsam T36)** | Optionen → Hash: Export-JSON hashen + prüfen. Copy ehrlich. Smoke direkt nach T36-Export |
 | T56 | **Komplett-alles-löschen** | Feature/UX | **Backlog — überdenken** | Ein Wizard: Gerät + Chain-Tresor + Vault-Datei + Telegram + optional NFT/Keys brennen. Ehrliche Grenzen (fremde Kopien, TG-Server, .env). Nicht als ein blinder Knopf ohne Checkliste. Siehe `NOTFALL-PURGE-MESSENGER.md` |
 | T54 | **Seed / Passwort SPOF** | Sicherheit/Doku | fortlaufend | Mnemonic = Identität/Coins; Vault-PW = Tresor-Inhalt; beides offline sichern; Ordner `.morgendrot-*` / Sidecar / `.env` = Gerät+Backup, nicht „Cloud = sicher“ |
 | T39 | **Telegram↔IOTA Beweis** | Produkt | später / gemeinsam am Ende | Export-JSON enthält Journal-Felder (chatId/Richtung); Beweis-Paket = JSON + SHA-256 (+ optional Chain). Kein TG-Vollforensik/Medien. Mit User am Roadmap-Ende priorisieren |

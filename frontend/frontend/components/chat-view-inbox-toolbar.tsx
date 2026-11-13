@@ -16,7 +16,6 @@ import {
   KeyRound,
   Lock,
   Package,
-  RefreshCw,
   Settings2,
   StickyNote,
 } from 'lucide-react'
@@ -146,6 +145,8 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   /** Tresor-Notizen / Passwort-Safe (rechts neben Optionen). */
   onOpenNotes?: () => void
   notesActive?: boolean
+  /** z. B. „Posteingang Funk“ — sonst „Posteingang“. */
+  inboxHeading?: string
 }
 
 function morgPkgImportDisabled(apiStatus: ApiStatus | null): boolean {
@@ -185,8 +186,8 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     onMorgPkgDeviceExportPick,
     morgPkgDeviceBusy,
     apiStatus,
-    onRefresh,
-    loading,
+    onRefresh: _onRefresh,
+    loading: _loading,
     onExportEinsatzberichtJson,
     onExportEinsatzberichtTxt,
     onExportEinsatzberichtTxtFull,
@@ -236,6 +237,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     showInboxPackageExpertMenu = false,
     inboxPackageExpertMenu,
     pathTools: pathToolsProp,
+    inboxHeading = 'Posteingang Alle',
   } = p
 
   const pathTools = pathToolsProp ?? DEFAULT_PATH_TOOLS
@@ -275,7 +277,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
       <div className="flex flex-wrap items-center justify-between gap-2 p-4">
         <div className="flex flex-wrap items-center gap-2">
           <Inbox className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold text-foreground">Posteingang</h3>
+          <h3 className="font-semibold text-foreground">{inboxHeading}</h3>
           {pendingHandshakeCount > 0 ? (
             <span
               className="inline-flex min-h-6 items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2.5 text-xs font-semibold text-emerald-800 dark:text-emerald-200"
@@ -457,7 +459,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   {exportBlocked
                     ? exportDenied
                     : exportEmpty
-                      ? 'Keine Nachrichten geladen — zuerst „Aktualisieren“. Telegram braucht Bot + Chat-ID im Telefonbuch.'
+                      ? 'Keine Nachrichten geladen — zuerst „Aktualisieren“ oben neben Tresor. Telegram braucht Bot + Chat-ID im Telefonbuch.'
                       : `${messageCount} Nachricht(en) bereit zum Export.`}
                 </p>
                 <div className="grid gap-2">
@@ -695,16 +697,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             onOpenChange={setWirePasteOpen}
           />
 
-          <button
-            type="button"
-            onClick={onRefresh}
-            disabled={loading}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-            title="Posteingang und Kontakte neu laden"
-          >
-            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-            Aktualisieren
-          </button>
+          {/* Aktualisieren sitzt einheitlich im Chat-Kopf neben „Tresor: …“. */}
         </div>
       </div>
       <div className="border-t border-border/70 px-4 py-2 text-xs">

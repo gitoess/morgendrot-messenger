@@ -114,7 +114,10 @@ import { buildComposeReplyTargets } from '@/frontend/hooks/build-compose-reply-t
 import { useChatViewComposerBindings } from '@/frontend/hooks/use-chat-view-composer-bindings'
 import { useChatViewPanelMessengerPorts } from '@/frontend/hooks/use-chat-view-panel-messenger-ports'
 import { useChatViewShellProps } from '@/frontend/hooks/use-chat-view-shell-props'
-import { resolveChatHeaderContext } from '@/frontend/lib/resolve-chat-header-context'
+import {
+  posteingangTitleForSendPath,
+  resolveChatHeaderContext,
+} from '@/frontend/lib/resolve-chat-header-context'
 import { pinnwandSidebarLabel } from '@/frontend/lib/pinnwand-display'
 import {
   Dialog,
@@ -912,6 +915,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         activeConversationSubtitle,
         showAllConversationsActive,
         inboxConversationGroupId,
+        activeSendPath,
+        iotaPathFocus,
       }),
     [
       channelMode,
@@ -921,7 +926,18 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       activeConversationSubtitle,
       showAllConversationsActive,
       inboxConversationGroupId,
+      activeSendPath,
+      iotaPathFocus,
     ]
+  )
+
+  const inboxHeading = useMemo(
+    () =>
+      posteingangTitleForSendPath({
+        activeSendPath,
+        iotaPathFocus,
+      }),
+    [activeSendPath, iotaPathFocus]
   )
 
   const mergedChatHeaderProps = useMemo(
@@ -929,8 +945,13 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       ...chatHeaderProps,
       conversationTitle: chatHeaderContext.title,
       conversationSubtitle: chatHeaderContext.subtitle,
+      conversationIcon: chatHeaderContext.icon,
       onOpenNotes: onChannelModeChange ? handleSelectSidebarNotes : undefined,
       suppressAppChrome: c.suppressAppChrome === true,
+      onRefreshStatus: async () => {
+        await chatHeaderProps.onRefreshStatus?.()
+        inboxPanelProps.onRefresh?.()
+      },
     }),
     [
       chatHeaderProps,
@@ -938,6 +959,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       onChannelModeChange,
       handleSelectSidebarNotes,
       c.suppressAppChrome,
+      inboxPanelProps.onRefresh,
     ]
   )
 
@@ -1330,6 +1352,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             hidePartnerStrip={showConversationSidebar}
             inboxSearchQuery={messengerSearchQuery}
             conversationMenu={conversationMenuProps}
+            inboxHeading={inboxHeading}
           />
 
           {composerBlock}
@@ -1420,6 +1443,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                   hidePartnerStrip
                   inboxSearchQuery={messengerSearchQuery}
                   conversationMenu={conversationMenuProps}
+                  inboxHeading={inboxHeading}
                 />
               </>
             ) : null}
@@ -1466,6 +1490,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                   hidePartnerStrip={false}
                   inboxSearchQuery={messengerSearchQuery}
                   conversationMenu={undefined}
+                  inboxHeading={inboxHeading}
                 />
               </>
             ) : null}

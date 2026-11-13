@@ -6,7 +6,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { BookOpen, Lock, Settings, StickyNote, Unlock } from 'lucide-react'
+import { BookOpen, Inbox, Lock, RefreshCw, Settings, StickyNote, Unlock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { isMessengerSessionKeysReady } from '@/frontend/lib/messenger-session-keys-ready'
@@ -56,6 +56,7 @@ export type ChatViewChatHeaderProps = {
   /** Kontext aus Sidebar-Auswahl — ersetzt generischen Modus-Titel. */
   conversationTitle?: string | null
   conversationSubtitle?: string | null
+  conversationIcon?: 'lock' | 'inbox'
   afterPulse?: ReactNode
   offlineStatus?: OfflineStatusSnapshot
   pinnwandTabUnreadCount?: number
@@ -252,8 +253,10 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
     offlineStatus,
     conversationTitle,
     conversationSubtitle,
+    conversationIcon = 'lock',
     compactNative = false,
     suppressAppChrome = false,
+    onRefreshStatus,
   } = p
 
   const channelTitle =
@@ -272,6 +275,9 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
   const showProfileBadges = !suppressAppChrome && !compactNative
   const showSendPathInHeader = sendPath?.visible && !compactNative
   const showSettingsBtn = Boolean(onOpenSettings) && !suppressAppChrome
+  /** Neben Tresor: immer im Messenger-Kopf, auch compact — nicht auf Einstellungsseiten. */
+  const showHeaderRefresh = Boolean(onRefreshStatus) && !suppressAppChrome
+  const useInboxIcon = conversationIcon === 'inbox' || channelMode === 'pinnwand' || channelMode === 'notes'
 
   const queuePending = offlineStatus?.queuePending ?? 0
   const showQueueOnlyBanner =
@@ -299,11 +305,21 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                   <div
                     className={cn(
                       'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl',
-                      encrypted ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
+                      useInboxIcon
+                        ? 'bg-muted text-foreground'
+                        : encrypted
+                          ? 'bg-emerald-500/10 text-emerald-400'
+                          : 'bg-amber-500/10 text-amber-400'
                     )}
                     aria-hidden
                   >
-                    {encrypted ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />}
+                    {useInboxIcon ? (
+                      <Inbox className="h-5 w-5" />
+                    ) : encrypted ? (
+                      <Lock className="h-5 w-5" />
+                    ) : (
+                      <Unlock className="h-5 w-5" />
+                    )}
                   </div>
                 ) : null}
                 <div className="min-w-0">
@@ -324,7 +340,7 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                   ) : null}
                 </div>
               </div>
-              {showHandbook || onOpenNotes || showSettingsBtn || showTreasuryBadge ? (
+              {showHandbook || onOpenNotes || showSettingsBtn || showTreasuryBadge || showHeaderRefresh ? (
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   {showHandbook ? <MessengerHandbookLink /> : null}
                   {onOpenNotes && channelMode === 'notes' ? (
@@ -340,6 +356,14 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                       label="Einstellungen"
                       icon={<Settings className="h-4 w-4 shrink-0" aria-hidden />}
                       onClick={onOpenSettings}
+                    />
+                  ) : null}
+                  {showHeaderRefresh ? (
+                    <HeaderToolbarButton
+                      label="Aktualisieren"
+                      icon={<RefreshCw className="h-4 w-4 shrink-0" aria-hidden />}
+                      onClick={() => void onRefreshStatus?.()}
+                      title="Status, Posteingang und Kontakte neu laden"
                     />
                   ) : null}
                   {showTreasuryBadge && apiStatus ? (
