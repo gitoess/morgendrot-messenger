@@ -2652,9 +2652,9 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 ### Durchgangs-Reihenfolge (verbindlich — Stand 2026-11-12)
 
 1. **Erledigt:** **T37** Landkarte · **T8/T9** Passwort/Backup/Schatten → Sicherheit · Telegram-Wipe-Scope · Klack/Klick-Ton (T29) · Sendepfad/Layout-Polish 2026-11-13  
-2. **Agent erledigt 2026-11-13:** Layout Telegram-Muster repariert (Nachrichten wieder sichtbar); **T36/T38** Unit/UI-Smoke (Optionen-Einträge + SHA-256). **Kein** Live-Feld-Export mit User in dieser Session.  
-3. **Gemeinsam später (verbindlich, mit User):** **T3** Meine Mailboxen → dann **T4** Schatten→Main; gebündelt **T36/T38** Live-Smoke (echter JSON/ZIP + Hash gegenprüfen); **T23/T33/T41** Kurz-Retest.  
-4. **Danach:** **T12**-Rest + T17 Handbuch; **T32** Zeitkapsel-Feldtest; **[+]-Menü** Passphrase/Zeitkapsel (Composer entlasten).  
+2. **Agent 2026-11-13 (Code/Unit):** Layout (Chats=Posteingang-Höhe, Composer volle Breite); Auswahl≈⋯-Parität; Empfänger-Wallet aus bei aktivem Chat + „An Adresse senden“; Sprachnachricht im **+**; **T3/T4/T36/T38** Unit-/Code-Smoke (Mailbox-/Shadow-/Export-/Hash-Tests) — **kein** Live-Feld mit User.  
+3. **Gemeinsam später (verbindlich):** Live-Retest **T3** Meine Mailboxen → **T4** Schatten→Main → **T36/T38** echter Export+Hash. Agent-Stand nur vorbereiten.  
+4. **Besprechen (noch nicht bauen):** **T23/T33/T41** Kurz-Retest-Umfang; **T12**-Rest; **T32** Zeitkapsel; **[+]** Passphrase/Zeitkapsel.  
 5. **Backlog (überdenken, nicht jetzt bauen):** **T56** Komplett-alles-löschen; **T39** Beweis-Paket  
 6. **Dann am Ende:** Ideen **T39–T54** priorisieren  
 7. **Später (nicht blockierend):** T45 · T47 · T51 · T52 · T53  
@@ -2673,8 +2673,8 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 |---|--------|-----|------|-------|
 | T1 | **Mainnet einrichten** | Feld/UI-Test | **am Schluss** dieses Durchgangs | Deploy / Gas / Schalter Produktion / Signer-Strip — zusammen klicken |
 | T2 | **Passwort ändern** | Durchgang + ggf. Smoke | **done 2026-11-12** | Unter **Sicherheit**; Session-PW nach Ändern sync; Header vs. voller Lock erklärt |
-| T3 | **Meine Mailboxen** | Durchgang | **gemeinsam später (nächster User-Block)** | Privat/Team vs. Deploy-Mailbox unter „Wo senden?“ — Settings → IOTA. Einstieg für gemeinsamen Durchgang nach Agent-Layout/T36-Unit |
-| T4 | **Schatten → Main (Sweep)** | Durchgang | **gemeinsam später (direkt nach T3)** | Quelle = Schatten-Seed. Ziel = bestehende 0x (Default) oder neue Adresse. Altes Wallet zurück = Seed importieren, nicht nochmal sweepen. Gas-Rest und nicht transferierbare Objekte bleiben |
+| T3 | **Meine Mailboxen** | Durchgang | **Agent Unit/Code 2026-11-13; Live gemeinsam später** | Settings → IOTA „Meine Mailboxen“. Unit: `my-mailbox-active`, `composer-mailbox-*`, Contact-Send-Mailbox. Live: Privat/Team vs Deploy unter „Wo senden?“ |
+| T4 | **Schatten → Main (Sweep)** | Durchgang | **Agent UI-Ist 2026-11-13; Live gemeinsam nach T3** | `chat-view-shadow-sweep` + API. Live: Quelle=Schatten-Seed; Ziel=0x oder neu; altes Wallet=Seed importieren |
 | T5 | **§ H.32b Einsatz beenden** | Retest | bewusst später | = QA #3 |
 | T6 | **Funk / Meshtastic** | Strategie-Entscheid | **verschoben** (nach Settings-Durchgang) | Offizielle Meshtastic-App vs. eigene UI — **noch nicht entscheiden**; Ist: Puls/Geräte-Embed |
 | T7 | **Vault-Registry / Chain-Globals** | Durchgang | später | bewusst zurückgestellt |
@@ -2706,9 +2706,9 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T33 | **Nachrichten-⋮ vs Chat-⋮** | UX/Doku | **done 2026-11-13** | Chat-⋮ = Modus „Nach Lesen löschen“; Zeilen-⋯ = „Von Chain löschen (Burn)“; Optionen ≠ ⋮; Handbuch-Tabelle |
 | T34 | **Magnet Wii-Feel** | UX | **done 2026-11-13, bewusst klein** | Bleibt aus. Wenn an: nur leichtes Anheben, kein Hover-Ton (der Klickton bleibt). Kein Wii-Scale mehr |
 | T35 | **Gruppe 1:1 vs gemeinsames Postfach** | Doku/UI | erledigt 2026-11-12, Retest | Labels + Handbuch-Tabelle; Handshake-Liste nur bei 1:1 |
-| T36 | **Telegram-Verlauf-Export** | Dialog statt Submenu 2026-11-12 | **Agent-Unit/UI PASS 2026-11-13; Live-Smoke gemeinsam später (mit T3-Block)** | Optionen → **Export Nachrichtenverlauf…**: Journal + Medien-ZIP (MORG). Keine TG-Server-Medien. Kein T39 parallel |
+| T36 | **Telegram-Verlauf-Export** | Dialog statt Submenu 2026-11-12 | **Agent Unit/UI PASS; Live gemeinsam später (nach T3/T4)** | Optionen → Export + Auswahl→JSON-Snapshot. Keine TG-Server-Medien. Kein T39 parallel |
 | T37 | **Tresor-Landkarte UI** | UX | **done 2026-11-12** | Sicherheit-Kurzkarte + Handbuch `#tresor-landkarte`; Gelb-Affordanz entfernt; Notfall-Scopes ehrlich |
-| T38 | **Hash & Prüfen (SHA-256)** | Feature | **Agent-Unit PASS 2026-11-13; Live-Smoke gemeinsam später (mit T36)** | Optionen → **Hash & Prüfen**. Gebündelt mit T36; kein T39/T56 parallel |
+| T38 | **Hash & Prüfen (SHA-256)** | Feature | **Agent Unit PASS; Live gemeinsam später (mit T36)** | Optionen → **Hash & Prüfen**. Gebündelt mit T36 |
 | T56 | **Komplett-alles-löschen** | Feature/UX | **Backlog — überdenken** | Ein Wizard: Gerät + Chain-Tresor + Vault-Datei + Telegram + optional NFT/Keys brennen. Ehrliche Grenzen (fremde Kopien, TG-Server, .env). Nicht als ein blinder Knopf ohne Checkliste. Siehe `NOTFALL-PURGE-MESSENGER.md` |
 | T54 | **Seed / Passwort SPOF** | Sicherheit/Doku | fortlaufend | Mnemonic = Identität/Coins; Vault-PW = Tresor-Inhalt; beides offline sichern; Ordner `.morgendrot-*` / Sidecar / `.env` = Gerät+Backup, nicht „Cloud = sicher“ |
 | T39 | **Telegram↔IOTA Beweis** | Produkt | später / gemeinsam am Ende | Export-JSON enthält Journal-Felder (chatId/Richtung); Beweis-Paket = JSON + SHA-256 (+ optional Chain). Kein TG-Vollforensik/Medien. Mit User am Roadmap-Ende priorisieren |

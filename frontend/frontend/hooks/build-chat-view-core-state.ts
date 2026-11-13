@@ -2,7 +2,9 @@
  * Core-Rückgabe: nur `messengerPorts` (P9 — Orchestrator-Felder in Ports).
  */
 
+import { toast } from 'sonner'
 import { assembleChatViewMessengerPorts, type ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
+import { buildForwardComposerPayload } from '@/frontend/lib/chat-forward-text'
 import { resolveConnectedAddresses } from '@/frontend/lib/connected-peers-snapshot'
 import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 import {
@@ -265,6 +267,25 @@ export function buildChatViewCoreMessengerPorts(
       onHideAllVisibleLocal: inbox.onHideAllVisibleLocal,
       onBulkHideSelected: inbox.onBulkHideSelected,
       onBulkPurgeSelected: inbox.onBulkPurgeSelected,
+      onBulkMarkProtokollSelected: inbox.onBulkMarkProtokollSelected,
+      onBulkCopySelected: inbox.onBulkCopySelected,
+      onBulkExportJsonSelected: inbox.onBulkExportJsonSelected,
+      onBulkForwardSelected: (includeSender: boolean) => {
+        const list = inbox.selectedVisibleMessages()
+        if (list.length === 0) return
+        if (list.length === 1) {
+          send.onForwardMessage(list[0]!, includeSender)
+          return
+        }
+        const text = list.map((m) => buildForwardComposerPayload(m, includeSender)).join('\n\n---\n\n')
+        composer.setMessage(text)
+        toast.success(
+          `${list.length} Nachrichten ins Feld — Empfänger prüfen (kein Multi-Send).`
+        )
+        requestAnimationFrame(() => {
+          document.getElementById('chat-composer-message')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        })
+      },
       localPurgeBusy: send.localPurgeBusy,
       morgPkgFileRef: composer.morgPkgFileRef,
       morgPkgDeviceFilesRef: composer.morgPkgDeviceFilesRef,

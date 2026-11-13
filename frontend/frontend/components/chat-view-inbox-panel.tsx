@@ -148,6 +148,10 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     toggleInboxSelection,
     onBulkHideSelected,
     onBulkPurgeSelected,
+    onBulkMarkProtokollSelected,
+    onBulkCopySelected,
+    onBulkExportJsonSelected,
+    onBulkForwardSelected,
     toggleProtokollMark,
     protokollMarkedIds,
     pinnedPinnwandIds,
@@ -264,6 +268,10 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         showPartnerFilterMenu={!hidePartnerStrip}
         onBulkHideSelected={onBulkHideSelected}
         onBulkPurgeSelected={() => void onBulkPurgeSelected()}
+        onBulkMarkProtokollSelected={onBulkMarkProtokollSelected}
+        onBulkCopySelected={onBulkCopySelected}
+        onBulkExportJsonSelected={onBulkExportJsonSelected}
+        onBulkForwardSelected={onBulkForwardSelected}
         hasHiddenMessages={hiddenInboxCount > 0}
         onToggleHideAllVisibleLocal={onToggleHideAllVisibleLocal}
         apiStatus={apiStatus}

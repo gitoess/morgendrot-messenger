@@ -130,6 +130,10 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   onClearInboxSelection: () => void
   onBulkHideSelected: () => void
   onBulkPurgeSelected: () => void
+  onBulkMarkProtokollSelected?: () => void
+  onBulkCopySelected?: () => void
+  onBulkExportJsonSelected?: () => void
+  onBulkForwardSelected?: (includeSender: boolean) => void
   hasHiddenMessages: boolean
   onToggleHideAllVisibleLocal: () => void
   localPurgeBusy?: boolean
@@ -229,7 +233,11 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     onSelectAllVisible,
     onClearInboxSelection,
     onBulkHideSelected,
-    onBulkPurgeSelected: _onBulkPurgeSelected,
+    onBulkPurgeSelected,
+    onBulkMarkProtokollSelected,
+    onBulkCopySelected,
+    onBulkExportJsonSelected,
+    onBulkForwardSelected,
     hasHiddenMessages,
     onToggleHideAllVisibleLocal,
     localPurgeBusy = false,
@@ -871,31 +879,88 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
         </div>
         {inboxSelectMode ? (
           <div className="mt-2 flex flex-col gap-2 rounded-lg border border-border/70 bg-muted/15 p-2.5">
-            <button
-              type="button"
-              onClick={onSelectAllVisible}
-              className="rounded-md border border-border px-2 py-1 text-left hover:bg-muted"
-            >
-              Alle anwählen
-            </button>
-            <button
-              type="button"
-              onClick={onClearInboxSelection}
-              className="rounded-md border border-border px-2 py-1 text-left hover:bg-muted"
-            >
-              Keine
-            </button>
-            <button
-              type="button"
-              disabled={selectedInboxCount === 0}
-              onClick={onBulkHideSelected}
-              className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1 text-left font-medium text-foreground hover:bg-primary/15 disabled:opacity-50"
-              title="Nur Sichtbarkeit in diesem Posteingang — Chain unverändert. Burn bleibt am Nachrichten-⋯."
-            >
-              Ausblenden ({selectedInboxCount})
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={onSelectAllVisible}
+                className="rounded-md border border-border px-2 py-1 text-left hover:bg-muted"
+              >
+                Alle anwählen
+              </button>
+              <button
+                type="button"
+                onClick={onClearInboxSelection}
+                className="rounded-md border border-border px-2 py-1 text-left hover:bg-muted"
+              >
+                Keine
+              </button>
+            </div>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Auswahl ({selectedInboxCount}) — wie Nachrichten-⋯, gebündelt
+            </p>
+            <div className="grid gap-1.5 sm:grid-cols-2">
+              <button
+                type="button"
+                disabled={selectedInboxCount === 0}
+                onClick={onBulkCopySelected}
+                className="rounded-md border border-border px-2 py-1.5 text-left hover:bg-muted disabled:opacity-50"
+                title="Rohinhalt / PWMSG-Wire der Auswahl in die Zwischenablage"
+              >
+                Inhalt/Wire kopieren
+              </button>
+              <button
+                type="button"
+                disabled={selectedInboxCount === 0}
+                onClick={onBulkMarkProtokollSelected}
+                className="rounded-md border border-border px-2 py-1.5 text-left hover:bg-muted disabled:opacity-50"
+              >
+                Für Protokoll markieren
+              </button>
+              <button
+                type="button"
+                disabled={selectedInboxCount === 0 || !onBulkForwardSelected}
+                onClick={() => onBulkForwardSelected?.(true)}
+                className="rounded-md border border-border px-2 py-1.5 text-left hover:bg-muted disabled:opacity-50"
+              >
+                Weiterleiten (mit Absender)
+              </button>
+              <button
+                type="button"
+                disabled={selectedInboxCount === 0 || !onBulkForwardSelected}
+                onClick={() => onBulkForwardSelected?.(false)}
+                className="rounded-md border border-border px-2 py-1.5 text-left hover:bg-muted disabled:opacity-50"
+              >
+                Weiterleiten (ohne Absender)
+              </button>
+              <button
+                type="button"
+                disabled={selectedInboxCount === 0}
+                onClick={onBulkExportJsonSelected}
+                className="rounded-md border border-border px-2 py-1.5 text-left hover:bg-muted disabled:opacity-50"
+              >
+                JSON-Snapshot
+              </button>
+              <button
+                type="button"
+                disabled={selectedInboxCount === 0}
+                onClick={onBulkHideSelected}
+                className="rounded-md border border-border px-2 py-1.5 text-left hover:bg-muted disabled:opacity-50"
+                title="Nur Sichtbarkeit — Chain unverändert"
+              >
+                Lokal ausblenden
+              </button>
+              <button
+                type="button"
+                disabled={selectedInboxCount === 0 || localPurgeBusy}
+                onClick={() => void onBulkPurgeSelected()}
+                className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-left font-medium text-foreground hover:bg-destructive/15 disabled:opacity-50 sm:col-span-2"
+                title="Nur Mailbox-Zeilen (burnbar). Bestätigung vor dem Lauf."
+              >
+                Von Chain löschen (Burn)
+              </button>
+            </div>
             <p className="text-[11px] text-muted-foreground">
-              Auswahl steuert nur Ein-/Ausblenden. Von Chain löschen: Nachrichten-⋯.
+              Nicht in Auswahl: Antworten, Telefonbuch, Handoff, Mesh-Paket, ECDH-.morg-pkg (je Zeile im ⋯).
             </p>
           </div>
         ) : null}

@@ -799,6 +799,13 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       setTimeout(() => setStatus('idle'), 7000)
       return
     }
+    if (
+      !window.confirm(
+        `${list.length} Nachricht(en) von der Chain löschen (Burn)? Storage-Rebate; Explorer behält Send-TX.`
+      )
+    ) {
+      return
+    }
     setSending(true)
     try {
       for (const msg of list) {
@@ -822,6 +829,87 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       setTimeout(() => setStatus('idle'), 6000)
     }
   }, [sortedFilteredDisplayMessages, selectedInboxIds, loadMessages, setMessages, setSending, setStatus, setStatusMsg])
+
+  const selectedVisibleMessages = useCallback(
+    () => sortedFilteredDisplayMessages.filter((m) => selectedInboxIds.has(m.id)),
+    [sortedFilteredDisplayMessages, selectedInboxIds]
+  )
+
+  const onBulkMarkProtokollSelected = useCallback(() => {
+    const ids = [...selectedInboxIds]
+    if (ids.length === 0) return
+    setProtokollMarkedIds((prev) => {
+      const n = new Set(prev)
+      for (const id of ids) n.add(id)
+      try {
+        sessionStorage.setItem('morg.protokoll.marked.ids', JSON.stringify([...n]))
+      } catch {
+        /* ignore */
+      }
+      return n
+    })
+    setStatus('success')
+    setStatusMsg(`${ids.length} für Protokoll markiert.`)
+    setTimeout(() => setStatus('idle'), 4000)
+  }, [selectedInboxIds, setStatus, setStatusMsg])
+
+  const onBulkCopySelected = useCallback(() => {
+    const list = selectedVisibleMessages()
+    if (list.length === 0) return
+    const text = list.map((m) => `${m.content ?? ''}`).join('\n\n---\n\n')
+    void navigator.clipboard.writeText(text).then(
+      () => {
+        setStatus('success')
+        setStatusMsg(
+          list.length === 1
+            ? 'Inhalt/Wire kopiert.'
+            : `${list.length} Inhalte/Wires in die Zwischenablage.`
+        )
+        setTimeout(() => setStatus('idle'), 4000)
+      },
+      () => {
+        setStatus('error')
+        setStatusMsg('Kopieren fehlgeschlagen.')
+        setTimeout(() => setStatus('idle'), 5000)
+      }
+    )
+  }, [selectedVisibleMessages, setStatus, setStatusMsg])
+
+  const onBulkExportJsonSelected = useCallback(() => {
+    const list = selectedVisibleMessages()
+    if (list.length === 0) return
+    const json = JSON.stringify(
+      {
+        schema: 'morgendrot.sneakernet.bulk.v1',
+        exportedAt: Date.now(),
+        count: list.length,
+        messages: list.map((msg) => ({
+          id: msg.id,
+          from: msg.from,
+          timestamp: msg.timestamp,
+          encryptedFlag: msg.encrypted === true,
+          recipient: msg.recipient ?? null,
+          transports: msg.transports ?? null,
+          content: msg.content,
+        })),
+      },
+      null,
+      2
+    )
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `morgendrot-selection-${list.length}.json`
+    a.rel = 'noopener'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+    setStatus('success')
+    setStatusMsg(`JSON-Snapshot: ${list.length} Nachricht(en).`)
+    setTimeout(() => setStatus('idle'), 4000)
+  }, [selectedVisibleMessages, setStatus, setStatusMsg])
 
   const resetInboxViewFilters = useCallback(() => {
     clearInboxBrowserViewFilters()
@@ -956,6 +1044,10 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     onHideAllVisibleLocal,
     onBulkHideSelected,
     onBulkPurgeSelected,
+    onBulkMarkProtokollSelected,
+    onBulkCopySelected,
+    onBulkExportJsonSelected,
+    selectedVisibleMessages,
     removeInboxPartnerFromQuickList,
     resetInboxViewFilters,
     inboxVisibilityHint,

@@ -23,7 +23,6 @@ import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
 import { readMessengerGroups } from '@/frontend/lib/messenger-group-store'
 import { resolveActiveSendPath } from '@/frontend/lib/messenger-channel-send-path'
-import { readPassphraseProtectEnabled } from '@/frontend/lib/passphrase-message-local-store'
 import type { ChatViewActiveConversationBarProps } from '@/frontend/components/chat-view-active-conversation-bar'
 
 export type ChatViewActiveConversationContext = {
@@ -361,14 +360,11 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     /** Immer: Toggle Verschlüsselt (auch wenn Conversation-Bar den Umschalter zeigt). */
     onEncryptedChange: sendTransportChoice.onEncryptedChange,
     hideComposerIotaRecipient: (() => {
-      // Passphrase und ECDH-Verschlüsselt: Adressfeld immer sichtbar (Ziel manuell prüfbar).
-      if (readPassphraseProtectEnabled()) return false
-      if (sendTransportRead.encrypted) return false
       const partnerOk =
         isValidRecipient0x(composerPartner.partner) || isValidRecipient0x(composerDraft.recipient)
       if (!partnerOk) return false
       if (isIotaBroadcastAll) return false
-      // Nur Klartext + aktiver Sidebar-Chat: Adresse steht in der Leiste; „leeren/ändern“ öffnet Feld.
+      // Aktiver Chat: Empfänger aus Sidebar/Leiste — Feld nur über „An Adresse senden“ (+).
       return hasActiveDirectConversation
     })(),
     activeConversationBar,

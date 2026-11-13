@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
-import { AlertCircle, BookUser, Check, ListOrdered, RefreshCw, Send } from 'lucide-react'
+import { AlertCircle, BookUser, Check, ListOrdered, Mic, RefreshCw, Send } from 'lucide-react'
 import { ChatComposerEmojiPicker } from '@/frontend/components/chat-composer-emoji-picker'
 import { ChatViewComposerPlusMenu } from '@/frontend/components/chat-view-composer-plus-menu'
 import { cn } from '@/lib/utils'
@@ -462,8 +462,13 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     deliveryChannel: composerDelivery,
     isPrivate,
   })
+  const [manualAddressMode, setManualAddressMode] = useState(false)
+  useEffect(() => {
+    setManualAddressMode(false)
+  }, [partner, activeConversationBar?.displayName, activeConversationBar?.addressLine])
+
   const showIotaField =
-    !hideComposerIotaRecipient &&
+    (!hideComposerIotaRecipient || manualAddressMode) &&
     !(isGroupChannel && groupMailboxSendAll) &&
     needsComposerIotaAddress({
       deliveryChannel: composerDelivery,
@@ -471,6 +476,12 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
       forcedTransport,
       meshPlaintextToNodeEnabled,
     })
+
+  const showVoiceMemoControls =
+    isPrivate && forcedTransport === 'internet' && !isTelegramDelivery
+  const voiceMemoActive =
+    showVoiceMemoControls &&
+    (voiceRecording || voiceBusy || (voiceActiveKind === 'normal' && voicePhase !== 'idle'))
   const showMailboxUi =
     !isPinnwandChannel &&
     needsComposerMailboxUi({
@@ -876,6 +887,32 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                         Telefonbuch
                       </button>
                     ) : null}
+                    {hideComposerIotaRecipient && !manualAddressMode && !showTelegramField ? (
+                      <button
+                        type="button"
+                        disabled={sending || voiceLocksComposer}
+                        onClick={() => setManualAddressMode(true)}
+                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
+                      >
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/70 text-muted-foreground">
+                          <Send className="h-4 w-4" aria-hidden />
+                        </span>
+                        An Adresse senden…
+                      </button>
+                    ) : null}
+                    {showVoiceMemoControls && !voiceMemoActive ? (
+                      <button
+                        type="button"
+                        disabled={sending || voiceNormalBlockedStart}
+                        onClick={onVoiceToggle}
+                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
+                      >
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/70 text-muted-foreground">
+                          <Mic className="h-4 w-4" aria-hidden />
+                        </span>
+                        Sprachnachricht
+                      </button>
+                    ) : null}
                     {showPath4Checkbox && forcedTransport === 'mesh' && !isTelegramDelivery ? (
                       <div className="space-y-1 border-t border-border/60 px-1 py-2">
                         <label
@@ -928,7 +965,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               )}
             />
 
-            {isPrivate && forcedTransport === 'internet' && !isTelegramDelivery ? (
+            {voiceMemoActive ? (
               <ChatViewVoiceRecord
                 slot="normal"
                 density="compact"

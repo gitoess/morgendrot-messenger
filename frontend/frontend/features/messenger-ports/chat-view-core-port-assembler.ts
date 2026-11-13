@@ -281,6 +281,10 @@ export type ChatViewInboxActionsSlice = {
   onHideAllVisibleLocal: () => void
   onBulkHideSelected: () => void
   onBulkPurgeSelected: () => void
+  onBulkMarkProtokollSelected: () => void
+  onBulkCopySelected: () => void
+  onBulkExportJsonSelected: () => void
+  onBulkForwardSelected: (includeSender: boolean) => void
   localPurgeBusy: boolean
   morgPkgFileRef: RefObject<HTMLInputElement | null>
   morgPkgDeviceFilesRef: RefObject<HTMLInputElement | null>
@@ -583,6 +587,10 @@ export function assembleInboxActionsPort(slice: ChatViewInboxActionsSlice): Inbo
     onHideAllVisibleLocal: slice.onHideAllVisibleLocal,
     onBulkHideSelected: slice.onBulkHideSelected,
     onBulkPurgeSelected: slice.onBulkPurgeSelected,
+    onBulkMarkProtokollSelected: slice.onBulkMarkProtokollSelected,
+    onBulkCopySelected: slice.onBulkCopySelected,
+    onBulkExportJsonSelected: slice.onBulkExportJsonSelected,
+    onBulkForwardSelected: slice.onBulkForwardSelected,
     localPurgeBusy: slice.localPurgeBusy,
     morgPkgFileRef: slice.morgPkgFileRef,
     morgPkgDeviceFilesRef: slice.morgPkgDeviceFilesRef,

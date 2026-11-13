@@ -1356,14 +1356,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             inboxSearchQuery={messengerSearchQuery}
             conversationMenu={conversationMenuProps}
             inboxHeading={inboxHeading}
-            /** Sidebar: Nachrichtenliste mit fester Mindesthöhe (kein flex-1→0). */
+            /** Sidebar: gleiche Höhe wie Chats-Spalte; Composer darunter volle Breite. */
             messageListMaxClassName={
               showConversationSidebar ? 'max-h-[min(50vh,28rem)] min-h-[14rem]' : undefined
             }
           />
 
-          {/* Telegram-Muster: Composer nur unter dem Posteingang (rechte Spalte). */}
-          <div className="shrink-0">{composerBlock}</div>
+          {/* Ohne Sidebar: Composer unter dem Posteingang. Mit Sidebar: volle Breite unter beiden Spalten. */}
+          {!showConversationSidebar ? <div className="shrink-0">{composerBlock}</div> : null}
         </>
       )}
 
@@ -1555,9 +1555,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               onSelectMessageHit={handleSelectMessageHit}
               {...sidebarHandshakeProps}
             />
-            <div className="grid gap-3 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-start">
+            <div className="grid gap-3 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-stretch">
               <ChatViewContactSidebar
-                className="hidden lg:flex lg:min-h-[min(50vh,28rem)] lg:self-stretch"
+                className="hidden max-h-[min(50vh,28rem)] min-h-[14rem] lg:flex"
                 directory={directory}
                 partnerOptions={inboxPartnerOptions}
                 activePartnerKey={inboxPartnerKey}
@@ -1585,8 +1585,13 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                 {...pinnwandSidebarProps}
                 {...sidebarHandshakeProps}
               />
-              <div className="flex min-w-0 flex-col gap-3">{conversationBody}</div>
+              <div className="flex min-h-[14rem] max-h-[min(50vh,28rem)] min-w-0 flex-col">
+                {conversationBody}
+              </div>
             </div>
+            {!onNotesTab && !onPinnwandTab ? (
+              <div className="shrink-0 pt-1">{composerBlock}</div>
+            ) : null}
           </div>
         ) : (
           <div className={isNativeMobile ? 'space-y-3' : 'space-y-8'}>{conversationBody}</div>

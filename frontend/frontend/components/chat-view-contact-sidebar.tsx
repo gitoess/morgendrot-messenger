@@ -296,8 +296,8 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
       <aside
         className={cn(
           'flex flex-col overflow-hidden rounded-xl border border-border bg-card/40',
-          /* Telegram-Muster: Liste scrollbar; Höhe vom Parent (min-h), Native: Parent scrollt. */
-          p.compactNative ? 'min-h-0' : 'min-h-[min(50vh,28rem)]',
+          /* Gleiche Höhe wie Posteingang-Liste; Native: Parent scrollt. */
+          p.compactNative ? 'min-h-0' : 'min-h-[14rem] max-h-[min(50vh,28rem)]',
           p.className
         )}
         aria-label="Konversationen"

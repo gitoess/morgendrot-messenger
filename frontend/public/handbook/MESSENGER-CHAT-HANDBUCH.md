@@ -16,13 +16,13 @@
 |---------|--------|
 | **App-Header** (Boss/Messenger) | **Tresor**, **Aktualisieren** (Status + Posteingang + Kontakte), Handbuch, Einstellungen — **nicht** in der Posteingang-Leiste |
 | **Chat-Kopf** | Sendepfad (**Alle** / Funk / **IOTA** / Telegram), **SOS — Hilferuf** (1:1, nicht Telegram). Mit Sidebar: **kein** großer Kanal-/Posteingang-Titel |
-| **Seitenleiste** (Desktop) | **Chats:** Ich, Alle, Kontakte, Gruppen; Suche oben; Doppelklick **Ich** → Profil + Peering-QR; Doppelklick **Gruppe** → Gruppe verwalten. Telegram-ähnlich: eigene Spalte, Liste scrollt |
-| **Posteingang** (rechts) | Nachrichten + Toolbar (On-Chain/NFT, **Optionen**, Filter). Liste mit Mindesthöhe (~14rem) und max. ~50vh — Nachrichten bleiben sichtbar |
-| **Composer** | Nur **unter dem Posteingang** (rechte Spalte, wie Telegram): `[+]`, Text, Sprache, Senden; **Verschlüsselt/Klartext** = Sendemodus. Später: Passphrase/Zeitkapsel eher ins **[+]-Menü** |
+| **Seitenleiste** (Desktop) | **Chats** gleiche Höhe wie Posteingang-Liste (~14rem–50vh), scrollt |
+| **Posteingang** (rechts) | Nachrichten + Toolbar; **Auswahl** ≈ Nachrichten-⋯ (Kopieren, Protokoll, Weiterleiten, JSON, Ausblenden, Burn) |
+| **Composer** | **Volle Breite unter beiden Spalten**: `[+]` (Datei, Kamera, STT, Telefonbuch, **An Adresse senden**, **Sprachnachricht**), Text, Senden. Empfänger-Wallet ausgeblendet bei aktivem Chat |
 | **Liste (Filter)** | **Beides / Eingang / Ausgang** und **Alles / Verschl. / Klartext** — nur Anzeige, nicht Sendemodus |
 | **Optionen** | Wire, Hash & Prüfen, Export Nachrichtenverlauf (Journal + Medien-ZIP), Datei-Paket — **nicht** Chat-⋮ |
 | **Nachrichten-⋯** (pro Zeile) | Kopieren, Telefonbuch, lokal ausblenden, **Von Chain löschen (Burn)** |
-| **Auswahl** | Nur **Ausblenden** (Sichtbarkeit). Von Chain löschen: Nachrichten-⋯ |
+| **Auswahl** | Kopieren, Protokoll markieren, Weiterleiten, JSON-Snapshot, lokal ausblenden, **Burn** (mit Confirm). Nicht: Antworten, Telefonbuch, Handoff, Mesh-Paket, ECDH-pkg |
 | **Browser** | Zurück/Vor navigiert Dashboard-Ansichten (`morgView`) |
 
 **Dashboard:** Kachel **Nachrichten** öffnet den Chat. **Telefonbuch** zusätzlich über `[+]` im Composer, Sidebar oder Kontakt-Detail.
