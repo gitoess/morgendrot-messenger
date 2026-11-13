@@ -55,7 +55,7 @@ function sendPathCapabilityReason(
 const ONLINE = {
   id: 'internet' as const,
   short: messengerTransportMeta('internet').label,
-  title: 'Online — alle Nachrichten, Kontakte und Optionen; Senden über Internet',
+  title: 'Alle — gesamter Posteingang; Senden über Internet (ohne IOTA-Fokus)',
 }
 
 const FUNK = {

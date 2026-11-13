@@ -148,7 +148,7 @@ describe('ChatViewMainContent (§ H.1a)', () => {
 
   it('zeigt Privat-Composer und Posteingang', () => {
     render(<ChatViewMainContent {...buildMainContentProps()} />)
-    expect(screen.getByRole('heading', { name: /^Posteingang Online$/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /^Posteingang Alle$/i })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: /Nachricht verfassen/i })).toBeInTheDocument()
     expect(screen.getByTestId('inbox-panel')).toBeInTheDocument()
     expect(screen.getByTestId('send-panel')).toBeInTheDocument()

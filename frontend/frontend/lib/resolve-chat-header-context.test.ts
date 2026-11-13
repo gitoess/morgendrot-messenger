@@ -66,7 +66,7 @@ describe('posteingangTitleForSendPath', () => {
     expect(posteingangTitleForSendPath({})).toBe('Posteingang Alle')
     expect(posteingangTitleForSendPath({ activeSendPath: 'telegram' })).toBe('Posteingang Telegram')
     expect(posteingangTitleForSendPath({ activeSendPath: 'mesh' })).toBe('Posteingang Funk')
-    expect(posteingangTitleForSendPath({ activeSendPath: 'internet' })).toBe('Posteingang Online')
+    expect(posteingangTitleForSendPath({ activeSendPath: 'internet' })).toBe('Posteingang Alle')
     expect(
       posteingangTitleForSendPath({ activeSendPath: 'internet', iotaPathFocus: true })
     ).toBe('Posteingang IOTA')

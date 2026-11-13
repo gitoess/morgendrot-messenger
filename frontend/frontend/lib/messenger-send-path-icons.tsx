@@ -5,12 +5,13 @@
  */
 
 import type { LucideIcon } from 'lucide-react'
-import { Globe2, Link2, Radio, Send, Smartphone } from 'lucide-react'
+import { Inbox, Link2, Radio, Send, Smartphone } from 'lucide-react'
 
 export type MessengerTransportIconKey = 'internet' | 'mesh' | 'adhoc' | 'telegram' | 'iota'
 
 const MAP: Record<MessengerTransportIconKey, { Icon: LucideIcon; label: string }> = {
-  internet: { Icon: Globe2, label: 'Online' },
+  /** Sendepfad „Alle“ — kein spezielles Kanal-Icon in Zeilen. */
+  internet: { Icon: Inbox, label: 'Alle' },
   mesh: { Icon: Radio, label: 'Funk' },
   adhoc: { Icon: Smartphone, label: 'Ad-hoc' },
   telegram: { Icon: Send, label: 'Telegram' },
@@ -24,12 +25,17 @@ export function messengerTransportMeta(key: MessengerTransportIconKey): {
   return MAP[key]
 }
 
-/** Inbox-Zeile: source/transport → Icon-Key (IOTA-Fokus nur im Sendepfad). */
+/**
+ * Inbox-Zeile: nur konkrete Kanäle (Funk / Telegram / IOTA / Ad-hoc).
+ * „Alle“/Internet ohne Mailbox → kein Icon (null).
+ */
 export function inboxTransportIconKey(
-  t: string
-): Exclude<MessengerTransportIconKey, 'iota'> {
-  if (t === 'mesh') return 'mesh'
-  if (t === 'telegram') return 'telegram'
+  t: string,
+  source?: string | null
+): MessengerTransportIconKey | null {
+  if (t === 'mesh' || source === 'mesh') return 'mesh'
+  if (t === 'telegram' || source === 'telegram') return 'telegram'
   if (t === 'adhoc') return 'adhoc'
-  return 'internet'
+  if (source === 'mailbox' || t === 'internet' || t === 'lan') return 'iota'
+  return null
 }

@@ -218,7 +218,7 @@ function HeaderToolbarButton(p: {
   return (
     <button type="button" onClick={p.onClick} className={className} aria-label={p.label} title={tip}>
       {p.icon}
-      <span className="hidden sm:inline">{p.label}</span>
+      <span>{p.label}</span>
     </button>
   )
 }

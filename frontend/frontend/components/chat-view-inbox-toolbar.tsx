@@ -16,6 +16,7 @@ import {
   KeyRound,
   Lock,
   Package,
+  RefreshCw,
   Settings2,
   StickyNote,
 } from 'lucide-react'
@@ -186,8 +187,8 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     onMorgPkgDeviceExportPick,
     morgPkgDeviceBusy,
     apiStatus,
-    onRefresh: _onRefresh,
-    loading: _loading,
+    onRefresh,
+    loading,
     onExportEinsatzberichtJson,
     onExportEinsatzberichtTxt,
     onExportEinsatzberichtTxtFull,
@@ -449,9 +450,9 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               <DialogHeader>
                 <DialogTitle>Nachrichtenverlauf exportieren</DialogTitle>
                 <DialogDescription>
-                  Download auf dieses Gerät. Enthält sichtbare Posteingangs-Zeilen (IOTA/Funk/Telegram-Journal:
-                  Text, Chat-ID, Richtung). Keine Telegram-Medien, kein voller TG-Forensik-Dump. Beweis: JSON
-                  speichern → Optionen → Hash &amp; Prüfen (SHA-256). Optionaler Chain-Anker = T39.
+                  JSON/Text: Journal-Felder (Text, Chat-ID, Richtung) — keine Telegram-Medien. Medien aus dem
+                  Chat (MORG-Bilder/Audio im Wire): ZIP Klartext oder ZIP+HTML → Ordner medien/. Beweis: Datei
+                  speichern → Optionen → Hash &amp; Prüfen.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-3 text-sm">
@@ -519,7 +520,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     disabled={exportDisabled}
                     onClick={() => runExportAndClose(() => void onExportEinsatzprotokollPlainZip())}
                   >
-                    ZIP Klartext
+                    ZIP Klartext (inkl. medien/)
                   </Button>
                   <Button
                     type="button"
@@ -697,7 +698,16 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             onOpenChange={setWirePasteOpen}
           />
 
-          {/* Aktualisieren sitzt einheitlich im Chat-Kopf neben „Tresor: …“. */}
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+            title="Posteingang und Kontakte neu laden"
+          >
+            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+            Aktualisieren
+          </button>
         </div>
       </div>
       <div className="border-t border-border/70 px-4 py-2 text-xs">

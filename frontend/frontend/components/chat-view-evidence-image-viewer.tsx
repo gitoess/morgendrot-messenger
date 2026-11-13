@@ -1072,15 +1072,18 @@ export function ChatViewEvidenceImageViewerButton(p?: {
           {p?.triggerLabel ?? 'On-Chain Bild / NFT'}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{nftWalletUi ? 'NFT & Schlüsselkarte' : 'On-Chain / NFT'}</DialogTitle>
-          <DialogDescription>
-            {nftWalletUi
-              ? `Oben nur ansehen (Galerie / Object-ID) · unten handeln (Minten / Guthaben / Zeitkapsel). Cap ${Math.round(EVIDENCE_IMAGE_MAX_RAW_BYTES / 1024)} KB.`
-              : `Zwei Bereiche: Schauen/suchen (Wire, Klartext, Galerie) vs. Handeln (Minten, Guthaben, Zeitkapsel). Cap ${Math.round(EVIDENCE_IMAGE_MAX_RAW_BYTES / 1024)} KB.`}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="flex max-h-[90vh] max-w-lg flex-col overflow-hidden p-0 sm:max-w-lg">
+        <div className="shrink-0 border-b border-border/60 px-6 pb-3 pt-6 pr-14">
+          <DialogHeader>
+            <DialogTitle>{nftWalletUi ? 'NFT & Schlüsselkarte' : 'On-Chain / NFT'}</DialogTitle>
+            <DialogDescription>
+              {nftWalletUi
+                ? `Oben nur ansehen (Galerie / Object-ID) · unten handeln (Minten / Guthaben / Zeitkapsel). Cap ${Math.round(EVIDENCE_IMAGE_MAX_RAW_BYTES / 1024)} KB.`
+                : `Zwei Bereiche: Schauen/suchen (Wire, Klartext, Galerie) vs. Handeln (Minten, Guthaben, Zeitkapsel). Cap ${Math.round(EVIDENCE_IMAGE_MAX_RAW_BYTES / 1024)} KB.`}
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
         <div className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-2 border-b border-border/60 bg-background/95 px-1 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <Button
             type="button"
@@ -2361,6 +2364,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
               ))}
             </ul>
           ) : null}
+        </div>
         </div>
       </DialogContent>
     </Dialog>

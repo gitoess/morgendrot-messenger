@@ -393,21 +393,25 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                         ? (['mesh'] as const)
                         : row.msg.source === 'telegram'
                           ? (['telegram'] as const)
-                          : (['internet'] as const)
-                    ).map((t) => {
-                      const meta = messengerTransportMeta(inboxTransportIconKey(String(t)))
+                          : row.msg.source === 'mailbox'
+                            ? (['internet'] as const)
+                            : ([] as const)
+                    ).flatMap((t) => {
+                      const key = inboxTransportIconKey(String(t), row.msg.source)
+                      if (!key) return []
+                      const meta = messengerTransportMeta(key)
                       const Icon = meta.Icon
                       const label = meta.label
-                      return (
+                      return [
                         <span
-                          key={t}
+                          key={`${t}-${label}`}
                           className="inline-flex items-center text-muted-foreground"
                           title={label}
                           aria-label={label}
                         >
                           <Icon className="h-3.5 w-3.5" aria-hidden />
-                        </span>
-                      )
+                        </span>,
+                      ]
                     })}
                   </span>
                   {fromLabel ? (

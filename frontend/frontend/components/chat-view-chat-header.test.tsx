@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+﻿import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import {
   ChatViewChatHeader,
@@ -98,7 +98,7 @@ describe('ChatViewChatHeader (§ H.1a)', () => {
     )
     expect(screen.getByRole('heading', { name: /Chat mit Max/i })).toBeInTheDocument()
     expect(screen.getByText('0xabc')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Online/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Alle$/i })).toBeInTheDocument()
   })
 
   it('verlinkt Handbuch direkt ins Messenger-Handbuch', () => {

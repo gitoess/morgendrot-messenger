@@ -19,7 +19,7 @@ export function posteingangTitleForSendPath(p: {
   if (p.activeSendPath === 'telegram') return 'Posteingang Telegram'
   if (p.activeSendPath === 'mesh' || p.activeSendPath === 'adhoc') return 'Posteingang Funk'
   if (p.activeSendPath === 'internet' && p.iotaPathFocus) return 'Posteingang IOTA'
-  if (p.activeSendPath === 'internet') return 'Posteingang Online'
+  /** internet ohne IOTA-Fokus = gesamter Posteingang („Alle“), nicht „Online“. */
   return 'Posteingang Alle'
 }
 

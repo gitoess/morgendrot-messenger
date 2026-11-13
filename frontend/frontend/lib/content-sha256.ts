@@ -10,11 +10,14 @@ function bytesToHex(buf: ArrayBuffer): string {
 }
 
 export async function sha256HexOfBytes(data: ArrayBuffer | Uint8Array): Promise<string> {
-  const view =
+  /** Immer kopieren — SharedArrayBuffer/Offset-Views knacken sonst crypto.subtle.digest. */
+  const bytes =
     data instanceof Uint8Array
-      ? data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength)
-      : data
-  const dig = await crypto.subtle.digest('SHA-256', view as ArrayBuffer)
+      ? data
+      : new Uint8Array(data)
+  const copy = new Uint8Array(bytes.byteLength)
+  copy.set(bytes)
+  const dig = await crypto.subtle.digest('SHA-256', copy.buffer)
   return bytesToHex(dig)
 }
 
