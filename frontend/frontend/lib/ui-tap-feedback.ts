@@ -4,6 +4,7 @@
  */
 
 import {
+  readKlackFeedbackEnabled,
   readMagnetFeedbackEnabled,
   readSoundFeedbackEnabled,
   readSoundFeedbackVolume,
@@ -88,43 +89,60 @@ function trackOscillator(osc: OscillatorNode): void {
   }
 }
 
-/** Kurzes mechanisches Klack (Rauschen), kein Ton. */
-function playKlack(ctx: AudioContext, volPct: number): void {
-  const dur = 0.03
+/** Kurzes mechanisches Klack (Rauschen), kein melodischer Ton. */
+function playKlackNoise(ctx: AudioContext, volPct: number): void {
+  const dur = 0.022
   const frames = Math.max(1, Math.floor(ctx.sampleRate * dur))
   const buffer = ctx.createBuffer(1, frames, ctx.sampleRate)
   const data = buffer.getChannelData(0)
   for (let i = 0; i < frames; i++) {
-    const env = (1 - i / frames) ** 3
+    const env = (1 - i / frames) ** 4
     data[i] = (Math.random() * 2 - 1) * env
   }
   const src = ctx.createBufferSource()
-  const filter = ctx.createBiquadFilter()
+  const hp = ctx.createBiquadFilter()
+  const bp = ctx.createBiquadFilter()
   const gain = ctx.createGain()
-  filter.type = 'highpass'
-  filter.frequency.value = 1400
+  hp.type = 'highpass'
+  hp.frequency.value = 1800
+  bp.type = 'bandpass'
+  bp.frequency.value = 3200
+  bp.Q.value = 0.9
   const now = ctx.currentTime
-  const peak = Math.max(0.02, 0.42 * (volPct / 100))
+  const peak = Math.max(0.03, 0.55 * (volPct / 100))
   gain.gain.setValueAtTime(peak, now)
   gain.gain.exponentialRampToValueAtTime(0.001, now + dur)
   src.buffer = buffer
-  src.connect(filter)
-  filter.connect(gain)
+  src.connect(hp)
+  hp.connect(bp)
+  bp.connect(gain)
   gain.connect(ctx.destination)
   src.start(now)
-  src.stop(now + dur + 0.02)
+  src.stop(now + dur + 0.015)
+}
+
+/** Button-Klack — eigene Pref, unabhängig vom Klick-Ton. */
+export function playKlack(): void {
+  try {
+    if (!readKlackFeedbackEnabled()) return
+    const volPct = readSoundFeedbackVolume()
+    if (volPct <= 0) return
+    whenAudioRunning((ctx) => playKlackNoise(ctx, volPct))
+  } catch {
+    /* ignore */
+  }
 }
 
 export function playTapClick(kind: TapFeedbackKind = 'select'): void {
   try {
+    if (kind === 'confirm') {
+      playKlack()
+      return
+    }
     if (!readSoundFeedbackEnabled()) return
     const volPct = readSoundFeedbackVolume()
     if (volPct <= 0) return
     whenAudioRunning((ctx) => {
-    if (kind === 'confirm') {
-      playKlack(ctx, volPct)
-      return
-    }
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
     const { freq, durMs, gain: peak } = TONES[kind]
@@ -154,12 +172,13 @@ export function pulseHaptic(_pattern: number | number[] = 18): void {
   // Desktop: Magnet ersetzt Vibration.
 }
 
+/** Primärer Tipp auf Buttons → Klack (nicht Piep). */
 export function tapSelectFeedback(): void {
-  playTapClick('select')
+  playKlack()
 }
 
 export function tapConfirmFeedback(): void {
-  playTapClick('confirm')
+  playKlack()
 }
 
 export type UiToneKind = 'unlock' | 'success' | 'error'

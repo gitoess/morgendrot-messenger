@@ -296,6 +296,7 @@ export function testMessengerPorts(over: {
       onExportEinsatzprotokoll: vi.fn(async () => {}),
       onExportEinsatzprotokollPlainZip: vi.fn(async () => {}),
       onExportEinsatzprotokollMarked: vi.fn(async () => {}),
+      onExportMorgMediaZip: vi.fn(async () => {}),
     },
     packageExpert: {
       inboxPackageFilter: '',

@@ -68,11 +68,14 @@ export function inboxToolbarToolsForSendPath(p: {
   const onlineAll = p.activeSendPath === 'internet' && !p.iotaPathFocus
   const iotaOnly = p.activeSendPath === 'internet' && Boolean(p.iotaPathFocus)
   const chain = onlineAll || iotaOnly
+  const telegram = p.activeSendPath === 'telegram'
 
   return {
+    /** Wire/PWMSG = Chain; Telegram hat Journal, kein Wire-Paste. */
     showWirePaste: chain,
     showDecryptExport: true,
-    showPakete: chain,
+    /** .morg-pkg Sneakernet — auch Telegram/Funk sinnvoll. */
+    showPakete: chain || telegram || p.activeSendPath === 'mesh',
     showNachrichtenverlauf: true,
     showOnChainNft: chain,
     showIotaExpertInHistory: chain,

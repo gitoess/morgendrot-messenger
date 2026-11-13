@@ -269,14 +269,13 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
 
   const channelSubtitle = conversationSubtitle?.trim() || null
   const showHandbook = channelMode !== 'notes' && !compactNative && !suppressAppChrome
-  /** Vault nur hier, wenn kein fester App-Header darüber. */
-  const showTreasuryBadge =
-    !suppressAppChrome && Boolean(apiStatus) && channelMode !== 'pinnwand'
+  /** Vault neben Aktualisieren — auch wenn App-Header darüber (Einsatz). */
+  const showTreasuryBadge = Boolean(apiStatus) && channelMode !== 'pinnwand'
   const showProfileBadges = !suppressAppChrome && !compactNative
   const showSendPathInHeader = sendPath?.visible && !compactNative
   const showSettingsBtn = Boolean(onOpenSettings) && !suppressAppChrome
-  /** Neben Tresor: immer im Messenger-Kopf, auch compact — nicht auf Einstellungsseiten. */
-  const showHeaderRefresh = Boolean(onRefreshStatus) && !suppressAppChrome
+  /** Neben Tresor — auch bei suppressAppChrome (Einsatz-Header darüber), sonst nur Inbox-Leiste. */
+  const showHeaderRefresh = Boolean(onRefreshStatus)
   const useInboxIcon = conversationIcon === 'inbox' || channelMode === 'pinnwand' || channelMode === 'notes'
 
   const queuePending = offlineStatus?.queuePending ?? 0

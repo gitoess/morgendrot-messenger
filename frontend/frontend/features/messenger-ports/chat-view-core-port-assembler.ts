@@ -306,6 +306,7 @@ export type ChatViewInboxExportActionsSlice = {
   onExportEinsatzprotokoll: () => void | Promise<void>
   onExportEinsatzprotokollPlainZip: () => void | Promise<void>
   onExportEinsatzprotokollMarked: () => void | Promise<void>
+  onExportMorgMediaZip: InboxExportActionsPort['onExportMorgMediaZip']
 }
 
 export type ChatViewPackageExpertSlice = {

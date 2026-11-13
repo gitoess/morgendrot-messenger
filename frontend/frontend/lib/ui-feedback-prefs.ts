@@ -6,6 +6,7 @@ export const UI_FEEDBACK_PREFS_CHANGED = 'morgendrot:ui-feedback-prefs-changed'
 
 const LS_SOUND = 'morgendrot.ui.feedback.sound.v1'
 const LS_SOUND_VOLUME = 'morgendrot.ui.feedback.soundVolume.v1'
+const LS_KLACK = 'morgendrot.ui.feedback.klack.v1'
 const LS_MAGNET = 'morgendrot.ui.feedback.magnet.v1'
 
 /** 0–100; Default 70 — Regler-Unterschiede sollen hörbar sein. */
@@ -19,6 +20,7 @@ function emitPrefsChanged(): void {
         detail: {
           soundEnabled: readSoundFeedbackEnabled(),
           soundVolume: readSoundFeedbackVolume(),
+          klackEnabled: readKlackFeedbackEnabled(),
           magnetEnabled: readMagnetFeedbackEnabled(),
         },
       })
@@ -82,6 +84,15 @@ export function persistSoundFeedbackVolume(volume: number): void {
   } catch {
     /* ignore */
   }
+}
+
+/** Mechanisches Klack beim Antippen von Buttons — getrennt vom Klick-Ton. Default an. */
+export function readKlackFeedbackEnabled(): boolean {
+  return readBool(LS_KLACK, true)
+}
+
+export function persistKlackFeedbackEnabled(on: boolean): void {
+  writeBool(LS_KLACK, on)
 }
 
 /** Hover-/Press-„Widerstand“ (Scale) — Default aus (oft unsichtbar/clipped; optional). */

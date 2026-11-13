@@ -423,6 +423,7 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     onExportEinsatzprotokollPlainZip,
     onExportEinsatzprotokollMarked,
     onExportEinsatzberichtEncrypted,
+    onExportMorgMediaZip,
   } = useChatViewEinsatzExports({
     messagesLength: messages.length,
     messagesForExport,
@@ -637,6 +638,7 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     onExportEinsatzprotokollPlainZip,
     onExportEinsatzprotokollMarked,
     onExportEinsatzberichtEncrypted,
+    onExportMorgMediaZip,
   }
 }
 

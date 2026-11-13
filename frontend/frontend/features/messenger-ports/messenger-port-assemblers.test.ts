@@ -290,6 +290,7 @@ describe('assembleChatViewMessengerPorts', () => {
         onExportEinsatzprotokoll: vi.fn(async () => {}),
         onExportEinsatzprotokollPlainZip: vi.fn(async () => {}),
         onExportEinsatzprotokollMarked: vi.fn(async () => {}),
+        onExportMorgMediaZip: vi.fn(async () => {}),
       },
       packageExpert: {
         inboxPackageFilter: '',
@@ -559,6 +560,7 @@ describe('assembleChatViewPanelMessengerPorts', () => {
         onExportEinsatzprotokoll: vi.fn(async () => {}),
         onExportEinsatzprotokollPlainZip: vi.fn(async () => {}),
         onExportEinsatzprotokollMarked: vi.fn(async () => {}),
+        onExportMorgMediaZip: vi.fn(async () => {}),
       },
       packageExpert: {
         inboxPackageFilter: '',

@@ -289,6 +289,7 @@ export function buildChatViewCoreMessengerPorts(
       onExportEinsatzprotokoll: inbox.onExportEinsatzprotokoll,
       onExportEinsatzprotokollPlainZip: inbox.onExportEinsatzprotokollPlainZip,
       onExportEinsatzprotokollMarked: inbox.onExportEinsatzprotokollMarked,
+      onExportMorgMediaZip: inbox.onExportMorgMediaZip,
     },
     packageExpert: {
       inboxPackageFilter: inbox.inboxPackageFilter,

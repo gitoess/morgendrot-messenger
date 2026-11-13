@@ -585,6 +585,15 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+    /** Start-Eintrag immer mit morgView markieren — sonst „Zurück“ nur 1× / hängt. */
+    try {
+      const cur = window.history.state as { morgView?: unknown } | null
+      if (!cur || !('morgView' in cur)) {
+        window.history.replaceState({ morgView: null }, '', window.location.href)
+      }
+    } catch {
+      /* ignore */
+    }
     const onPop = (e: PopStateEvent) => {
       const st = e.state as {
         morgView?: DashboardActiveView | null
@@ -605,8 +614,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         }
         return
       }
-      // Kein morg-State → Startseite (Browser-Zurück aus der App)
-      navigateTo(null, { fromPop: true })
+      // Fremder History-Eintrag ohne morg-State → nicht die App leeren
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
@@ -622,6 +630,15 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         setActiveView(parsed)
         persistDashboardActiveView(parsed)
         restoredDashboardViewRef.current = true
+        if (typeof window !== 'undefined') {
+          try {
+            /** Home darunter, aktuelle View oben — Vor/Zurück kennt beide. */
+            window.history.replaceState({ morgView: null }, '', window.location.href)
+            window.history.pushState({ morgView: parsed, channel: 'private' }, '', window.location.href)
+          } catch {
+            /* ignore */
+          }
+        }
       }
     } catch {
       /* ignore */

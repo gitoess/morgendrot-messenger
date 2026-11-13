@@ -15,6 +15,8 @@ import { encryptEinsatzberichtUtf8, downloadEinsatzberichtEncryptedJson } from '
 import {
   downloadEinsatzprotokollZipPasswordProtected,
   downloadEinsatzprotokollZipPlain,
+  downloadMorgMediaZipOnly,
+  type MorgMediaKindFilter,
 } from '@/frontend/lib/einsatzprotokoll-export'
 import type { Message } from '@/frontend/lib/types'
 import type { ApiStatus } from '@/frontend/lib/api'
@@ -351,6 +353,40 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
     }
   }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn, guardExport])
 
+  const onExportMorgMediaZip = useCallback(
+    async (kinds: MorgMediaKindFilter) => {
+      if (!guardExport()) return
+      if (messagesLength === 0) {
+        setStatus('error')
+        setStatusMsg('Keine Nachrichten im Posteingang.')
+        setTimeout(() => setStatus('idle'), 5000)
+        return
+      }
+      if (!confirmForensicExportIfDeviceTimeUntrusted(deviceTimeTrustWarn)) return
+      try {
+        setStatusMsg('Extrahiere Medien aus dem Posteingang…')
+        const full = await messagesForExport()
+        const { count } = downloadMorgMediaZipOnly(full, { kinds })
+        if (count === 0) {
+          setStatus('error')
+          setStatusMsg(
+            'Keine passenden MORG-Medien in den Nachrichten (Telegram-Server-Medien sind nicht enthalten).'
+          )
+          setTimeout(() => setStatus('idle'), 7000)
+          return
+        }
+        setStatus('success')
+        setStatusMsg(`Medien-ZIP: ${count} Datei(en) unter medien/.`)
+        setTimeout(() => setStatus('idle'), 7000)
+      } catch (e) {
+        setStatus('error')
+        setStatusMsg(e instanceof Error ? e.message : String(e))
+        setTimeout(() => setStatus('idle'), 6000)
+      }
+    },
+    [messagesLength, messagesForExport, setStatus, setStatusMsg, deviceTimeTrustWarn, guardExport]
+  )
+
   return {
     onExportEinsatzberichtJson,
     onExportEinsatzberichtTxt,
@@ -359,5 +395,6 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
     onExportEinsatzprotokollPlainZip,
     onExportEinsatzprotokollMarked,
     onExportEinsatzberichtEncrypted,
+    onExportMorgMediaZip,
   }
 }

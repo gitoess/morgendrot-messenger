@@ -169,7 +169,22 @@ ${rows}
 `
 }
 
-type ExtractedMedia = { path: string; bytes: Uint8Array }
+type ExtractedMedia = { path: string; bytes: Uint8Array; kind: MorgMediaKind }
+
+/** Auswahl für „nur Medien“-Export. */
+export type MorgMediaKind = 'audio' | 'photo' | 'image' | 'file' | 'text' | 'slide'
+
+export type MorgMediaKindFilter = Partial<Record<MorgMediaKind, boolean>>
+
+export function morgMediaKindForTag(tag: string): MorgMediaKind {
+  if (tag === 'MORG_AUDIO_V1') return 'audio'
+  if (tag === 'MORG_LUMA_V1' || tag === 'MORG_CHROMA_V1') return 'photo'
+  if (tag === 'MORG_COMPACT_IMG_V1') return 'image'
+  if (tag === 'MORG_FILE_TXT_V1') return 'file'
+  if (tag === 'MORG_TXT_V1') return 'text'
+  if (tag.startsWith('MORG_SLIDE')) return 'slide'
+  return 'file'
+}
 
 function b64ToBytes(b64: string): Uint8Array {
   const bin = atob(b64.replace(/\s/g, ''))
@@ -188,7 +203,15 @@ function extForMorgTag(tag: string): string {
   return 'bin'
 }
 
-export function extractMorgMediaFromMessages(messages: Message[]): ExtractedMedia[] {
+function kindAllowed(kind: MorgMediaKind, filter?: MorgMediaKindFilter | null): boolean {
+  if (!filter) return true
+  return filter[kind] === true
+}
+
+export function extractMorgMediaFromMessages(
+  messages: Message[],
+  opts?: { kinds?: MorgMediaKindFilter | null }
+): ExtractedMedia[] {
   const out: ExtractedMedia[] = []
   const chronological = [...messages].sort((a, b) => a.timestamp - b.timestamp)
   let mediaIdx = 0
@@ -207,6 +230,8 @@ export function extractMorgMediaFromMessages(messages: Message[]): ExtractedMedi
       const payload = raw.slice(colon + 1, end).replace(/\s/g, '')
       i = end + 2
       if (!payload.length) continue
+      const kind = morgMediaKindForTag(tag)
+      if (!kindAllowed(kind, opts?.kinds)) continue
       const ext = extForMorgTag(tag)
       try {
         if (tag === 'MORG_TXT_V1') {
@@ -214,11 +239,13 @@ export function extractMorgMediaFromMessages(messages: Message[]): ExtractedMedi
           out.push({
             path: `medien/msg-${mi + 1}-txt-${mediaIdx++}.txt`,
             bytes: strToU8(txt),
+            kind,
           })
         } else {
           out.push({
             path: `medien/msg-${mi + 1}-${tag.replace(/^MORG_/, '').toLowerCase()}-${mediaIdx++}.${ext}`,
             bytes: b64ToBytes(payload),
+            kind,
           })
         }
       } catch {
@@ -227,6 +254,29 @@ export function extractMorgMediaFromMessages(messages: Message[]): ExtractedMedi
     }
   }
   return out
+}
+
+/** Nur Medien-Ordner als ZIP (kein Protokoll-Text). */
+export function downloadMorgMediaZipOnly(
+  messages: Message[],
+  opts?: { kinds?: MorgMediaKindFilter | null }
+): { count: number } {
+  const media = extractMorgMediaFromMessages(messages, opts)
+  if (media.length === 0) return { count: 0 }
+  const files: Record<string, Uint8Array> = {}
+  for (const m of media) files[m.path] = m.bytes
+  const zipped = zipSync(files, { level: 6 })
+  const blob = new Blob([zipped], { type: 'application/zip' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `morgendrot-medien-${Date.now()}.zip`
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+  return { count: media.length }
 }
 
 export function buildEinsatzprotokollZipBytes(

@@ -14,7 +14,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -1058,20 +1057,23 @@ export function ChatViewEvidenceImageViewerButton(p?: {
         }
       }}
     >
-      <DialogTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className={
-            p?.triggerClassName ||
-            'w-full justify-start rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent'
-          }
-        >
-          <ImageIcon className="mr-2 h-4 w-4 shrink-0" />
-          {p?.triggerLabel ?? 'On-Chain Bild / NFT'}
-        </Button>
-      </DialogTrigger>
+      {/* Kein DialogTrigger: kontrolliertes open + Trigger toggelt sonst beim X neu auf (Flackern). */}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className={
+          p?.triggerClassName ||
+          'w-full justify-start rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent'
+        }
+        onClick={() => {
+          setOpen(true)
+          p?.onOpenChange?.(true)
+        }}
+      >
+        <ImageIcon className="mr-2 h-4 w-4 shrink-0" />
+        {p?.triggerLabel ?? 'On-Chain Bild / NFT'}
+      </Button>
       <DialogContent className="flex max-h-[90vh] max-w-lg flex-col overflow-hidden p-0 sm:max-w-lg">
         <div className="shrink-0 border-b border-border/60 px-6 pb-3 pt-6 pr-14">
           <DialogHeader>
@@ -1099,6 +1101,18 @@ export function ChatViewEvidenceImageViewerButton(p?: {
               aria-hidden
             />
             Aktualisieren
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="ml-auto h-8 text-[11px]"
+            onClick={() => {
+              setOpen(false)
+              p?.onOpenChange?.(false)
+            }}
+          >
+            Schließen
           </Button>
           {leaseCounts.open > 0 ? (
             <Button

@@ -18,15 +18,17 @@ import {
   readMessengerAppearanceId,
 } from '@/frontend/lib/messenger-appearance-theme'
 import {
+  persistKlackFeedbackEnabled,
   persistMagnetFeedbackEnabled,
   persistSoundFeedbackEnabled,
   persistSoundFeedbackVolume,
+  readKlackFeedbackEnabled,
   readMagnetFeedbackEnabled,
   readSoundFeedbackEnabled,
   readSoundFeedbackVolume,
   UI_FEEDBACK_PREFS_CHANGED,
 } from '@/frontend/lib/ui-feedback-prefs'
-import { playTapClick } from '@/frontend/lib/ui-tap-feedback'
+import { playKlack, playTapClick } from '@/frontend/lib/ui-tap-feedback'
 
 const COLOR_FIELDS: { key: keyof CustomAppearanceColors; label: string }[] = [
   { key: 'background', label: 'Hintergrund' },
@@ -43,12 +45,14 @@ export function SettingsAppearanceSection() {
   const [customOn, setCustomOn] = useState(() => readCustomAppearanceEnabled())
   const [custom, setCustom] = useState<CustomAppearanceColors>(() => readCustomAppearanceColors())
   const [soundOn, setSoundOn] = useState(() => readSoundFeedbackEnabled())
+  const [klackOn, setKlackOn] = useState(() => readKlackFeedbackEnabled())
   const [soundVolume, setSoundVolume] = useState(() => readSoundFeedbackVolume())
   const [magnetOn, setMagnetOn] = useState(() => readMagnetFeedbackEnabled())
 
   useEffect(() => {
     const sync = () => {
       setSoundOn(readSoundFeedbackEnabled())
+      setKlackOn(readKlackFeedbackEnabled())
       setSoundVolume(readSoundFeedbackVolume())
       setMagnetOn(readMagnetFeedbackEnabled())
     }
@@ -189,11 +193,26 @@ export function SettingsAppearanceSection() {
           <h5 className="text-sm font-semibold text-foreground">Klang &amp; Feedback</h5>
         </div>
         <p className="text-[11px] text-muted-foreground">
-          Klick-Ton + kurze Töne bei Entsperren (tata) / Fehler. Magnet (Wii-Scale) optional, Default aus.
+          Klack = mechanisch beim Antippen. Klick-Ton = kurze Pieptöne (Entsperren/Fehler/Probe). Getrennt
+          schaltbar. Magnet optional.
         </p>
         <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
+          <Label htmlFor="ui-klack" className="text-sm text-foreground">
+            Klack (Button)
+          </Label>
+          <Switch
+            id="ui-klack"
+            checked={klackOn}
+            onCheckedChange={(on) => {
+              setKlackOn(on)
+              persistKlackFeedbackEnabled(on)
+              if (on) playKlack()
+            }}
+          />
+        </div>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
           <Label htmlFor="ui-sound" className="text-sm text-foreground">
-            Klick-Ton
+            Klick-Ton (Piep)
           </Label>
           <Switch
             id="ui-sound"
@@ -206,7 +225,7 @@ export function SettingsAppearanceSection() {
           />
         </div>
         <div
-          className={`space-y-2 rounded-lg border border-border bg-muted/20 px-3 py-2 ${soundOn ? '' : 'opacity-50'}`}
+          className={`space-y-2 rounded-lg border border-border bg-muted/20 px-3 py-2 ${soundOn || klackOn ? '' : 'opacity-50'}`}
         >
           <div className="flex items-center justify-between gap-3">
             <Label htmlFor="ui-sound-volume" className="text-sm text-foreground">
@@ -221,7 +240,7 @@ export function SettingsAppearanceSection() {
             max={100}
             step={5}
             value={soundVolume}
-            disabled={!soundOn}
+            disabled={!soundOn && !klackOn}
             data-no-tap-feedback="true"
             onInput={(e) => {
               const v = Number((e.target as HTMLInputElement).value)
@@ -234,7 +253,9 @@ export function SettingsAppearanceSection() {
               persistSoundFeedbackVolume(v)
             }}
             onPointerUp={() => {
-              if (soundOn && readSoundFeedbackVolume() > 0) playTapClick('soft')
+              if (readSoundFeedbackVolume() <= 0) return
+              if (klackOn) playKlack()
+              else if (soundOn) playTapClick('soft')
             }}
             className="w-full accent-[var(--path-online)]"
             aria-valuemin={0}

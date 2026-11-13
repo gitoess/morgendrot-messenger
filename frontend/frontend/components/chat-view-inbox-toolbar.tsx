@@ -95,6 +95,14 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   onExportEinsatzprotokoll: () => void | Promise<void>
   onExportEinsatzprotokollPlainZip: () => void | Promise<void>
   onExportEinsatzprotokollMarked: () => void | Promise<void>
+  onExportMorgMediaZip: (kinds: {
+    audio?: boolean
+    photo?: boolean
+    image?: boolean
+    file?: boolean
+    text?: boolean
+    slide?: boolean
+  }) => void | Promise<void>
   protokollMarkedCount: number
   recipient: string
   setStatus: (v: 'idle' | 'success' | 'error') => void
@@ -196,6 +204,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     onExportEinsatzprotokoll,
     onExportEinsatzprotokollPlainZip,
     onExportEinsatzprotokollMarked,
+    onExportMorgMediaZip,
     protokollMarkedCount,
     messages,
     myAddress,
@@ -244,6 +253,14 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
   const pathTools = pathToolsProp ?? DEFAULT_PATH_TOOLS
   const [wirePasteOpen, setWirePasteOpen] = useState(false)
   const [exportHistoryOpen, setExportHistoryOpen] = useState(false)
+  const [mediaKinds, setMediaKinds] = useState({
+    audio: true,
+    photo: true,
+    image: true,
+    file: true,
+    text: false,
+    slide: true,
+  })
   const [pkgToolsOpen, setPkgToolsOpen] = useState(false)
   const [hashToolsOpen, setHashToolsOpen] = useState(false)
   const pkgImportDisabled = morgPkgImportDisabled(apiStatus)
@@ -503,7 +520,9 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   </Button>
                 </div>
                 <div className="grid gap-2 border-t border-border pt-3">
-                  <p className="text-[11px] font-medium text-muted-foreground">ZIP</p>
+                  <p className="text-[11px] font-medium text-muted-foreground">
+                    ZIP — Text + Medien (Optionen → Export Nachrichtenverlauf…)
+                  </p>
                   <Button
                     type="button"
                     variant="outline"
@@ -511,7 +530,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     disabled={exportDisabled}
                     onClick={() => runExportAndClose(() => void onExportEinsatzprotokoll())}
                   >
-                    ZIP + HTML (verschlüsselt)
+                    Text mit Medien (ZIP+HTML, verschlüsselt)
                   </Button>
                   <Button
                     type="button"
@@ -520,7 +539,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     disabled={exportDisabled}
                     onClick={() => runExportAndClose(() => void onExportEinsatzprotokollPlainZip())}
                   >
-                    ZIP Klartext (inkl. medien/)
+                    Text mit Medien (ZIP Klartext, inkl. medien/)
                   </Button>
                   <Button
                     type="button"
@@ -530,6 +549,56 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     onClick={() => runExportAndClose(() => void onExportEinsatzprotokollMarked())}
                   >
                     ZIP nur markiert (★ {protokollMarkedCount})
+                  </Button>
+                </div>
+                <div className="grid gap-2 border-t border-border pt-3">
+                  <p className="text-[11px] font-medium text-muted-foreground">
+                    Nur Medien / Dateien (MORG im Wire — keine Telegram-Server-Medien)
+                  </p>
+                  <div className="flex flex-wrap gap-2 text-[11px]">
+                    {(
+                      [
+                        ['audio', 'Audio'],
+                        ['photo', 'Foto'],
+                        ['image', 'Bild'],
+                        ['file', 'Datei'],
+                        ['slide', 'Slide'],
+                        ['text', 'Text-Anhang'],
+                      ] as const
+                    ).map(([id, label]) => (
+                      <label
+                        key={id}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/20 px-2 py-1"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={mediaKinds[id]}
+                          onChange={(e) =>
+                            setMediaKinds((prev) => ({ ...prev, [id]: e.target.checked }))
+                          }
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-auto justify-start whitespace-normal py-2 text-left"
+                    disabled={
+                      exportDisabled ||
+                      !(
+                        mediaKinds.audio ||
+                        mediaKinds.photo ||
+                        mediaKinds.image ||
+                        mediaKinds.file ||
+                        mediaKinds.slide ||
+                        mediaKinds.text
+                      )
+                    }
+                    onClick={() => runExportAndClose(() => void onExportMorgMediaZip(mediaKinds))}
+                  >
+                    Nur Medien exportieren (ZIP)
                   </Button>
                 </div>
                 {pathTools.showDecryptExport ? (
@@ -702,11 +771,11 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             type="button"
             onClick={onRefresh}
             disabled={loading}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted/30 text-foreground transition-colors hover:bg-muted disabled:opacity-50"
             title="Posteingang und Kontakte neu laden"
+            aria-label="Aktualisieren"
           >
             <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-            Aktualisieren
           </button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import type { Message } from '@/frontend/lib/types'
+import type { MorgMediaKindFilter } from '@/frontend/lib/einsatzprotokoll-export'
 
 /** Einsatz-Exporte und ECDH-Morg-Pkg aus dem Posteingang (P5b). */
 export type InboxExportActionsPort = {
@@ -10,6 +11,7 @@ export type InboxExportActionsPort = {
   readonly onExportEinsatzprotokoll: () => void | Promise<void>
   readonly onExportEinsatzprotokollPlainZip: () => void | Promise<void>
   readonly onExportEinsatzprotokollMarked: () => void | Promise<void>
+  readonly onExportMorgMediaZip: (kinds: MorgMediaKindFilter) => void | Promise<void>
 }
 
 export function asInboxExportActions(actions: InboxExportActionsPort): InboxExportActionsPort {
