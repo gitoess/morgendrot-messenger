@@ -41,6 +41,8 @@
 
 **Nachtrag 2026-11-13 (Agent-Lücken + gemeinsames Retest am Schluss):** Mobile Posteingang **Optionen→Chat** wieder verdrahtet; Badges **PWMSG/NFT-Gate** filtern wie **Verschlüsselt**; Composer zeigt **Dieses NFT verleihen…** auch ohne aufgeklapptes Privacy-Panel. Agent prüft T23/T33/T41/T32 soweit Unit/UI allein möglich. **Gemeinsames Live-Retest (T3/T4/T36/T38 + T23/T33/T41/T32-Checklisten) bewusst am Schluss dieses Durchgangs** — nicht als Zwischenstopp.
 
+**Nachtrag 2026-11-13 (Boss-Header Peer-Switch):** In **Nachrichten** Header-Schalter **Einsatzleitung** (Titel „Nachrichten“ weg); in **Einsatzleitung** Schalter **Nachrichten**. Move-Probe toleriert Record-`exposedFunctions` (kein `.map`-Crash). Handbuch Move-Upgrade-Ort = Settings→IOTA.
+
 **Nachtrag 2026-11-05 (Wire einfügen):** **Optionen → Wire einfügen** — Paste `MORG_PWMSG_V1` + Passphrase → lokaler Klartext (≠ Toolbar **Entschlüsseln** = Einsatzbericht-.json). ECDH-Wires weiter nur mit Handshake.
 
 **Nachtrag 2026-11-06 (H.23 B2 NFT-Schlüsselkarte — aktiv):** Spec **`docs/NFT-SCHLUESSELKARTE-B2.md`**. **Zusätzlicher Zugriffsmodus**, kein Ersatz für Passphrase und nicht für Alltags-Direktchat. Lesen spezieller Enc-Inhalte: **Passphrase und/oder Besitz** eines NFTs (optional **beides**). Nutzen: Evidenz teilen, temporäre Leserechte, Weitergabe per NFT-Transfer. **P0–P3 Ist:** Enc-Store + Multi-Slot + Composer-Bindung + Mint an Slot + öffentlicher `[morg-keycard]`-Marker (kein Move). **2-Geräte-Feldtest** bewusst später.

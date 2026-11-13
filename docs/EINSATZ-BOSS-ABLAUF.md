@@ -100,8 +100,10 @@ Einsatzleitung
 │   ├── [ZIP] [IOTA] [WLAN-QR]
 │   ├── Neues Gerät (Seed + QR)
 │   └── Bestehende Geräte (TTL · Purge · Handoff)
-└── ▼ Erweitert — Chain / Move-Upgrade
+└── ▼ Erweitert — Archiv & Beweis (Chain/Move-Upgrade → Einstellungen → IOTA)
 ```
+
+**Navigation (Boss-Header):** In Nachrichten nur Schalter **Einsatzleitung**; in Einsatzleitung nur **Nachrichten** (aktueller Ort nicht als Titel).
 
 Zielbild: `docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`
 

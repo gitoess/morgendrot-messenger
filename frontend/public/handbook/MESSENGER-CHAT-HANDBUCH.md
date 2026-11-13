@@ -14,7 +14,7 @@
 
 | Bereich | Inhalt |
 |---------|--------|
-| **App-Header** (Boss/Messenger) | **Tresor**, **Aktualisieren** (Status + Posteingang + Kontakte), Handbuch, Einstellungen — **nicht** in der Posteingang-Leiste |
+| **App-Header** (Boss/Messenger) | **Tresor**, **Aktualisieren** (Status + Posteingang + Kontakte), Handbuch, Einstellungen — **nicht** in der Posteingang-Leiste. In **Nachrichten** / **Einsatzleitung**: nur das **Gegenstück** als Schalter (aktueller Ort nicht nochmals als Titel) |
 | **Chat-Kopf** | Sendepfad (**Alle** / Funk / **IOTA** / Telegram), **SOS — Hilferuf** (1:1, nicht Telegram). Mit Sidebar: **kein** großer Kanal-/Posteingang-Titel |
 | **Seitenleiste** (Desktop) | **Chats** gleiche Höhe wie Posteingang (`min(70vh,44rem)`), scrollt |
 | **Posteingang** (rechts) | Nachrichten + Toolbar; **Auswahl** ≈ Nachrichten-⋯ (Kopieren, Protokoll, Weiterleiten, JSON, Ausblenden, Burn) |
@@ -361,7 +361,7 @@ Wo welche Funktion liegt (Messenger, Boss):
 | **Neues Helfer-Handy** (Seed + Handoff-ZIP + QR) | **Helfer einrichten** → **Neues Gerät** → Seed + QR |
 | **TTL / Purge** für bestehende Geräte | **Helfer einrichten** → **Bestehende Geräte** |
 | **PWA im WLAN** (nur App installieren) | **Helfer einrichten** → **WLAN-QR** (neben ZIP/IOTA) |
-| **Move-Upgrade / Chain-Status** | **Einsatzleitung → Erweitert** |
+| **Move-Upgrade / Chain-Status** | **Einstellungen → IOTA → Package & Move-Upgrade** (nicht mehr unter Einsatzleitung → Erweitert) |
 | **Kontakte** anlegen, Import/Export JSON, verschl. Backup | **Telefonbuch** (`[+]` im Composer, Sidebar, Kontakt-Detail) |
 | **Team-/Private-Mailboxen** aktiv setzen | **Einstellungen → Meine Mailboxen** |
 | **Nachrichten-Forensik** (Verlauf JSON/TXT, Medien-ZIP) | **Posteingang → Optionen → Export Nachrichtenverlauf…** |

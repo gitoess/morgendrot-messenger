@@ -21,11 +21,16 @@ export function DashboardMessengerBossHeader(p: {
   hasKeys?: boolean
   /** Status / Posteingang neu laden — neben Tresor. */
   onRefreshStatus?: () => void | Promise<void>
-  /** Unteransicht: Zurück / Hauptmenü / Titel im festen Header. */
+  /**
+   * Unteransicht: Zurück / Hauptmenü.
+   * Nachrichten ↔ Einsatzleitung: nur das Gegenstück als Schalter (aktueller Ort nicht als Titel).
+   * Andere Views (Einstellungen/.env): viewTitle.
+   */
   subNav?: {
     viewTitle: string
     onBack: () => void
     onGoHome: () => void
+    peerSwitch?: { label: string; onClick: () => void } | null
   } | null
 }) {
   const { t } = useAppTranslation('dashboard')
@@ -80,7 +85,18 @@ export function DashboardMessengerBossHeader(p: {
               >
                 {t('nav.home')}
               </button>
-              <span className="text-xs font-semibold text-foreground">{sub.viewTitle}</span>
+              {sub.peerSwitch ? (
+                <button
+                  type="button"
+                  onClick={sub.peerSwitch.onClick}
+                  className="rounded-lg border border-primary/35 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-primary/15"
+                  title={sub.peerSwitch.label}
+                >
+                  {sub.peerSwitch.label}
+                </button>
+              ) : (
+                <span className="text-xs font-semibold text-foreground">{sub.viewTitle}</span>
+              )}
             </div>
           ) : null}
         </div>

@@ -86,15 +86,31 @@ export function ProjektDashboard() {
               <span className="text-sm font-medium">Zurück</span>
             </button>
             <div className="h-4 w-px bg-border" />
-            <span className="text-sm font-semibold text-foreground">
-              {s.activeView.type === 'settings'
-                ? 'Einstellungen'
-                : s.activeView.type === 'config'
-                  ? '.env anpassen'
-                  : s.activeView.type === 'einsatzleitung'
-                    ? 'Einsatzleitung'
+            {s.activeView.type === 'chat' && canAccessEinsatzleitung(s.role) ? (
+              <button
+                type="button"
+                onClick={s.openEinsatzleitungView}
+                className="rounded-lg border border-primary/35 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-primary/15"
+              >
+                Einsatzleitung
+              </button>
+            ) : s.activeView.type === 'einsatzleitung' ? (
+              <button
+                type="button"
+                onClick={s.openMessengerChatView}
+                className="rounded-lg border border-primary/35 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-primary/15"
+              >
+                Nachrichten
+              </button>
+            ) : (
+              <span className="text-sm font-semibold text-foreground">
+                {s.activeView.type === 'settings'
+                  ? 'Einstellungen'
+                  : s.activeView.type === 'config'
+                    ? '.env anpassen'
                     : featureTitle(s.activeView.type, projektFeatures)}
-            </span>
+              </span>
+            )}
           </div>
         </header>
 

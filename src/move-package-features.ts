@@ -58,7 +58,18 @@ export async function getMessagingMoveFeatures(packageId: string): Promise<Messa
             return data;
         }
         const mod = await getModule.call(client, { package: pkg, module: 'messaging' });
-        const names = new Set((mod?.exposedFunctions ?? []).map((f) => f.name));
+        // IOTA-RPC liefert exposedFunctions teils als Array, teils als Record<name, …>.
+        const rawExposed = (mod as { exposedFunctions?: unknown } | null | undefined)?.exposedFunctions;
+        const exposedList: ExposedFn[] = Array.isArray(rawExposed)
+            ? (rawExposed as ExposedFn[])
+            : rawExposed && typeof rawExposed === 'object'
+              ? Object.entries(rawExposed as Record<string, unknown>).map(([name, v]) =>
+                    v && typeof v === 'object' && typeof (v as ExposedFn).name === 'string'
+                        ? (v as ExposedFn)
+                        : { name }
+                )
+              : [];
+        const names = new Set(exposedList.map((f) => f.name).filter(Boolean));
         const data: MessagingMoveFeatures = {
             teamBroadcastStore: names.has('store_team_plaintext_broadcast'),
             teamBroadcastPurge: names.has('purge_team_plaintext_broadcast'),
