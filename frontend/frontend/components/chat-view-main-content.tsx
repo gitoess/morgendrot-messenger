@@ -1356,14 +1356,23 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             inboxSearchQuery={messengerSearchQuery}
             conversationMenu={conversationMenuProps}
             inboxHeading={inboxHeading}
-            /** Sidebar: gleiche Höhe wie Chats-Spalte; Composer darunter volle Breite. */
+            className={
+              showConversationSidebar
+                ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
+                : undefined
+            }
+            /** Sidebar: Liste füllt die feste Spaltenhöhe; Composer darunter (kein Overlap). */
             messageListMaxClassName={
-              showConversationSidebar ? 'max-h-[min(50vh,28rem)] min-h-[14rem]' : undefined
+              showConversationSidebar ? 'min-h-0 flex-1 overflow-y-auto' : undefined
             }
           />
 
           {/* Ohne Sidebar: Composer unter dem Posteingang. Mit Sidebar: volle Breite unter beiden Spalten. */}
-          {!showConversationSidebar ? <div className="shrink-0">{composerBlock}</div> : null}
+          {!showConversationSidebar ? (
+            <div className="relative z-10 mt-3 shrink-0 border-t border-border bg-background pt-3">
+              {composerBlock}
+            </div>
+          ) : null}
         </>
       )}
 
@@ -1557,7 +1566,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             />
             <div className="grid gap-3 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-stretch">
               <ChatViewContactSidebar
-                className="hidden max-h-[min(50vh,28rem)] min-h-[14rem] lg:flex"
+                className="hidden h-[min(42vh,22rem)] overflow-hidden lg:flex"
                 directory={directory}
                 partnerOptions={inboxPartnerOptions}
                 activePartnerKey={inboxPartnerKey}
@@ -1585,12 +1594,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                 {...pinnwandSidebarProps}
                 {...sidebarHandshakeProps}
               />
-              <div className="flex min-h-[14rem] max-h-[min(50vh,28rem)] min-w-0 flex-col">
+              <div className="flex h-[min(42vh,22rem)] min-w-0 flex-col overflow-hidden">
                 {conversationBody}
               </div>
             </div>
             {!onNotesTab && !onPinnwandTab ? (
-              <div className="shrink-0 pt-1">{composerBlock}</div>
+              <div className="relative z-10 mt-3 shrink-0 border-t border-border bg-background pt-3">
+                {composerBlock}
+              </div>
             ) : null}
           </div>
         ) : (

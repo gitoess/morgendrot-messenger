@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
-import { AlertCircle, BookUser, Check, ListOrdered, Mic, RefreshCw, Send } from 'lucide-react'
+import { AlertCircle, BookUser, Check, KeyRound, ListOrdered, Lock, Mic, RefreshCw, Send } from 'lucide-react'
 import { ChatComposerEmojiPicker } from '@/frontend/components/chat-composer-emoji-picker'
 import { ChatViewComposerPlusMenu } from '@/frontend/components/chat-view-composer-plus-menu'
 import { cn } from '@/lib/utils'
@@ -48,6 +48,13 @@ import {
 } from '@/frontend/components/chat-view-active-conversation-bar'
 import { ChatViewEncryptionModeToggle } from '@/frontend/components/chat-view-encryption-mode-toggle'
 import { PassphraseProtectComposerToggle } from '@/frontend/components/chat-view-passphrase-protect-toggle'
+import {
+  readPassphraseProtectEnabled,
+  readPassphraseZeitkapselModeEnabled,
+  writePassphraseProtectEnabled,
+  writePassphraseZeitkapselModeEnabled,
+  PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT,
+} from '@/frontend/lib/passphrase-message-local-store'
 import { hasTeamBroadcastKey } from '@/frontend/lib/team-broadcast-key-store'
 import { GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG } from '@/frontend/lib/group-team-broadcast'
 import {
@@ -463,9 +470,22 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     isPrivate,
   })
   const [manualAddressMode, setManualAddressMode] = useState(false)
+  const [privacyToolsOpen, setPrivacyToolsOpen] = useState(
+    () => readPassphraseProtectEnabled() || readPassphraseZeitkapselModeEnabled()
+  )
   useEffect(() => {
     setManualAddressMode(false)
   }, [partner, activeConversationBar?.displayName, activeConversationBar?.addressLine])
+
+  useEffect(() => {
+    const syncPrivacy = () => {
+      if (readPassphraseProtectEnabled() || readPassphraseZeitkapselModeEnabled()) {
+        setPrivacyToolsOpen(true)
+      }
+    }
+    window.addEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, syncPrivacy)
+    return () => window.removeEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, syncPrivacy)
+  }, [])
 
   const showIotaField =
     (!hideComposerIotaRecipient || manualAddressMode) &&
@@ -669,12 +689,24 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             <ChatViewEncryptionModeToggle {...encryptionModeToggle} />
           </div>
         ) : null}
-        {forcedTransport === 'internet' ? (
-          <PassphraseProtectComposerToggle
-            encrypted={encrypted}
-            onEncryptedChange={onEncryptedChange ?? encryptionModeToggle?.onEncryptedChange}
-            onRequestVaultSession={onNavigateHomeWhenLocked}
-          />
+        {forcedTransport === 'internet' && privacyToolsOpen ? (
+          <div className="space-y-2 rounded-xl border border-border/70 bg-muted/15 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-semibold text-foreground">Passphrase &amp; Zeitkapsel</p>
+              <button
+                type="button"
+                className="text-[11px] text-muted-foreground underline hover:no-underline"
+                onClick={() => setPrivacyToolsOpen(false)}
+              >
+                Zuklappen
+              </button>
+            </div>
+            <PassphraseProtectComposerToggle
+              encrypted={encrypted}
+              onEncryptedChange={onEncryptedChange ?? encryptionModeToggle?.onEncryptedChange}
+              onRequestVaultSession={onNavigateHomeWhenLocked}
+            />
+          </div>
         ) : null}
         {showRecipientRow ? (
           <div className="min-h-[4.5rem]">
@@ -912,6 +944,52 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                         </span>
                         Sprachnachricht
                       </button>
+                    ) : null}
+                    {forcedTransport === 'internet' && !isTelegramDelivery ? (
+                      <>
+                        <button
+                          type="button"
+                          disabled={sending || voiceLocksComposer || encrypted}
+                          title={
+                            encrypted
+                              ? 'Zuerst Verschlüsselung aus — Passphrase ersetzt ECDH für diese Nachricht.'
+                              : undefined
+                          }
+                          onClick={() => {
+                            writePassphraseZeitkapselModeEnabled(false)
+                            writePassphraseProtectEnabled(true)
+                            if (encrypted) onEncryptedChange?.(false)
+                            setPrivacyToolsOpen(true)
+                          }}
+                          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
+                        >
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/70 text-muted-foreground">
+                            <Lock className="h-4 w-4" aria-hidden />
+                          </span>
+                          Passphrase-Schutz…
+                        </button>
+                        <button
+                          type="button"
+                          disabled={sending || voiceLocksComposer || encrypted}
+                          title={
+                            encrypted
+                              ? 'Zuerst Verschlüsselung aus — Zeitkapsel nutzt NFT-Gate, nicht ECDH.'
+                              : undefined
+                          }
+                          onClick={() => {
+                            writePassphraseProtectEnabled(false)
+                            writePassphraseZeitkapselModeEnabled(true)
+                            if (encrypted) onEncryptedChange?.(false)
+                            setPrivacyToolsOpen(true)
+                          }}
+                          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
+                        >
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/70 text-muted-foreground">
+                            <KeyRound className="h-4 w-4" aria-hidden />
+                          </span>
+                          Zeitkapsel-Nachricht…
+                        </button>
+                      </>
                     ) : null}
                     {showPath4Checkbox && forcedTransport === 'mesh' && !isTelegramDelivery ? (
                       <div className="space-y-1 border-t border-border/60 px-1 py-2">

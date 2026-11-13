@@ -2652,9 +2652,9 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 ### Durchgangs-Reihenfolge (verbindlich — Stand 2026-11-12)
 
 1. **Erledigt:** **T37** Landkarte · **T8/T9** Passwort/Backup/Schatten → Sicherheit · Telegram-Wipe-Scope · Klack/Klick-Ton (T29) · Sendepfad/Layout-Polish 2026-11-13  
-2. **Agent 2026-11-13 (Code/Unit):** Layout (Chats=Posteingang-Höhe, Composer volle Breite); Auswahl≈⋯-Parität; Empfänger-Wallet aus bei aktivem Chat + „An Adresse senden“; Sprachnachricht im **+**; **T3/T4/T36/T38** Unit-/Code-Smoke (Mailbox-/Shadow-/Export-/Hash-Tests) — **kein** Live-Feld mit User.  
-3. **Gemeinsam später (verbindlich):** Live-Retest **T3** Meine Mailboxen → **T4** Schatten→Main → **T36/T38** echter Export+Hash. Agent-Stand nur vorbereiten.  
-4. **Besprechen (noch nicht bauen):** **T23/T33/T41** Kurz-Retest-Umfang; **T12**-Rest; **T32** Zeitkapsel; **[+]** Passphrase/Zeitkapsel.  
+2. **Agent 2026-11-13 (Code/Unit):** Layout ohne Overlap (feste Thread-Höhe + Composer darunter); Auswahl≈⋯; **+** = Sprachnachricht, An Adresse, **Passphrase**, **Zeitkapsel**; T3/T4/T36/T38 Unit-Smoke — **kein** Live-Feld.  
+3. **Gemeinsam später (verbindlich):** Live **T3** Mailboxen → **T4** Schatten→Main → **T36/T38** Export+Hash.  
+4. **Besprechen:** **T23/T33/T41**; **T12**-Rest; **T32** Zeitkapsel-Feldtest (UI-Einstieg jetzt im **+**).  
 5. **Backlog (überdenken, nicht jetzt bauen):** **T56** Komplett-alles-löschen; **T39** Beweis-Paket  
 6. **Dann am Ende:** Ideen **T39–T54** priorisieren  
 7. **Später (nicht blockierend):** T45 · T47 · T51 · T52 · T53  
