@@ -386,13 +386,18 @@ function MessengerDashboardBody({
                       : featureTitle(s.activeView.type, messengerFeaturesI18n) ?? t('nav.messages'),
               onBack: s.handleBack,
               onGoHome: s.goHome,
-              // Aktueller Ort nicht als Titel — nur Gegenstück wählbar (Sicherheit: nur Boss-Header).
-              peerSwitch:
+              // Aktueller Ort nicht als Titel — Gegenstück(e); Settings: Titel + beide Sprünge.
+              peerSwitches:
                 s.activeView.type === 'chat'
-                  ? { label: t('nav.einsatzleitung'), onClick: s.openEinsatzleitungView }
+                  ? [{ label: t('nav.einsatzleitung'), onClick: s.openEinsatzleitungView }]
                   : s.activeView.type === 'einsatzleitung'
-                    ? { label: t('nav.messages'), onClick: s.openMessengerChatView }
-                    : null,
+                    ? [{ label: t('nav.messages'), onClick: s.openMessengerChatView }]
+                    : s.activeView.type === 'settings' || s.activeView.type === 'config'
+                      ? [
+                          { label: t('nav.messages'), onClick: s.openMessengerChatView },
+                          { label: t('nav.einsatzleitung'), onClick: s.openEinsatzleitungView },
+                        ]
+                      : [],
             }}
           />
         ) : !(isCapacitorNativePlatform() && s.activeView.type === 'chat') ? (

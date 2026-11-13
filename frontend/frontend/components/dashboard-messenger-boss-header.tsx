@@ -23,19 +23,27 @@ export function DashboardMessengerBossHeader(p: {
   onRefreshStatus?: () => void | Promise<void>
   /**
    * Unteransicht: Zurück / Hauptmenü.
-   * Nachrichten ↔ Einsatzleitung: nur das Gegenstück als Schalter (aktueller Ort nicht als Titel).
-   * Andere Views (Einstellungen/.env): viewTitle.
+   * Nachrichten ↔ Einsatzleitung: nur Gegenstück(e) als Schalter (aktueller Ort nicht als Titel).
+   * Einstellungen/.env: Titel + Schnellsprung zu Nachrichten und Einsatzleitung.
    */
   subNav?: {
     viewTitle: string
     onBack: () => void
     onGoHome: () => void
+    /** Prefer peerSwitches; peerSwitch kept as single-item alias. */
     peerSwitch?: { label: string; onClick: () => void } | null
+    peerSwitches?: { label: string; onClick: () => void }[]
   } | null
 }) {
   const { t } = useAppTranslation('dashboard')
   const showVaultBadge = p.vaultBannerActions != null
   const sub = p.subNav
+  const peers =
+    sub?.peerSwitches && sub.peerSwitches.length > 0
+      ? sub.peerSwitches
+      : sub?.peerSwitch
+        ? [sub.peerSwitch]
+        : []
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/80 bg-card/95 backdrop-blur-sm">
@@ -85,15 +93,23 @@ export function DashboardMessengerBossHeader(p: {
               >
                 {t('nav.home')}
               </button>
-              {sub.peerSwitch ? (
-                <button
-                  type="button"
-                  onClick={sub.peerSwitch.onClick}
-                  className="rounded-lg border border-primary/35 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-primary/15"
-                  title={sub.peerSwitch.label}
-                >
-                  {sub.peerSwitch.label}
-                </button>
+              {peers.length > 0 ? (
+                <>
+                  {peers.length > 1 ? (
+                    <span className="text-xs font-semibold text-foreground">{sub.viewTitle}</span>
+                  ) : null}
+                  {peers.map((peer) => (
+                    <button
+                      key={peer.label}
+                      type="button"
+                      onClick={peer.onClick}
+                      className="rounded-lg border border-primary/35 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-primary/15"
+                      title={peer.label}
+                    >
+                      {peer.label}
+                    </button>
+                  ))}
+                </>
               ) : (
                 <span className="text-xs font-semibold text-foreground">{sub.viewTitle}</span>
               )}

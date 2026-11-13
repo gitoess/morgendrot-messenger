@@ -85,7 +85,8 @@ export async function getMessagingMoveFeatures(packageId: string): Promise<Messa
             ...fallback,
             error: e instanceof Error ? e.message : String(e),
         };
-        cache.set(pkgKey, { at: Date.now(), data });
+        // Fehler kurz cachen (nicht 10 Min) — RPC-Form kann nach Fix/Neustart sofort wieder stimmen.
+        cache.set(pkgKey, { at: Date.now() - CACHE_MS + 30_000, data });
         return data;
     }
 }

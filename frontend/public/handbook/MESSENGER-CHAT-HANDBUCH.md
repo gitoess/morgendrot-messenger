@@ -14,7 +14,7 @@
 
 | Bereich | Inhalt |
 |---------|--------|
-| **App-Header** (Boss/Messenger) | **Tresor**, **Aktualisieren** (Status + Posteingang + Kontakte), Handbuch, Einstellungen — **nicht** in der Posteingang-Leiste. In **Nachrichten** / **Einsatzleitung**: nur das **Gegenstück** als Schalter (aktueller Ort nicht nochmals als Titel) |
+| **App-Header** (Boss/Messenger) | **Tresor**, **Aktualisieren** (Status + Posteingang + Kontakte), Handbuch, Einstellungen — **nicht** in der Posteingang-Leiste. In **Nachrichten** / **Einsatzleitung**: nur das **Gegenstück** als Schalter. In **Einstellungen**: Titel + Sprünge zu Nachrichten und Einsatzleitung |
 | **Chat-Kopf** | Sendepfad (**Alle** / Funk / **IOTA** / Telegram), **SOS — Hilferuf** (1:1, nicht Telegram). Mit Sidebar: **kein** großer Kanal-/Posteingang-Titel |
 | **Seitenleiste** (Desktop) | **Chats** gleiche Höhe wie Posteingang (`min(70vh,44rem)`), scrollt |
 | **Posteingang** (rechts) | Nachrichten + Toolbar; **Auswahl** ≈ Nachrichten-⋯ (Kopieren, Protokoll, Weiterleiten, JSON, Ausblenden, Burn) |
@@ -426,7 +426,7 @@ In der Chat-**Sidebar** Abschnitt **Gruppen**:
 
 - Button **Verwalten** (auch ohne bestehende Gruppe) → Sheet „Gruppe verwalten“
 - Zahnrad an der Gruppenzeile (Handy-tauglich; Doppelklick weiterhin)
-- Im Gruppenkanal zusätzlich Chat-⋮ → **Gruppe verwalten…**
+- Im Gruppenkanal: Sidebar **Verwalten** / Zahnrad (nicht Optionen — dort absichtlich kein Doppel-Eintrag)
 
 Dort: Name, Mitglieder, **Team-Postfach**, **Team-Key** erzeugen/rotieren (Enc-Broadcast).
 

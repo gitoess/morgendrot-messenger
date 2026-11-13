@@ -55,4 +55,25 @@ describe('DashboardMessengerBossHeader peer switch', () => {
     )
     expect(screen.getByText('Einstellungen')).toBeInTheDocument()
   })
+
+  it('settings: title plus Nachrichten and Einsatzleitung peers', () => {
+    render(
+      <DashboardMessengerBossHeader
+        role="boss"
+        onOpenSettings={vi.fn()}
+        subNav={{
+          viewTitle: 'Einstellungen',
+          onBack: vi.fn(),
+          onGoHome: vi.fn(),
+          peerSwitches: [
+            { label: 'Nachrichten', onClick: vi.fn() },
+            { label: 'Einsatzleitung', onClick: vi.fn() },
+          ],
+        }}
+      />
+    )
+    expect(screen.getByText('Einstellungen')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Nachrichten' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Einsatzleitung' })).toBeInTheDocument()
+  })
 })

@@ -47,7 +47,7 @@ Damit die „Alphabet-Suppe“ der Blockchain-IDs übersichtlich bleibt: **Wer**
 
 | ID | Bedeutung | Wo in der UI | Historie? |
 |----|-----------|--------------|-----------|
-| **UpgradeCap-ID** | Der „Generalschlüssel“ für das Package: Nur wer diese Object-ID besitzt, darf das Package upgraden (Code reparieren/ändern). Wird beim ersten Deploy erzeugt; gehört dem Wallet, das deployt hat. | **Einsatzleitung → Erweitert → Chain-Status** (Boss); `.env` `UPGRADE_CAP_ID`; siehe **`docs/DEPLOY-MOVE-UPGRADE-VS-PUBLISH.md`**. | Nein. |
+| **UpgradeCap-ID** | Der „Generalschlüssel“ für das Package: Nur wer diese Object-ID besitzt, darf das Package upgraden (Code reparieren/ändern). Wird beim ersten Deploy erzeugt; gehört dem Wallet, das deployt hat. | **Einstellungen → IOTA → Package & Move-Upgrade** (Boss/Kommandant); `.env` `UPGRADE_CAP_ID`; siehe **`docs/DEPLOY-MOVE-UPGRADE-VS-PUBLISH.md`**. | Nein. |
 | **Vault-Registry-ID** | Siehe oben – Boss legt sie einmal an (create_globals), trägt sie in .env ein. | Popup, Config, Tresor, optional am Asset. | Nein. |
 | **Vault-ID** | Einzelnes „Schließfach“ innerhalb der Registry (pro Adresse). | Wird intern genutzt; keine eigene Anzeige als ID. | — |
 

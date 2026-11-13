@@ -241,17 +241,19 @@ export function SettingsView({
             (advancedIotaStatus?.myAddressFull || advancedIotaStatus?.myAddress || status?.address || '').trim()
           }
         />
-        <div className="rounded-xl border border-border bg-card p-4">
-          <p className="mb-1 text-sm font-semibold text-foreground">Package &amp; Move-Upgrade</p>
-          <p className="mb-3 text-[12px] text-muted-foreground">
-            Chain-Status und In-Place-Upgrade (gleiche Package-ID). Früher unter Einsatzleitung → Erweitert —
-            hier unter IOTA, weil es das Move-Package betrifft, nicht den Einsatz-Alltag.
-          </p>
-          <DashboardEinsatzChainPanel
-            apiStatus={advancedIotaStatus}
-            onRefreshStatus={() => void loadStatus()}
-          />
-        </div>
+        {managedNetwork ? (
+          <div className="rounded-xl border border-border bg-card p-4">
+            <p className="mb-1 text-sm font-semibold text-foreground">Package &amp; Move-Upgrade</p>
+            <p className="mb-3 text-[12px] text-muted-foreground">
+              Chain-Status und In-Place-Upgrade (gleiche Package-ID). Nur Boss/Kommandant — nicht Chat-Alltag.
+              Früher unter Einsatzleitung → Erweitert; jetzt unter IOTA, weil es das Move-Package betrifft.
+            </p>
+            <DashboardEinsatzChainPanel
+              apiStatus={advancedIotaStatus}
+              onRefreshStatus={() => void loadStatus()}
+            />
+          </div>
+        ) : null}
         {!slimMessengerEinsatz && status?.backendOnline && status.signer === 'sdk' ? (
           <div className="rounded-xl border border-border bg-card p-4">
             <div className="mb-3 flex items-start gap-3">

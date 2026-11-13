@@ -43,6 +43,8 @@
 
 **Nachtrag 2026-11-13 (Boss-Header Peer-Switch):** In **Nachrichten** Header-Schalter **Einsatzleitung** (Titel „Nachrichten“ weg); in **Einsatzleitung** Schalter **Nachrichten**. Move-Probe toleriert Record-`exposedFunctions` (kein `.map`-Crash). Handbuch Move-Upgrade-Ort = Settings→IOTA.
 
+**Nachtrag 2026-11-13 (Sicherheit/Konsistenz weiter):** Move-Upgrade-Panel nur Boss/Kommandant; Settings-Header Sprünge Nachrichten+Einsatzleitung; Move-Probe-Fehler nur ~30s cachen; Docs (UpgradeCap, Burn-on-read, Gruppe-Verwalten) an Ist.
+
 **Nachtrag 2026-11-05 (Wire einfügen):** **Optionen → Wire einfügen** — Paste `MORG_PWMSG_V1` + Passphrase → lokaler Klartext (≠ Toolbar **Entschlüsseln** = Einsatzbericht-.json). ECDH-Wires weiter nur mit Handshake.
 
 **Nachtrag 2026-11-06 (H.23 B2 NFT-Schlüsselkarte — aktiv):** Spec **`docs/NFT-SCHLUESSELKARTE-B2.md`**. **Zusätzlicher Zugriffsmodus**, kein Ersatz für Passphrase und nicht für Alltags-Direktchat. Lesen spezieller Enc-Inhalte: **Passphrase und/oder Besitz** eines NFTs (optional **beides**). Nutzen: Evidenz teilen, temporäre Leserechte, Weitergabe per NFT-Transfer. **P0–P3 Ist:** Enc-Store + Multi-Slot + Composer-Bindung + Mint an Slot + öffentlicher `[morg-keycard]`-Marker (kein Move). **2-Geräte-Feldtest** bewusst später.
@@ -2705,7 +2707,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T9 | **Schatten → Sicherheit** | UI-Verschiebung | **done 2026-11-12** | Mit T8; IOTA nur noch Hinweis-Link |
 | T10 | **Aktualisieren-Pattern** | UX-Regel | **done 2026-11-13** | Settings: oben pro Tab „Aktualisieren“ + karten-eigene Ladeknöpfe. **Messenger:** ein Knopf im **festen App-Header rechts neben Tresor** (Status, Posteingang, Kontakte) — **nicht** in der Posteingang-Toolbar; Chat-Kopf ohne Duplikat (`suppressAppChrome`). Saldo (IOTA Gas) bleibt |
 | T11 | **Secrets-Landkarte** | Doku/UI | später | Wo liegt was (Vault vs Runtime-JSON vs localStorage vs .env) — komplett, nicht nur Telegram |
-| T12 | **Einstellungen kürzen + zwei Layouts** | UI + Handbuch | **teil-done 2026-11-13** | PC: Einstellungen links/rechts. Chat **lg:** Telegram-Muster Chats \| Posteingang+Composer; Sendepfad **Alle**/Funk/IOTA/Telegram. Handbuch-Sync Rest + T17; **[+]** später Passphrase/Zeitkapsel |
+| T12 | **Einstellungen kürzen + zwei Layouts** | UI + Handbuch | **teil-done 2026-11-13** | PC: Einstellungen links/rechts. Chat **lg:** Telegram-Muster Chats \| Posteingang+Composer; Sendepfad **Alle**/Funk/IOTA/Telegram. **[+]** Passphrase/Zeitkapsel Ist. Handbuch-Sync Rest + T17 am Schluss |
 | T13 | **Wallet Empfangen** | UI | **done 2026-11-13** | Empfangen-Dialog: Wallet-QR + aktive Mailbox-IDs + Hinweis Coins vs. Chat |
 | T14 | **SOS Hilferuf fertigstellen** | Feature + Produkt-Split | später | Button Ist unvollständig (Sheet/Fan-out Teil-Ist). **IOTA-Messenger:** geplant `hideSos: true` (Einsatz-Feature). Morgendrot behält SOS |
 | T15 | **Wallet-Lücken vs. IOTA-Wallet/Rebased** | Abgleich | Backlog nach Durchgang | Bewusst **nicht** 1:1: kein Staking/Ledger/Multi-Profil-UI. Stärken bei uns: Gesichert/Guthaben, Zeitkapsel-Leihe, Aktivität/Msg-Burn. Lücken notieren, nicht blind nachbauen |

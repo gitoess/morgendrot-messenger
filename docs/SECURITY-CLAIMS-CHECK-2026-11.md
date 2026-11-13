@@ -10,7 +10,7 @@
 | **Asynchrone Dead-Drop, Discovery-Tags, rotierende Outboxes** | Feste `MAILBOX_ID` / Package-IDs; DFs unter Mailbox; Events | **Nur teilweise.** Keine rotierenden Outboxes. |
 | **Handshake mit Decoys** | Ohne Decoy-Rauschen | **Stimmt nicht.** |
 | **Lokale Schlüsselableitung (HW-Fragment + Passphrase, nur RAM)** | Vault PBKDF2+AES-GCM auf Disk; ECDH im Vault | **Teilweise.** Kein HW-Fragment; Seed kann verschlüsselt auf Disk liegen. |
-| **Burn-on-read / object::delete** | Purge/Rebate; ImageNFT `burn` im Experiment; **Opt-in** „Burn-on-read“ im Chat-⋮ (Vorschlag + Bestätigung, kein Auto) | **Teilweise.** Bewusstes Löschen / Opt-in-Hinweis. |
+| **Burn-on-read / object::delete** | Purge/Rebate; ImageNFT `burn` im Experiment; **Opt-in** „Nach Lesen löschen“ unter **Optionen → Chat · Sicherheit** (nur Modus; Vorschlag + Bestätigung, kein Auto). Echter Burn: Zeilen-⋯ / Auswahl | **Teilweise.** Bewusstes Löschen / Opt-in-Hinweis. |
 | **Kein klassischer Server für Metadaten** | Direkt-RPC möglich; Boss optional | **Teilweise.** Fullnode sieht Queries; Boss kann Meta sehen. |
 
 ## Was wir bewusst umgesetzt haben (besser als Claims, aber enger)
@@ -24,7 +24,7 @@
 | Gegenseitiger Ausschluss Handshake ↔ Passphrase-Schutz | Weniger Fehlbedienung | — |
 | **Vault-/Session-Lock:** Chat- + ImageNFT-Passphrasen + Team-Keys aus RAM; Enc-Sidecars bleiben; Purge/Einsatz-Ende löscht Sidecars | Weniger Klartext-Reste; Keys nach Unlock wieder da | Nest-Datei `.team-keys.enc` optional später; Browser = `teamKeys.enc.v1` |
 | **H.23 A4 UX:** ⋮ → Schlüssel erneuern (Epoch-Anzeige) + Hinweis nach Enc-Send | Rotation auffindbar | Kein Auto-Ratchet |
-| **Burn-on-read Opt-in** (Chat-⋮) | Purge nach Lesen vorschlagen; bei aktiv → Composer erzwingt Mailbox (Event nicht purgebar) | Mit Bestätigung; nur Mailbox-Objekte; Explorer behält TX/Events |
+| **Burn-on-read Opt-in** (Optionen → Chat) | Purge nach Lesen vorschlagen; bei aktiv → Composer erzwingt Mailbox (Event nicht purgebar) | Mit Bestätigung; nur Mailbox-Objekte; Explorer behält TX/Events |
 | **H.23 B1 Team-Key** | Enc Team-Broadcast + Handoff; UI erzeugen/rotieren; Enc-Send ohne Auto-Fork; Browser-Sidecar `teamKeys.enc.v1` (Nest `.team-keys.enc` optional später) | Legacy-Klartext wird beim Unlock migriert/gelöscht; 2-Geräte-Feldtest bewusst später |
 | **H.23 B2 NFT-Schlüsselkarte** | Enc-Store + Galerie + P4a/dual/P4a2/P4b-PoC (`MORG_NFTGATE_V1`, Seal-Broker) | Secrets off-chain; P4b = Policy+Broker PoC (nicht Mysten-Seal) |
 
