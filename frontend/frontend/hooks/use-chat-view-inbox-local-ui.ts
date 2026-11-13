@@ -37,7 +37,7 @@ import {
 } from '@/frontend/features/inbox/inbox-partner-filter'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import type { Message } from '@/frontend/lib/types'
-import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
+import { messageMatchesInboxWireFilter, type InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
 import {
   messageMatchesInboxSourceFilter,
   type InboxSourceFilter,
@@ -423,9 +423,12 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
         }
       }
     }
-    /** Richtung immer, unabhängig von Partner-Schnellliste. Quelle steuert der Sendepfad. */
+    /** Richtung immer — Eingang/Ausgang filtert sofort. */
     if (inboxDirectionFilter !== 'all') {
       rows = filterInboxMessagesByPartnerAndDirection(rows, myAddress, null, inboxDirectionFilter)
+    }
+    if (inboxChannelFiltersArmed && inboxSourceFilter !== 'all') {
+      rows = rows.filter((m) => messageMatchesInboxSourceFilter(m, inboxSourceFilter, sourceFilterCtx))
     }
     return rows
   }, [
@@ -433,6 +436,8 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     myAddress,
     inboxPartnerKey,
     inboxDirectionFilter,
+    inboxSourceFilter,
+    inboxChannelFiltersArmed,
     inboxPartnerFiltersArmed,
     inboxConversationGroupId,
     sourceFilterCtx,
@@ -440,8 +445,10 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     sendPathInboxSourceFilter,
   ])
 
-  /** Inhalt Verschlüsselt/Klartext ist kein Listenfilter mehr — nur noch Sendemodus. */
-  const wireFilteredMessages = useMemo(() => partnerFilteredMessages, [partnerFilteredMessages])
+  const wireFilteredMessages = useMemo(() => {
+    if (!inboxWireFiltersArmed || inboxWireFilter === 'all') return partnerFilteredMessages
+    return partnerFilteredMessages.filter((m) => messageMatchesInboxWireFilter(m, inboxWireFilter))
+  }, [partnerFilteredMessages, inboxWireFilter, inboxWireFiltersArmed])
 
   useEffect(() => {
     setPartnerLastSeenMap(readPartnerLastSeenMap(inboxScopeKey(myAddress)))
@@ -839,8 +846,8 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     const reasons: string[] = []
     if (hiddenLocal > 0) reasons.push(`${hiddenLocal} lokal ausgeblendet`)
     if (inboxPartnerFiltersArmed && inboxPartnerKey) reasons.push('Partner-Filter')
-    if (inboxChannelFiltersArmed && inboxDirectionFilter !== 'all') {
-      reasons.push(`Kanal „${inboxDirectionFilter === 'in' ? 'Eingang' : 'Ausgang'}“`)
+    if (inboxDirectionFilter !== 'all') {
+      reasons.push(`Richtung „${inboxDirectionFilter === 'in' ? 'Eingang' : 'Ausgang'}“`)
     }
     if (sendPathInboxSourceFilter !== 'all') {
       reasons.push(`Sendepfad „${sendPathInboxSourceFilter}“`)

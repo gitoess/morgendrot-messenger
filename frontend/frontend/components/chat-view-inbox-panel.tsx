@@ -234,7 +234,6 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
 
   return (
     <div className="rounded-xl border border-border bg-card">
-      {conversationMenu ? <ChatViewConversationMenu {...conversationMenu} /> : null}
       <ChatViewInboxToolbar
         {...toolbarProps}
         messages={messages}
@@ -242,15 +241,19 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         inboxSelectMode={inboxSelectMode}
         setInboxSelectMode={setInboxSelectMode}
         selectedInboxCount={selectedInboxIds.size}
-        showWireControls={false}
-        onToggleWireControls={() => undefined}
+        showWireControls={inboxWireFiltersArmed}
+        onToggleWireControls={() => setInboxWireFiltersArmed(!inboxWireFiltersArmed)}
         showChannelControls={inboxChannelFiltersArmed}
         onToggleChannelControls={() => setInboxChannelFiltersArmed(!inboxChannelFiltersArmed)}
         showPartnerControls={inboxPartnerFiltersArmed}
         onTogglePartnerControls={() => setInboxPartnerFiltersArmed(!inboxPartnerFiltersArmed)}
+        conversationMenuSlot={
+          conversationMenu ? (
+            <ChatViewConversationMenu {...conversationMenu} variant="toolbar" />
+          ) : undefined
+        }
         directionFilter={inboxDirectionFilter}
         onDirectionFilterChange={setInboxDirectionFilter}
-        showPartnerFilterMenu={!hidePartnerStrip}
         onBulkHideSelected={onBulkHideSelected}
         onBulkPurgeSelected={() => void onBulkPurgeSelected()}
         hasHiddenMessages={hiddenInboxCount > 0}
@@ -272,7 +275,8 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           showLagebild={pinnwandOverviewConfigured}
         />
       ) : null}
-      {!hidePartnerStrip && inboxPartnerFiltersArmed ? (
+      {!hidePartnerStrip &&
+      (inboxWireFiltersArmed || inboxChannelFiltersArmed || inboxPartnerFiltersArmed) ? (
         <ChatViewInboxPartnerStrip
           partnerOptions={inboxPartnerOptions}
           myAddressKnown={myAddress.trim().length > 0}
@@ -283,12 +287,12 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           sourceFilter={inboxSourceFilter}
           onSourceFilterChange={setInboxSourceFilter}
           showLagebildSource={pinnwandOverviewConfigured}
-          wireFilter="all"
-          onWireFilterChange={() => undefined}
+          wireFilter={inboxWireFilter}
+          onWireFilterChange={setInboxWireFilter}
           onPartnerSelectForSend={selectInboxPartnerForSend}
-          showWireSection={false}
-          showChannelSection={false}
-          showPartnerSection
+          showWireSection={inboxWireFiltersArmed}
+          showChannelSection={inboxChannelFiltersArmed}
+          showPartnerSection={inboxPartnerFiltersArmed}
           onRemoveInboxPartnerFromQuickList={(address, opts) => {
             removeInboxPartnerFromQuickList(address, {
               hideMatchingMessages: opts.hideMatchingMessages,
@@ -297,6 +301,15 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           }}
           apiStatus={apiStatus}
         />
+      ) : null}
+      {inboxWireFiltersArmed && inboxWireFilter !== 'all' ? (
+        <p className="border-b border-border/60 px-3 py-1.5 text-[11px] text-muted-foreground" role="status">
+          {filteredInboxRows.length === 0
+            ? 'Keine Zeile passt. „Alles“ zeigt wieder die ganze Liste.'
+            : `${filteredInboxRows.length} ${filteredInboxRows.length === 1 ? 'Zeile' : 'Zeilen'} — nur ${
+                inboxWireFilter === 'encrypted' ? 'verschlüsselte' : 'Klartext'
+              }. Das ändert nicht, wie du sendest.`}
+        </p>
       ) : null}
       <InboxTelegramAlarmGroupJoinStrip />
       <div className="max-h-[min(70vh,42rem)] overflow-y-auto">

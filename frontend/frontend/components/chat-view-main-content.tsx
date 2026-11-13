@@ -1082,7 +1082,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         ? activeConversationSubtitle
         : canRenew
           ? 'Partner gesetzt'
-          : 'Kontakt wählen oder Telefonbuch öffnen'
+          : undefined
 
     if (isPrivate && (composerDelivery === 'chain' || inboxPartnerFiltersArmed)) {
       return {

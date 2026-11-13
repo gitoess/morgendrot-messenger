@@ -63,4 +63,20 @@ describe('ChatViewConversationMenu Info', () => {
     expect(screen.getByRole('button', { name: /Chat-Optionen/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Gruppen-Info öffnen/i })).toBeInTheDocument()
   })
+
+  it('toolbar-Variante: nur ⋮, kein Direktchat-Banner', () => {
+    render(
+      <ChatViewConversationMenu
+        title="Direktchat"
+        subtitle="Kontakt wählen oder Telefonbuch öffnen"
+        canClearHistory
+        canExport
+        variant="toolbar"
+        showChainSecurityTools={false}
+      />
+    )
+    expect(screen.getByRole('button', { name: /Chat-Optionen/i })).toBeInTheDocument()
+    expect(screen.queryByText(/^Direktchat$/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Kontakt wählen/i)).not.toBeInTheDocument()
+  })
 })
