@@ -1297,16 +1297,6 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                   )}
                 </Button>
               ) : null}
-              {mode === 'owner' &&
-              (listNftKeycards().length > 0 || listNftTimeLeasesLocal().length > 0) ? (
-                <p className="rounded-md border border-sky-800/35 bg-sky-950/20 px-2.5 py-2 text-[11px] text-sky-100/90">
-                  <span className="font-medium text-foreground">Galerie ≠ Schlüsselkarte/Zeitkapsel.</span>{' '}
-                  Galerie = nur ImageNFTs mit <span className="font-medium">AddressOwner = deine Wallet</span>{' '}
-                  jetzt. Während Leihe/Escrow oder nach Transfer fehlt das NFT hier — lokal gemerkte Karte und
-                  Lease-Zeilen bleiben trotzdem sichtbar. NFT-Gate-Lesen braucht aktuellen Besitz oder aktive
-                  Borrower-Leihe; „schon geclaimt“ ohne Rückgabe an dich = kein Leserecht.
-                </p>
-              ) : null}
               <div className="space-y-1.5">
                 <Label htmlFor="evidence-query">{mode === 'object' ? 'Object-ID' : 'Besitzer-Adresse'}</Label>
                 <Input

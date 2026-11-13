@@ -67,6 +67,8 @@ export type ChatViewChatHeaderProps = {
    * Notizen bleibt (Chat-Kontext).
    */
   suppressAppChrome?: boolean
+  /** Kein Titel/Icon (Sidebar-Layout: Posteingang bündig mit Chats). */
+  hideTitleRow?: boolean
 }
 
 type TresorSessionUi = 'locked' | 'no-keys' | 'ready'
@@ -256,6 +258,7 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
     conversationIcon = 'lock',
     compactNative = false,
     suppressAppChrome = false,
+    hideTitleRow = false,
     onRefreshStatus,
   } = p
 
@@ -278,115 +281,127 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
   /** App-Header hat Aktualisieren bei suppressAppChrome; sonst hier neben Tresor. */
   const showHeaderRefresh = Boolean(onRefreshStatus) && !suppressAppChrome
   const useInboxIcon = conversationIcon === 'inbox' || channelMode === 'pinnwand' || channelMode === 'notes'
+  const showTitleBlock = !hideTitleRow
 
   const queuePending = offlineStatus?.queuePending ?? 0
   const showQueueOnlyBanner =
     isPrivate && statusPollAttempted && basisUnreachable && queuePending > 0
+
+  const showChromeActions =
+    showHeaderRefresh || showTreasuryBadge || showHandbook || (onOpenNotes && channelMode === 'notes') || showSettingsBtn
 
   return (
     <>
       <section
         className={cn(
           'rounded-xl border border-border/60 bg-card/30',
-          compactNative ? 'p-2' : 'p-3 sm:p-4'
+          compactNative ? 'p-2' : hideTitleRow && !showChromeActions ? 'p-2 sm:p-3' : 'p-3 sm:p-4'
         )}
         aria-label="Chat-Kopf"
       >
         <div className={cn(compactNative ? 'space-y-2' : 'space-y-3')}>
-          <div
-            className={cn(
-              'sticky top-0 z-30 border-b border-border/50 bg-card/95 backdrop-blur-sm',
-              compactNative ? '-mx-2 px-2 pb-2' : '-mx-3 px-3 pb-3 sm:-mx-4 sm:px-4'
-            )}
-          >
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div className="flex min-w-0 gap-2">
-                {!compactNative ? (
-                  <div
-                    className={cn(
-                      'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl',
-                      useInboxIcon
-                        ? 'bg-muted text-foreground'
-                        : encrypted
-                          ? 'bg-emerald-500/10 text-emerald-400'
-                          : 'bg-amber-500/10 text-amber-400'
-                    )}
-                    aria-hidden
-                  >
-                    {useInboxIcon ? (
-                      <Inbox className="h-5 w-5" />
-                    ) : encrypted ? (
-                      <Lock className="h-5 w-5" />
-                    ) : (
-                      <Unlock className="h-5 w-5" />
-                    )}
+          {showTitleBlock || showChromeActions ? (
+            <div
+              className={cn(
+                showTitleBlock &&
+                  'sticky top-0 z-30 border-b border-border/50 bg-card/95 backdrop-blur-sm',
+                showTitleBlock &&
+                  (compactNative ? '-mx-2 px-2 pb-2' : '-mx-3 px-3 pb-3 sm:-mx-4 sm:px-4')
+              )}
+            >
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                {showTitleBlock ? (
+                  <div className="flex min-w-0 gap-2">
+                    {!compactNative ? (
+                      <div
+                        className={cn(
+                          'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl',
+                          useInboxIcon
+                            ? 'bg-muted text-foreground'
+                            : encrypted
+                              ? 'bg-emerald-500/10 text-emerald-400'
+                              : 'bg-amber-500/10 text-amber-400'
+                        )}
+                        aria-hidden
+                      >
+                        {useInboxIcon ? (
+                          <Inbox className="h-5 w-5" />
+                        ) : encrypted ? (
+                          <Lock className="h-5 w-5" />
+                        ) : (
+                          <Unlock className="h-5 w-5" />
+                        )}
+                      </div>
+                    ) : null}
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <h2
+                          className={cn(
+                            'font-bold leading-tight text-foreground',
+                            compactNative ? 'text-base' : 'text-lg sm:text-xl'
+                          )}
+                        >
+                          {channelTitle}
+                        </h2>
+                        {showProfileBadges ? <ChatNetworkBadge /> : null}
+                        {showProfileBadges ? <ActiveProfileBadge status={apiStatus} compact /> : null}
+                      </div>
+                      {channelSubtitle ? (
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground">{channelSubtitle}</p>
+                      ) : null}
+                    </div>
                   </div>
-                ) : null}
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <h2
-                      className={cn(
-                        'font-bold leading-tight text-foreground',
-                        compactNative ? 'text-base' : 'text-lg sm:text-xl'
-                      )}
-                    >
-                      {channelTitle}
-                    </h2>
-                    {showProfileBadges ? <ChatNetworkBadge /> : null}
-                    {showProfileBadges ? <ActiveProfileBadge status={apiStatus} compact /> : null}
-                  </div>
-                  {channelSubtitle ? (
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">{channelSubtitle}</p>
+                ) : (
+                  <div className="min-w-0 flex-1" />
+                )}
+                <div className="flex max-w-full flex-col items-stretch gap-2 sm:max-w-none sm:items-end">
+                  {showHeaderRefresh || showTreasuryBadge ? (
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                      {showTreasuryBadge && apiStatus ? (
+                        <TresorSessionBadge
+                          sessionLocked={!!apiStatus.locked}
+                          hasKeys={isMessengerSessionKeysReady(apiStatus)}
+                          actions={vaultBannerActions}
+                        />
+                      ) : null}
+                      {showHeaderRefresh ? (
+                        <button
+                          type="button"
+                          onClick={() => void onRefreshStatus?.()}
+                          className="inline-flex items-center gap-1.5 rounded-md border border-foreground/25 bg-foreground px-3 py-2 text-xs font-bold text-background shadow-sm transition-colors hover:bg-foreground/90"
+                          title="Status, Posteingang und Kontakte neu laden"
+                          aria-label="Aktualisieren"
+                        >
+                          <RefreshCw className="h-4 w-4 shrink-0" aria-hidden />
+                          Aktualisieren
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {showHandbook || onOpenNotes || showSettingsBtn ? (
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      {showHandbook ? <MessengerHandbookLink /> : null}
+                      {onOpenNotes && channelMode === 'notes' ? (
+                        <HeaderToolbarButton
+                          label="Zu Chats"
+                          icon={<StickyNote className="h-4 w-4 shrink-0" aria-hidden />}
+                          onClick={onOpenNotes}
+                          title="Zurück zum Posteingang"
+                        />
+                      ) : null}
+                      {showSettingsBtn ? (
+                        <HeaderToolbarButton
+                          label="Einstellungen"
+                          icon={<Settings className="h-4 w-4 shrink-0" aria-hidden />}
+                          onClick={onOpenSettings}
+                        />
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
               </div>
-              <div className="flex max-w-full flex-col items-stretch gap-2 sm:max-w-none sm:items-end">
-                {showHeaderRefresh || showTreasuryBadge ? (
-                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                    {showHeaderRefresh ? (
-                      <button
-                        type="button"
-                        onClick={() => void onRefreshStatus?.()}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-foreground/25 bg-foreground px-3 py-2 text-xs font-bold text-background shadow-sm transition-colors hover:bg-foreground/90"
-                        title="Status, Posteingang und Kontakte neu laden"
-                        aria-label="Aktualisieren"
-                      >
-                        <RefreshCw className="h-4 w-4 shrink-0" aria-hidden />
-                        Aktualisieren
-                      </button>
-                    ) : null}
-                    {showTreasuryBadge && apiStatus ? (
-                      <TresorSessionBadge
-                        sessionLocked={!!apiStatus.locked}
-                        hasKeys={isMessengerSessionKeysReady(apiStatus)}
-                        actions={vaultBannerActions}
-                      />
-                    ) : null}
-                  </div>
-                ) : null}
-                {showHandbook || onOpenNotes || showSettingsBtn ? (
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    {showHandbook ? <MessengerHandbookLink /> : null}
-                    {onOpenNotes && channelMode === 'notes' ? (
-                      <HeaderToolbarButton
-                        label="Zu Chats"
-                        icon={<StickyNote className="h-4 w-4 shrink-0" aria-hidden />}
-                        onClick={onOpenNotes}
-                        title="Zurück zum Posteingang"
-                      />
-                    ) : null}
-                    {showSettingsBtn ? (
-                      <HeaderToolbarButton
-                        label="Einstellungen"
-                        icon={<Settings className="h-4 w-4 shrink-0" aria-hidden />}
-                        onClick={onOpenSettings}
-                      />
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
             </div>
-          </div>
+          ) : null}
 
           {showSendPathInHeader ? <ChatViewSendPathCompact {...sendPath} className="w-full" /> : null}
 

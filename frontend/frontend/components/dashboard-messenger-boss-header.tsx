@@ -40,6 +40,13 @@ export function DashboardMessengerBossHeader(p: {
             <h1 className="text-lg font-bold tracking-tight text-foreground">{t('brand.morgendrot')}</h1>
             <DashboardRolePill role={p.role} />
             <ChatNetworkBadge />
+            {showVaultBadge ? (
+              <TresorSessionBadge
+                sessionLocked={!!p.sessionLocked}
+                hasKeys={p.hasKeys}
+                actions={p.vaultBannerActions}
+              />
+            ) : null}
             {p.onRefreshStatus ? (
               <button
                 type="button"
@@ -51,13 +58,6 @@ export function DashboardMessengerBossHeader(p: {
                 <RefreshCw className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 Aktualisieren
               </button>
-            ) : null}
-            {showVaultBadge ? (
-              <TresorSessionBadge
-                sessionLocked={!!p.sessionLocked}
-                hasKeys={p.hasKeys}
-                actions={p.vaultBannerActions}
-              />
             ) : null}
           </div>
           <DashboardHeaderAddress address={p.myAddressFull} />

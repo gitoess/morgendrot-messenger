@@ -383,7 +383,7 @@ function MessengerDashboardBody({
                     ? t('views.config')
                     : s.activeView.type === 'einsatzleitung'
                       ? t('views.einsatzleitung')
-                      : featureTitle(s.activeView.type, messengerFeaturesI18n),
+                      : featureTitle(s.activeView.type, messengerFeaturesI18n) ?? 'Nachrichten',
               onBack: s.handleBack,
               onGoHome: s.goHome,
             }}
@@ -419,6 +419,13 @@ function MessengerDashboardBody({
                       : featureTitle(s.activeView.type, messengerFeaturesI18n)}
               </span>
               <div className="ml-auto flex shrink-0 items-center gap-2">
+                {showHomeVaultBadge ? (
+                  <TresorSessionBadge
+                    sessionLocked={vaultSessionLocked}
+                    hasKeys={browserSignerReady}
+                    actions={homeVaultActions}
+                  />
+                ) : null}
                 <button
                   type="button"
                   onClick={() => void s.checkStatus()}
@@ -428,13 +435,6 @@ function MessengerDashboardBody({
                 >
                   Aktualisieren
                 </button>
-                {showHomeVaultBadge ? (
-                  <TresorSessionBadge
-                    sessionLocked={vaultSessionLocked}
-                    hasKeys={browserSignerReady}
-                    actions={homeVaultActions}
-                  />
-                ) : null}
               </div>
             </div>
           </header>
@@ -586,6 +586,13 @@ function MessengerDashboardBody({
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {showHomeVaultBadge ? (
+              <TresorSessionBadge
+                sessionLocked={vaultSessionLocked}
+                hasKeys={browserSignerReady}
+                actions={homeVaultActions}
+              />
+            ) : null}
             <button
               type="button"
               onClick={() => void s.checkStatus()}
@@ -595,13 +602,6 @@ function MessengerDashboardBody({
             >
               Aktualisieren
             </button>
-            {showHomeVaultBadge ? (
-              <TresorSessionBadge
-                sessionLocked={vaultSessionLocked}
-                hasKeys={browserSignerReady}
-                actions={homeVaultActions}
-              />
-            ) : null}
             <div
               className={cn(
                 'flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium',

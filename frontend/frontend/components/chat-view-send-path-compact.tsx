@@ -173,8 +173,8 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
 
   if (!visible) return null
 
-  /** Immer Grid — kein horizontaler Schiebebalken bei schmaler Breite. */
-  const gridLayout = layout !== 'row'
+  /** Immer Grid außer layout=scroll — kein horizontaler Schiebebalken. */
+  const gridLayout = layout !== 'scroll'
 
   const showTelegramPath = Boolean(onComposerDeliveryChange)
   const chainActive = composerDelivery === 'chain'

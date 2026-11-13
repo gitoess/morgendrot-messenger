@@ -8,6 +8,10 @@
 
 Diese Anleitung listet **alle Privacy-/Vault-Funktionen, die heute im Messenger nutzbar sind**, wo du sie findest, und was sie **nicht** sind.
 
+### Galerie ≠ Schlüsselkarte / Zeitkapsel
+
+Unter **On-Chain / NFT** zeigt die **Galerie** nur ImageNFTs mit `AddressOwner = deine Wallet jetzt`. Während Leihe/Escrow oder nach Transfer fehlt das NFT dort — lokal gemerkte Schlüsselkarte und Lease-Zeilen bleiben trotzdem sichtbar. NFT-Gate-Lesen braucht aktuellen Besitz oder eine aktive Borrower-Leihe; „schon geclaimt“ ohne Rückgabe an dich = kein Leserecht.
+
 ---
 
 ## 0. Schnellstart Test (1 Gerät) — in Alltagssprache

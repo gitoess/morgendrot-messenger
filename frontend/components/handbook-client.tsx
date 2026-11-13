@@ -140,7 +140,7 @@ export function HandbookClient() {
               <span className="font-mono">/handbook/{active}</span> prüfen.
             </p>
           ) : body ? (
-            <HandbookMarkdown source={body} />
+            <HandbookMarkdown text={body} />
           ) : null}
         </article>
       </div>

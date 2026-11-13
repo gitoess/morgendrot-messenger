@@ -119,7 +119,7 @@ describe('ChatViewChatHeader (§ H.1a)', () => {
     expect(screen.getByRole('button', { name: /Einstellungen/i })).toBeInTheDocument()
   })
 
-  it('zeigt Aktualisieren neben Tresor wenn onRefreshStatus gesetzt', () => {
+  it('zeigt Aktualisieren rechts neben Tresor wenn onRefreshStatus gesetzt', () => {
     const onRefreshStatus = vi.fn()
     render(
       <ChatViewChatHeader
@@ -145,6 +145,28 @@ describe('ChatViewChatHeader (§ H.1a)', () => {
       />
     )
     expect(screen.queryByRole('button', { name: /^Aktualisieren$/i })).not.toBeInTheDocument()
+  })
+
+  it('blendet Titelzeile aus wenn hideTitleRow', () => {
+    render(
+      <ChatViewChatHeader
+        {...baseHeader({
+          channelMode: 'private',
+          conversationTitle: 'Posteingang Alle',
+          hideTitleRow: true,
+          suppressAppChrome: true,
+          sendPath: {
+            visible: true,
+            channelMode: 'private',
+            encrypted: true,
+            forcedTransport: 'internet',
+            onForcedTransportChange: vi.fn(),
+          },
+        })}
+      />
+    )
+    expect(screen.queryByRole('heading', { name: /^Posteingang Alle$/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Alle$/i })).toBeInTheDocument()
   })
 
   it('warnt bei unsicherer Geräte-Uhr (§ H.6c)', () => {

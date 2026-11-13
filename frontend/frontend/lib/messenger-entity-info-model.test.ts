@@ -61,7 +61,12 @@ describe('messenger-entity-info-model', () => {
 
   it('buildTelegramAlarmInfoSections: Token nur maskiert', () => {
     const sections = buildTelegramAlarmInfoSections({
-      membership: { inviteLink: 'https://t.me/+x', groupChatId: '-1001', label: 'Alarm' },
+      membership: {
+        inviteLink: 'https://t.me/+x',
+        groupChatId: '-1001',
+        label: 'Alarm',
+        confirmedAtMs: 1,
+      },
       integration: {
         enabled: true,
         botTokenConfigured: true,

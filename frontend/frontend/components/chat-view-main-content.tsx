@@ -946,6 +946,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       conversationTitle: chatHeaderContext.title,
       conversationSubtitle: chatHeaderContext.subtitle,
       conversationIcon: chatHeaderContext.icon,
+      /** Mit Sidebar: kein zweiter „Posteingang …“-Titel — Sendepfad bleibt. */
+      hideTitleRow: showConversationSidebar,
       onOpenNotes: onChannelModeChange ? handleSelectSidebarNotes : undefined,
       suppressAppChrome: c.suppressAppChrome === true,
       onRefreshStatus: async () => {
@@ -956,6 +958,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     [
       chatHeaderProps,
       chatHeaderContext,
+      showConversationSidebar,
       onChannelModeChange,
       handleSelectSidebarNotes,
       c.suppressAppChrome,
@@ -1416,7 +1419,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                   query={messengerSearchQuery}
                   onQueryChange={setMessengerSearchQuery}
                   activeSendPath={activeSendPath}
-      iotaPathFocus={iotaPathFocus}
                   onSelectContact={handleMobileSelectContact}
                   onSelectGroup={handleMobileSelectGroup}
                   onSelectTelegramAlarmGroup={() => {
@@ -1459,7 +1461,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                   query={messengerSearchQuery}
                   onQueryChange={setMessengerSearchQuery}
                   activeSendPath={activeSendPath}
-                  iotaPathFocus={iotaPathFocus}
                   placeholder="Posteingang durchsuchen…"
                   onSelectContact={handleMobileSelectContact}
                   onSelectGroup={handleMobileSelectGroup}
@@ -1524,7 +1525,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           />
         </div>
       ) : (
-      <div className={isNativeMobile ? 'space-y-3' : 'space-y-6'}>
+      <div className={isNativeMobile ? 'space-y-3' : showConversationSidebar ? 'space-y-3' : 'space-y-6'}>
         <ChatViewChatHeader
           {...(isNativeMobile ? nativeHeaderProps : mergedChatHeaderProps)}
         />
@@ -1534,7 +1535,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         ) : null}
 
         {showConversationSidebar ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             <ChatViewMessengerSearch
               directory={directory}
               partnerOptions={inboxPartnerOptions}
@@ -1543,14 +1544,13 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               query={messengerSearchQuery}
               onQueryChange={setMessengerSearchQuery}
               activeSendPath={activeSendPath}
-      iotaPathFocus={iotaPathFocus}
               onSelectContact={handleSelectSidebarContact}
               onSelectGroup={handleSelectSidebarGroup}
               onSelectTelegramAlarmGroup={handleSelectSidebarTelegramAlarm}
               onSelectMessageHit={handleSelectMessageHit}
               {...sidebarHandshakeProps}
             />
-            <div className="grid gap-4 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-start">
+            <div className="grid gap-3 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-stretch">
             <ChatViewContactSidebar
               className="hidden lg:flex"
               directory={directory}

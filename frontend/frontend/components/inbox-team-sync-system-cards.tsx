@@ -206,7 +206,8 @@ export function InboxTeamSyncSystemCards(p: {
       if (
         tg &&
         tg.kind === 'invite_link' &&
-        shouldShowTelegramAlarmGroupInvite({ tgSeq: tg.tgSeq, inviteLink: tg.inviteLink }) &&
+        Boolean(tg.inviteLink) &&
+        shouldShowTelegramAlarmGroupInvite({ tgSeq: tg.tgSeq, inviteLink: tg.inviteLink! }) &&
         !seenTg.has(tg.tgSeq)
       ) {
         seenTg.add(tg.tgSeq)
