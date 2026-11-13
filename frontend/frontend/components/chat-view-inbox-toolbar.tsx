@@ -240,10 +240,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
   const [exportHistoryOpen, setExportHistoryOpen] = useState(false)
   const [pkgToolsOpen, setPkgToolsOpen] = useState(false)
   const [hashToolsOpen, setHashToolsOpen] = useState(false)
-  const filterArmedCount =
-    (directionFilter !== 'all' ? 1 : 0) +
-    (showSourceFilterChips && sourceFilter !== 'all' ? 1 : 0) +
-    (showPartnerControls ? 1 : 0)
+  const filterArmedCount = (directionFilter !== 'all' ? 1 : 0) + (showPartnerControls ? 1 : 0)
   const pkgImportDisabled = morgPkgImportDisabled(apiStatus)
   const pkgDeviceDisabled =
     morgPkgDeviceBusy || apiStatus?.locked === true || !(apiStatus?.connectedAddresses?.length ?? 0)
@@ -703,61 +700,39 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             {inboxSelectMode ? 'Auswahl beenden' : 'Auswahl'}
           </button>
           {onDirectionFilterChange ? (
-            <div
-              className="inline-flex flex-wrap items-center gap-1 rounded-md border border-border bg-background p-0.5"
-              role="group"
-              aria-label="Richtung in der Liste"
-            >
-              {(
-                [
-                  ['all', 'Beides'],
-                  ['in', 'Eingang'],
-                  ['out', 'Ausgang'],
-                ] as const
-              ).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => onDirectionFilterChange(id)}
-                  className={cn(
-                    'rounded px-2 py-1 text-xs font-medium transition-colors',
-                    directionFilter === id
-                      ? 'bg-primary/15 text-primary'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          ) : null}
-          {showSourceFilterChips && onSourceFilterChange && sourceFilterOptions.length > 0 ? (
-            <div
-              className="inline-flex flex-wrap items-center gap-1"
-              role="group"
-              aria-label="Quelle in der Liste"
-            >
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Quelle
+            <div className="inline-flex flex-wrap items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <Filter className="h-3.5 w-3.5" aria-hidden />
+                Filter
               </span>
-              {sourceFilterOptions.map((o) => (
-                <button
-                  key={o.id}
-                  type="button"
-                  disabled={o.disabled}
-                  title={o.title}
-                  onClick={() => onSourceFilterChange(o.id)}
-                  className={cn(
-                    'rounded-md border px-2 py-1 text-xs font-medium transition-colors',
-                    o.disabled && 'cursor-not-allowed opacity-40',
-                    sourceFilter === o.id && !o.disabled
-                      ? 'border-primary bg-primary/15 text-primary'
-                      : 'border-border bg-background text-muted-foreground hover:bg-muted'
-                  )}
-                >
-                  {o.label}
-                </button>
-              ))}
+              <div
+                className="inline-flex flex-wrap items-center gap-1 rounded-md border border-border bg-background p-0.5"
+                role="group"
+                aria-label="Richtung in der Liste"
+                title="Welche Nachrichten in der Liste — nicht der Sendemodus"
+              >
+                {(
+                  [
+                    ['all', 'Beides'],
+                    ['in', 'Eingang'],
+                    ['out', 'Ausgang'],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => onDirectionFilterChange(id)}
+                    className={cn(
+                      'rounded px-2.5 py-1 text-xs font-medium transition-colors',
+                      directionFilter === id
+                        ? 'bg-primary/15 text-primary'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
           ) : null}
           {showPartnerFilterMenu ? (
@@ -770,23 +745,16 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   ? 'border-primary bg-primary/15 text-primary'
                   : 'border-border hover:bg-muted'
               )}
-              title="Partner-Schnellliste unter der Leiste ein- oder ausblenden"
+              title="Partner-Schnellliste unter der Leiste"
             >
-              <Filter className="h-3.5 w-3.5 shrink-0" aria-hidden />
               Partner
             </button>
           ) : null}
-          {directionFilter !== 'all' || (showSourceFilterChips && sourceFilter !== 'all') ? (
+          {directionFilter !== 'all' ? (
             <span className="text-[11px] text-muted-foreground" role="status">
-              Liste:{' '}
-              {directionFilter === 'in'
-                ? 'nur Eingang'
-                : directionFilter === 'out'
-                  ? 'nur Ausgang'
-                  : 'Beides'}
-              {showSourceFilterChips && sourceFilter !== 'all'
-                ? ` · Quelle ${sourceFilterOptions.find((o) => o.id === sourceFilter)?.label ?? sourceFilter}`
-                : ''}
+              {directionFilter === 'in' ? 'Nur empfangene Zeilen' : 'Nur gesendete Zeilen'}
+              {' · '}
+              Selbst-an-dich erscheint in beiden
             </span>
           ) : null}
           {hasHiddenMessages ? (

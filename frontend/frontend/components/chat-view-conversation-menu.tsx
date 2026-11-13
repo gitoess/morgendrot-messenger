@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { Download, Eraser, Flame, FlaskConical, Info, KeyRound, MoreVertical, Settings2, Users } from 'lucide-react'
-import { ChatViewEncryptionModeToggle } from '@/frontend/components/chat-view-encryption-mode-toggle'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import {
   RATCHET_EXPERIMENT_CHANGED,
   readRatchetExperimentEnabled,
@@ -39,11 +37,6 @@ export type ChatViewConversationMenuProps = {
   }
   onManageGroup?: () => void
   onCreateGroup?: () => void
-  encryptionToggle?: {
-    encrypted: boolean
-    onEncryptedChange: (v: boolean) => void
-    forcedTransport?: ForcedTransport
-  }
   /**
    * Chain-Sicherheit (Burn-on-read, Schlüssel erneuern, Double Ratchet).
    * Aus bei Funk/Telegram — gehört nicht in den Posteingang-„Optionen“-Menü.
@@ -53,7 +46,6 @@ export type ChatViewConversationMenuProps = {
 
 /** Telegram-ähnliches ⋮-Menü — Kernpunkte immer sichtbar (disabled wenn nicht anwendbar). */
 export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
-  const enc = p.encryptionToggle
   const burn = p.burnOnRead
   const chainSecurity = p.showChainSecurityTools !== false
   const hasGroupActions = Boolean(p.onManageGroup || p.onCreateGroup)
@@ -86,37 +78,14 @@ export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
           >
             <p className="truncate text-sm font-semibold text-foreground">{p.title}</p>
             {p.subtitle ? <p className="truncate text-[11px] text-muted-foreground">{p.subtitle}</p> : null}
-            {enc ? (
-              <p className="truncate text-[11px] text-muted-foreground">
-                {enc.forcedTransport === 'internet'
-                  ? `Nächste Nachricht: ${enc.encrypted ? 'verschlüsselt' : 'Klartext'}`
-                  : 'Dieser Pfad sendet Klartext. Verschlüsseln geht auf Online.'}
-              </p>
-            ) : null}
           </button>
         ) : (
           <>
             <p className="truncate text-sm font-semibold text-foreground">{p.title}</p>
             {p.subtitle ? <p className="truncate text-[11px] text-muted-foreground">{p.subtitle}</p> : null}
-            {enc ? (
-              <p className="truncate text-[11px] text-muted-foreground">
-                {enc.forcedTransport === 'internet'
-                  ? `Nächste Nachricht: ${enc.encrypted ? 'verschlüsselt' : 'Klartext'}`
-                  : 'Dieser Pfad sendet Klartext. Verschlüsseln geht auf Online.'}
-              </p>
-            ) : null}
           </>
         )}
       </div>
-      {enc ? (
-        <ChatViewEncryptionModeToggle
-          compact
-          encrypted={enc.encrypted}
-          forcedTransport={enc.forcedTransport ?? 'internet'}
-          onEncryptedChange={enc.onEncryptedChange}
-          className="shrink-0 shadow-sm"
-        />
-      ) : null}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Chat-Optionen">

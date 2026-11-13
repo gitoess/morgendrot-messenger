@@ -1019,12 +1019,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           onEnabledChange: setBurnOnReadEnabled,
         }
       : undefined
-    const encToggle = {
-      encrypted,
-      onEncryptedChange: setEncrypted,
-      forcedTransport,
-    }
-
     if (onPinnwandTab) {
       return {
         title: pinnwandSidebarLabel(role, apiStatus),
@@ -1049,7 +1043,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         onViewInfo: hasActive ? handleOpenGroupInfo : undefined,
         onManageGroup: openGroupSettings,
         onCreateGroup: openGroupSettings,
-        encryptionToggle: encToggle,
         onExportHistory: exportHistory,
         onClearHistory: clearHistory,
         burnOnRead: burnToggle,
@@ -1108,7 +1101,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         renewEncryptionHint:
           'Session-Epoch erhöhen — Forward Secrecy ab Rotation (nicht pro Nachricht). Alte Nachrichten bleiben lesbar.',
         burnOnRead: burnToggle,
-        encryptionToggle: encToggle,
         showChainSecurityTools: chainSecurity,
       }
     }
@@ -1128,9 +1120,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     openGroupSettings,
     handleOpenGroupInfo,
     handleOpenTelegramAlarmInfo,
-    encrypted,
-    setEncrypted,
-    forcedTransport,
     activeSendPath,
     iotaPathFocus,
     inboxPartnerFiltersArmed,

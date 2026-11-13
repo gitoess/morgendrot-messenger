@@ -403,7 +403,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       if (inboxConversationGroupId) {
         const group = readMessengerGroups().find((g) => g.id === inboxConversationGroupId)
         if (group) {
-          rows = filterInboxMessagesByPartnerAndDirection(rows, myAddress, null, inboxDirectionFilter, {
+          rows = filterInboxMessagesByPartnerAndDirection(rows, myAddress, null, 'all', {
             groupMemberAddresses: group.memberAddresses,
             teamMailboxObjectId: group.teamMailboxObjectId,
           })
@@ -414,19 +414,18 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
         const key = inboxPartnerKey.trim().toLowerCase()
         const meNorm = myAddress.trim().toLowerCase()
         if (meNorm && key === meNorm) {
-          rows = filterInboxMessagesByPartnerAndDirection(rows, myAddress, meNorm, inboxDirectionFilter)
+          rows = filterInboxMessagesByPartnerAndDirection(rows, myAddress, meNorm, 'all')
         } else {
           const contactMatch = resolveContactConversationMatch(key, contactDirectory)
-          rows = filterInboxMessagesForContactConversation(rows, myAddress, key, inboxDirectionFilter, {
+          rows = filterInboxMessagesForContactConversation(rows, myAddress, key, 'all', {
             contactMatch,
           })
         }
       }
-    } else if (inboxDirectionFilter !== 'all') {
-      rows = filterInboxMessagesByPartnerAndDirection(rows, myAddress, null, inboxDirectionFilter)
     }
-    if (inboxSourceFilter !== 'all') {
-      rows = rows.filter((m) => messageMatchesInboxSourceFilter(m, inboxSourceFilter, sourceFilterCtx))
+    /** Richtung immer, unabhängig von Partner-Schnellliste. Quelle steuert der Sendepfad. */
+    if (inboxDirectionFilter !== 'all') {
+      rows = filterInboxMessagesByPartnerAndDirection(rows, myAddress, null, inboxDirectionFilter)
     }
     return rows
   }, [
@@ -434,7 +433,6 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     myAddress,
     inboxPartnerKey,
     inboxDirectionFilter,
-    inboxSourceFilter,
     inboxPartnerFiltersArmed,
     inboxConversationGroupId,
     sourceFilterCtx,

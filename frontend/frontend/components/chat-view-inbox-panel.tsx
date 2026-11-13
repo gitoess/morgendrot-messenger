@@ -14,12 +14,7 @@ import {
 import { ChatViewInboxToolbar } from '@/frontend/components/chat-view-inbox-toolbar'
 import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partner-filter'
 import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
-import { type InboxSourceFilter, inboxSourceFilterLabel } from '@/frontend/lib/inbox-source-filter'
-import {
-  inboxSourceFilterDeniedReason,
-  inboxSourceFilterReadAllowed,
-} from '@/frontend/lib/messenger-capability-gates'
-import { inboxToolbarToolsForSendPath } from '@/frontend/lib/send-path-inbox-source-filter'
+import type { InboxSourceFilter } from '@/frontend/lib/inbox-source-filter'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import { ChatViewInboxOutgoingHandshakeRequests } from '@/frontend/components/chat-view-inbox-outgoing-handshake-requests'
 import { ChatViewInboxHandshakeRequests } from '@/frontend/components/chat-view-inbox-handshake-requests'
@@ -255,27 +250,6 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         onTogglePartnerControls={() => setInboxPartnerFiltersArmed(!inboxPartnerFiltersArmed)}
         directionFilter={inboxDirectionFilter}
         onDirectionFilterChange={setInboxDirectionFilter}
-        sourceFilter={inboxSourceFilter}
-        onSourceFilterChange={(id) => {
-          setInboxSourceFilter(id as InboxSourceFilter)
-        }}
-        showSourceFilterChips={
-          (toolbarProps.pathTools ?? inboxToolbarToolsForSendPath({ activeSendPath: 'internet' }))
-            .showKanalFilterToggle
-        }
-        sourceFilterOptions={(
-          ['all', 'mailbox', 'group', 'telegram', 'funk', 'lagebild'] as InboxSourceFilter[]
-        )
-          .filter((id) => id !== 'lagebild' || pinnwandOverviewConfigured)
-          .map((id) => {
-            const ok = inboxSourceFilterReadAllowed(apiStatus, id)
-            return {
-              id,
-              label: inboxSourceFilterLabel(id),
-              disabled: !ok,
-              title: !ok ? inboxSourceFilterDeniedReason(apiStatus, id) ?? undefined : undefined,
-            }
-          })}
         showPartnerFilterMenu={!hidePartnerStrip}
         onBulkHideSelected={onBulkHideSelected}
         onBulkPurgeSelected={() => void onBulkPurgeSelected()}

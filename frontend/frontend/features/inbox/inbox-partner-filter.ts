@@ -137,6 +137,7 @@ export function filterInboxMessagesByPartnerAndDirection(
       return norm(cpTg) === norm(partnerAddress)
     }
     if (incomingMeshRadio) {
+      if (direction === 'out' && !selfToSelf) return false
       if (groupNorms) {
         const cpMesh = messageCounterpartyAddress(m, myAddress)
         if (cpMesh && groupNorms.has(norm(cpMesh))) return true

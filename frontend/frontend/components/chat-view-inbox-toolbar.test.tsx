@@ -125,13 +125,14 @@ describe('ChatViewInboxToolbar actions (§ H.1a)', () => {
     expect(updater(false)).toBe(true)
   })
 
-  it('zeigt Richtung Beides/Eingang/Ausgang und Partner', () => {
+  it('zeigt Filter Beides/Eingang/Ausgang und Partner, keine Quelle', () => {
     render(<ChatViewInboxToolbar {...makeProps()} />)
+    expect(screen.getByText(/^Filter$/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^Beides$/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^Eingang$/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^Ausgang$/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^Partner$/i })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Posteingang \(Inhalt\)/i })).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Quelle$/i)).not.toBeInTheDocument()
   })
 
   it('Richtung-Klick filtert die Liste', () => {
