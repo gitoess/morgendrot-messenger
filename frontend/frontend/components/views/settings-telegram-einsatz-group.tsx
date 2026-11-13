@@ -293,9 +293,6 @@ export function SettingsTelegramEinsatzGroup(p: SettingsTelegramEinsatzGroupProp
                 {busy === 'drain' ? 'Queue…' : `Queue senden (${queueCount})`}
               </Button>
             ) : null}
-            <Button type="button" size="sm" variant="outline" disabled={!p.backendOnline} onClick={() => void load()}>
-              Neu laden
-            </Button>
           </div>
 
           {feedback ? (

@@ -159,7 +159,7 @@ export function SettingsView({
 
       <SettingsCategoryNav active={activeCategory} onSelect={selectCategory} categories={categories} />
 
-      <SettingsCollapsiblePanel open={activeCategory === 'general'} title="Allgemein" icon={<Globe className="h-5 w-5" />}>
+      <SettingsCollapsiblePanel open={activeCategory === 'general'} title="Allgemein" icon={<Globe className="h-5 w-5" />} onRefresh={() => void loadStatus()}>
         <SettingsLanguageSection />
         <SettingsOnboardingSection apiStatus={advancedIotaStatus} />
         <SettingsAppearanceSection />
@@ -183,7 +183,7 @@ export function SettingsView({
         ) : null}
       </SettingsCollapsiblePanel>
 
-      <SettingsCollapsiblePanel open={activeCategory === 'iota'} title="IOTA (Online / Chain)" icon={<Send className="h-5 w-5" />}>
+      <SettingsCollapsiblePanel open={activeCategory === 'iota'} title="IOTA (Online / Chain)" icon={<Send className="h-5 w-5" />} onRefresh={() => void loadStatus()}>
         {managedNetwork ? (
           <SettingsNetworkProfilesSection
             apiStatus={advancedIotaStatus}
@@ -272,11 +272,11 @@ export function SettingsView({
         ) : null}
       </SettingsCollapsiblePanel>
 
-      <SettingsCollapsiblePanel open={activeCategory === 'funk'} title="Funk (Meshtastic)" icon={<Radio className="h-5 w-5" />}>
+      <SettingsCollapsiblePanel open={activeCategory === 'funk'} title="Funk (Meshtastic)" icon={<Radio className="h-5 w-5" />} onRefresh={() => void loadStatus()}>
         <SettingsFunkSection apiStatus={advancedIotaStatus} />
       </SettingsCollapsiblePanel>
 
-      <SettingsCollapsiblePanel open={activeCategory === 'telegram'} title="Telegram" icon={<Send className="h-5 w-5" />}>
+      <SettingsCollapsiblePanel open={activeCategory === 'telegram'} title="Telegram" icon={<Send className="h-5 w-5" />} onRefresh={() => void loadStatus()}>
         {managedNetwork ? (
           <>
             <SettingsTelegramIntegration backendOnline={backendOnline} />
@@ -296,13 +296,20 @@ export function SettingsView({
         )}
       </SettingsCollapsiblePanel>
 
-      <SettingsCollapsiblePanel open={activeCategory === 'security'} title="Sicherheit & Notfall" icon={<Shield className="h-5 w-5" />}>
+      <SettingsCollapsiblePanel open={activeCategory === 'security'} title="Sicherheit & Notfall" icon={<Shield className="h-5 w-5" />} onRefresh={() => void loadStatus()}>
         <SettingsTresorMapCard />
         <SettingsVaultPasswordSection vaultLocked={vaultLocked} />
         <SettingsVaultBackupSection vaultLocked={vaultLocked} onRequestVaultUnlock={onRequestVaultUnlock} />
         {backendOnline ? (
           <div className="rounded-xl border border-border bg-card p-4">
-            <ChatViewShadowSweep />
+            <ChatViewShadowSweep
+              sessionAddress={(
+                advancedIotaStatus?.myAddressFull ||
+                advancedIotaStatus?.myAddress ||
+                status?.address ||
+                ''
+              ).trim()}
+            />
           </div>
         ) : null}
         <SettingsEmergencyPurgeSection />

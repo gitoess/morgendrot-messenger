@@ -1208,9 +1208,12 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         if (!result.ok) return { ok: false, message: result.error };
                         return {
                             ok: true,
-                            message: `Sweep OK. Main ${result.mainAddress}. Secret Key jetzt kopieren (einmalig). TX ${result.digest ?? '—'}.`,
+                            message: result.createdNewMain
+                                ? `Sweep OK. Neue Main ${result.mainAddress}. Secret Key jetzt kopieren (einmalig). TX ${result.digest ?? '—'}.`
+                                : `Sweep OK auf bestehende Adresse ${result.mainAddress}. Kein neues Secret. TX ${result.digest ?? '—'}.`,
                             shadowAddress: result.shadowAddress,
                             mainAddress: result.mainAddress,
+                            createdNewMain: result.createdNewMain,
                             mainSecretKey: result.mainSecretKey,
                             digest: result.digest,
                             transferredObjectCount: result.transferredObjectCount,

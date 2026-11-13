@@ -1,6 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { SettingsCategoryId } from '@/frontend/lib/settings-navigation'
@@ -47,10 +48,12 @@ type SettingsCollapsiblePanelProps = {
   title: string
   icon?: ReactNode
   handbookAnchor?: string
+  onRefresh?: () => void | Promise<void>
   children: ReactNode
 }
 
 export function SettingsCollapsiblePanel(p: SettingsCollapsiblePanelProps) {
+  const [refreshing, setRefreshing] = useState(false)
   if (!p.open) return null
   return (
     <section className="space-y-4 rounded-xl border border-border bg-card/40 p-4">
@@ -61,6 +64,19 @@ export function SettingsCollapsiblePanel(p: SettingsCollapsiblePanelProps) {
           </div>
         ) : null}
         <h3 className="text-base font-semibold text-foreground">{p.title}</h3>
+        {p.onRefresh ? (
+          <button
+            type="button"
+            className="ml-auto text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+            disabled={refreshing}
+            onClick={() => {
+              setRefreshing(true)
+              Promise.resolve(p.onRefresh?.()).finally(() => setRefreshing(false))
+            }}
+          >
+            {refreshing ? '…' : 'Aktualisieren'}
+          </button>
+        ) : null}
       </div>
       <div className="space-y-4">{p.children}</div>
     </section>

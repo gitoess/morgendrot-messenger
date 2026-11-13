@@ -577,14 +577,23 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
             });
             req.on('end', async () => {
                 try {
-                    const data = JSON.parse(body || '{}') as { shadowMnemonic?: string; mnemonic?: string };
+                    const data = JSON.parse(body || '{}') as {
+                        shadowMnemonic?: string;
+                        mnemonic?: string;
+                        destinationAddress?: string;
+                    };
                     const mnemonic = String(data.shadowMnemonic ?? data.mnemonic ?? '').trim();
                     if (!mnemonic) {
                         sendJson(res, 400, { ok: false, error: 'shadowMnemonic fehlt (12+ Wörter).' }, cors);
                         return;
                     }
+                    const destinationAddress = String(data.destinationAddress || '').trim();
                     const { executeShadowSweep } = await import('./shadow-sweep.js');
-                    const result = await executeShadowSweep(getClient(), mnemonic);
+                    const result = await executeShadowSweep(
+                        getClient(),
+                        mnemonic,
+                        destinationAddress ? { destinationAddress } : undefined
+                    );
                     if (!result.ok) {
                         sendJson(res, 400, result, cors);
                         return;
@@ -594,8 +603,9 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         200,
                         {
                             ...result,
-                            securityNote:
-                                'Mnemonic und Secret nur über localhost/API auf 127.0.0.1 senden. Secret sofort im Tresor sichern; nicht erneut abrufbar.',
+                            securityNote: result.createdNewMain
+                                ? 'Neues Main-Secret nur über localhost. Sofort sichern; nicht erneut abrufbar. Denselben Seed nochmal sweepen erzeugt eine weitere neue Adresse und leert die Quelle.'
+                                : 'Sweep auf eine bestehende Adresse. Kein neues Secret. Die Sitzung bleibt auf der bisherigen MY_ADDRESS, bis du das Ziel-Wallet entsperrst.',
                         },
                         cors
                     );
