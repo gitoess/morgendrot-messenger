@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Settings, Copy, Check, KeyRound, Radio, Send, Globe, Shield } from 'lucide-react'
+import { Settings, Copy, Check, KeyRound, Radio, Send, Globe, Shield, BookOpen } from 'lucide-react'
+import Link from 'next/link'
 import { Switch } from '@/components/ui/switch'
 import {
   getStatus,
@@ -162,6 +163,23 @@ export function SettingsView({
       <div className="min-w-0 space-y-4">
 
       <SettingsCollapsiblePanel open={activeCategory === 'general'} title="Allgemein" icon={<Globe className="h-5 w-5" />} onRefresh={() => void loadStatus()}>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h4 className="font-semibold text-foreground">Handbuch</h4>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Anleitung zu Chat, Tresor und Einstellungen — nicht am Sendepfad.
+              </p>
+            </div>
+            <Link
+              href="/handbook?file=MESSENGER-CHAT-HANDBUCH.md"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+            >
+              <BookOpen className="h-4 w-4 shrink-0" aria-hidden />
+              Öffnen
+            </Link>
+          </div>
+        </div>
         <SettingsLanguageSection />
         <SettingsOnboardingSection apiStatus={advancedIotaStatus} />
         <SettingsAppearanceSection />

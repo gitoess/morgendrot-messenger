@@ -320,11 +320,16 @@ export function ProjektDashboard() {
         {!s.locked ? (
           <div className="mb-6 grid gap-4 grid-cols-1">
             <DashboardIotaTransferCard
+              myAddressFull={s.apiSnapshot?.myAddressFull}
               walletNativeIotaBalance={s.apiSnapshot?.walletNativeIotaBalance ?? undefined}
               walletNativeIotaBalanceFetchFailed={s.apiSnapshot?.walletNativeIotaBalanceFetchFailed}
               hasValidMyAddressForBalance={s.hasValidMyAddressForBalance}
               onRefreshStatus={s.checkStatus}
               addressSuggestions={s.dashboardTransferAddressSuggestions}
+              mailboxIds={[
+                ...(s.apiSnapshot?.mailboxId ? [s.apiSnapshot.mailboxId] : []),
+                ...(s.apiSnapshot?.inboxUnionMailboxIds ?? []),
+              ]}
             />
           </div>
         ) : null}

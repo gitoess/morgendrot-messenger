@@ -1,7 +1,8 @@
 'use client'
 
 /**
- * Schnellfilter: Partner-Chips, Kanal (Eingang/Ausgang + Quelle), optional Inhalt (Klartext/Verschlüsselt).
+ * Schnellfilter: Partner-Chips und Kanal (Eingang/Ausgang + Quelle).
+ * Verschlüsselt/Klartext ist nur noch der Sendeschalter im Chat — kein Listenfilter.
  * Filter wirken nur wenn die jeweilige Toolbar-Sektion eingeschaltet ist (armed).
  */
 

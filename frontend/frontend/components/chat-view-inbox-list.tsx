@@ -104,8 +104,6 @@ export type ChatViewInboxListProps = InboxFeedReadPort & {
   /** GET /api/status derzeit nicht erreichbar (zusätzlicher Hinweis bei leerem Posteingang). */
   basisUnreachable?: boolean
   inboxRows: ChatInboxRow[]
-  /** Badge „Verschlüsselt“ / „Klartext“ filtert die Liste, sendet nicht. */
-  onFilterProtection?: (kind: 'encrypted' | 'plaintext') => void
   /** Kontaktverzeichnis für Anzeigenamen neben 0x… */
   contactDirectory: Record<string, ContactMeshEntryClient>
   isMeshVerifiedForAddress: (address: string) => boolean
@@ -154,7 +152,6 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
     basisUnreachable = false,
     messages,
     inboxRows,
-    onFilterProtection,
     myAddress,
     contactDirectory,
     isMeshVerifiedForAddress,
@@ -453,33 +450,13 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     }
                     if (row.msg.encrypted) {
                       return (
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-0.5 rounded-full border border-emerald-600/30 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-700 hover:bg-emerald-500/25 dark:text-emerald-400"
-                          title="Nur verschlüsselte Zeilen in der Liste zeigen"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onFilterProtection?.('encrypted')
-                          }}
+                        <span
+                          className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400"
+                          title="Diese Nachricht ist verschlüsselt. Ob du verschlüsselt sendest, stellst du im Chat-Kopf ein."
                         >
                           <Lock className="h-3 w-3" aria-hidden />
                           Verschlüsselt
-                        </button>
-                      )
-                    }
-                    if (onFilterProtection) {
-                      return (
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-0.5 rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-medium text-muted-foreground hover:bg-muted"
-                          title="Nur Klartext-Zeilen in der Liste zeigen"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onFilterProtection('plaintext')
-                          }}
-                        >
-                          Klartext
-                        </button>
+                        </span>
                       )
                     }
                     return null

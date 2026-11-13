@@ -46,6 +46,8 @@ export type DashboardIotaTransferCardProps = {
   hasValidMyAddressForBalance?: boolean
   onRefreshStatus?: () => void | Promise<void>
   addressSuggestions?: string[]
+  /** Aktive Chat-Mailboxen (Server/Team/Privat) — nur Anzeige beim Empfangen. */
+  mailboxIds?: string[]
 }
 
 export function DashboardIotaTransferCard({
@@ -56,6 +58,7 @@ export function DashboardIotaTransferCard({
   hasValidMyAddressForBalance = false,
   onRefreshStatus,
   addressSuggestions = [],
+  mailboxIds = [],
 }: DashboardIotaTransferCardProps) {
   const { t } = useAppTranslation('dashboard')
   const [transferOpen, setTransferOpen] = useState(!compact)
@@ -265,6 +268,9 @@ export function DashboardIotaTransferCard({
         )}
         {addrOk ? (
           <div className="space-y-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Wallet — Coins hierher
+            </p>
             <p className="break-all font-mono text-[11px] leading-relaxed text-foreground">{myAddress}</p>
             <button
               type="button"
@@ -276,6 +282,27 @@ export function DashboardIotaTransferCard({
             </button>
           </div>
         ) : null}
+        {(() => {
+          const ids = [...new Set(mailboxIds.map((id) => id.trim()).filter((id) => /^0x[a-fA-F0-9]{64}$/i.test(id)))]
+          if (ids.length === 0) return null
+          return (
+            <div className="space-y-2 border-t border-border pt-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Chat-Mailboxen — Nachrichten, keine Coins
+              </p>
+              <ul className="space-y-1.5">
+                {ids.map((id) => (
+                  <li key={id} className="break-all font-mono text-[10px] text-muted-foreground">
+                    {id}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-[11px] text-muted-foreground">
+                Coins gehören auf die Wallet-Adresse oben. Chat läuft über die Mailbox-Objekt-IDs.
+              </p>
+            </div>
+          )
+        })()}
       </DialogContent>
     </Dialog>
   )

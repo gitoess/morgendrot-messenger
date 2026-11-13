@@ -716,6 +716,10 @@ function MessengerDashboardBody({
               hasValidMyAddressForBalance={s.hasValidMyAddressForBalance}
               onRefreshStatus={s.checkStatus}
               addressSuggestions={s.dashboardTransferAddressSuggestions}
+              mailboxIds={[
+                ...(s.apiSnapshot?.mailboxId ? [s.apiSnapshot.mailboxId] : []),
+                ...(s.apiSnapshot?.inboxUnionMailboxIds ?? []),
+              ]}
             />
             <DashboardIotaActivityCard />
           </div>

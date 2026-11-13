@@ -29,6 +29,10 @@ export function DashboardMessengerBossHome(p: {
           hasValidMyAddressForBalance={p.hasValidMyAddressForBalance}
           onRefreshStatus={p.onRefreshStatus}
           addressSuggestions={p.addressSuggestions}
+          mailboxIds={[
+            ...(p.apiSnapshot?.mailboxId ? [p.apiSnapshot.mailboxId] : []),
+            ...(p.apiSnapshot?.inboxUnionMailboxIds ?? []),
+          ]}
         />
         <DashboardIotaActivityCard compact />
       </div>

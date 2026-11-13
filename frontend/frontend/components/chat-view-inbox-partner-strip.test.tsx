@@ -31,11 +31,10 @@ function makeProps(over: Partial<ChatViewInboxPartnerStripProps> = {}): ChatView
 }
 
 describe('ChatViewInboxPartnerStrip (§ H.1a)', () => {
-  it('schaltet Wire-Filter um', () => {
-    const onWireFilterChange = vi.fn()
-    render(<ChatViewInboxPartnerStrip {...makeProps({ onWireFilterChange })} />)
-    fireEvent.click(screen.getByRole('button', { name: /^Verschlüsselte$/i }))
-    expect(onWireFilterChange).toHaveBeenCalledWith('encrypted')
+  it('zeigt keinen Inhalt-Filter Verschlüsselt/Klartext mehr', () => {
+    render(<ChatViewInboxPartnerStrip {...makeProps({ showWireSection: false })} />)
+    expect(screen.queryByRole('button', { name: /^Verschlüsselte$/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /^Klartext$/i })).toBeNull()
   })
 
   it('schaltet Richtung Eingang/Ausgang', () => {

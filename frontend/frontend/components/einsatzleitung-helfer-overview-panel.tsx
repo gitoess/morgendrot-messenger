@@ -27,7 +27,7 @@ export function EinsatzleitungHelferOverviewPanel(p: {
       <EinsatzleitungTeamRosterPanel apiStatus={p.apiStatus} contactDirectory={p.contactDirectory} />
       <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
         <FileJson className="h-3 w-3" aria-hidden />
-        Funk-/Telegram-IDs: Team-Update oder manuell im Telefonbuch — verteilen unter „Team einrichten“.
+        Funk-/Telegram-IDs: Team-Update oder manuell im Telefonbuch — verteilen unter „Helfer-Geräte einrichten“.
       </p>
     </div>
   )

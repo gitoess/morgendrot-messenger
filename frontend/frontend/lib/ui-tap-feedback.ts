@@ -13,6 +13,7 @@ import {
 let sharedCtx: AudioContext | null = null
 let installed = false
 let lastClickAt = 0
+let lastHoverToneAt = 0
 let hoverTarget: Element | null = null
 const liveOscillators: OscillatorNode[] = []
 
@@ -244,6 +245,11 @@ function applyHoverMagnet(el: Element): void {
   clearHoverMagnet()
   hoverTarget = el
   el.classList.add('ui-magnet-hover')
+  const now = Date.now()
+  if (now - lastHoverToneAt > 220) {
+    lastHoverToneAt = now
+    playTapClick('hover')
+  }
 }
 
 export function ensureUiTapFeedbackInstalled(): void {

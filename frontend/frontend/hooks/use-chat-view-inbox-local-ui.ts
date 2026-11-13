@@ -37,7 +37,7 @@ import {
 } from '@/frontend/features/inbox/inbox-partner-filter'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import type { Message } from '@/frontend/lib/types'
-import { messageMatchesInboxWireFilter, type InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
+import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
 import {
   messageMatchesInboxSourceFilter,
   type InboxSourceFilter,
@@ -444,10 +444,8 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     sendPathInboxSourceFilter,
   ])
 
-  const wireFilteredMessages = useMemo(() => {
-    if (!inboxWireFiltersArmed || inboxWireFilter === 'all') return partnerFilteredMessages
-    return partnerFilteredMessages.filter((m) => messageMatchesInboxWireFilter(m, inboxWireFilter))
-  }, [partnerFilteredMessages, inboxWireFilter, inboxWireFiltersArmed])
+  /** Inhalt Verschlüsselt/Klartext ist kein Listenfilter mehr — nur noch Sendemodus. */
+  const wireFilteredMessages = useMemo(() => partnerFilteredMessages, [partnerFilteredMessages])
 
   useEffect(() => {
     setPartnerLastSeenMap(readPartnerLastSeenMap(inboxScopeKey(myAddress)))
@@ -853,20 +851,6 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     } else if (inboxChannelFiltersArmed && inboxSourceFilter !== 'all') {
       reasons.push(`Quelle „${inboxSourceFilter}“`)
     }
-    if (inboxWireFilter === 'encrypted') reasons.push('Inhalt „Verschlüsselt“')
-    if (inboxWireFilter === 'plaintext') reasons.push('Inhalt „Klartext“')
-
-    const encLoaded = inboxMessages.filter((m) => m.encrypted === true).length
-    const encVisible = filteredDisplayMessages.filter((m) => m.encrypted === true).length
-    if (encLoaded > 0 && encVisible === 0 && inboxWireFilter === 'plaintext') {
-      reasons.push(`${encLoaded} verschlüsselt (unter „Klartext“ ausgeblendet)`)
-    }
-    const plainLoaded = inboxMessages.filter((m) => m.encrypted !== true).length
-    const plainVisible = filteredDisplayMessages.filter((m) => m.encrypted !== true).length
-    if (plainLoaded > 0 && plainVisible === 0 && inboxWireFilter === 'encrypted') {
-      reasons.push(`${plainLoaded} Klartext (unter „Verschlüsselt“ ausgeblendet)`)
-    }
-
     if (reasons.length === 0) {
       return `${inboxMessages.length} Nachrichten geladen, Anzeige leer — Filter unter Partner / Kanal / Posteingang prüfen.`
     }
@@ -880,21 +864,16 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     inboxPartnerFiltersArmed,
     inboxDirectionFilter,
     inboxSourceFilter,
-    inboxWireFilter,
-    inboxWireFiltersArmed,
     sendPathInboxSourceFilter,
   ])
 
-  /** Transport/Partner blockieren Mailbox — zurücksetzen (nicht bei bewusstem Inhalt-Filter Klartext/Verschlüsselt). */
+  /** Transport/Partner blockieren Mailbox — zurücksetzen. */
   useEffect(() => {
     /** Sendepfad-Filter: leerer Posteingang (z. B. Funk ohne Mesh) ist erwartet — nicht zurücksetzen. */
     if (sendPathInboxSourceFilter !== 'all') return
     if (inboxPartnerFiltersArmed && inboxPartnerKey?.trim()) return
     if (messages.length === 0) return
     if (displayMessages.length === 0) return
-    if (inboxWireFiltersArmed && inboxWireFilter !== 'all') return
-    const encLoaded = messages.filter((m) => m.encrypted === true).length
-    const encVisible = filteredDisplayMessages.filter((m) => m.encrypted === true).length
     const mbLoaded = messages.filter((m) => m.chainPurgeable === true).length
     const mbVisible = filteredDisplayMessages.filter((m) => m.chainPurgeable === true).length
     const transportFilterBlocksMailbox =
@@ -906,12 +885,9 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       hiddenInboxIds.size > 0 ||
       (inboxPartnerFiltersArmed && inboxPartnerKey != null) ||
       (inboxChannelFiltersArmed &&
-        (inboxDirectionFilter !== 'all' || inboxSourceFilter !== 'all')) ||
-      (inboxWireFiltersArmed && inboxWireFilter !== 'all')
+        (inboxDirectionFilter !== 'all' || inboxSourceFilter !== 'all'))
     const needsReset =
-      (filteredDisplayMessages.length === 0 && filtersActive) ||
-      (encLoaded > 0 && encVisible === 0 && filtersActive) ||
-      transportFilterBlocksMailbox
+      (filteredDisplayMessages.length === 0 && filtersActive) || transportFilterBlocksMailbox
     if (!needsReset) return
     resetInboxViewFilters()
   }, [
@@ -926,8 +902,6 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     inboxDirectionFilter,
     inboxSourceFilter,
     resetInboxViewFilters,
-    inboxWireFilter,
-    inboxWireFiltersArmed,
   ])
 
   return {

@@ -190,8 +190,8 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     inboxSelectMode,
     setInboxSelectMode,
     selectedInboxCount,
-    showWireControls,
-    onToggleWireControls,
+    showWireControls: _showWireControls,
+    onToggleWireControls: _onToggleWireControls,
     showChannelControls,
     onToggleChannelControls,
     showPartnerControls,
@@ -225,9 +225,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
   const [pkgToolsOpen, setPkgToolsOpen] = useState(false)
   const [hashToolsOpen, setHashToolsOpen] = useState(false)
   const filterArmedCount =
-    (showWireControls ? 1 : 0) +
-    (showChannelControls && pathTools.showKanalFilterToggle ? 1 : 0) +
-    (showPartnerControls ? 1 : 0)
+    (showChannelControls && pathTools.showKanalFilterToggle ? 1 : 0) + (showPartnerControls ? 1 : 0)
   const pkgImportDisabled = morgPkgImportDisabled(apiStatus)
   const pkgDeviceDisabled =
     morgPkgDeviceBusy || apiStatus?.locked === true || !(apiStatus?.connectedAddresses?.length ?? 0)
@@ -707,18 +705,6 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Anzeige filtern
               </DropdownMenuLabel>
-              <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault()
-                  onToggleWireControls()
-                }}
-              >
-                <Check
-                  className={cn('mr-2 h-4 w-4', showWireControls ? 'opacity-100' : 'opacity-0')}
-                  aria-hidden
-                />
-                Inhalt (Verschl. / Klartext)
-              </DropdownMenuItem>
               {pathTools.showKanalFilterToggle ? (
                 <DropdownMenuItem
                   onSelect={(e) => {

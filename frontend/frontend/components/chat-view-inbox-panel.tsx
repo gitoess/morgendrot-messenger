@@ -242,8 +242,8 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         inboxSelectMode={inboxSelectMode}
         setInboxSelectMode={setInboxSelectMode}
         selectedInboxCount={selectedInboxIds.size}
-        showWireControls={inboxWireFiltersArmed}
-        onToggleWireControls={() => setInboxWireFiltersArmed(!inboxWireFiltersArmed)}
+        showWireControls={false}
+        onToggleWireControls={() => undefined}
         showChannelControls={inboxChannelFiltersArmed}
         onToggleChannelControls={() => setInboxChannelFiltersArmed(!inboxChannelFiltersArmed)}
         showPartnerControls={inboxPartnerFiltersArmed}
@@ -269,8 +269,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           showLagebild={pinnwandOverviewConfigured}
         />
       ) : null}
-      {!hidePartnerStrip &&
-      (inboxWireFiltersArmed || inboxChannelFiltersArmed || inboxPartnerFiltersArmed) ? (
+      {!hidePartnerStrip && (inboxChannelFiltersArmed || inboxPartnerFiltersArmed) ? (
         <ChatViewInboxPartnerStrip
           partnerOptions={inboxPartnerOptions}
           myAddressKnown={myAddress.trim().length > 0}
@@ -281,10 +280,10 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           sourceFilter={inboxSourceFilter}
           onSourceFilterChange={setInboxSourceFilter}
           showLagebildSource={pinnwandOverviewConfigured}
-          wireFilter={inboxWireFilter}
-          onWireFilterChange={setInboxWireFilter}
+          wireFilter="all"
+          onWireFilterChange={() => undefined}
           onPartnerSelectForSend={selectInboxPartnerForSend}
-          showWireSection={inboxWireFiltersArmed}
+          showWireSection={false}
           showChannelSection={inboxChannelFiltersArmed}
           showPartnerSection={inboxPartnerFiltersArmed}
           onRemoveInboxPartnerFromQuickList={(address, opts) => {
@@ -295,15 +294,6 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           }}
           apiStatus={apiStatus}
         />
-      ) : null}
-      {inboxWireFiltersArmed && inboxWireFilter !== 'all' ? (
-        <p className="border-b border-border/60 px-3 py-1.5 text-[11px] text-muted-foreground" role="status">
-          {filteredInboxRows.length === 0
-            ? 'Keine Zeile passt. „Alles“ zeigt wieder die ganze Liste.'
-            : `${filteredInboxRows.length} ${filteredInboxRows.length === 1 ? 'Zeile' : 'Zeilen'} — nur ${
-                inboxWireFilter === 'encrypted' ? 'verschlüsselte' : 'Klartext'
-              }. Das ändert nicht, wie du sendest.`}
-        </p>
       ) : null}
       <InboxTelegramAlarmGroupJoinStrip />
       <div className="max-h-[min(70vh,42rem)] overflow-y-auto">
@@ -342,10 +332,6 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           basisUnreachable={basisUnreachable}
           messages={messages}
           inboxRows={filteredInboxRows}
-          onFilterProtection={(kind) => {
-            setInboxWireFiltersArmed(true)
-            setInboxWireFilter(kind)
-          }}
           myAddress={myAddress}
           contactDirectory={contactDirectory}
           isMeshVerifiedForAddress={isMeshVerifiedForAddress}
