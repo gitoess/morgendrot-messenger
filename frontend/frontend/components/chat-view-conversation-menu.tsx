@@ -23,8 +23,6 @@ export type ChatViewConversationMenuProps = {
   canExport: boolean
   /** Info: IDs / Mailbox / TX / Telegram — nicht Einstellungen. */
   onViewInfo?: () => void
-  /** @deprecated Prefer onViewInfo */
-  onViewProfile?: () => void
   onExportHistory?: () => void
   onClearHistory?: () => void
   onRenewEncryptionKeys?: () => void | Promise<void>
@@ -51,7 +49,7 @@ export function ChatConversationMenuItems(p: ChatViewConversationMenuProps) {
   const burn = p.burnOnRead
   const chainSecurity = p.showChainSecurityTools !== false
   const hasGroupActions = Boolean(p.onManageGroup || p.onCreateGroup)
-  const onInfo = p.onViewInfo ?? p.onViewProfile
+  const onInfo = p.onViewInfo
   const [ratchetExp, setRatchetExp] = useState(false)
 
   useEffect(() => {
@@ -183,7 +181,7 @@ export function ChatConversationMenuItems(p: ChatViewConversationMenuProps) {
 
 /** Telegram-ähnliches ⋮-Menü — Kernpunkte immer sichtbar (disabled wenn nicht anwendbar). */
 export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
-  const onInfo = p.onViewInfo ?? p.onViewProfile
+  const onInfo = p.onViewInfo
   const infoLabel = p.onManageGroup ? 'Gruppen-Info' : 'Info'
   const itemsOnly = p.variant === 'items'
   const toolbarOnly = p.variant === 'toolbar'

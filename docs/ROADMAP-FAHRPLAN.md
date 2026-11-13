@@ -49,6 +49,8 @@
 
 **Nachtrag 2026-11-13 (a11y/Docs):** Listenfilter `aria-pressed`; Move-RPC-Fehler ohne `.map`-Rohtext; Handbuch/Einstellungen: Helfer einrichten + Move unter IOTA.
 
+**Nachtrag 2026-11-13 (Handbuch-Links):** `EXPORT-ASSISTENT-REFERENZ` in Handbook-Allowlist + PWA-Sync; `?file=` statt `?doc=`; tote Anker Tresor/System→Einstellungen; Einsatzhub-Hinweis; Move-Upgrade-Pfade; Status-API liefert moveFeatures-Fehler statt `undefined`.
+
 **Nachtrag 2026-11-05 (Wire einfügen):** **Optionen → Wire einfügen** — Paste `MORG_PWMSG_V1` + Passphrase → lokaler Klartext (≠ Toolbar **Entschlüsseln** = Einsatzbericht-.json). ECDH-Wires weiter nur mit Handshake.
 
 **Nachtrag 2026-11-06 (H.23 B2 NFT-Schlüsselkarte — aktiv):** Spec **`docs/NFT-SCHLUESSELKARTE-B2.md`**. **Zusätzlicher Zugriffsmodus**, kein Ersatz für Passphrase und nicht für Alltags-Direktchat. Lesen spezieller Enc-Inhalte: **Passphrase und/oder Besitz** eines NFTs (optional **beides**). Nutzen: Evidenz teilen, temporäre Leserechte, Weitergabe per NFT-Transfer. **P0–P3 Ist:** Enc-Store + Multi-Slot + Composer-Bindung + Mint an Slot + öffentlicher `[morg-keycard]`-Marker (kein Move). **2-Geräte-Feldtest** bewusst später.

@@ -185,7 +185,7 @@
   },
   "einsatzHub": {
     "title": "Einsatzleitung",
-    "bossHint": "Helfer einrichten (Profil + Kanal-Rechte) → oben. TTL/Purge → Parameter. Chain/WLAN → Erweitert.",
+    "bossHint": "Helfer einrichten (Profil + Rechte) oben. TTL/Purge → Bestehende Geräte. Chain/Move → Einstellungen → IOTA. WLAN-QR → Helfer einrichten.",
     "handbookLink": "Handbuch"
   }
 }

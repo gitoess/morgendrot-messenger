@@ -455,7 +455,7 @@ export function ChatViewPulseSettings({
         {settingsEmbedded && !networkManaged ? (
           <p className="text-[11px] leading-relaxed text-muted-foreground">
             Mailbox, Direkt-RPC und optionaler Streams-Puls — Erklärung und Checkliste im{' '}
-            <Link href="/handbook?file=MESSENGER-CHAT-HANDBUCH.md#einstellungen-system--identität" className="text-primary underline hover:no-underline">
+            <Link href="/handbook?file=EINSTELLUNGEN-NUTZER-HANDBUCH.md#iota" className="text-primary underline hover:no-underline">
               Handbuch
             </Link>
             .

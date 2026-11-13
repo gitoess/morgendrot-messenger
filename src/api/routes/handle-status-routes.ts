@@ -171,8 +171,14 @@ export async function handleStatusRoutes(
         if (packageTrim && /^0x[a-fA-F0-9]{64}$/i.test(packageTrim)) {
             try {
                 moveFeatures = await getMessagingMoveFeatures(packageTrim);
-            } catch {
-                moveFeatures = undefined;
+            } catch (e: unknown) {
+                moveFeatures = {
+                    teamBroadcastStore: false,
+                    teamBroadcastPurge: false,
+                    privateMailboxPurge: false,
+                    probed: false,
+                    error: e instanceof Error ? e.message : String(e),
+                };
             }
         }
         const upgradeCapFromEnv = (CFG.UPGRADE_CAP_ID || '').trim();

@@ -9,7 +9,8 @@ import { HandbookMarkdown } from '@/components/handbook-markdown'
 const DOCS: { file: string; title: string; group?: string }[] = [
   { file: 'MESSENGER-CHAT-HANDBUCH.md', title: '1 · Messenger (Chat)', group: 'Messenger' },
   { file: 'EINSTELLUNGEN-NUTZER-HANDBUCH.md', title: '2 · Einstellungen', group: 'Messenger' },
-  { file: 'TELEGRAM-INTEGRATION-EINRICHTUNG.md', title: 'Telegram einrichten', group: 'Messenger' },
+  { file: 'EXPORT-ASSISTENT-REFERENZ.md', title: 'Helfer / Handoff-ZIP', group: 'Messenger' },
+  { file: 'TELEGRAM-INTEGRATION-ZIELBILD.md', title: 'Telegram (Zielbild)', group: 'Messenger' },
   { file: 'VAULT-EINRICHTEN.md', title: 'Tresor einrichten', group: 'Messenger' },
   { file: 'VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md', title: 'Messenger vs. Tresor', group: 'Messenger' },
   { file: 'DASHBOARD-ERSTE-SCHRITTE.md', title: 'Dashboard: Erste Schritte', group: 'Start' },

@@ -9,7 +9,7 @@ const HANDBOOK_PATH = '/handbook/EINSTELLUNGEN-NUTZER-HANDBUCH.md'
 export function SettingsHandbookLink(p: { className?: string; label?: string }) {
   return (
     <Link
-      href={`/handbook?doc=EINSTELLUNGEN-NUTZER-HANDBUCH.md`}
+      href={`/handbook?file=EINSTELLUNGEN-NUTZER-HANDBUCH.md`}
       className={cn(
         'inline-flex items-center gap-1.5 text-xs text-primary hover:underline',
         p.className

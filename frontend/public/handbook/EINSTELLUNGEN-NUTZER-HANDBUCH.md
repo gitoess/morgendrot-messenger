@@ -116,7 +116,7 @@ Telegram = **optionaler Push/Hinweis**, kein Chat-Ersatz für IOTA/Funk.
 | **Einsatz-Alarmgruppe** | Boss: eine Telegram-**Gruppe** für SOS/Team. Morgendrot-Einsatz — **nicht** IOTA-Messenger-only. |
 | **Hinweis nach Online-Send** | Nach erfolgreichem **IOTA-1:1**: Kurz-Push an den Kontakt, **wenn** dessen Telegram-ID im Telefonbuch steht. Composer-Tab „telegram“ ist ein **anderer** Kanal (direkt Telegram senden). |
 
-Schritt: `TELEGRAM-INTEGRATION-EINRICHTUNG.md` (Schritte Bot/Gruppe). Zielbild/Architektur: `docs/TELEGRAM-INTEGRATION-ZIELBILD.md` (Entwickler).
+Details: `docs/TELEGRAM-INTEGRATION-ZIELBILD.md` (Einrichtung + Architektur).
 
 ---
 

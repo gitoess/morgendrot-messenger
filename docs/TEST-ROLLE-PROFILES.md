@@ -85,7 +85,7 @@ npm run dev:role:kommandant
 | `.env` / Runtime-Config ändern | ❌ | ✅ | Einstellungen → **.env anpassen** (nur Boss: POST `/api/config`) |
 | Hierarchie-Keys (ROLE, BOSS_ADDRESS, …) | ❌ | ✅ | `.env anpassen` (Boss + `hierarchyChange`) |
 | **Steuerung / Boss-Modus** | ❌ | ✅ | Dashboard-Kachel **Steuerung** → *Boss-Modus* (Rollen setzen, Befehle, Mesh) |
-| **Export-Assistent** (Handoff-ZIP ~3 KB) | ❌ | ✅ | **Einstellungen** oder Steuerung → Boss-Modus → **Export-Assistent** |
+| **Helfer einrichten** (Handoff-ZIP ~3 KB) | ❌ | ✅ | **Einsatzleitung → Helfer einrichten** (oder Boss-Modus Export-Panel) |
 | **Handoff importieren** (ZIP) | ✅ | ✅ | **Einstellungen → Handoff importieren** — **`docs/HANDOFF-IMPORT-UX.md`** |
 | **Pinnwand-Admin** | ❌ | ✅ | Steuerung → *Admin* |
 | Geräte-Radar | ✅ (full) | ✅ | Dashboard unter den Kacheln (Arbeitsbereich **full**) |
@@ -178,7 +178,7 @@ Protokoll: **`docs/TEST-RUN-LOGBOOK.md`**.
 | Test | Rolle | Status |
 |------|-------|--------|
 | Einsatzleitung-Tab: Import JSON → Telefonbuch | Boss, Kommandant | offen |
-| Einsatzleitung: Handoff-ZIP (Export-Assistent / Schnell-Handoff) | Boss | offen |
+| Einsatzleitung: Handoff-ZIP (Helfer einrichten) | Boss | offen |
 | Einsatzleitung: Forensik-Export (JSON/TXT/ZIP) | Boss, Kommandant | offen |
 | Posteingang-Shortcut „Einsatzleitung“ → Tab | Boss, Kommandant | offen |
 

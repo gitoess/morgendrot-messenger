@@ -185,7 +185,7 @@
   },
   "einsatzHub": {
     "title": "Operations lead",
-    "bossHint": "Set up helper (profile + channel rights) at top. TTL/purge → parameters. Chain/WLAN → Advanced.",
+    "bossHint": "Set up helpers (profile + rights) at top. TTL/purge → Existing devices. Chain/Move → Settings → IOTA. WLAN QR → helper setup.",
     "handbookLink": "Handbook"
   }
 }
