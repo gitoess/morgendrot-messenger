@@ -2650,7 +2650,7 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 ### Durchgangs-Reihenfolge (verbindlich — Stand 2026-11-12)
 
 1. **Erledigt:** **T37** Landkarte · **T8/T9** Passwort/Backup/Schatten → Sicherheit · Telegram-Wipe-Scope · Klick-Lautstärke  
-2. **Als Nächstes:** **T3** Meine Mailboxen · **T4** Schatten→Main (jetzt unter Sicherheit)  
+2. **Als Nächstes:** **T4** Schatten→Main (unter Sicherheit). **T3** Meine Mailboxen **zurückgestellt** (2026-11-13, testen wir später)  
 3. **Backlog (überdenken, nicht jetzt bauen):** **T56** Komplett-alles-löschen (Wizard inkl. optional NFT)  
 4. **Dann am Ende:** Ideen **T39–T54** priorisieren; T33 + Zeitkapsel nachholen  
 5. **Später (nicht blockierend):** T45 · T47 · T51 · T52 · T53  
@@ -2670,8 +2670,8 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 |---|--------|-----|------|-------|
 | T1 | **Mainnet einrichten** | Feld/UI-Test | **am Schluss** dieses Durchgangs | Deploy / Gas / Schalter Produktion / Signer-Strip — zusammen klicken |
 | T2 | **Passwort ändern** | Durchgang + ggf. Smoke | **done 2026-11-12** | Unter **Sicherheit**; Session-PW nach Ändern sync; Header vs. voller Lock erklärt |
-| T3 | **Meine Mailboxen** | Durchgang | **jetzt** | Privat/Team vs. Deploy-Mailbox unter „Wo senden?“ — Settings → IOTA |
-| T4 | **Schatten → Main (Sweep)** | Durchgang | nach T3 | Einmal-Werkzeug; Zielplatz: **Sicherheit** |
+| T3 | **Meine Mailboxen** | Durchgang | **später** (2026-11-13) | Privat/Team vs. Deploy-Mailbox unter „Wo senden?“ — Settings → IOTA. Nicht blockierend |
+| T4 | **Schatten → Main (Sweep)** | Durchgang | **jetzt** | Einstellungen → Sicherheit, nur bei Backend online. Einmal-Werkzeug: neues Main-Secret, nicht die laufende Adresse |
 | T5 | **§ H.32b Einsatz beenden** | Retest | bewusst später | = QA #3 |
 | T6 | **Funk / Meshtastic** | Strategie-Entscheid | **verschoben** (nach Settings-Durchgang) | Offizielle Meshtastic-App vs. eigene UI — **noch nicht entscheiden**; Ist: Puls/Geräte-Embed |
 | T7 | **Vault-Registry / Chain-Globals** | Durchgang | später | bewusst zurückgestellt |
@@ -2679,7 +2679,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T9 | **Schatten → Sicherheit** | UI-Verschiebung | **done 2026-11-12** | Mit T8; IOTA nur noch Hinweis-Link |
 | T10 | **Aktualisieren-Pattern** | UX-Regel | während Settings-Durchgang | Pro Settings-Karte **oben** „Aktualisieren“; keine verstreuten „Neu laden“. Ausnahme: **Saldo aktualisieren** (IOTA Gas) ok |
 | T11 | **Secrets-Landkarte** | Doku/UI | später | Wo liegt was (Vault vs Runtime-JSON vs localStorage vs .env) — komplett, nicht nur Telegram |
-| T12 | **Einstellungen radikal kürzen** | UI + Handbuch | **am Schluss** des Durchgangs (früher nur wenn blockierend) | Zu viel Text/Doppelung; Tabs aufräumen, Veraltetes löschen, Labels wie Telegram-Push verständlich halten |
+| T12 | **Einstellungen kürzen + zwei Layouts** | UI + Handbuch | **am Schluss** des Durchgangs (früher nur wenn blockierend) | Eine App, zwei Anordnungen: **PC** breit (Liste / Inhalt / Status), **Handy** eine Spalte (APK-Shell bleibt). Kein zweites Programm. Dazu Tabs kürzen, Veraltetes löschen. Entscheidung 2026-11-13 |
 | T13 | **Wallet Empfangen** | UI | nach Hauptmenü-Durchgang | Receive-Dialog: neben Wallet-Adresse/QR auch **aktive Mailbox-IDs** (Server/Team/Privat) + kurzer Hinweis „Coins → 0x, Chat → Mailbox“ |
 | T14 | **SOS Hilferuf fertigstellen** | Feature + Produkt-Split | später | Button Ist unvollständig (Sheet/Fan-out Teil-Ist). **IOTA-Messenger:** geplant `hideSos: true` (Einsatz-Feature). Morgendrot behält SOS |
 | T15 | **Wallet-Lücken vs. IOTA-Wallet/Rebased** | Abgleich | Backlog nach Durchgang | Bewusst **nicht** 1:1: kein Staking/Ledger/Multi-Profil-UI. Stärken bei uns: Gesichert/Guthaben, Zeitkapsel-Leihe, Aktivität/Msg-Burn. Lücken notieren, nicht blind nachbauen |
