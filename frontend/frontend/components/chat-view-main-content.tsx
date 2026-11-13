@@ -1356,11 +1356,13 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             inboxSearchQuery={messengerSearchQuery}
             conversationMenu={conversationMenuProps}
             inboxHeading={inboxHeading}
-            className={showConversationSidebar ? 'flex h-[16rem] flex-col' : undefined}
+            className={
+              showConversationSidebar ? 'flex min-h-0 flex-1 flex-col' : undefined
+            }
           />
 
-          {/* Mit Sidebar: Composer darunter über volle Breite (Chats + Posteingang). */}
-          {!showConversationSidebar ? composerBlock : null}
+          {/* Telegram-Muster: Composer nur unter dem Posteingang (rechte Spalte). */}
+          {composerBlock}
         </>
       )}
 
@@ -1552,9 +1554,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               onSelectMessageHit={handleSelectMessageHit}
               {...sidebarHandshakeProps}
             />
-            <div className="grid gap-3 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-stretch">
+            <div className="grid h-[min(70vh,36rem)] gap-3 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-stretch">
               <ChatViewContactSidebar
-                className="hidden h-[16rem] lg:flex"
+                className="hidden h-full lg:flex"
                 directory={directory}
                 partnerOptions={inboxPartnerOptions}
                 activePartnerKey={inboxPartnerKey}
@@ -1582,9 +1584,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                 {...pinnwandSidebarProps}
                 {...sidebarHandshakeProps}
               />
-              <div className="flex h-[16rem] min-w-0 flex-col">{conversationBody}</div>
+              <div className="flex h-full min-h-0 min-w-0 flex-col gap-3">
+                {conversationBody}
+              </div>
             </div>
-            {!onNotesTab && !onPinnwandTab ? composerBlock : null}
           </div>
         ) : (
           <div className={isNativeMobile ? 'space-y-3' : 'space-y-8'}>{conversationBody}</div>

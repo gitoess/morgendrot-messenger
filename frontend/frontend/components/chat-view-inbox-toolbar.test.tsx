@@ -179,6 +179,15 @@ describe('ChatViewInboxToolbar actions (§ H.1a)', () => {
     expect(screen.queryByRole('button', { name: /^Wire einfügen$/i })).not.toBeInTheDocument()
   })
 
+  it('zeigt T36 Export und T38 Hash unter Optionen', async () => {
+    render(<ChatViewInboxToolbar {...makeProps({ messageCount: 3 })} />)
+    const btn = screen.getByRole('button', { name: /Optionen/i })
+    fireEvent.pointerDown(btn, { button: 0, ctrlKey: false, pointerType: 'mouse' })
+    fireEvent.click(btn)
+    expect(await screen.findByRole('menuitem', { name: /Hash & Prüfen/i })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /Export Nachrichtenverlauf/i })).toBeInTheDocument()
+  })
+
   it('lässt Optionen offen wenn Export gesperrt (Wire/Pakete bleiben nutzbar)', () => {
     render(
       <ChatViewInboxToolbar

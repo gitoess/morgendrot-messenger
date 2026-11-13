@@ -16,9 +16,9 @@
 |---------|--------|
 | **App-Header** (Boss/Messenger) | **Tresor**, **Aktualisieren** (Status + Posteingang + Kontakte), Handbuch, Einstellungen — **nicht** in der Posteingang-Leiste |
 | **Chat-Kopf** | Sendepfad (**Alle** / Funk / **IOTA** / Telegram), **SOS — Hilferuf** (1:1, nicht Telegram). Mit Sidebar: **kein** großer Kanal-/Posteingang-Titel |
-| **Seitenleiste** (Desktop) | **Chats:** Ich, Alle, Kontakte, Gruppen; Suche oben; Doppelklick **Ich** → Profil + Peering-QR; Doppelklick **Gruppe** → Gruppe verwalten. Höhe kurz (~2–3 Posteingang-Zeilen), Liste scrollt |
-| **Posteingang** (rechts daneben) | Nachrichten + Toolbar (On-Chain/NFT, **Optionen**, Filter). Gleiche kurze Höhe; Liste scrollt |
-| **Composer** | **Unter** Chats+Posteingang über **volle Breite**: `[+]`, Text, Sprache, Senden; **Verschlüsselt/Klartext** = Sendemodus |
+| **Seitenleiste** (Desktop) | **Chats:** Ich, Alle, Kontakte, Gruppen; Suche oben; Doppelklick **Ich** → Profil + Peering-QR; Doppelklick **Gruppe** → Gruppe verwalten. Telegram-ähnlich: volle Spaltenhöhe, Liste scrollt |
+| **Posteingang** (rechts) | Nachrichten + Toolbar (On-Chain/NFT, **Optionen**, Filter). Füllt die rechte Spalte über dem Composer |
+| **Composer** | Nur **unter dem Posteingang** (rechte Spalte, wie Telegram): `[+]`, Text, Sprache, Senden; **Verschlüsselt/Klartext** = Sendemodus. Später: Passphrase/Zeitkapsel eher ins **[+]-Menü** |
 | **Liste (Filter)** | **Beides / Eingang / Ausgang** und **Alles / Verschl. / Klartext** — nur Anzeige, nicht Sendemodus |
 | **Optionen** | Wire, Hash & Prüfen, Export Nachrichtenverlauf (Journal + Medien-ZIP), Datei-Paket — **nicht** Chat-⋮ |
 | **Nachrichten-⋯** (pro Zeile) | Kopieren, Telefonbuch, lokal ausblenden, **Von Chain löschen (Burn)** |
@@ -268,7 +268,7 @@ Ganzes Private-Mailbox-Object: **Einstellungen → Meine Mailboxen** → Aufräu
 
 ## Posteingang
 
-**Navigation:** Dashboard-Kachel **Nachrichten** → Chat. Desktop: links **Chats**, rechts **Posteingang** (kurze Höhe, scrollt), darunter **Composer** über die volle Breite. **Telefonbuch** über `[+]` im Composer, Sidebar oder Kontakt-Detail.
+**Navigation:** Dashboard-Kachel **Nachrichten** → Chat. Desktop (Telegram-Muster): links **Chats**, rechts **Posteingang** + darunter **Composer** nur in der rechten Spalte. **Telefonbuch** über `[+]` im Composer, Sidebar oder Kontakt-Detail.
 
 | Funktion | Beschreibung |
 |----------|--------------|
@@ -541,4 +541,4 @@ Voraussetzung Import: **Handshake** zum Absender der Datei (Peer in `peerMap`).
 
 ---
 
-*Stand: 2026-11-13 — Chats|Posteingang kurz zweispaltig, Composer volle Breite darunter; Sendepfad Alle/IOTA/Funk/Telegram; Aktualisieren neben Tresor; Optionen Wire/Hash/Export.*
+*Stand: 2026-11-13 — Chats|Posteingang Telegram-Muster (Composer nur rechts); Sendepfad Alle/IOTA/Funk/Telegram; Aktualisieren neben Tresor; Optionen Wire/Hash/Export.*
