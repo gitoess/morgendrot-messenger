@@ -23,10 +23,7 @@ import {
 import { ContactPhonebookCard } from '@/frontend/components/contact-phonebook-card'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { Message } from '@/frontend/lib/types'
-import {
-  countConversationMediaStats,
-  type InboxConversationMediaStats,
-} from '@/frontend/lib/inbox-conversation-media-stats'
+import { countConversationMediaStats, firstMessageIdForMediaKind, type InboxConversationMediaStats } from '@/frontend/lib/inbox-conversation-media-stats'
 import { lookupContactEntry } from '@/frontend/lib/contact-display'
 import { messagesForContactConversation } from '@/frontend/lib/contact-conversation-filter'
 import { parseCompactImageMessage } from '@/frontend/lib/compact-image-wire'
@@ -38,6 +35,7 @@ import {
   readProfileContactMailboxSlotOverride,
 } from '@/frontend/lib/contact-mailbox-slots'
 import { buildContactInfoSections } from '@/frontend/lib/messenger-entity-info-model'
+import { CONTACT_PHONEBOOK_META_CHANGED_EVENT, readContactNotes } from '@/frontend/lib/contact-phonebook-meta-store'
 import { TechnicalIdRow, TechnicalIdSection } from '@/frontend/components/technical-id-row'
 
 export type ChatViewContactDetailDialogProps = {
@@ -219,6 +217,16 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
     ? resolveContactSidebarDisplayName(p.directory, address, entry)
     : ''
   const [techOpen, setTechOpen] = useState(false)
+  const [notesRev, setNotesRev] = useState(0)
+  useEffect(() => {
+    const bump = () => setNotesRev((n) => n + 1)
+    window.addEventListener(CONTACT_PHONEBOOK_META_CHANGED_EVENT, bump)
+    return () => window.removeEventListener(CONTACT_PHONEBOOK_META_CHANGED_EVENT, bump)
+  }, [])
+  const localNote = useMemo(() => {
+    void notesRev
+    return address ? readContactNotes()[address.trim().toLowerCase()] : undefined
+  }, [address, notesRev])
 
   const conversationMessages = useMemo(() => {
     if (!address || !p.myAddress.trim()) return []
@@ -297,6 +305,8 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
             onRemove={p.onRemove}
             onRecordContact={() => undefined}
             onSelectForMessenger={p.onSelectForMessenger}
+            hideChannelIds
+            note={localNote}
           />
         ) : (
           <p className="text-sm text-muted-foreground">Kein Telefonbuch-Eintrag — nur Adresse bekannt.</p>
@@ -321,8 +331,11 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
             onFocusText={conversationMessages.length > 0 ? focusFirst : undefined}
             onFocusMediaKind={
               p.onFocusMessage
-                ? () => {
-                    focusFirst()
+                ? (kind) => {
+                    const id = firstMessageIdForMediaKind(conversationMessages, kind)
+                    if (!id) return
+                    p.onFocusMessage?.(id)
+                    p.onOpenChange(false)
                   }
                 : undefined
             }

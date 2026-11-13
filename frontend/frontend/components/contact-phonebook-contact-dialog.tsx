@@ -43,6 +43,8 @@ export type ContactPhonebookFormValues = {
   mailboxBufferId: string
   telegramChatId: string
   roleTagsCsv: string
+  /** Nur auf diesem Gerät, nicht in der Chain. */
+  note: string
 }
 
 export type ContactPhonebookContactDialogProps = {
@@ -66,6 +68,7 @@ const empty: ContactPhonebookFormValues = {
   mailboxBufferId: '',
   telegramChatId: '',
   roleTagsCsv: '',
+  note: '',
 }
 
 function hasExtraMailboxSlots(form: ContactPhonebookFormValues): boolean {
@@ -105,6 +108,7 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
             ? (initial as { roleTags?: string[] }).roleTags
             : undefined
         ),
+      note: initial?.note ?? '',
     }
     openSnapshotRef.current = snapshot
     setForm(snapshot)
@@ -211,6 +215,17 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
                 onChange={(e) => setForm((f) => ({ ...f, roleTagsCsv: e.target.value }))}
                 placeholder="z. B. Medic, THW, Gruppenführer"
                 className="w-full rounded-lg border border-border bg-input px-3 py-2.5 text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Notiz (nur dieses Gerät)</label>
+              <textarea
+                value={form.note}
+                onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+                rows={2}
+                maxLength={500}
+                placeholder="Kurznotiz, nicht on-chain"
+                className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm"
               />
             </div>
             <div className="space-y-1.5">

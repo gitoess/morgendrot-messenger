@@ -571,8 +571,8 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               <DialogHeader>
                 <DialogTitle>Datei-Paket (.morg-pkg)</DialogTitle>
                 <DialogDescription>
-                  Sneakernet: Dateien verschlüsselt für einen verbundenen Partner — Archiv, nicht Chat-Verlauf. Nicht
-                  dasselbe wie „Export Nachrichtenverlauf“.
+                  Offline-Datei-Archiv (.morg-pkg) für einen Partner. Das ist kein Posteingang-Filter und kein
+                  Sendemodus im Composer.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-3 text-sm">

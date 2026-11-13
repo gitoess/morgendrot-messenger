@@ -72,6 +72,42 @@ export function emptyConversationMediaStats(): InboxConversationMediaStats {
   }
 }
 
+function matchesMediaKind(content: string, kind: keyof InboxConversationMediaStats): boolean {
+  const k = classifyMessageContent(content)
+  switch (kind) {
+    case 'photos':
+      return k.photo
+    case 'videos':
+      return k.video
+    case 'files':
+      return k.file
+    case 'audioFiles':
+      return k.audio && !k.voice
+    case 'voiceMessages':
+      return k.voice
+    case 'sharedLinks':
+      return k.link
+    case 'polls':
+      return k.poll
+    case 'gifs':
+      return k.gif
+    default:
+      return false
+  }
+}
+
+export function firstMessageIdForMediaKind(
+  messages: readonly Message[],
+  kind: keyof InboxConversationMediaStats
+): string | null {
+  for (const m of messages) {
+    const content = `${m.content ?? ''}`
+    if (!content.trim()) continue
+    if (matchesMediaKind(content, kind)) return m.id
+  }
+  return null
+}
+
 export function countConversationMediaStats(messages: readonly Message[]): InboxConversationMediaStats {
   const stats = emptyConversationMediaStats()
   for (const m of messages) {

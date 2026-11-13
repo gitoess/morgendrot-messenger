@@ -32,9 +32,11 @@ import {
   hideContactFromPhonebook,
   readContactFavorites,
   readContactLastContacted,
+  readContactNotes,
   readHiddenContacts,
   recordContactLastContacted,
   toggleContactFavorite,
+  writeContactNote,
 } from '@/frontend/lib/contact-phonebook-meta-store'
 import {
   canManageTeamRoster,
@@ -188,6 +190,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
             await saveContactEntry({ address: previousKey, clearMesh: true, label: 'Partner' })
           }
           recordContactLastContacted(storageKey)
+          writeContactNote(storageKey, values.note)
           bumpMeta()
           refreshContactDirectory()
           const okMsg = r.message || 'Kontakt gespeichert.'
@@ -273,6 +276,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
         hasPrivateMailbox={hasMb}
         loraOnly={hasLora && !isOnline}
         lastSeen={lastContact[address]}
+        note={readContactNotes()[address]}
         expanded={Boolean(expanded[address])}
         onToggleExpand={() => setExpanded((e) => ({ ...e, [address]: !e[address] }))}
         onToggleFavorite={() => {
@@ -286,6 +290,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
             initial: {
               ...entry,
               label: entry.label ?? '',
+              note: readContactNotes()[address] ?? '',
               meshNodeId: entry.meshNodeId ?? '',
               telegramChatId: entry.telegramChatId ?? (address.startsWith('tg:') ? address.slice(3) : ''),
               roleTagsCsv: formatContactRoleTagsCsv(entry.roleTags),
@@ -442,7 +447,41 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
 
       <PhonebookMeshBackupPanel directory={directory} onContactsChanged={refreshContactDirectory} />
 
-      <TelegramAlarmGroupPhonebookBanner />
+      <details className="rounded-xl border border-border/80 bg-muted/10 px-3 py-2">
+        <summary className="cursor-pointer text-xs font-medium text-foreground">
+          Telegram-Chat-IDs sichern (nicht Funk)
+        </summary>
+        <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+          Nur Name und Telegram-Chat-ID. Meshtastic-Node-IDs stehen im Funk-Backup darüber, nicht hier.
+        </p>
+        <button
+          type="button"
+          className="mt-2 rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-medium hover:bg-muted/50"
+          onClick={() => {
+            const rows = Object.entries(directory)
+              .map(([address, entry]) => ({
+                address,
+                label: entry.label ?? '',
+                telegramChatId: entry.telegramChatId?.trim() ?? '',
+              }))
+              .filter((r) => r.telegramChatId)
+            const json = JSON.stringify(rows, null, 2)
+            void navigator.clipboard.writeText(json).then(
+              () => toast.success(`${rows.length} Telegram-ID(s) kopiert.`),
+              () => toast.message('Kopieren nicht möglich.')
+            )
+          }}
+        >
+          Telegram-IDs kopieren
+        </button>
+      </details>
+
+      <details className="rounded-xl border border-border/80 bg-muted/10 px-3 py-2">
+        <summary className="cursor-pointer text-xs font-medium text-foreground">Einsatz-Alarmgruppe</summary>
+        <div className="mt-2">
+          <TelegramAlarmGroupPhonebookBanner />
+        </div>
+      </details>
 
       <ContactPhonebookContactDialog
         open={dialog != null}

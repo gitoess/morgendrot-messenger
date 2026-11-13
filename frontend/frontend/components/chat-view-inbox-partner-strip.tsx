@@ -58,8 +58,15 @@ function PartnerChipSection(p: {
     opts: { hideMatchingMessages: boolean; messageTransport: 'mesh' | 'iota' | 'all' }
   ) => void
 }) {
-  const { title, options, partnerKey, onPartnerKeyChange, onPartnerSelectForSend, stripTransport, onRemoveFromQuickList } =
-    p
+  const {
+    title,
+    options,
+    partnerKey,
+    onPartnerKeyChange,
+    onPartnerSelectForSend,
+    stripTransport,
+    onRemoveFromQuickList,
+  } = p
   const [overflowOpen, setOverflowOpen] = useState(false)
   if (options.length === 0) return null
 
@@ -227,12 +234,12 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
             className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
             title="Nur Listen-Filter oben — unabhängig vom Composer unten (ECDH / Passphrase-Schutz)."
           >
-            Ansicht (Liste)
+            Ansicht — nur diese Liste
           </span>
           {(
             [
               ['all', 'Alles'],
-              ['encrypted', 'Nur geschützt'],
+              ['encrypted', 'Nur verschlüsselt'],
               ['plaintext', 'Nur Klartext'],
             ] as const
           ).map(([id, label]) => (
@@ -251,6 +258,9 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
             </button>
           ))}
         </div>
+        <p className="text-[11px] text-muted-foreground">
+          Filtert nur die Liste. Ob du verschlüsselt sendest, stellst du im Composer ein. Eine Auswahl hier ändert den Sendemodus nicht.
+        </p>
       </div>
       ) : null}
       {showChannelSection ? (

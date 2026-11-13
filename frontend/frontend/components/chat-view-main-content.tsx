@@ -1578,6 +1578,13 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           handleSelectSidebarContact(contactDetailAddress)
           setContactDetailOpen(false)
         }}
+        onFocusMessage={(messageId) => {
+          if (contactDetailAddress) handleSelectSidebarContact(contactDetailAddress)
+          setContactDetailOpen(false)
+          requestAnimationFrame(() => {
+            document.getElementById(`inbox-msg-${messageId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          })
+        }}
       />
       ) : null}
 

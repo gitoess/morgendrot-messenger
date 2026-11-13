@@ -2650,7 +2650,7 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 ### Durchgangs-Reihenfolge (verbindlich — Stand 2026-11-12)
 
 1. **Erledigt:** **T37** Landkarte · **T8/T9** Passwort/Backup/Schatten → Sicherheit · Telegram-Wipe-Scope · Klick-Lautstärke  
-2. **Als Nächstes:** **T4** Schatten→Main gemeinsam mit **T3** später testen. **T10** Aktualisieren **done 2026-11-13**  
+2. **Als Nächstes:** **T4** Schatten→Main gemeinsam mit **T3** später testen. **T10** Aktualisieren **done 2026-11-13**. **T27 / T30 / T31 done 2026-11-13**  
 3. **Backlog (überdenken, nicht jetzt bauen):** **T56** Komplett-alles-löschen (Wizard inkl. optional NFT)  
 4. **Dann am Ende:** Ideen **T39–T54** priorisieren; T33 + Zeitkapsel nachholen  
 5. **Später (nicht blockierend):** T45 · T47 · T51 · T52 · T53  
@@ -2694,11 +2694,11 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T24 | **Nachrichten-Archiv UX** | Feature | später | Auswahl/alle archivieren (nicht nur „neu“); Verschlüsselung klar (Chain-Envelope ≠ NFT-PW); Mainnet-only Guard wenn Testnet sinnlos |
 | T25 | **„Team einrichten“ Rename** | UX | mit Einsatzleitung | „Helfer einrichten“ → klarerer Name; Provision-Registry bleibt optional im Export-Flow, nicht parallel unter Mein Team |
 | T26 | **Typo/Farbe überall lesbar** | UX | fortlaufend | Kein Lila als Fließtext; einheitliche foreground/muted — Start Einsatzleitung 2026-11-12 |
-| T27 | **Telefonbuch entschlacken** | UX | Messenger-Durchgang | Alarmgruppe nicht oben; Team-Roster nicht doppelt; Funk-Backup vs. Telegram-Backup klar; „Aus Team entfernen“ vs. Telefonbuch trennen; Icons/Avatare (Telegram-Inspiration); Notizen am Kontakt |
+| T27 | **Telefonbuch entschlacken** | UX | **done 2026-11-13** | Alarmgruppe eingeklappt unten; Team-Entfernen nur im Menü, getrennt vom Telefonbuch; Funk-Backup und Telegram-IDs getrennte Klappen; Notiz nur lokal |
 | T28 | **Handbuch-Platz** | UX | mit T12/T17 | Nicht am Sendepfad „Online“ — App-Menü/Settings; Chat-Kopf prüfen |
 | T29 | **Klang & Magnet-Prefs** | UX | **done + Lautstärke 2026-11-12** | Ton an/aus + Lautstärke 0–100; Magnet Default aus |
-| T30 | **Kontakt-Info = Mehr** | UX | Messenger-Durchgang | Kein Doppelklick-Zwang; Medien klickbar; IDs hinter „Mehr“; nur Namen in Sidebar |
-| T31 | **Posteingang Filter vs Composer** | UX | Messenger-Durchgang | „Nur verschlüsselt“ = Ansichtsfilter; Sendemodus nur Composer; pkg = Offline-Datei-Archiv; Auswahl ≠ Filter |
+| T30 | **Kontakt-Info = Mehr** | UX | **done 2026-11-13** | Seitenleiste nur Namen; Info öffnet Mehr; Medien springen zur Nachricht; IDs unter „Mehr“ |
+| T31 | **Posteingang Filter vs Composer** | UX | **done 2026-11-13** | „Nur verschlüsselt“ = Listenfilter; Partner-Chip filtert nur; .morg-pkg = Offline-Archiv, kein Sendemodus |
 | T32 | **On-Chain/NFT + Optionen + Entschlüsseln** | Gemeinsam testen | **teil-done 2026-11-12** | PWMSG + Vault-Notizen ok. Zeitkapsel-Feldtest **später**. Wire-Paste = nur PWMSG. Next: T33 |
 | T33 | **Nachrichten-⋮ vs Chat-⋮** | UX/Doku | **später** (nach T55) | Wire kopieren in ⋮; Burn-Label vs Handbuch; Passphrase-Aktionen nur bei PWMSG nach Unlock — Angleichen Anleitung |
 | T34 | **Magnet Wii-Feel** | UX | Messenger | Hover Scale+Glow+Hover-Ton; Einstellungen Erscheinungsbild; nur Maus/Trackpad |
