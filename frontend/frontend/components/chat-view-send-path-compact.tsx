@@ -195,14 +195,13 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
   return (
     <div
       className={cn(
-        'flex w-full flex-col overflow-x-hidden rounded-xl border border-border/60 bg-muted/25 px-3 py-3',
+        'flex w-full flex-col overflow-hidden rounded-xl border border-border/60 bg-muted/25 px-3 py-3',
         className
       )}
     >
       <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Sendepfad</p>
       <div
         className={cn(
-          'overflow-x-hidden',
           gridLayout
             ? showAdhocTransport
               ? 'grid grid-cols-2 gap-2 sm:grid-cols-3'
