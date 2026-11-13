@@ -141,9 +141,16 @@ describe('ChatViewInboxToolbar actions (§ H.1a)', () => {
     const onWireFilterChange = vi.fn()
     render(
       <ChatViewInboxToolbar
-        {...makeProps({ onDirectionFilterChange, onWireFilterChange })}
+        {...makeProps({
+          onDirectionFilterChange,
+          onWireFilterChange,
+          directionFilter: 'in',
+          wireFilter: 'encrypted',
+        })}
       />
     )
+    expect(screen.getByRole('button', { name: /^Eingang$/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /^Verschl\.$/i })).toHaveAttribute('aria-pressed', 'true')
     fireEvent.click(screen.getByRole('button', { name: /^Eingang$/i }))
     expect(onDirectionFilterChange).toHaveBeenCalledWith('in')
     fireEvent.click(screen.getByRole('button', { name: /^Verschl\.$/i }))

@@ -811,6 +811,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 <button
                   key={id}
                   type="button"
+                  aria-pressed={directionFilter === id}
                   onClick={() => onDirectionFilterChange(id)}
                   className={cn(
                     'rounded px-2.5 py-1 text-xs font-medium transition-colors',
@@ -841,6 +842,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 <button
                   key={id}
                   type="button"
+                  aria-pressed={wireFilter === id}
                   onClick={() => onWireFilterChange(id)}
                   className={cn(
                     'rounded px-2.5 py-1 text-xs font-medium transition-colors',

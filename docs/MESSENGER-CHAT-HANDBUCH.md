@@ -321,7 +321,7 @@ Ganzes Private-Mailbox-Object: **Einstellungen → Meine Mailboxen** → Aufräu
 | **Exportieren** | `initialProfile` v1 | Gleiches Schema wie Import |
 | **Funk · Node-IDs sichern** | Passwort-JSON (Export/Import) | Am **Ende** des Telefonbuchs eingeklappt — verschlüsselte 0x↔Meshtastic-Zuordnung für Gerätewechsel; **nicht** dasselbe wie `initialProfile` |
 
-Details zu JSON-Formaten und Helfer-ZIP: siehe unten und **Einsatzleitung → Export-Assistent** (`docs/EXPORT-ASSISTENT-REFERENZ.md`).
+Details zu JSON-Formaten und Helfer-ZIP: siehe unten und **Einsatzleitung → Helfer einrichten** (`docs/EXPORT-ASSISTENT-REFERENZ.md`).
 
 ### Akzeptierte Import-JSON-Formen
 
@@ -380,7 +380,7 @@ Wo welche Funktion liegt (Messenger, Boss):
 | **`.env` im Handoff-ZIP** | Geräte-Konfiguration: `ROLE`, `ROLE_ID`, Partner-Adressen, Mailbox-Object-IDs, RPC, `PACKAGE_ID`-Verweis, PSK-Hinweise | **Ja** — jeder Export erzeugt eine **eigene** `.env` (oder verschlüsselte `handoff.morg.enc`) für **dieses** Zielprofil |
 | **Move-Package (`PACKAGE_ID`)** | On-Chain-Vertrag / Einsatz-Instanz auf IOTA — gemeinsame „Move-Umgebung“ | **Nein** — normalerweise **dieselbe** `PACKAGE_ID` wie beim Boss (alle Helfer im **gleichen** Einsatz) |
 | **Mailboxen auf der Chain** | Objekte (Server-, Team-, Private-IDs), die Nachrichten speichern | **Nein** — vom Boss (oder Betrieb) **angelegt**; der Helfer bekommt nur die **IDs und Rechte** in seiner `.env` |
-| **Export-Assistent** | UI zum Bündeln: Profil + Partner + Team-Postfächer → ZIP | Erzeugt **kein** neues Move-Deploy, nur Konfiguration + README |
+| **Helfer einrichten** (Handoff-ZIP) | UI zum Bündeln: Profil + Partner + Team-Postfächer → ZIP | Erzeugt **kein** neues Move-Deploy, nur Konfiguration + README |
 
 ### Muss jeder Helfer eine eigene `.env` bekommen?
 
@@ -400,7 +400,7 @@ Wo welche Funktion liegt (Messenger, Boss):
 
 Weiter: `docs/HANDOFF-IMPORT-UX.md`, `docs/HANDOFF-ZIP-ENCRYPTION.md`, `docs/API-EINSATZ-ROLE-TEMPLATES.md`.
 
-**Export-Assistent (Handoff-ZIP):** `docs/EXPORT-ASSISTENT-REFERENZ.md` · **Move on-chain (nur Messenger):** `docs/MOVE-MESSENGER-KONFIGURATION.md` · **Alle `.env`-Keys in den Einstellungen:** `docs/ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md` · Laientext gesamt: `docs/ENV-ERKLAERUNG.md`
+**Helfer einrichten / Handoff-ZIP:** `docs/EXPORT-ASSISTENT-REFERENZ.md` · **Move on-chain (nur Messenger):** `docs/MOVE-MESSENGER-KONFIGURATION.md` · **Alle `.env`-Keys in den Einstellungen:** `docs/ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md` · Laientext gesamt: `docs/ENV-ERKLAERUNG.md`
 
 ---
 

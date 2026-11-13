@@ -9,10 +9,10 @@
 | Tab | Für wen | Kern |
 |-----|---------|------|
 | **Allgemein** | alle | Sprache, Wizard, Erscheinungsbild (Standard/Hell + Farben, **Klack** / Klick-Ton / Magnet / Lautstärke), App installieren, Expertenmodus, Handbuch, Handoff, Einsatz beenden |
-| **IOTA** | alle | Netz (Boss), Gas, Chain-IDs, Tresor-Passwort/Backup, Mailboxen, Schatten (bis Umzug) |
+| **IOTA** | alle | Netz (Boss/Kommandant), Gas, Chain-IDs, Mailboxen; Boss: **Package & Move-Upgrade** |
 | **Funk** | Einsatz | Meshtastic/Puls — Strategie später (offizielle App vs. eigene UI) |
 | **Telegram** | Boss (+ Helfer Join) | Bot, Alarme, optional Gruppenalarm, Hinweis nach Online-Send |
-| **Sicherheit** | alle | Notfall-Löschung — später auch Passwort/Backup/Schatten |
+| **Sicherheit** | alle | Passwort/Backup/Schatten, Tresor-Landkarte, Notfall-Löschung |
 
 **.env:** nur Link ganz unten → „Konfiguration öffnen“. Nicht in Allgemein.
 
@@ -53,14 +53,20 @@ Ein aktives Netz. Signer-Status darunter (Browser-Signer für Direkt-Send).
 
 Pro Netz: Package + Postfach. Unter „Globals“: Vault-Registry / Command-Registry / Upgrade Cap = aktive `.env` (On-Chain-Objekte, **nicht** lokaler Tresor).
 
+### Package & Move-Upgrade (Boss/Kommandant)
+
+**Pfad:** Einstellungen → **IOTA** → **Package & Move-Upgrade** (nicht unter Einsatzleitung → Erweitert).
+
+Chain-Status (Broadcast/Purge/Privat) und **Move upgraden** bei gleicher `PACKAGE_ID`. Helfer sehen den Block nicht.
+
 ### Passwort / Backup / Mailboxen / Schatten
 
-| Block | Kurz | Zielplatz |
-|-------|------|-----------|
-| Passwort ändern | Vault-Datei neu verschlüsseln; „Tresor sperren“ = Keys aus RAM | → **Sicherheit** (Roadmap T8) |
-| Backup | Lokal / Chain sichern & laden | → Sicherheit |
-| Meine Mailboxen | Privat/Team-Postfächer ≠ Deploy-Mailbox unter „Wo senden?“ | bleibt IOTA |
-| Schatten → Main | Einmal-Sweep temporäre Adresse → Main | → Sicherheit (T9) |
+| Block | Kurz | Ort |
+|-------|------|-----|
+| Passwort ändern | Vault-Datei neu verschlüsseln; „Tresor sperren“ = Keys aus RAM | **Sicherheit** |
+| Backup | Lokal / Chain sichern & laden | **Sicherheit** |
+| Meine Mailboxen | Privat/Team-Postfächer ≠ Deploy-Mailbox unter „Wo senden?“ | **IOTA** |
+| Schatten → Main | Einmal-Sweep temporäre Adresse → Main | **Sicherheit** |
 
 ### Meine Mailboxen (T3 — genau)
 

@@ -83,7 +83,7 @@ export function inboxToolbarToolsForSendPath(p: {
   }
 }
 
-/** Chat-⋮ (Burn/Ratchet/Schlüssel) — nur Chain/Online sinnvoll. */
+/** Optionen → Chat · Sicherheit (Burn-Modus/Ratchet/Schlüssel) — nur Chain/Online sinnvoll. */
 export function conversationMenuChainToolsVisible(p: {
   activeSendPath: ActiveSendPath
   iotaPathFocus?: boolean

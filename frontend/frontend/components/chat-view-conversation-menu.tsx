@@ -46,7 +46,7 @@ export type ChatViewConversationMenuProps = {
   variant?: 'header' | 'toolbar' | 'items'
 }
 
-/** Menüeinträge — in Chat-⋮ oder unter Posteingang → Optionen. */
+/** Menüeinträge — unter Posteingang → Optionen → Chat · Sicherheit (und optional Header-Menü). */
 export function ChatConversationMenuItems(p: ChatViewConversationMenuProps) {
   const burn = p.burnOnRead
   const chainSecurity = p.showChainSecurityTools !== false

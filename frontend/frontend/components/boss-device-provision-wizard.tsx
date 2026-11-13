@@ -767,7 +767,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
                 <span>
                   <strong className="text-foreground">Handoff-ZIP mit Passwort</strong>
                   <span className="mt-0.5 block text-xs text-muted-foreground">
-                    Standard: Klartext-ZIP (schnelle Übergabe). Optional wie Export-Assistent — Passwort mündlich
+                    Standard: Klartext-ZIP (schnelle Übergabe). Optional mit Passwort — Passwort mündlich
                     zum Helfer.
                   </span>
                 </span>

@@ -283,7 +283,11 @@ export function DashboardEinsatzChainPanel(p: Pick<EinsatzPanelProps, 'apiStatus
           <p className="text-xs text-muted-foreground">PACKAGE_ID setzen.</p>
         ) : !moveProbed ? (
           <p className="text-xs text-muted-foreground">
-            {move?.error ? `RPC: ${move.error}` : 'Move-Funktionen werden geprüft…'}
+            {move?.error
+              ? move.error.includes('.map is not a function')
+                ? 'RPC-Probe vorübergehend fehlgeschlagen — Backend neu starten oder „Aktualisieren“; Move-Funktionen werden erneut geprüft.'
+                : `RPC: ${move.error}`
+              : 'Move-Funktionen werden geprüft…'}
           </p>
         ) : (
           <div className="flex flex-wrap gap-2">

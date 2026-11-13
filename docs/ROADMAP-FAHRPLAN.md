@@ -47,6 +47,8 @@
 
 **Nachtrag 2026-11-13 (Pfad-Konsistenz):** Falsche Links/Copy „Erweitert → Export-Assistent“ → **Helfer einrichten**; Erweitert-UI-Hinweis Move→IOTA; Boss-Ablauf/ID-Übersicht/Zielbild; toter `onOpenEinsatzleitung`-Prop aus Chat entfernt (Nav nur Header/Home).
 
+**Nachtrag 2026-11-13 (a11y/Docs):** Listenfilter `aria-pressed`; Move-RPC-Fehler ohne `.map`-Rohtext; Handbuch/Einstellungen: Helfer einrichten + Move unter IOTA.
+
 **Nachtrag 2026-11-05 (Wire einfügen):** **Optionen → Wire einfügen** — Paste `MORG_PWMSG_V1` + Passphrase → lokaler Klartext (≠ Toolbar **Entschlüsseln** = Einsatzbericht-.json). ECDH-Wires weiter nur mit Handshake.
 
 **Nachtrag 2026-11-06 (H.23 B2 NFT-Schlüsselkarte — aktiv):** Spec **`docs/NFT-SCHLUESSELKARTE-B2.md`**. **Zusätzlicher Zugriffsmodus**, kein Ersatz für Passphrase und nicht für Alltags-Direktchat. Lesen spezieller Enc-Inhalte: **Passphrase und/oder Besitz** eines NFTs (optional **beides**). Nutzen: Evidenz teilen, temporäre Leserechte, Weitergabe per NFT-Transfer. **P0–P3 Ist:** Enc-Store + Multi-Slot + Composer-Bindung + Mint an Slot + öffentlicher `[morg-keycard]`-Marker (kein Move). **2-Geräte-Feldtest** bewusst später.
@@ -94,7 +96,7 @@
 - **§ H.37 Multi-Profil beim Login (Backlog):** mehrere lokale Accounts mit eigenem Seed/Vault; **Auswahl beim Unlock**; **nie parallel**. Ist: eine Identität pro Instanz; Vault-Datei laden = grober Wechsel. Spec/Umsetzung **nach** aktuellem Messenger-Durchgang, nicht parallel zu Session C.
 
 **Nachtrag 2026-11-09 (Messenger UX — Sendepfad-Optionen + Entity-Info):**
-- **Posteingang „Optionen“** vs Chat-⋮ getrennt: ⋮ = Burn/Schlüssel/Ratchet (nur Chain/Online); Optionen = Wire/Pakete/Verlauf (pfadgefiltert).
+- **Posteingang „Optionen“** (Ist 2026-11-13): **Posteingang · Tools** (Wire/Pakete/Verlauf) + **Chat · Sicherheit** (Schlüssel/Nach-Lesen-Modus); echter Burn = Zeilen-⋯ / Auswahl — kein separates Chat-⋮ mehr.
 - **Sendepfad-Fit:** Funk/Telegram ohne Wire/Pakete/On-Chain; Online/IOTA behalten Chain-Tools; Kanal-Filter nur Online (sonst steuert der Sendepfad).
 - **Filter-Zeile** gestrafft: Auswahl + ein Filter-Dropdown (Inhalt/Partner; Kanal nur Online).
 - **Entity-Info:** einheitliche kopierbare IDs (Kontakt/Gruppe/Telegram-Alarm/Self/NFT) — kein Gruppen-Passwort, keine Klartext-Secrets; Gruppe: Titel/⋮ → Info → CTA Verwalten.
