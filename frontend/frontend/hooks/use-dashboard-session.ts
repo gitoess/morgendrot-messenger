@@ -1013,18 +1013,20 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       window.dispatchEvent(new Event(DIRECT_IOTA_UI_CHANGED))
       return { ok: true as const }
     }
+    // Browser-Geheimnisse immer leeren — auch wenn Backend/Terminal schon weg ist
+    // (sonst bleibt Badge „Tresor: bereit“ trotz Abmelden).
+    clearDirectIotaSessionSignerOnLock()
+    clearDirectChatEcdhKeyMaterial()
+    await wipeLocalPassphraseStoresOnLock()
+    setPrivacySoftLocked(false)
+    setMainnetSignerHint(null)
+    vaultUnlockRequestedRef.current = true
+    setLocked(true)
+    navigateTo(null)
+    window.dispatchEvent(new Event(DIRECT_IOTA_UI_CHANGED))
     const r = await vaultLockCommand()
     if (r.ok) {
-      clearDirectIotaSessionSignerOnLock()
-      clearDirectChatEcdhKeyMaterial()
-      await wipeLocalPassphraseStoresOnLock()
-      setPrivacySoftLocked(false)
-      setMainnetSignerHint(null)
-      vaultUnlockRequestedRef.current = true
-      setLocked(true)
       await checkStatus()
-      navigateTo(null)
-      window.dispatchEvent(new Event(DIRECT_IOTA_UI_CHANGED))
     }
     return r
   }, [checkStatus, navigateTo])

@@ -2665,7 +2665,7 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 
 1. **Erledigt:** **T37** Landkarte · **T8/T9** Passwort/Backup/Schatten → Sicherheit · Telegram-Wipe-Scope · Klack/Klick-Ton (T29) · Sendepfad/Layout-Polish 2026-11-13  
 2. **Agent allein (Ist):** Layout/UX + Mobile Optionen→Chat + Badge-Filter PWMSG/NFT-Gate + Zeitkapsel-Verleihen-CTA; Unit + eigener Browser-Smoke.  
-3. **Gemeinsame Rituale — am Schluss dieses Durchgangs (ein Block):** Live **T3** → **T4** → **T36/T38** **und** Checklisten **T23/T33/T41** + **T32**. Nicht stückweise dazwischen.  
+3. **Gemeinsame Rituale — am Schluss dieses Durchgangs (ein Block):** Live **T3** (done 2026-11-15) → **T36/T38** **und** Checklisten **T23/T33/T41** + **T32**. **T4 Schatten** bewusst später (2. Account / Multi-Profil).  
 4. **Backlog (überdenken, nicht jetzt bauen):** **T56** Komplett-alles-löschen; **T39** Beweis-Paket  
 5. **Dann am Ende:** Ideen **T39–T54** priorisieren  
 6. **Später (nicht blockierend):** T45 · T47 · T51 · T52 · T53  
@@ -2705,7 +2705,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T1 | **Mainnet einrichten** | Feld/UI-Test | **am Schluss** dieses Durchgangs | Deploy / Gas / Schalter Produktion / Signer-Strip — zusammen klicken |
 | T2 | **Passwort ändern** | Durchgang + ggf. Smoke | **done 2026-11-12** | Unter **Sicherheit**; Session-PW nach Ändern sync; Header vs. voller Lock erklärt |
 | T3 | **Meine Mailboxen** | Durchgang | **Live gemeinsam — nach hinten** (nach Agent-Layout-Stabil) | Settings → IOTA. Unit schon grün; Live mit User erst nach Layout-Freeze |
-| T4 | **Schatten → Main (Sweep)** | Durchgang | **Live gemeinsam — nach hinten** (nach T3) | UI-Ist da; Live mit User erst nach T3 |
+| T4 | **Schatten → Main (Sweep)** | Durchgang | **später** (nach T3; User 2026-11-15) | Mit 2. Account oder nach **§ H.37 Multi-Profil** — nicht im aktuellen Live-Block |
 | T5 | **§ H.32b Einsatz beenden** | Retest | bewusst später | = QA #3 |
 | T6 | **Funk / Meshtastic** | Strategie-Entscheid | **verschoben** (nach Settings-Durchgang) | Offizielle Meshtastic-App vs. eigene UI — **noch nicht entscheiden**; Ist: Puls/Geräte-Embed |
 | T7 | **Vault-Registry / Chain-Globals** | Durchgang | später | bewusst zurückgestellt |
