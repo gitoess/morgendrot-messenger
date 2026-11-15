@@ -297,6 +297,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
   const pathTools = pathToolsProp ?? DEFAULT_PATH_TOOLS
   const [wirePasteOpen, setWirePasteOpen] = useState(false)
   const [exportHistoryOpen, setExportHistoryOpen] = useState(false)
+  const [exportBusy, setExportBusy] = useState(false)
   const [mediaKinds, setMediaKinds] = useState({
     audio: true,
     image: true,
@@ -327,15 +328,21 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     setTimeout(() => setStatus('idle'), 6000)
   }
 
-  const runExportAndClose = (run: () => void) => {
+  /** Promise abwarten — sonst schließt der Dialog bevor Download startet / confirm greift. */
+  const runExportAndClose = (run: () => void | Promise<void>) => {
     blockExportAction(() => {
-      run()
-      setExportHistoryOpen(false)
+      setExportBusy(true)
+      void Promise.resolve()
+        .then(() => run())
+        .finally(() => {
+          setExportBusy(false)
+          setExportHistoryOpen(false)
+        })
     })
   }
 
   const exportEmpty = messageCount === 0
-  const exportDisabled = exportEmpty || exportBlocked
+  const exportDisabled = exportEmpty || exportBlocked || exportBusy
 
   return (
     <div className="border-b border-border">
@@ -579,14 +586,17 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   </label>
                 </div>
                 <div className="grid gap-2">
+                  {exportBusy ? (
+                    <p className="text-xs text-muted-foreground">Export läuft — bitte warten…</p>
+                  ) : null}
                   <Button
                     type="button"
-                    variant="default"
+                    variant="outline"
                     className="h-auto justify-start whitespace-normal py-2.5 text-left"
                     disabled={exportDisabled}
                     onClick={() =>
                       runExportAndClose(() =>
-                        void onExportEinsatzberichtJson({
+                        onExportEinsatzberichtJson({
                           scope: exportScope,
                           contentMode: exportContentMode,
                         })
@@ -600,9 +610,19 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     variant="outline"
                     className="h-auto justify-start whitespace-normal py-2.5 text-left"
                     disabled={exportDisabled}
+                    onClick={() => runExportAndClose(() => onExportEinsatzberichtEncrypted())}
+                  >
+                    <Lock className="mr-2 h-4 w-4 shrink-0 opacity-80" aria-hidden />
+                    JSON verschlüsselt (Passwort)
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-auto justify-start whitespace-normal py-2.5 text-left"
+                    disabled={exportDisabled}
                     onClick={() =>
                       runExportAndClose(() =>
-                        void onExportEinsatzberichtTxtFull({
+                        onExportEinsatzberichtTxtFull({
                           scope: exportScope,
                           contentMode: exportContentMode,
                         })
@@ -618,7 +638,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     disabled={exportDisabled}
                     onClick={() =>
                       runExportAndClose(() =>
-                        void onExportEinsatzberichtTxt({
+                        onExportEinsatzberichtTxt({
                           scope: exportScope,
                           contentMode: exportContentMode,
                         })
@@ -626,16 +646,6 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     }
                   >
                     Text kurz (~200 Zeichen)
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-auto justify-start whitespace-normal py-2.5 text-left"
-                    disabled={exportDisabled}
-                    onClick={() => runExportAndClose(() => void onExportEinsatzberichtEncrypted())}
-                  >
-                    <Lock className="mr-2 h-4 w-4 shrink-0 opacity-80" aria-hidden />
-                    Verschlüsselt (Passwort-JSON)
                   </Button>
                 </div>
                 <div className="grid gap-2 border-t border-border pt-3">
@@ -647,7 +657,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     variant="outline"
                     className="h-auto justify-start whitespace-normal py-2 text-left"
                     disabled={exportDisabled}
-                    onClick={() => runExportAndClose(() => void onExportEinsatzprotokoll(mediaKinds))}
+                    onClick={() => runExportAndClose(() => onExportEinsatzprotokoll(mediaKinds))}
                   >
                     Text mit Medien (ZIP+HTML, verschlüsselt)
                   </Button>
@@ -656,7 +666,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     variant="outline"
                     className="h-auto justify-start whitespace-normal py-2 text-left"
                     disabled={exportDisabled}
-                    onClick={() => runExportAndClose(() => void onExportEinsatzprotokollPlainZip(mediaKinds))}
+                    onClick={() => runExportAndClose(() => onExportEinsatzprotokollPlainZip(mediaKinds))}
                   >
                     Text mit Medien (ZIP Klartext, inkl. medien/)
                   </Button>
@@ -664,8 +674,8 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     type="button"
                     variant="outline"
                     className="h-auto justify-start whitespace-normal py-2 text-left"
-                    disabled={protokollMarkedCount === 0 || exportBlocked}
-                    onClick={() => runExportAndClose(() => void onExportEinsatzprotokollMarked())}
+                    disabled={protokollMarkedCount === 0 || exportBlocked || exportBusy}
+                    onClick={() => runExportAndClose(() => onExportEinsatzprotokollMarked())}
                   >
                     ZIP nur markiert (★ {protokollMarkedCount})
                   </Button>

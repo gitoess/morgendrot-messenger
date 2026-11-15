@@ -2,9 +2,10 @@
 
 /**
  * Medien-Galerie mit Haken: Vorschaubilder / Labels nach Art, Auswahl speichern.
+ * Vollständigen Verlauf nur auf Knopf — nicht auto (vermeidet Render-/Fetch-Schleifen).
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import type { Message } from '@/frontend/lib/types'
 import {
@@ -42,7 +43,7 @@ function objectUrlFor(item: MorgMediaListItem): string | null {
 
 export type ChatViewMediaGalleryProps = {
   messages: Message[]
-  /** Optional: vollständigen Verlauf laden (sonst nur `messages`). */
+  /** Optional: vollständigen Verlauf laden (nur per Knopf). */
   loadMessages?: () => Promise<Message[]>
   kinds?: MorgMediaKindFilter | null
   /** Wenn gesetzt: nur diese Nachrichten (z. B. eine Zeile). */
@@ -56,57 +57,88 @@ export function ChatViewMediaGallery(p: ChatViewMediaGalleryProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({})
+  const [scanNote, setScanNote] = useState('')
+  const messagesRef = useRef(p.messages)
+  const loadMessagesRef = useRef(p.loadMessages)
+  const kindsRef = useRef(p.kinds)
+  messagesRef.current = p.messages
+  loadMessagesRef.current = p.loadMessages
+  kindsRef.current = p.kinds
 
-  const load = useCallback(async () => {
+  const applyList = useCallback(async (src: Message[]) => {
+    const unlocked = await unlockRememberedPassphraseMessagesForExport(src)
+    const kindsRaw = kindsRef.current
+    const kinds: MorgMediaKindFilter | null = kindsRaw
+      ? {
+          ...kindsRaw,
+          image: kindsRaw.image === true || kindsRaw.photo === true,
+        }
+      : null
+    const list = await listMorgMediaForExport(unlocked.messages, { kinds })
+    setItems(list)
+    setSelected(new Set(list.map((x) => x.id)))
+    if (list.length === 0 && src.length > 0) {
+      setError(
+        `${src.length} Nachrichten gescannt, 0 Medien (nur MORG-Wire; Telegram-Cloud fehlt; versiegelt: ${unlocked.stillSealed}).`
+      )
+    } else {
+      setError('')
+    }
+    setScanNote(`${src.length} Nachrichten · ${list.length} Medien`)
+    const urls: Record<string, string> = {}
+    for (const it of list) {
+      const u = objectUrlFor(it)
+      if (u) urls[it.id] = u
+    }
+    setPreviewUrls((prev) => {
+      for (const u of Object.values(prev)) URL.revokeObjectURL(u)
+      return urls
+    })
+  }, [])
+
+  /** Nur sichtbare Inbox — kein Full-Fetch (sonst API-Sturm). */
+  const loadVisible = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      const loaded = p.loadMessages ? await p.loadMessages() : []
-      const raw = loaded.length > 0 ? loaded : p.messages
-      /** Sichtbare Inbox zusätzlich mergen — falls Full-Load lückenhaft war. */
-      const { mergeAllMessages } = await import('@/frontend/lib/message-dedup')
-      const merged = mergeAllMessages([...raw, ...p.messages])
-      const unlocked = await unlockRememberedPassphraseMessagesForExport(merged)
-      const kinds: MorgMediaKindFilter | null = p.kinds
-        ? {
-            ...p.kinds,
-            image: p.kinds.image === true || p.kinds.photo === true,
-          }
-        : null
-      const list = await listMorgMediaForExport(unlocked.messages, { kinds })
-      setItems(list)
-      if (list.length === 0 && merged.length > 0) {
-        setError(
-          `${merged.length} Nachrichten gescannt, 0 Medien (nur MORG-Wire; Telegram-Cloud fehlt; versiegelt: ${unlocked.stillSealed}).`
-        )
-      }
-      setSelected(new Set(list.map((x) => x.id)))
-      const urls: Record<string, string> = {}
-      for (const it of list) {
-        const u = objectUrlFor(it)
-        if (u) urls[it.id] = u
-      }
-      setPreviewUrls((prev) => {
-        for (const u of Object.values(prev)) URL.revokeObjectURL(u)
-        return urls
-      })
+      await applyList([...messagesRef.current])
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
       setItems([])
     } finally {
       setLoading(false)
     }
-  }, [p.messages, p.loadMessages, p.kinds])
+  }, [applyList])
 
+  const loadFull = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const loader = loadMessagesRef.current
+      const loaded = loader ? await loader() : []
+      const { mergeAllMessages } = await import('@/frontend/lib/message-dedup')
+      const merged = mergeAllMessages([...(loaded.length ? loaded : []), ...messagesRef.current])
+      await applyList(merged)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+      setItems([])
+    } finally {
+      setLoading(false)
+    }
+  }, [applyList])
+
+  /** Kinds-Änderung: sichtbare Liste neu scannen (kein Full-Load). */
+  const kindsKey = JSON.stringify(p.kinds ?? null)
   useEffect(() => {
-    void load()
+    void loadVisible()
     return () => {
       setPreviewUrls((prev) => {
         for (const u of Object.values(prev)) URL.revokeObjectURL(u)
         return {}
       })
     }
-  }, [load])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur kinds / compact-Wechsel
+  }, [kindsKey, p.compact, loadVisible])
 
   const byKind = useMemo(() => {
     const map = new Map<MorgMediaKind, MorgMediaListItem[]>()
@@ -136,12 +168,12 @@ export function ChatViewMediaGallery(p: ChatViewMediaGalleryProps) {
       p.onStatus?.('Keine Medien ausgewählt.')
       return
     }
-    const { count } = await downloadMorgMediaListItems(items, ids)
-    p.onStatus?.(
-      count > 0
-        ? `${count} Datei(en) gespeichert (Browser ggf. Mehrfach-Downloads erlauben).`
-        : 'Nichts gespeichert.'
-    )
+    try {
+      const { count } = await downloadMorgMediaListItems(items, ids)
+      p.onStatus?.(count ? `${count} Datei(en) gespeichert.` : 'Nichts gespeichert.')
+    } catch (e) {
+      p.onStatus?.(e instanceof Error ? e.message : String(e))
+    }
   }
 
   const zipSelected = async () => {
@@ -150,108 +182,102 @@ export function ChatViewMediaGallery(p: ChatViewMediaGalleryProps) {
       p.onStatus?.('Keine Medien ausgewählt.')
       return
     }
-    const { count } = await downloadMorgMediaZipFromItems(items, ids)
-    p.onStatus?.(count > 0 ? `ZIP mit ${count} Datei(en).` : 'ZIP leer.')
+    try {
+      const { count } = await downloadMorgMediaZipFromItems(items, ids)
+      p.onStatus?.(count ? `Medien-ZIP: ${count} Datei(en).` : 'ZIP leer.')
+    } catch (e) {
+      p.onStatus?.(e instanceof Error ? e.message : String(e))
+    }
   }
 
-  if (loading) {
-    return <p className="text-xs text-muted-foreground">Medien werden geladen…</p>
-  }
-  if (error) {
-    return <p className="text-xs text-destructive">{error}</p>
-  }
-  if (items.length === 0) {
-    return (
-      <p className="text-xs text-muted-foreground">
-        Keine MORG-Medien in diesen Nachrichten (Telegram-Server-Medien fehlen hier).
-      </p>
-    )
+  if (p.compact && items.length === 0 && !loading && !error) {
+    return <p className="text-xs text-muted-foreground">Keine MORG-Medien in dieser Auswahl.</p>
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" size="sm" variant="outline" onClick={selectAll}>
-          Alle
+        {p.loadMessages ? (
+          <Button type="button" size="sm" variant="outline" disabled={loading} onClick={() => void loadFull()}>
+            {loading ? 'Lädt…' : 'Gesamten Verlauf scannen'}
+          </Button>
+        ) : null}
+        <Button type="button" size="sm" variant="ghost" disabled={loading} onClick={() => void loadVisible()}>
+          Sichtbare neu
         </Button>
-        <Button type="button" size="sm" variant="outline" onClick={selectNone}>
-          Keine
-        </Button>
-        <span className="text-[11px] text-muted-foreground">
-          {selectedCount}/{items.length} gewählt
-        </span>
+        {scanNote ? <span className="text-[10px] text-muted-foreground">{scanNote}</span> : null}
       </div>
-
-      <div className={p.compact ? 'max-h-48 space-y-3 overflow-y-auto' : 'max-h-72 space-y-4 overflow-y-auto'}>
-        {KIND_SECTIONS.map(({ kind, title }) => {
-          const section = byKind.get(kind)
-          if (!section?.length) return null
-          return (
-            <div key={kind}>
-              <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {title} ({section.length})
-              </p>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {section.map((it) => {
-                  const preview = previewUrls[it.id]
-                  return (
-                    <label
-                      key={it.id}
-                      className="flex cursor-pointer flex-col gap-1 rounded-md border border-border bg-muted/15 p-1.5 hover:bg-muted/30"
-                    >
-                      <span className="flex items-start gap-1.5">
-                        <input
-                          type="checkbox"
-                          className="mt-0.5"
-                          checked={selected.has(it.id)}
-                          onChange={() => toggle(it.id)}
-                        />
-                        <span className="min-w-0 flex-1 truncate text-[10px] font-medium text-foreground">
-                          {it.filename}
-                        </span>
-                      </span>
-                      {preview ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={preview}
-                          alt=""
-                          className="h-20 w-full rounded object-cover bg-muted"
-                        />
-                      ) : (
-                        <span className="flex h-14 items-center justify-center rounded bg-muted/40 text-[10px] text-muted-foreground">
-                          {it.kind === 'audio' ? '♪ Audio' : it.kind === 'file' || it.kind === 'text' ? '📄' : 'Datei'}{' '}
-                          · {it.sizeLabel}
-                        </span>
-                      )}
-                      <span className="text-[9px] text-muted-foreground">{it.sizeLabel}</span>
-                    </label>
-                  )
-                })}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      <div className="grid gap-2">
-        <Button
-          type="button"
-          size="sm"
-          disabled={selectedCount === 0}
-          onClick={() => void saveSelected()}
-        >
-          Ausgewählte speichern ({selectedCount})
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          disabled={selectedCount === 0}
-          onClick={() => void zipSelected()}
-        >
-          Ausgewählte als ZIP
-        </Button>
-      </div>
+      {loading ? <p className="text-xs text-muted-foreground">Medien werden gelesen…</p> : null}
+      {error ? <p className="text-xs text-amber-800 dark:text-amber-200">{error}</p> : null}
+      {!loading && items.length > 0 ? (
+        <>
+          <div className="flex flex-wrap gap-1.5">
+            <Button type="button" size="sm" variant="outline" onClick={selectAll}>
+              Alle ({items.length})
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={selectNone}>
+              Keine
+            </Button>
+            <Button type="button" size="sm" disabled={selectedCount === 0} onClick={() => void saveSelected()}>
+              Speichern ({selectedCount})
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={selectedCount === 0}
+              onClick={() => void zipSelected()}
+            >
+              ZIP ({selectedCount})
+            </Button>
+          </div>
+          <div className="max-h-48 space-y-2 overflow-y-auto">
+            {KIND_SECTIONS.map(({ kind, title }) => {
+              const group = byKind.get(kind)
+              if (!group?.length) return null
+              return (
+                <div key={kind}>
+                  <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    {title} ({group.length})
+                  </p>
+                  <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+                    {group.map((it) => {
+                      const checked = selected.has(it.id)
+                      const preview = previewUrls[it.id]
+                      return (
+                        <label
+                          key={it.id}
+                          className="flex cursor-pointer flex-col gap-1 rounded-md border border-border bg-muted/15 p-1.5 hover:bg-muted/30"
+                        >
+                          <span className="flex items-start gap-1">
+                            <input
+                              type="checkbox"
+                              className="mt-0.5"
+                              checked={checked}
+                              onChange={() => toggle(it.id)}
+                            />
+                            <span className="min-w-0 flex-1 truncate text-[10px] leading-tight text-foreground">
+                              {it.filename}
+                            </span>
+                          </span>
+                          {preview ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={preview} alt="" className="h-14 w-full rounded object-cover" />
+                          ) : (
+                            <span className="flex h-14 items-center justify-center rounded bg-muted/40 text-[10px] text-muted-foreground">
+                              {it.kind} · {it.sizeLabel}
+                            </span>
+                          )}
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      ) : null}
     </div>
   )
 }

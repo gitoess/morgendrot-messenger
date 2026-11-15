@@ -474,6 +474,12 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     ]
   )
 
+  /** Stabil — sonst Media-Galerie → useEffect-Schleife (Sidebar „spinnt“). */
+  const loadMessagesForMediaExport = useCallback(
+    () => messagesForExport({ scope: 'all' }),
+    [messagesForExport]
+  )
+
   const {
     onExportEinsatzberichtJson,
     onExportEinsatzberichtTxt,
@@ -705,7 +711,7 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     onExportMorgMediaZip,
     onExportMorgMediaDirect,
     messagesForExport,
-    loadMessagesForMediaExport: () => messagesForExport({ scope: 'all' }),
+    loadMessagesForMediaExport,
   }
 }
 
