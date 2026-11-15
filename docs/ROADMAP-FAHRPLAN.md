@@ -41,6 +41,8 @@
 
 **Nachtrag 2026-11-13 (Agent-Lücken + gemeinsames Retest am Schluss):** Mobile Posteingang **Optionen→Chat** wieder verdrahtet; Badges **PWMSG/NFT-Gate** filtern wie **Verschlüsselt**; Composer zeigt **Dieses NFT verleihen…** auch ohne aufgeklapptes Privacy-Panel. Agent prüft T23/T33/T41/T32 soweit Unit/UI allein möglich. **Gemeinsames Live-Retest (T3/T4/T36/T38 + T23/T33/T41/T32-Checklisten) bewusst am Schluss dieses Durchgangs** — nicht als Zwischenstopp.
 
+**Nachtrag 2026-11-15 (`.morg-pkg` Hash/Anker):** Idee **T57** kritisch bewertet — **User: lassen / nicht bauen**. ECDH reicht für Sneakernet. **Größe:** Soft-Limit Klartext Default **512 KiB** (Env bis ~**4 MiB**) — kein Krypto-Hardcap, sondern Speicher/JSON/Browser.
+
 **Nachtrag 2026-11-13 (Boss-Header Peer-Switch):** In **Nachrichten** Header-Schalter **Einsatzleitung** (Titel „Nachrichten“ weg); in **Einsatzleitung** Schalter **Nachrichten**. Move-Probe toleriert Record-`exposedFunctions` (kein `.map`-Crash). Handbuch Move-Upgrade-Ort = Settings→IOTA.
 
 **Nachtrag 2026-11-13 (Sicherheit/Konsistenz weiter):** Move-Upgrade-Panel nur Boss/Kommandant; Settings-Header Sprünge Nachrichten+Einsatzleitung; Move-Probe-Fehler nur ~30s cachen; Docs (UpgradeCap, Burn-on-read, Gruppe-Verwalten) an Ist.
@@ -2667,7 +2669,7 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 2. **Agent allein (Ist):** Layout/UX + Mobile Optionen→Chat + Badge-Filter PWMSG/NFT-Gate + Zeitkapsel-Verleihen-CTA; Unit + eigener Browser-Smoke.  
 3. **Gemeinsame Rituale — am Schluss dieses Durchgangs (ein Block):** Live **T3** (done 2026-11-15) → **T36/T38** **und** Checklisten **T23/T33/T41** + **T32**. **T4 Schatten** bewusst später (2. Account / Multi-Profil).  
 4. **Backlog (überdenken, nicht jetzt bauen):** **T56** Komplett-alles-löschen; **T39** Beweis-Paket  
-5. **Dann am Ende:** Ideen **T39–T54** priorisieren  
+5. **Dann am Ende:** Ideen **T39–T54** priorisieren (**T57** verworfen 2026-11-15)  
 6. **Später (nicht blockierend):** T45 · T47 · T51 · T52 · T53  
 7. **Explizit nicht im Messenger-Durchgang:** Abo-NFT-Verkaufsstory, PlanRadar-App, Zapier-Store, TG-Gerichts-Vollforensik
 
@@ -2743,6 +2745,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T56 | **Komplett-alles-löschen** | Feature/UX | **Backlog — überdenken** | Ein Wizard: Gerät + Chain-Tresor + Vault-Datei + Telegram + optional NFT/Keys brennen. Ehrliche Grenzen (fremde Kopien, TG-Server, .env). Nicht als ein blinder Knopf ohne Checkliste. Siehe `NOTFALL-PURGE-MESSENGER.md` |
 | T54 | **Seed / Passwort SPOF** | Sicherheit/Doku | fortlaufend | Mnemonic = Identität/Coins; Vault-PW = Tresor-Inhalt; beides offline sichern; Ordner `.morgendrot-*` / Sidecar / `.env` = Gerät+Backup, nicht „Cloud = sicher“ |
 | T39 | **Telegram↔IOTA Beweis** | Produkt | später / gemeinsam am Ende | Export-JSON enthält Journal-Felder (chatId/Richtung); Beweis-Paket = JSON + SHA-256 (+ optional Chain). Kein TG-Vollforensik/Medien. Mit User am Roadmap-Ende priorisieren |
+| T57 | **`.morg-pkg` Hash / Signatur / optionaler Chain-Anker** | Forensik/Sneakernet | **verworfen 2026-11-15** | User: nicht bauen. ECDH reicht; bei Bedarf später neu bewerten. |
 | T55 | **Optionen-Hub Online** | UX | **done 2026-11-12** | Wire · Hash · Export · Decrypt-JSON · pkg getrennt; Hash nur Optionen. Notizen-Button 1× (Posteingang) |
 | T40 | **Magnet/Haptik** | Entscheidung 2026-11-12 | erledigt | Default **aus**; optional lassen. Nicht weiter aufblasen — Affordance statt Pseudo-Wii |
 | T41 | **Klickbarkeit ohne Magnet** | UX | **done; Kurz-Retest mit T23/T33** | Badge Eingang/Ausgang/Verschl. → Listenfilter; Composer unverändert |
@@ -2758,6 +2761,10 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T51 | **Abo/Credits (nicht „NFT verkaufen“)** | Produkt/Recht | nach SaaS-Split | Euro-Abo + Server-Kontingent + Gas-Tank; optional Soulbound-Ausweis on-chain — Nutzer sieht „Pro / Restpunkte“, nie Börsen-NFT |
 | T52 | **PlanRadar / Baustellen-API** | Integration | nach T45/T48 | Webhook Ticket→Beweis-Hash oder Export Ticket+Hash; Pro/Enterprise nötig — nicht Kern-Messenger |
 | T53 | **Einstellungen-Lücken vs Telegram** | UX | mit T12 | Benachrichtigungen (Preview an/aus), Stumm pro Chat, Medien-Auto-Download, App-Sperre/Biometrie, Archiv/Pin, Lesebestätigung ehrlich (T46); TG-Tab: nur Bot/Alarm/Notify — keine TG-Privacy-Kopie |
+
+### T57 — `.morg-pkg` Hash/Anker — **verworfen 2026-11-15**
+
+Nicht umsetzen. Bei späterem Bedarf neu spezifizieren (nur Ciphertext-Hash, nie Paket-Body on-chain).
 
 **Nicht** parallel zu Session C / Zeitkapsel-Feldtest starten.
 

@@ -37,6 +37,7 @@ import {
 import { buildContactInfoSections } from '@/frontend/lib/messenger-entity-info-model'
 import { CONTACT_PHONEBOOK_META_CHANGED_EVENT, readContactNotes } from '@/frontend/lib/contact-phonebook-meta-store'
 import { TechnicalIdRow, TechnicalIdSection } from '@/frontend/components/technical-id-row'
+import { ChatViewMediaGallery } from '@/frontend/components/chat-view-media-gallery'
 
 export type ChatViewContactDetailDialogProps = {
   open: boolean
@@ -339,13 +340,6 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
             {conversationMessages.length}{' '}
             {conversationMessages.length === 1 ? 'Nachricht' : 'Nachrichten'} in diesem 1:1-Verlauf.
           </p>
-          <ConversationPhotoThumbnails
-            messages={conversationMessages}
-            onOpenMessage={(id) => {
-              p.onFocusMessage?.(id)
-              p.onOpenChange(false)
-            }}
-          />
           <MediaStatsPanel
             stats={mediaStats}
             textCount={textCount}
@@ -361,6 +355,7 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
                 : undefined
             }
           />
+          <ChatViewMediaGallery messages={[...conversationMessages]} compact />
         </section>
 
         <section className="border-t border-border pt-4">

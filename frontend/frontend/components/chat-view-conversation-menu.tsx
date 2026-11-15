@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Download, Eraser, Flame, FlaskConical, Info, KeyRound, MoreVertical, Settings2, Users } from 'lucide-react'
+import { Eraser, Flame, FlaskConical, Info, KeyRound, MoreVertical, Settings2, Users } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -95,21 +95,6 @@ export function ChatConversationMenuItems(p: ChatViewConversationMenuProps) {
           Info
         </DropdownMenuItem>
       )}
-
-      <DropdownMenuItem
-        disabled={!p.onExportHistory || !p.canExport}
-        title={
-          !p.onExportHistory
-            ? 'Export hier nicht angebunden'
-            : !p.canExport
-              ? 'Keine Nachrichten zum Export'
-              : undefined
-        }
-        onSelect={() => p.onExportHistory?.()}
-      >
-        <Download className="mr-2 h-4 w-4" />
-        Verlauf exportieren
-      </DropdownMenuItem>
 
       {chainSecurity ? (
         <>

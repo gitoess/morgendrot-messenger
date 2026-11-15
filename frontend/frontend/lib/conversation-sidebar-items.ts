@@ -191,8 +191,8 @@ export function buildConversationSidebarTelegramAlarm(
     key: 'telegram-alarm:membership',
     displayName: label,
     subtitle: membership.groupChatId
-      ? `Telegram · beigetreten · ${membership.groupChatId}`
-      : 'Telegram · beigetreten · Hinweise in der Telegram-App',
+      ? `Telegram · Alarmgruppe · ${membership.groupChatId}`
+      : 'Telegram · Alarmgruppe',
     inviteLink: membership.inviteLink.trim(),
     groupChatId: membership.groupChatId?.trim() || undefined,
   }

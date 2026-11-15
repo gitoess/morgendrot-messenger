@@ -91,7 +91,7 @@ export function ChatViewInboxPackageExpertMenu(p: ChatViewInboxPackageExpertMenu
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[min(100vw-2rem,20rem)]">
         <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-          IOTA-Vertrag (Move Package-ID)
+          IOTA-Vertrag (Move Package-ID) — filtert den Posteingang
         </DropdownMenuLabel>
         <p className="px-2 pb-2 text-[10px] leading-snug text-muted-foreground">
           Die <strong className="text-foreground">0x…-Zahl</strong> ist die On-Chain-Programm-ID (Smart Contract),

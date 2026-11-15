@@ -303,14 +303,16 @@ export type ChatViewInboxActionsSlice = {
 
 export type ChatViewInboxExportActionsSlice = {
   exportEcdhMorgPkgForMessage: (msg: Message) => void | Promise<void>
-  onExportEinsatzberichtJson: () => void
-  onExportEinsatzberichtTxt: () => void
-  onExportEinsatzberichtTxtFull: () => void
+  onExportEinsatzberichtJson: InboxExportActionsPort['onExportEinsatzberichtJson']
+  onExportEinsatzberichtTxt: InboxExportActionsPort['onExportEinsatzberichtTxt']
+  onExportEinsatzberichtTxtFull: InboxExportActionsPort['onExportEinsatzberichtTxtFull']
   onExportEinsatzberichtEncrypted: () => void | Promise<void>
-  onExportEinsatzprotokoll: () => void | Promise<void>
-  onExportEinsatzprotokollPlainZip: () => void | Promise<void>
+  onExportEinsatzprotokoll: InboxExportActionsPort['onExportEinsatzprotokoll']
+  onExportEinsatzprotokollPlainZip: InboxExportActionsPort['onExportEinsatzprotokollPlainZip']
   onExportEinsatzprotokollMarked: () => void | Promise<void>
   onExportMorgMediaZip: InboxExportActionsPort['onExportMorgMediaZip']
+  onExportMorgMediaDirect: InboxExportActionsPort['onExportMorgMediaDirect']
+  loadMessagesForMediaExport?: () => Promise<Message[]>
 }
 
 export type ChatViewPackageExpertSlice = {

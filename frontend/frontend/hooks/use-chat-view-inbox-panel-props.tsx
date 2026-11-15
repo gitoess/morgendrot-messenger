@@ -204,6 +204,8 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
     onExportEinsatzprotokollPlainZip: inboxExportActions.onExportEinsatzprotokollPlainZip,
     onExportEinsatzprotokollMarked: inboxExportActions.onExportEinsatzprotokollMarked,
     onExportMorgMediaZip: inboxExportActions.onExportMorgMediaZip,
+    onExportMorgMediaDirect: inboxExportActions.onExportMorgMediaDirect,
+    loadMessagesForMediaExport: inboxExportActions.loadMessagesForMediaExport,
     protokollMarkedCount: inboxViewUi.protokollMarkedIds.size,
     onHideInboxMessageLocal: inboxActions.onHideInboxMessageLocal,
     onPurgeInboxMessageChain: inboxActions.onPurgeInboxMessageChain,

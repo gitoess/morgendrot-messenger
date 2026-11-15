@@ -109,7 +109,8 @@ describe('buildConversationSidebarTelegramAlarm', () => {
     })
     expect(item?.kind).toBe('telegram-alarm')
     expect(item?.displayName).toBe('Einsatz TG')
-    expect(item?.subtitle).toContain('beigetreten')
+    expect(item?.subtitle).toContain('Alarmgruppe')
+    expect(item?.subtitle).toContain('-100123')
   })
 
   it('liefert null ohne Einladungslink', () => {

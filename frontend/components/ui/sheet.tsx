@@ -71,6 +71,18 @@ function SheetOverlay({
   )
 }
 
+const sheetCloseBtnClass =
+  'ring-offset-background focus:ring-ring flex h-9 w-9 shrink-0 items-center justify-center rounded-md opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden pointer-events-auto disabled:pointer-events-none'
+
+function SheetCloseButton() {
+  return (
+    <SheetPrimitive.Close type="button" data-slot="sheet-close" className={sheetCloseBtnClass}>
+      <XIcon className="size-4" />
+      <span className="sr-only">Schließen</span>
+    </SheetPrimitive.Close>
+  )
+}
+
 function SheetContent({
   className,
   children,
@@ -81,21 +93,28 @@ function SheetContent({
 }) {
   const nativeCtx = React.useContext(NativeOverlayOpenContext)
 
+  const stripped = className?.replace(/\boverflow-y-auto\b/g, '').replace(/\boverflow-auto\b/g, '')
+
+  const body = (
+    <>
+      <div className="flex shrink-0 justify-end">
+        <SheetCloseButton />
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+    </>
+  )
+
   const panelClassName = cn(
-    'bg-background flex flex-col gap-4 border p-4 shadow-lg',
-    'max-h-[min(92vh,720px)] overflow-y-auto',
-    className,
+    'bg-background relative flex flex-col gap-3 border p-4 shadow-lg',
+    'max-h-[min(92vh,720px)]',
+    stripped,
   )
 
   if (nativeCtx.useShell) {
     const placement = side === 'top' ? 'center' : 'bottom'
     return (
       <NativeModalShell open={nativeCtx.open} enabled placement={placement} panelClassName={panelClassName}>
-        {children}
-        <SheetPrimitive.Close className="ring-offset-background focus:ring-ring absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
-          <XIcon className="size-4" />
-          <span className="sr-only">Close</span>
-        </SheetPrimitive.Close>
+        {body}
       </NativeModalShell>
     )
   }
@@ -106,7 +125,7 @@ function SheetContent({
       <SheetPrimitive.Content
         data-slot="sheet-content"
         className={cn(
-          'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-4 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
+          'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-50 flex flex-col gap-3 shadow-lg transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500',
           side === 'right' &&
             'data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right inset-y-0 right-0 h-full w-3/4 border-l sm:max-w-sm',
           side === 'left' &&
@@ -115,15 +134,12 @@ function SheetContent({
             'data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top inset-x-0 top-0 h-auto border-b',
           side === 'bottom' &&
             'data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom inset-x-0 bottom-0 h-auto border-t',
-          className,
+          'p-4',
+          stripped,
         )}
         {...props}
       >
-        {children}
-        <SheetPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
-          <XIcon className="size-4" />
-          <span className="sr-only">Close</span>
-        </SheetPrimitive.Close>
+        {body}
       </SheetPrimitive.Content>
     </SheetPortal>
   )

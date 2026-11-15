@@ -9,14 +9,20 @@ export type MorgPkgExportPartnerOption = {
 
 export function buildMorgPkgExportPartnerOptions(
   connectedAddresses: string[] | undefined,
-  contactDirectory: Record<string, ContactMeshEntryClient>
+  contactDirectory: Record<string, ContactMeshEntryClient>,
+  /** Eigene Adresse auslassen — Paket geht an den Partner (ECDH mit dessen Pubkey). */
+  myAddress?: string
 ): MorgPkgExportPartnerOption[] {
-  const addrs = (connectedAddresses ?? []).map((a) => a.trim()).filter((a) => /^0x[a-fA-F0-9]{64}$/i.test(a))
+  const my = (myAddress ?? '').trim().toLowerCase()
+  const addrs = (connectedAddresses ?? [])
+    .map((a) => a.trim())
+    .filter((a) => /^0x[a-fA-F0-9]{64}$/i.test(a))
   const seen = new Set<string>()
   const out: MorgPkgExportPartnerOption[] = []
   for (const address of addrs) {
     const key = address.toLowerCase()
     if (seen.has(key)) continue
+    if (my && key === my) continue
     seen.add(key)
     const name = contactDisplayLabel(contactDirectory, address)
     out.push({

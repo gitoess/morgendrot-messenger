@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
-import { BookUser, Info, Megaphone, MessageCircle, Settings2, User, Users } from 'lucide-react'
+import { BookUser, Megaphone, MessageCircle, MoreVertical, Settings2, User, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { InboxPartnerOption } from '@/frontend/components/chat-view-inbox-partner-strip'
@@ -143,7 +143,7 @@ function SidebarRow(p: {
             p.onOpenMore?.()
           }}
         >
-          <Info className="h-4 w-4" aria-hidden />
+          <MoreVertical className="h-4 w-4" aria-hidden />
         </button>
       ) : null}
     </div>

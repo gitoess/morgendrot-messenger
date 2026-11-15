@@ -63,6 +63,7 @@ import {
   ChatConversationMenuItems,
   type ChatViewConversationMenuProps,
 } from '@/frontend/components/chat-view-conversation-menu'
+import { ChatViewMediaGallery } from '@/frontend/components/chat-view-media-gallery'
 
 const DEFAULT_PATH_TOOLS = inboxToolbarToolsForSendPath({
   activeSendPath: 'internet',
@@ -88,14 +89,47 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   apiStatus: ApiStatus | null
   onRefresh: () => void
   loading: boolean
-  onExportEinsatzberichtJson: () => void
-  onExportEinsatzberichtTxt: () => void
-  onExportEinsatzberichtTxtFull: () => void
+  onExportEinsatzberichtJson: (opts?: {
+    scope?: 'all' | 'visibleChat'
+    contentMode?: 'asStored' | 'plaintextOnly' | 'redactEncrypted'
+  }) => void | Promise<void>
+  onExportEinsatzberichtTxt: (opts?: {
+    scope?: 'all' | 'visibleChat'
+    contentMode?: 'asStored' | 'plaintextOnly' | 'redactEncrypted'
+  }) => void | Promise<void>
+  onExportEinsatzberichtTxtFull: (opts?: {
+    scope?: 'all' | 'visibleChat'
+    contentMode?: 'asStored' | 'plaintextOnly' | 'redactEncrypted'
+  }) => void | Promise<void>
   onExportEinsatzberichtEncrypted: () => void | Promise<void>
-  onExportEinsatzprotokoll: () => void | Promise<void>
-  onExportEinsatzprotokollPlainZip: () => void | Promise<void>
+  /** Vollständigen Verlauf für Medien-Galerie laden. */
+  loadMessagesForMediaExport?: () => Promise<import('@/frontend/lib/types').Message[]>
+  onExportEinsatzprotokoll: (kinds?: {
+    audio?: boolean
+    photo?: boolean
+    image?: boolean
+    file?: boolean
+    text?: boolean
+    slide?: boolean
+  }) => void | Promise<void>
+  onExportEinsatzprotokollPlainZip: (kinds?: {
+    audio?: boolean
+    photo?: boolean
+    image?: boolean
+    file?: boolean
+    text?: boolean
+    slide?: boolean
+  }) => void | Promise<void>
   onExportEinsatzprotokollMarked: () => void | Promise<void>
   onExportMorgMediaZip: (kinds: {
+    audio?: boolean
+    photo?: boolean
+    image?: boolean
+    file?: boolean
+    text?: boolean
+    slide?: boolean
+  }) => void | Promise<void>
+  onExportMorgMediaDirect: (kinds: {
     audio?: boolean
     photo?: boolean
     image?: boolean
@@ -209,6 +243,8 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     onExportEinsatzprotokollPlainZip,
     onExportEinsatzprotokollMarked,
     onExportMorgMediaZip,
+    onExportMorgMediaDirect,
+    loadMessagesForMediaExport,
     protokollMarkedCount,
     messages,
     myAddress,
@@ -263,12 +299,15 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
   const [exportHistoryOpen, setExportHistoryOpen] = useState(false)
   const [mediaKinds, setMediaKinds] = useState({
     audio: true,
-    photo: true,
     image: true,
     file: true,
     text: false,
     slide: true,
   })
+  const [exportScope, setExportScope] = useState<'all' | 'visibleChat'>('all')
+  const [exportContentMode, setExportContentMode] = useState<
+    'asStored' | 'plaintextOnly' | 'redactEncrypted'
+  >('asStored')
   const [pkgToolsOpen, setPkgToolsOpen] = useState(false)
   const [hashToolsOpen, setHashToolsOpen] = useState(false)
   const pkgImportDisabled = morgPkgImportDisabled(apiStatus)
@@ -478,9 +517,8 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               <DialogHeader>
                 <DialogTitle>Nachrichtenverlauf exportieren</DialogTitle>
                 <DialogDescription>
-                  JSON/Text: Journal-Felder (Text, Chat-ID, Richtung) — keine Telegram-Medien. Medien aus dem
-                  Chat (MORG-Bilder/Audio im Wire): ZIP Klartext oder ZIP+HTML → Ordner medien/. Beweis: Datei
-                  speichern → Optionen → Hash &amp; Prüfen.
+                  Standard: gesamter Posteingang (alle Mailboxen + Telegram-Journal). Passphrase-Nachrichten
+                  werden freigeschaltet, wenn die Passphrase lokal gemerkt ist — sonst Wire. Optionen unten.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-3 text-sm">
@@ -489,33 +527,103 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     ? exportDenied
                     : exportEmpty
                       ? 'Keine Nachrichten geladen — zuerst „Aktualisieren“ oben neben Tresor. Telegram braucht Bot + Chat-ID im Telefonbuch.'
-                      : `${messageCount} Nachricht(en) bereit zum Export.`}
+                      : `${messageCount} Nachricht(en) in der Ansicht — Export lädt zusätzlich den vollständigen Verlauf.`}
                 </p>
+                <div className="space-y-1.5 rounded-md border border-border/60 bg-muted/15 px-2.5 py-2">
+                  <p className="text-[11px] font-medium text-foreground">Umfang</p>
+                  <label className="flex items-center gap-2 text-xs">
+                    <input
+                      type="radio"
+                      name="export-scope"
+                      checked={exportScope === 'all'}
+                      onChange={() => setExportScope('all')}
+                    />
+                    Gesamter Posteingang
+                  </label>
+                  <label className="flex items-center gap-2 text-xs">
+                    <input
+                      type="radio"
+                      name="export-scope"
+                      checked={exportScope === 'visibleChat'}
+                      onChange={() => setExportScope('visibleChat')}
+                    />
+                    Nur aktueller Chat (Filter)
+                  </label>
+                  <p className="pt-1 text-[11px] font-medium text-foreground">Verschlüsselung</p>
+                  <label className="flex items-center gap-2 text-xs">
+                    <input
+                      type="radio"
+                      name="export-enc"
+                      checked={exportContentMode === 'asStored'}
+                      onChange={() => setExportContentMode('asStored')}
+                    />
+                    Wie gespeichert (gemerkte Passphrase → Klartext, sonst Wire)
+                  </label>
+                  <label className="flex items-center gap-2 text-xs">
+                    <input
+                      type="radio"
+                      name="export-enc"
+                      checked={exportContentMode === 'plaintextOnly'}
+                      onChange={() => setExportContentMode('plaintextOnly')}
+                    />
+                    Nur Klartext (versiegelt weglassen)
+                  </label>
+                  <label className="flex items-center gap-2 text-xs">
+                    <input
+                      type="radio"
+                      name="export-enc"
+                      checked={exportContentMode === 'redactEncrypted'}
+                      onChange={() => setExportContentMode('redactEncrypted')}
+                    />
+                    Versiegelt als „[Verschlüsselt]“ (kein Unlock)
+                  </label>
+                </div>
                 <div className="grid gap-2">
                   <Button
                     type="button"
                     variant="default"
                     className="h-auto justify-start whitespace-normal py-2.5 text-left"
                     disabled={exportDisabled}
-                    onClick={() => runExportAndClose(() => onExportEinsatzberichtJson())}
+                    onClick={() =>
+                      runExportAndClose(() =>
+                        void onExportEinsatzberichtJson({
+                          scope: exportScope,
+                          contentMode: exportContentMode,
+                        })
+                      )
+                    }
                   >
-                    JSON (vollständig, Klartext)
+                    JSON (vollständig)
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
                     className="h-auto justify-start whitespace-normal py-2.5 text-left"
                     disabled={exportDisabled}
-                    onClick={() => runExportAndClose(() => void onExportEinsatzberichtTxtFull())}
+                    onClick={() =>
+                      runExportAndClose(() =>
+                        void onExportEinsatzberichtTxtFull({
+                          scope: exportScope,
+                          contentMode: exportContentMode,
+                        })
+                      )
+                    }
                   >
-                    Text (vollständig, Klartext)
+                    Text (vollständig)
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
                     className="h-auto justify-start whitespace-normal py-2.5 text-left"
                     disabled={exportDisabled}
-                    onClick={() => runExportAndClose(() => onExportEinsatzberichtTxt())}
+                    onClick={() =>
+                      runExportAndClose(() =>
+                        void onExportEinsatzberichtTxt({
+                          scope: exportScope,
+                          contentMode: exportContentMode,
+                        })
+                      )
+                    }
                   >
                     Text kurz (~200 Zeichen)
                   </Button>
@@ -532,14 +640,14 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 </div>
                 <div className="grid gap-2 border-t border-border pt-3">
                   <p className="text-[11px] font-medium text-muted-foreground">
-                    ZIP — Text + Medien (Optionen → Export Nachrichtenverlauf…)
+                    ZIP — Text + Medien (Auswahl der Arten unten gilt auch hier)
                   </p>
                   <Button
                     type="button"
                     variant="outline"
                     className="h-auto justify-start whitespace-normal py-2 text-left"
                     disabled={exportDisabled}
-                    onClick={() => runExportAndClose(() => void onExportEinsatzprotokoll())}
+                    onClick={() => runExportAndClose(() => void onExportEinsatzprotokoll(mediaKinds))}
                   >
                     Text mit Medien (ZIP+HTML, verschlüsselt)
                   </Button>
@@ -548,7 +656,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     variant="outline"
                     className="h-auto justify-start whitespace-normal py-2 text-left"
                     disabled={exportDisabled}
-                    onClick={() => runExportAndClose(() => void onExportEinsatzprotokollPlainZip())}
+                    onClick={() => runExportAndClose(() => void onExportEinsatzprotokollPlainZip(mediaKinds))}
                   >
                     Text mit Medien (ZIP Klartext, inkl. medien/)
                   </Button>
@@ -564,22 +672,21 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 </div>
                 <div className="grid gap-2 border-t border-border pt-3">
                   <p className="text-[11px] font-medium text-muted-foreground">
-                    Nur Medien / Dateien (MORG im Wire — keine Telegram-Server-Medien)
+                    Medien — Galerie (MORG im Wire; Telegram-Server-Fotos/-Audio fehlen)
                   </p>
-                  <div className="flex flex-wrap gap-2 text-[11px]">
+                  <div className="grid gap-1.5 text-[11px] sm:grid-cols-2">
                     {(
                       [
+                        ['image', 'Bilder (Online + Funk)'],
                         ['audio', 'Audio'],
-                        ['photo', 'Foto'],
-                        ['image', 'Bild'],
-                        ['file', 'Datei'],
-                        ['slide', 'Slide'],
-                        ['text', 'Text-Anhang'],
+                        ['file', 'Dateien'],
+                        ['text', 'Text-Anhänge'],
+                        ['slide', 'Slides'],
                       ] as const
                     ).map(([id, label]) => (
                       <label
                         key={id}
-                        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/20 px-2 py-1"
+                        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/20 px-2 py-1.5"
                       >
                         <input
                           type="checkbox"
@@ -592,25 +699,24 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                       </label>
                     ))}
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-auto justify-start whitespace-normal py-2 text-left"
-                    disabled={
-                      exportDisabled ||
-                      !(
-                        mediaKinds.audio ||
-                        mediaKinds.photo ||
-                        mediaKinds.image ||
-                        mediaKinds.file ||
-                        mediaKinds.slide ||
-                        mediaKinds.text
-                      )
-                    }
-                    onClick={() => runExportAndClose(() => void onExportMorgMediaZip(mediaKinds))}
-                  >
-                    Nur Medien exportieren (ZIP)
-                  </Button>
+                  <p className="text-[10px] text-muted-foreground">
+                    Audio/Bilder nur, wenn MORG-Wire im Verlauf liegt (nicht Telegram-Cloud). Passphrase-Medien
+                    erscheinen nach lokalem Freischalten.
+                  </p>
+                  {exportDisabled ? (
+                    <p className="text-xs text-muted-foreground">Keine Nachrichten geladen.</p>
+                  ) : (
+                    <ChatViewMediaGallery
+                      messages={messages}
+                      loadMessages={loadMessagesForMediaExport}
+                      kinds={mediaKinds}
+                      onStatus={(msg) => {
+                        setStatus('success')
+                        setStatusMsg(msg)
+                        setTimeout(() => setStatus('idle'), 7000)
+                      }}
+                    />
+                  )}
                 </div>
                 {pathTools.showDecryptExport ? (
                   <div className="border-t border-border pt-3">
@@ -671,8 +777,8 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               <DialogHeader>
                 <DialogTitle>Hash &amp; Prüfen (SHA-256)</DialogTitle>
                 <DialogDescription>
-                  Lokal SHA-256 von Text oder Datei (z. B. Export-JSON). Nur hier unter Optionen — kein zweites
-                  Hash-Panel unter Sicherheit. Optional später Chain-Anker (T39).
+                  Lokal SHA-256 von Text oder Datei (z. B. Export-JSON oder `.morg-pkg`). Nur hier unter Optionen —
+                  kein zweites Hash-Panel unter Sicherheit.
                 </DialogDescription>
               </DialogHeader>
               <SettingsContentHashPanel />
@@ -684,15 +790,23 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               <DialogHeader>
                 <DialogTitle>Datei-Paket (.morg-pkg)</DialogTitle>
                 <DialogDescription>
-                  Offline-Datei-Archiv (.morg-pkg) für einen Partner. Das ist kein Posteingang-Filter und kein
-                  Sendemodus im Composer.
+                  Offline-Übergabe (USB/SD/AirDrop): Dateien werden für genau einen Handshake-Partner
+                  verschlüsselt (ECDH mit dessen IOTA-Pubkey) — kein Chain-Posteingang, kein Passwort.
+                  Mehrere Dateien in einem Paket ja; mehrere Empfänger = Paket je Partner neu erzeugen.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-3 text-sm">
+                <p className="rounded-md border border-border/70 bg-muted/25 px-2.5 py-2 text-[11px] text-muted-foreground">
+                  Partner = Connect/Handshake-Adresse unten. Nicht verwechseln:{' '}
+                  <span className="font-medium text-foreground">Package-ID</span> = Move-Vertrag (bei neuem Deploy
+                  neu). <span className="font-medium text-foreground">Mailbox-Objekt-ID</span> = Postfach on-chain
+                  (ändert sich mit dem Package). <span className="font-medium text-foreground">.morg-pkg</span> =
+                  lokale Datei für einen Partner — unabhängig von Package/Mailbox-IDs.
+                </p>
                 {morgPkgExportPartnerOptions.length > 0 && onMorgPkgExportRecipientChange ? (
                   <div className="space-y-1.5">
                     <label htmlFor="morg-pkg-export-recipient" className="text-xs font-medium text-foreground">
-                      Empfänger für Export
+                      Partner hier wählen (Pflicht für Export)
                     </label>
                     <select
                       id="morg-pkg-export-recipient"
@@ -709,10 +823,13 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                         </option>
                       ))}
                     </select>
+                    <p className="text-[11px] text-muted-foreground">
+                      Nur Connect/Handshake — ohne Pubkey keine Entschlüsselung beim Partner.
+                    </p>
                   </div>
                 ) : (
                   <p className="rounded-md border border-amber-600/35 bg-amber-500/10 px-2.5 py-2 text-xs text-amber-950 dark:text-amber-100">
-                    Export: zuerst Handshake/Connect — dann Empfänger wählbar.
+                    Zuerst Handshake/Connect mit dem Partner — dann erscheint die Adresse hier (nicht die eigene).
                   </p>
                 )}
                 <div className="grid gap-2">
@@ -720,13 +837,19 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     <Button
                       type="button"
                       variant="outline"
-                      className="justify-start"
+                      className="h-auto justify-start whitespace-normal py-2.5 text-left"
                       onClick={() => {
                         onOpenMorgPkgArchive()
                         setPkgToolsOpen(false)
                       }}
                     >
-                      Paket-Archiv{morgPkgImportCount > 0 ? ` (${morgPkgImportCount})` : ''}
+                      <span className="flex flex-col items-start gap-0.5">
+                        <span>Paket-Archiv{morgPkgImportCount > 0 ? ` (${morgPkgImportCount})` : ''}</span>
+                        <span className="text-[11px] font-normal text-muted-foreground">
+                          Lokal im Browser (session): importierte .morg-pkg-Inhalte öffnen/speichern — nicht der
+                          Chain-Posteingang.
+                        </span>
+                      </span>
                     </Button>
                   ) : null}
                   <Button
@@ -765,8 +888,16 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                       void onMorgPkgDeviceExportPick()
                     }}
                   >
-                    {morgPkgDeviceBusy ? 'Export: Paket wird gebaut…' : 'Export: Dateien → .morg-pkg'}
+                    {morgPkgDeviceBusy
+                      ? 'Paket wird gebaut…'
+                      : 'Dateien wählen → als .morg-pkg speichern'}
                   </Button>
+                  <p className="text-[11px] text-muted-foreground">
+                    Zuerst Dateiauswahl, dann Download der verschlüsselten .morg-pkg. Öffnen nur mit
+                    Handshake-Schlüssel des Partners — kein Passwort. Klartext-Budget ca.{' '}
+                    <span className="font-medium text-foreground">512 KiB</span> (Server-Env bis ~4 MiB) — Limit wegen
+                    Speicher/JSON im Browser, nicht wegen ECDH. Größer = mehrere Pakete.
+                  </p>
                 </div>
               </div>
             </DialogContent>

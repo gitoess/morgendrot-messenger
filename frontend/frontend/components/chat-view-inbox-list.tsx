@@ -52,6 +52,7 @@ import {
 import { SlideShowCrossfade } from '@/frontend/components/slide-show-crossfade'
 import type { ChatInboxRow } from '@/frontend/features/inbox/chat-view-inbox-rows'
 import { downloadSneakernetPackage } from '@/frontend/lib/sneakernet-export'
+import { downloadMorgMediaFilesDirect } from '@/frontend/lib/einsatzprotokoll-export'
 import type { Message } from '@/frontend/lib/types'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
@@ -767,13 +768,29 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                       Handoff importieren
                     </DropdownMenuItem>
                   ) : null}
+                  {(row.msg.content ?? '').includes('[[MORG_') ? (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        void downloadMorgMediaFilesDirect([row.msg]).then((r) => {
+                          if (r.count === 0) {
+                            toast.message('Keine dekodierbaren Medien in dieser Nachricht.')
+                            return
+                          }
+                          toast.success(`${r.count} Datei(en) gespeichert.`)
+                        })
+                      }}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Medien speichern
+                    </DropdownMenuItem>
+                  ) : null}
                   <DropdownMenuItem onClick={() => void exportEcdhMorgPkgForMessage(row.msg)}>
                     <Lock className="mr-2 h-4 w-4" />
-                    ECDH .morg-pkg speichern
+                    Für Partner verschlüsseln (.morg-pkg)
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => downloadSneakernetPackage(row.msg)}>
                     <Download className="mr-2 h-4 w-4" />
-                    JSON (Klartext-Snapshot)
+                    Klartext-JSON (ohne ECDH)
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

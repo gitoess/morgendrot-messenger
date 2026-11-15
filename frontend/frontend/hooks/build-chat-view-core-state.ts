@@ -311,6 +311,8 @@ export function buildChatViewCoreMessengerPorts(
       onExportEinsatzprotokollPlainZip: inbox.onExportEinsatzprotokollPlainZip,
       onExportEinsatzprotokollMarked: inbox.onExportEinsatzprotokollMarked,
       onExportMorgMediaZip: inbox.onExportMorgMediaZip,
+      onExportMorgMediaDirect: inbox.onExportMorgMediaDirect,
+      loadMessagesForMediaExport: inbox.loadMessagesForMediaExport,
     },
     packageExpert: {
       inboxPackageFilter: inbox.inboxPackageFilter,

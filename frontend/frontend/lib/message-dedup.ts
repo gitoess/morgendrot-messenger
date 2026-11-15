@@ -10,10 +10,24 @@ function isEncryptedPlaceholderContent(s: string): boolean {
   return s.trimStart().startsWith('[Verschlüsselt]')
 }
 
-/** Beim Dedup-Merge: echte Entschlüsselung vor Platzhalter, längerer Klartext sonst. */
+function looksLikeEncryptedWire(s: string): boolean {
+  const t = s.trim()
+  return (
+    t.startsWith('MORG_PWMSG_V1:') ||
+    t.startsWith('MORG_NFTGATE_V1:') ||
+    t.startsWith('[[MORG_ENV') ||
+    isEncryptedPlaceholderContent(t)
+  )
+}
+
+/** Beim Dedup-Merge: Klartext vor Wire/Platzhalter (Wire ist oft länger als Klartext). */
 export function pickMergedInboxContent(a: string, b: string): string {
   const aa = a ?? ''
   const bb = b ?? ''
+  const aWire = looksLikeEncryptedWire(aa)
+  const bWire = looksLikeEncryptedWire(bb)
+  if (aWire && !bWire) return bb
+  if (bWire && !aWire) return aa
   const aPh = isEncryptedPlaceholderContent(aa)
   const bPh = isEncryptedPlaceholderContent(bb)
   if (aPh && !bPh) return bb

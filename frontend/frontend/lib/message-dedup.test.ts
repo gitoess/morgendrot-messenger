@@ -76,6 +76,13 @@ describe('pickMergedInboxContent', () => {
       pickMergedInboxContent('[Verschlüsselt] x', 'Hallo')
     ).toBe('Hallo')
   })
+
+  it('wählt Klartext statt längerem Wire', () => {
+    const wire =
+      'MORG_PWMSG_V1:TU9SR1BXTVNHMQCyeyJzY2hlbWEiOiJtb3JnZW5kcm90LnBhc3NwaHJhc2UubXNnLnYxIn0='
+    expect(pickMergedInboxContent(wire, 'ok')).toBe('ok')
+    expect(pickMergedInboxContent('ok', wire)).toBe('ok')
+  })
 })
 
 describe('inboxMessageListSignature', () => {

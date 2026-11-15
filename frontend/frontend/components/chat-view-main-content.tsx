@@ -43,6 +43,7 @@ import { ChatViewNotesTabPanel } from '@/frontend/components/chat-view-notes-tab
 import { ChatViewContactSidebar } from '@/frontend/components/chat-view-contact-sidebar'
 import { ChatViewContactDetailDialog } from '@/frontend/components/chat-view-contact-detail-dialog'
 import { MessengerEntityInfoDialog } from '@/frontend/components/messenger-entity-info-dialog'
+import { ChatViewMediaGallery } from '@/frontend/components/chat-view-media-gallery'
 import { ChatViewMessengerSearch } from '@/frontend/components/chat-view-messenger-search'
 import { resolveContactSidebarDisplayName } from '@/frontend/lib/conversation-sidebar-items'
 import { readMessengerGroups } from '@/frontend/lib/messenger-group-store'
@@ -511,28 +512,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setRecipient('')
   }, [selectInboxConversationAll, setPartner, setRecipient])
 
-  const { sendPanelProps } = useChatViewSendPanelProps({
-    messengerPorts: panelMessengerPorts,
-    activeGroup,
-    expertTools: uiCaps.expertTools,
-    pinnwandBroadcastAddress: pinnwandCaps.broadcastAddress,
-    canPostToPinnwand: pinnwandCaps.canPost,
-    vaultBannerActions,
-    onOpenPhonebook:
-      (isPrivate || isGroup) && !showConversationSidebar ? () => setPhonebookOpen(true) : undefined,
-    onOpenGroupSettings: () => setGroupSettingsOpen(true),
-    activeConversation:
-      showConversationSidebar && (isPrivate || isGroup)
-        ? {
-            inboxPartnerKey: isPrivate ? inboxPartnerKey : null,
-            inboxConversationGroupId: isGroup ? inboxConversationGroupId : null,
-            inboxPartnerFiltersArmed,
-            directory,
-          }
-        : undefined,
-    onClearActiveDirectConversation: isPrivate ? clearActiveDirectConversation : undefined,
-  })
-
   const { encryptedPartnerPanelProps } = useChatViewEncryptedPartnerPanelProps({
     messengerPorts: panelMessengerPorts,
     activeGroupMemberAddresses: activeGroup?.memberAddresses,
@@ -747,6 +726,54 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       setTelegramIntegrationInfo(r)
     })
   }, [])
+
+  const onViewConversationInfo = useCallback(() => {
+    if (isGroup && inboxConversationGroupId) {
+      handleOpenGroupInfo()
+      return
+    }
+    if (telegramAlarmSelected) {
+      handleOpenTelegramAlarmInfo()
+      return
+    }
+    const peer =
+      (inboxPartnerKey && isValidRecipient0x(inboxPartnerKey) ? inboxPartnerKey : '') ||
+      [recipient, partner].map((s) => (s || '').trim()).find(isValidRecipient0x) ||
+      ''
+    if (peer) handleOpenContactDetail(peer)
+  }, [
+    isGroup,
+    inboxConversationGroupId,
+    telegramAlarmSelected,
+    inboxPartnerKey,
+    recipient,
+    partner,
+    handleOpenGroupInfo,
+    handleOpenTelegramAlarmInfo,
+    handleOpenContactDetail,
+  ])
+
+  const { sendPanelProps } = useChatViewSendPanelProps({
+    messengerPorts: panelMessengerPorts,
+    activeGroup,
+    expertTools: uiCaps.expertTools,
+    pinnwandBroadcastAddress: pinnwandCaps.broadcastAddress,
+    canPostToPinnwand: pinnwandCaps.canPost,
+    vaultBannerActions,
+    onOpenPhonebook:
+      (isPrivate || isGroup) && !showConversationSidebar ? () => setPhonebookOpen(true) : undefined,
+    onOpenGroupSettings: () => setGroupSettingsOpen(true),
+    activeConversation:
+      showConversationSidebar && (isPrivate || isGroup)
+        ? {
+            inboxPartnerKey: isPrivate ? inboxPartnerKey : null,
+            inboxConversationGroupId: isGroup ? inboxConversationGroupId : null,
+            inboxPartnerFiltersArmed,
+            directory,
+          }
+        : undefined,
+    onClearActiveDirectConversation: isPrivate ? clearActiveDirectConversation : undefined,
+  })
 
   const activeGroupForInfo = useMemo(() => {
     if (!inboxConversationGroupId) return null
@@ -1030,7 +1057,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const conversationMenuProps = useMemo((): ChatViewInboxPanelProps['conversationMenu'] => {
     if (!showConversationSidebar) return undefined
 
-    const exportHistory = () => panelMessengerPorts.inboxExportActions.onExportEinsatzberichtTxt()
     const clearHistory = () => panelMessengerPorts.inboxActions.onHideAllVisibleLocal()
     const chainSecurity = conversationMenuChainToolsVisible({
       activeSendPath,
@@ -1042,13 +1068,20 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           onEnabledChange: setBurnOnReadEnabled,
         }
       : undefined
+
+    const canOpenInfo = Boolean(
+      (isGroup && inboxConversationGroupId) ||
+        telegramAlarmSelected ||
+        (inboxPartnerKey && isValidRecipient0x(inboxPartnerKey)) ||
+        [recipient, partner].map((s) => (s || '').trim()).some(isValidRecipient0x)
+    )
+
     if (onPinnwandTab) {
       return {
         title: pinnwandSidebarLabel(role, apiStatus),
         subtitle: pinnwandCaps.canPost ? 'Team-Brett · posten erlaubt' : 'Team-Brett · nur Lesen',
         canClearHistory: false,
-        canExport: true,
-        onExportHistory: exportHistory,
+        canExport: false,
         onClearHistory: clearHistory,
         onCreateGroup: openGroupSettings,
         burnOnRead: burnToggle,
@@ -1062,11 +1095,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         title: hasActive ? (activeConversationTitle as string) : 'Gruppenchat',
         subtitle: hasActive ? activeConversationSubtitle : 'Gruppe wählen oder anlegen',
         canClearHistory: hasActive,
-        canExport: true,
-        onViewInfo: hasActive ? handleOpenGroupInfo : undefined,
+        canExport: false,
+        onViewInfo: canOpenInfo ? onViewConversationInfo : undefined,
         onManageGroup: openGroupSettings,
         onCreateGroup: openGroupSettings,
-        onExportHistory: exportHistory,
         onClearHistory: clearHistory,
         burnOnRead: burnToggle,
         showChainSecurityTools: chainSecurity,
@@ -1078,9 +1110,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         title: activeConversationTitle ?? 'Einsatz-Alarmgruppe',
         subtitle: activeConversationSubtitle,
         canClearHistory: false,
-        canExport: true,
-        onViewInfo: handleOpenTelegramAlarmInfo,
-        onExportHistory: exportHistory,
+        canExport: false,
+        onViewInfo: onViewConversationInfo,
         onClearHistory: clearHistory,
         onCreateGroup: openGroupSettings,
         burnOnRead: burnToggle,
@@ -1107,28 +1138,24 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           ? 'Partner gesetzt'
           : undefined
 
-    if (isPrivate && (composerDelivery === 'chain' || inboxPartnerFiltersArmed)) {
-      return {
-        title: partnerTitle,
-        subtitle: partnerSubtitle,
-        canClearHistory: true,
-        canExport: true,
-        onViewInfo: renewPeer ? () => handleOpenContactDetail(renewPeer) : undefined,
-        onExportHistory: exportHistory,
-        onClearHistory: clearHistory,
-        onCreateGroup: openGroupSettings,
-        onRenewEncryptionKeys:
-          chainSecurity && canRenew ? () => void handleRenewPeerEncryption(renewPeer) : undefined,
-        renewEncryptionLabel:
-          chainSecurity && canRenew ? `Schlüssel erneuern (Epoch ${epoch || 1})` : undefined,
-        renewEncryptionHint:
-          'Session-Epoch erhöhen — Forward Secrecy ab Rotation (nicht pro Nachricht). Alte Nachrichten bleiben lesbar.',
-        burnOnRead: burnToggle,
-        showChainSecurityTools: chainSecurity,
-      }
+    /** Immer Chat·Sicherheit mit Info, sobald Sidebar da — nicht nur bei chain/Filter. */
+    return {
+      title: partnerTitle,
+      subtitle: partnerSubtitle,
+      canClearHistory: true,
+      canExport: false,
+      onViewInfo: canOpenInfo ? onViewConversationInfo : undefined,
+      onClearHistory: clearHistory,
+      onCreateGroup: openGroupSettings,
+      onRenewEncryptionKeys:
+        chainSecurity && canRenew ? () => void handleRenewPeerEncryption(renewPeer) : undefined,
+      renewEncryptionLabel:
+        chainSecurity && canRenew ? `Schlüssel erneuern (Epoch ${epoch || 1})` : undefined,
+      renewEncryptionHint:
+        'Session-Epoch erhöhen — Forward Secrecy ab Rotation (nicht pro Nachricht). Alte Nachrichten bleiben lesbar.',
+      burnOnRead: burnToggle,
+      showChainSecurityTools: chainSecurity,
     }
-
-    return undefined
   }, [
     showConversationSidebar,
     onPinnwandTab,
@@ -1141,21 +1168,16 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     activeConversationTitle,
     activeConversationSubtitle,
     openGroupSettings,
-    handleOpenGroupInfo,
-    handleOpenTelegramAlarmInfo,
+    onViewConversationInfo,
     activeSendPath,
     iotaPathFocus,
     inboxPartnerFiltersArmed,
     inboxPartnerKey,
-    handleOpenContactDetail,
     handleRenewPeerEncryption,
     burnOnReadEnabled,
     setBurnOnReadEnabled,
     recipient,
     partner,
-    selectInboxPartnerForSend,
-    composerDelivery,
-    panelMessengerPorts.inboxExportActions,
     panelMessengerPorts.inboxActions,
   ])
 
@@ -1658,7 +1680,18 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               openGroupSettings()
             },
           }}
-        />
+        >
+          <ChatViewMediaGallery
+            messages={messengerPorts.inboxFeedRead.messages}
+            loadMessages={messengerPorts.inboxExportActions.loadMessagesForMediaExport}
+            compact
+            onStatus={(msg) => {
+              setStatus('success')
+              setStatusMsg(msg)
+              setTimeout(() => setStatus('idle'), 7000)
+            }}
+          />
+        </MessengerEntityInfoDialog>
       ) : null}
 
       {telegramAlarmInfoOpen ? (
@@ -1679,7 +1712,18 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                 }
               : undefined
           }
-        />
+        >
+          <ChatViewMediaGallery
+            messages={messengerPorts.inboxFeedRead.messages}
+            loadMessages={messengerPorts.inboxExportActions.loadMessagesForMediaExport}
+            compact
+            onStatus={(msg) => {
+              setStatus('success')
+              setStatusMsg(msg)
+              setTimeout(() => setStatus('idle'), 7000)
+            }}
+          />
+        </MessengerEntityInfoDialog>
       ) : null}
 
       {(isPrivate || isGroup || onPinnwandTab) && phonebookOpen ? (

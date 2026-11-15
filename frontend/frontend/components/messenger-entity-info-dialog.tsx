@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { Info } from 'lucide-react'
 import {
   Dialog,
@@ -18,6 +19,8 @@ export type MessengerEntityInfoDialogProps = {
   title: string
   description?: string
   sections: MessengerInfoSection[]
+  /** z. B. Medien-Galerie mit Auswahl. */
+  children?: ReactNode
   /** Optional primary action (z. B. Gruppe verwalten). */
   primaryAction?: { label: string; onClick: () => void }
   secondaryAction?: { label: string; onClick: () => void }
@@ -64,6 +67,11 @@ export function MessengerEntityInfoDialog(p: MessengerEntityInfoDialogProps) {
               )}
             </TechnicalIdSection>
           ))}
+          {p.children ? (
+            <TechnicalIdSection title="Medien">
+              {p.children}
+            </TechnicalIdSection>
+          ) : null}
         </div>
 
         {p.primaryAction || p.secondaryAction ? (

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import {
+  clearTelegramAlarmGroupMembershipChatId,
   readTelegramAlarmGroupMembership,
   saveTelegramAlarmGroupMembershipChatId,
   TELEGRAM_ALARM_GROUP_JOIN_CHANGED_EVENT,
@@ -45,11 +46,23 @@ export function TelegramAlarmGroupChatIdCapture(p: {
     p.onSaved?.()
   }
 
+  const handleClear = () => {
+    const res = clearTelegramAlarmGroupMembershipChatId()
+    if (!res.ok) {
+      toast.error(res.error)
+      return
+    }
+    toast.message('Chat-ID entfernt — Senden an die Gruppe erst nach neuer ID.')
+    setDraft('')
+    sync()
+    p.onSaved?.()
+  }
+
   return (
     <div className={p.compact ? 'mt-3 space-y-2' : 'mt-4 space-y-3'}>
       <div>
         <Label htmlFor="tg-alarm-group-chat-id" className="text-xs text-muted-foreground">
-          Gruppen-Chat-ID (Supergruppe, beginnt mit -100…)
+          Gruppen-Chat-ID (Supergruppe, typisch -100…)
         </Label>
         <Input
           id="tg-alarm-group-chat-id"
@@ -62,14 +75,19 @@ export function TelegramAlarmGroupChatIdCapture(p: {
         />
       </div>
       <p className="text-[11px] leading-relaxed text-muted-foreground">
-        In Telegram: Bot in der Gruppe erwähnen, dann unter{' '}
-        <span className="font-mono">api.telegram.org/bot…/getUpdates</span> die{' '}
-        <span className="font-mono">chat.id</span> ablesen — oder vom Boss übernehmen.
+        Nur die Telegram-Gruppen-ID für Alarme/Hinweise (typisch <span className="font-mono">-100…</span>) — kein
+        Chat-Verlauf. Andere ID speichern ersetzt die lokale. Boss-Einstellung hat Vorrang, sobald der Server eine
+        liefert; lokal entfernen: Button „Chat-ID entfernen“.
       </p>
       <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" onClick={handleSave}>
           Chat-ID speichern
         </Button>
+        {savedId ? (
+          <Button type="button" size="sm" variant="outline" onClick={handleClear}>
+            Chat-ID entfernen
+          </Button>
+        ) : null}
         {p.showSkip && p.onSkip ? (
           <Button type="button" size="sm" variant="ghost" onClick={p.onSkip}>
             Später
@@ -78,11 +96,11 @@ export function TelegramAlarmGroupChatIdCapture(p: {
       </div>
       {savedId ? (
         <p className="text-xs text-emerald-700 dark:text-emerald-300">
-          Gespeichert: <span className="font-mono">{savedId}</span>
+          Aktiv: <span className="font-mono">{savedId}</span>
         </p>
       ) : (
         <p className="text-xs text-amber-800 dark:text-amber-200">
-          Ohne Chat-ID: Gruppe in der Sidebar sichtbar, Thread-Filter und Senden an „Alle“ eingeschränkt.
+          Ohne Chat-ID: in der Sidebar sichtbar, Senden an „Alle“ eingeschränkt.
         </p>
       )}
     </div>

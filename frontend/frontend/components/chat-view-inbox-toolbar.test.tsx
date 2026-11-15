@@ -27,6 +27,7 @@ function makeProps(overrides: Partial<ChatViewInboxToolbarProps> = {}): ChatView
     onExportEinsatzprotokollPlainZip: vi.fn(),
     onExportEinsatzprotokollMarked: vi.fn(),
     onExportMorgMediaZip: vi.fn(),
+    onExportMorgMediaDirect: vi.fn(),
     protokollMarkedCount: 0,
     recipient: '',
     setStatus: vi.fn(),

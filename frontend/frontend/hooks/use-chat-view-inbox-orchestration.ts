@@ -23,6 +23,16 @@ import {
 import { mergeAllMessages } from '@/frontend/lib/message-dedup'
 import type { Message } from '@/frontend/lib/types'
 import {
+  filterInboxMessagesForContactConversation,
+  resolveContactConversationMatch,
+} from '@/frontend/lib/contact-conversation-filter'
+import {
+  filterInboxMessagesByPartnerAndDirection,
+  messageTouchesTelegramTransport,
+} from '@/frontend/features/inbox/inbox-partner-filter'
+import { readMessengerGroups } from '@/frontend/lib/messenger-group-store'
+import { TELEGRAM_ALARM_INBOX_PARTNER_KEY } from '@/frontend/lib/telegram-alarm-group-prefs'
+import {
   readComposerMailboxObjectId,
   writeComposerMailboxObjectId,
 } from '@/frontend/lib/composer-mailbox-object-id'
@@ -173,26 +183,6 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     },
     [appendMeshMessage]
   )
-
-  const messagesForExport = useCallback(async () => {
-    const fromApi = await fetchAllInboxMessagesForExport({
-      packageId: inboxPackageFilter.trim() || undefined,
-      bossView: false,
-      role,
-    })
-    const meshOnly = messages.filter((m) => m.transports?.includes('mesh'))
-    const tgFromUi = messages.filter(
-      (m) => m.source === 'telegram' || m.transports?.includes('telegram')
-    )
-    let tgJournal: Message[] = []
-    if (myAddress.trim()) {
-      const j = await fetchTelegramJournal({ limit: 500 })
-      if (j.ok && j.entries?.length) {
-        tgJournal = mapTelegramJournalToMessages(j.entries, myAddress)
-      }
-    }
-    return mergeAllMessages([...fromApi, ...meshOnly, ...tgFromUi, ...tgJournal])
-  }, [messages, inboxPackageFilter, role, myAddress])
 
   const {
     mirrorQueuePending,
@@ -419,6 +409,71 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     }
   }, [apiStatus?.transportProfile, meshFirstTransportDefaultApplied, onMeshFirstTransportDefault])
 
+  /**
+   * Export = API (alle Mailboxen, paginiert) + UI + Telegram-Journal.
+   * Standard: gesamter Posteingang (kein Partner-Filter, kein Package-Filter) — sonst wirkt „vollständig“ lückenhaft.
+   * `scope: 'visibleChat'` = nur aktueller Chat wie in der Liste (inkl. optionalem Package-Filter).
+   */
+  const messagesForExport = useCallback(
+    async (opts?: { scope?: 'all' | 'visibleChat' }) => {
+      const scope = opts?.scope ?? 'all'
+      const fromApi = await fetchAllInboxMessagesForExport({
+        /** Vollständig: kein Package-Filter — sonst fehlen Mailboxen anderer Package-IDs. */
+        packageId: scope === 'visibleChat' ? inboxPackageFilter.trim() || undefined : undefined,
+        bossView: false,
+        role,
+      })
+      let tgJournal: Message[] = []
+      if (myAddress.trim()) {
+        const j = await fetchTelegramJournal({ limit: 5000 })
+        if (j.ok && j.entries?.length) {
+          tgJournal = mapTelegramJournalToMessages(j.entries, myAddress)
+        }
+      }
+      let merged = mergeAllMessages([...fromApi, ...messages, ...tgJournal, ...filteredDisplayMessages])
+      if (scope === 'visibleChat' && inboxPartnerFiltersArmed) {
+        if (inboxConversationGroupId) {
+          const group = readMessengerGroups().find((g) => g.id === inboxConversationGroupId)
+          if (group) {
+            merged = filterInboxMessagesByPartnerAndDirection(merged, myAddress, null, 'all', {
+              groupMemberAddresses: group.memberAddresses,
+              teamMailboxObjectId: group.teamMailboxObjectId,
+            })
+          }
+        } else if (inboxPartnerKey?.trim().toLowerCase() === TELEGRAM_ALARM_INBOX_PARTNER_KEY) {
+          merged = merged.filter((m) => messageTouchesTelegramTransport(m))
+        } else if (inboxPartnerKey?.trim()) {
+          const key = inboxPartnerKey.trim().toLowerCase()
+          const meNorm = myAddress.trim().toLowerCase()
+          if (meNorm && key === meNorm) {
+            merged = filterInboxMessagesByPartnerAndDirection(merged, myAddress, meNorm, 'all')
+          } else {
+            const contactMatch = resolveContactConversationMatch(key, directory)
+            merged = filterInboxMessagesForContactConversation(merged, myAddress, key, 'all', {
+              contactMatch,
+            })
+          }
+        }
+        if (inboxDirectionFilter !== 'all') {
+          merged = filterInboxMessagesByPartnerAndDirection(merged, myAddress, null, inboxDirectionFilter)
+        }
+      }
+      return merged
+    },
+    [
+      messages,
+      filteredDisplayMessages,
+      inboxPackageFilter,
+      role,
+      myAddress,
+      inboxPartnerFiltersArmed,
+      inboxConversationGroupId,
+      inboxPartnerKey,
+      inboxDirectionFilter,
+      directory,
+    ]
+  )
+
   const {
     onExportEinsatzberichtJson,
     onExportEinsatzberichtTxt,
@@ -428,8 +483,9 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     onExportEinsatzprotokollMarked,
     onExportEinsatzberichtEncrypted,
     onExportMorgMediaZip,
+    onExportMorgMediaDirect,
   } = useChatViewEinsatzExports({
-    messagesLength: messages.length,
+    messagesLength: Math.max(messages.length, filteredDisplayMessages.length),
     messagesForExport,
     myAddress,
     protokollMarkedIds,
@@ -647,6 +703,9 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     onExportEinsatzprotokollMarked,
     onExportEinsatzberichtEncrypted,
     onExportMorgMediaZip,
+    onExportMorgMediaDirect,
+    messagesForExport,
+    loadMessagesForMediaExport: () => messagesForExport({ scope: 'all' }),
   }
 }
 
