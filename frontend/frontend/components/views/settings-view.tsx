@@ -30,7 +30,6 @@ import { SettingsLanguageSection } from '@/frontend/components/settings-language
 import { SettingsAppearanceSection } from '@/frontend/components/settings-appearance-section'
 import { SettingsExpertModeSection } from '@/frontend/components/settings-expert-mode-section'
 import { CapacitorApiBaseCard } from '@/frontend/components/capacitor-api-base-card'
-import { DashboardPwaInstallCard } from '@/frontend/components/dashboard-pwa-install-card'
 import {
   SettingsCategoryNav,
   SettingsCollapsiblePanel,
@@ -184,7 +183,6 @@ export function SettingsView({
         <SettingsLanguageSection />
         <SettingsOnboardingSection apiStatus={advancedIotaStatus} />
         <SettingsAppearanceSection />
-        <DashboardPwaInstallCard compact anchorId="settings-pwa-install" />
         <SettingsExpertModeSection apiStatus={advancedIotaStatus} />
         <CapacitorApiBaseCard />
         <div id="settings-handoff-import">

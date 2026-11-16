@@ -8,7 +8,7 @@
 
 | Tab | Für wen | Kern |
 |-----|---------|------|
-| **Allgemein** | alle | Sprache, Wizard, Erscheinungsbild (Standard/Hell + Farben, **Klack** / Klick-Ton / Magnet / Lautstärke), App installieren, Expertenmodus, Handbuch, Handoff, Einsatz beenden |
+| **Allgemein** | alle | Sprache, Wizard, Erscheinungsbild (Klack / Klick-Ton / Magnet), Expertenmodus, Handbuch, **Handoff importieren** (Helfer). Kein PWA-„App installieren“ mehr — Browser-Menü / APK / Installer. **Einsatz beenden** → Einsatzleitung (nicht hier). |
 | **IOTA** | alle | Netz (Boss/Kommandant), Gas, Chain-IDs, Mailboxen; Boss: **Package & Move-Upgrade** |
 | **Funk** | Einsatz | Meshtastic/Puls — Strategie später (offizielle App vs. eigene UI) |
 | **Telegram** | Boss (+ Helfer Join) | Bot, Alarme, optional Gruppenalarm, Hinweis nach Online-Send |
@@ -151,6 +151,11 @@ Details: `docs/TELEGRAM-INTEGRATION-ZIELBILD.md` (Einrichtung + Architektur).
 ## Funk
 
 Kurz: Puls/Geräte-Embed. Entscheidung offizielle Meshtastic-App vs. eigene UI = Roadmap T6 — **noch nicht**.
+
+## Handoff (kurz)
+
+Boss teilt **Einsatz-Konfig** (Package/RPC/Mailbox/Capabilities, **kein** Seed) als ZIP (~3 KB). Helfer: **Allgemein → Handoff importieren** → neu laden → entsperren.  
+**Lassen für Morgendrot-Einsatz** (Helfer/Geräte). Solo/Privat meist ohne. IOTA-Messenger-only: weg (Produkt-Split).
 
 ---
 
