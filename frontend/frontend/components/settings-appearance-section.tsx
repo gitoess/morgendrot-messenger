@@ -304,7 +304,7 @@ export function SettingsAppearanceSection() {
                 Eingangs-Ton (neue Nachricht)
               </Label>
               <p className="mt-0.5 text-[11px] text-muted-foreground">
-                Nur bei offenem Tab/App — kein System-Push. Default aus. Eigene Nachrichten ohne Ton.
+                Glocken-Chime (nicht Klick-Piep). Nur offener Tab — kein System-Push. Default aus.
               </p>
             </div>
             <Switch

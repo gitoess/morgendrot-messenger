@@ -1,5 +1,6 @@
 /**
- * Kurzer WebAudio-Piep bei neuem Inbox-Eingang (Tab offen).
+ * Zwei-/Drei-Ton-Chime bei neuem Inbox-Eingang (Tab offen).
+ * Bewusst anders als UI-Klick (kurzer Triangle-Piep 380–660 Hz) — Glocken-Charakter, tiefer/länger.
  * Kein OS-Push — das bleibt T53 / H.6f.
  */
 
@@ -11,17 +12,42 @@ import {
 import { readSoundFeedbackVolume } from '@/frontend/lib/ui-feedback-prefs'
 import type { Message } from '@/frontend/lib/types'
 
-const TONES: Record<IncomingToneChannel, { freq: number; durMs: number; gain: number }> = {
-  dialog: { freq: 660, durMs: 110, gain: 0.2 },
-  group: { freq: 440, durMs: 140, gain: 0.22 },
-  pinnwand: { freq: 880, durMs: 90, gain: 0.18 },
+/** Frequenzen bewusst außerhalb der Klick-Töne (soft 380 / select 520 / confirm 660 / hover 440). */
+type ChimeNote = { freq: number; startMs: number; durMs: number }
+
+const CHIMES: Record<IncomingToneChannel, { notes: ChimeNote[]; gain: number }> = {
+  /** 1:1 — weiches „Ding–Dong“ (Eb4 → Bb4). */
+  dialog: {
+    gain: 0.16,
+    notes: [
+      { freq: 311, startMs: 0, durMs: 220 },
+      { freq: 466, startMs: 160, durMs: 280 },
+    ],
+  },
+  /** Gruppe — tiefer Dreiklang-Anflug (B3 → D4 → F#4). */
+  group: {
+    gain: 0.15,
+    notes: [
+      { freq: 247, startMs: 0, durMs: 180 },
+      { freq: 294, startMs: 120, durMs: 180 },
+      { freq: 370, startMs: 240, durMs: 260 },
+    ],
+  },
+  /** Pinnwand — helleres Doppel-Glockchen (F5 → A5), länger als Klick. */
+  pinnwand: {
+    gain: 0.14,
+    notes: [
+      { freq: 698, startMs: 0, durMs: 160 },
+      { freq: 880, startMs: 130, durMs: 240 },
+    ],
+  },
 }
 
 /** Priorität wenn ein Poll mehrere Novel-Typen liefert — ein Ton, nicht ein Akkord. */
 const PRIORITY: IncomingToneChannel[] = ['group', 'pinnwand', 'dialog']
 
 let lastPlayAt = 0
-const MIN_GAP_MS = 900
+const MIN_GAP_MS = 1200
 
 export function classifyIncomingToneChannel(
   msg: Pick<Message, 'pinnwandPost' | 'chainPurgeKind'>
@@ -76,28 +102,41 @@ export function playIncomingMessageTone(ch: IncomingToneChannel, opts?: { force?
     const now = Date.now()
     if (!opts?.force && now - lastPlayAt < MIN_GAP_MS) return
     lastPlayAt = now
-    const tone = TONES[ch]
+    const chime = CHIMES[ch]
     const ctx = getAudioContext()
     if (!ctx) return
     const start = () => {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
       const t0 = ctx.currentTime
-      const peak = Math.max(0.02, tone.gain * (volPct / 100))
-      osc.type = 'sine'
-      osc.frequency.value = tone.freq
-      gain.gain.setValueAtTime(peak, t0)
-      gain.gain.exponentialRampToValueAtTime(0.001, t0 + tone.durMs / 1000)
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.start(t0)
-      osc.stop(t0 + tone.durMs / 1000 + 0.02)
-      osc.onended = () => {
-        try {
-          osc.disconnect()
-          gain.disconnect()
-        } catch {
-          /* ignore */
+      const peak = Math.max(0.015, chime.gain * (volPct / 100))
+      for (const note of chime.notes) {
+        const osc = ctx.createOscillator()
+        const partial = ctx.createOscillator()
+        const gain = ctx.createGain()
+        const noteStart = t0 + note.startMs / 1000
+        const noteEnd = noteStart + note.durMs / 1000
+        /** Sine + leichte Quinte = Glocke; Klick nutzt Triangle + Pitch-Drop. */
+        osc.type = 'sine'
+        partial.type = 'sine'
+        osc.frequency.setValueAtTime(note.freq, noteStart)
+        partial.frequency.setValueAtTime(note.freq * 1.5, noteStart)
+        gain.gain.setValueAtTime(0, noteStart)
+        gain.gain.linearRampToValueAtTime(peak, noteStart + 0.018)
+        gain.gain.exponentialRampToValueAtTime(0.001, noteEnd)
+        osc.connect(gain)
+        partial.connect(gain)
+        gain.connect(ctx.destination)
+        osc.start(noteStart)
+        partial.start(noteStart)
+        osc.stop(noteEnd + 0.03)
+        partial.stop(noteEnd + 0.03)
+        osc.onended = () => {
+          try {
+            osc.disconnect()
+            partial.disconnect()
+            gain.disconnect()
+          } catch {
+            /* ignore */
+          }
         }
       }
     }
