@@ -19,7 +19,7 @@
 
 **Aktueller Arbeitsstand (verbindlich 2026-11-16):**
 1. **UX-Settings + QA-5er + Gruppe G1–G4:** Settings-3er **PASS**; i18n/Wizard/H.32b-Sicht/Handbuch-Stich **PASS**; G2–G4 **Live PASS** (Team-Broadcast Klartext+Enc, Inbox-Filter, Alle inkl. Gruppe).  
-2. **Als Nächstes:** nach **N1–N5 PASS** — H.1b Mini-Scheibe oder Session C (2. Gerät); T17 Rest später.  
+2. **Als Nächstes:** nach **N1–N5 PASS** + **H.1b Mini PASS** (Telegram-Notify-Plan → `lib/`) — Session C (2. Gerät) oder weitere H.1b-Mini; T17 Rest später.  
 3. **Nicht jetzt:** T4 Schatten, T56 Purge, P5d/Enc-return, Session C ohne 2. Gerät, Feature-Wildwuchs.  
 4. **Feld/Mesh/APK:** H.15 **4e/4f**, Meshtastic Phase B — mit 2. Gerät / nach PC-Kern.  
 5. **Multi-Account** = **§ H.37** (Backlog). **Handoff** bleibt Einsatz-Helfer-Pfad (Morgendrot), nicht Solo-Pflicht.
@@ -2806,7 +2806,7 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 | **N4** | T17 Scheibe 1 | **PASS** — Handbuch Telegram = Ist (Audience/CC/Alarmgruppe) + Einstieg Einstellungen→Telegram |
 | **N5** | Commit/Push Welle | **PASS** — `ab9e36e` auf `cursor/settings-iota-telegram-ux` |
 
-**Danach:** H.1b Mini-Scheiben / Session C wenn 2. Gerät / T17 Rest — nicht parallel wild.
+**Danach:** **H.1b Mini PASS** (Notify-Plan → `lib/telegram-notify-after-send`) — weitere Mini-Scheiben / Session C wenn 2. Gerät / T17 Rest — nicht parallel wild.
 
 ### Mailbox-UX-Entscheidungen (User 2026-11-16 — umgesetzt / Roadmap)
 

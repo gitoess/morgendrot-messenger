@@ -106,5 +106,12 @@ describe('telegram-notify-pref', () => {
         attachedBlobBase64: 'x',
       })
     ).toBe('[Bild-Anhang]')
+
+    expect(
+      buildTelegramMessagePreview({
+        message: '',
+        fallbackText: '  Wire-Snap-Text  ',
+      })
+    ).toBe('Wire-Snap-Text')
   })
 })

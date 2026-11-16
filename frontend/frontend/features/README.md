@@ -6,6 +6,7 @@
 - **`voice/`** — Sprachmemo-Limits und Recorder-MIME (`messenger-voice-record`).
 - **Einstellungen:** Lange Onboarding-/Session-Texte nur noch im **Handbuch** (`ONBOARDING-WALLET-UX-SPEC.md`, `RECOVERY-PHRASE-BACKUP.md`); UI = Schalter und Formulare in **`settings-view.tsx`**.
 - **Dashboard / Messenger-Kacheln (H.17, H.1b):** Sichtbarkeit **`chat`/`vault`/`boss`** vs. schlank — **`lib/dashboard-workspace-tile-visibility.ts`** + Vitest; **`dashboard.tsx`** nutzt nur noch den Filter.
+- **Telegram-Notify nach Send (H.1b Mini):** Entscheidung/Status — **`lib/telegram-notify-after-send.ts`** + Vitest; Hook **`use-chat-view-handle-send`** orchestriert nur.
 
 **Fahrplan:** `docs/MESSENGER-UI-MODULARITY-STRATEGY.md` und `docs/ROADMAP-FAHRPLAN.md` § H.1b.
 

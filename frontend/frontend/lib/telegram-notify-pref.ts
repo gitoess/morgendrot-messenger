@@ -165,6 +165,8 @@ export function buildTelegramMessagePreview(opts: {
   attachedBlobBase64?: string | null
   attachedAudioBase64?: string | null
   hasLoraAttachment?: boolean
+  /** z. B. erster Wire-Snap wenn Composer leer (Send-Flow). */
+  fallbackText?: string | null
 }): string {
   const t = opts.message.trim()
   if (t) return t
@@ -174,5 +176,7 @@ export function buildTelegramMessagePreview(opts: {
   if (opts.attachedBlobBase64) return '[Bild-Anhang]'
   if (opts.attachedAudioBase64) return '[Audio-Anhang]'
   if (opts.hasLoraAttachment) return '[LoRa-Bild]'
+  const fb = opts.fallbackText?.trim()
+  if (fb) return fb.slice(0, 200)
   return 'Neue Morgendrot-Nachricht'
 }
