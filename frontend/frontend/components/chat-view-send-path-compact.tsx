@@ -76,7 +76,8 @@ const IOTA = {
 
 const TELEGRAM = {
   short: messengerTransportMeta('telegram').label,
-  title: 'Telegram (1:1 oder Alarmgruppe)',
+  title:
+    'Telegram-Sendepfad: Nachricht nur über Bot (Chat-ID) — nicht IOTA. Anders als „Hinweis nach IOTA“ in Einstellungen.',
 }
 
 function PathIcon({ k }: { k: 'internet' | 'mesh' | 'adhoc' | 'telegram' | 'iota' }) {

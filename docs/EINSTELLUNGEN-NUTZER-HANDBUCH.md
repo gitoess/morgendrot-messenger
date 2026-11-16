@@ -135,8 +135,10 @@ Telegram = **optionaler Push/Hinweis**, kein Chat-Ersatz für IOTA/Funk.
 | **Eingehende Antworten** | **Long Polling** = Server fragt Telegram (kein Tunnel). Webhook braucht HTTPS. Aus = nur senden. Nur Telefonbuch-IDs. |
 | **Test an mich** | An deine Admin-Chat-ID. |
 | **Test an Kontakt** | An manuell eingegebene Partner-Chat-ID — nicht dasselbe. |
-| **Einsatz-Alarmgruppe** | Boss: eine Telegram-**Gruppe** für SOS/Team. Morgendrot-Einsatz — **nicht** IOTA-Messenger-only. |
-| **Hinweis nach Online-Send** | Nach erfolgreichem **IOTA-1:1**: Kurz-Push an den Kontakt, **wenn** dessen Telegram-ID im Telefonbuch steht. Composer-Tab „telegram“ ist ein **anderer** Kanal (direkt Telegram senden). |
+| **Einsatz-Alarmgruppe** | Boss: eine Telegram-**Gruppe** als Klingel für SOS / „Team alarmieren“. Default **aus** (kein versehentliches Gruppen-Schreiben). Aktiv = Schalter an + **Gruppen-Chat-ID (-100…)** + Speichern; Einladungslink nur für Helfer-Beitritt. |
+| **Hinweis nach Online-Send** | Nach erfolgreichem **IOTA-1:1 Online**: optionaler Kurz-Ping. Empfänger: **Kontakt / Ich / Beide** + optional **weitere Chat-IDs (CC, max. 5)**. Nicht die Alarmgruppe. Composer-Sendepfad „Telegram“ = **anderer** Kanal (nur Bot, ohne IOTA). |
+
+**Einstieg:** App → **Einstellungen → Telegram** (Handbuch-Karte unter Allgemein → „Öffnen“ führt ins Handbuch; Telegram-Tab = Aktion). Kurz-Setup: `TELEGRAM-INTEGRATION-EINRICHTUNG.md`.
 
 Details: `docs/TELEGRAM-INTEGRATION-ZIELBILD.md` (Einrichtung + Architektur).
 

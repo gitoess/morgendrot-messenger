@@ -186,7 +186,7 @@ Erlaubte eingehende Telegram-Texte erscheinen als **Merge-Zeilen** im Posteingan
 | Aspekt | Wert |
 |--------|------|
 | **Auslöser** | Erfolgreicher Send **und** Nutzer-Opt-in (`morgendrot.telegramNotifyOnSend`) |
-| **Empfänger** | `telegramChatId` aus Telefonbuch |
+| **Empfänger** | Wählbar: **Kontakt** / **Ich** (`adminChatId`) / **Beide** — **nicht** die Einsatz-Alarmgruppe |
 | **Transport** | API **`/api/integrations/telegram/notify`** → Relay **`/morgendrot-telegram/notify`** |
 | **Fehler** | **Nicht blockierend** für IOTA/Mesh-Send |
 

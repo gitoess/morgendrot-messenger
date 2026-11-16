@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildTelegramMessagePreview,
+  isTelegramNotifyAudience,
   normalizeTelegramRecipientInput,
   parseTelegramRecipientChatIds,
   resolveTelegramNotifyRecipientAddress,
+  telegramNotifyAudienceLabel,
   telegramRecipientToComposerDisplay,
 } from '@/frontend/lib/telegram-notify-pref'
 
@@ -64,6 +66,24 @@ describe('telegram-notify-pref', () => {
         encrypted: false,
       })
     ).toBeNull()
+  })
+
+  it('kennt Notify-Audience Kontakt/Ich/Beide', () => {
+    expect(isTelegramNotifyAudience('contact')).toBe(true)
+    expect(isTelegramNotifyAudience('self')).toBe(true)
+    expect(isTelegramNotifyAudience('both')).toBe(true)
+    expect(isTelegramNotifyAudience('group')).toBe(false)
+    expect(telegramNotifyAudienceLabel('both')).toMatch(/Kontakt und dich/)
+  })
+
+  it('parst Extra-CC-IDs mit Cap', async () => {
+    const { TELEGRAM_NOTIFY_EXTRA_IDS_CAP, parseTelegramRecipientChatIds } = await import(
+      '@/frontend/lib/telegram-notify-pref'
+    )
+    const many = Array.from({ length: TELEGRAM_NOTIFY_EXTRA_IDS_CAP + 3 }, (_, i) => String(1000 + i))
+    expect(parseTelegramRecipientChatIds(many.join(',')).slice(0, TELEGRAM_NOTIFY_EXTRA_IDS_CAP)).toHaveLength(
+      TELEGRAM_NOTIFY_EXTRA_IDS_CAP
+    )
   })
 
   it('baut Preview in sinnvoller Priorität', () => {

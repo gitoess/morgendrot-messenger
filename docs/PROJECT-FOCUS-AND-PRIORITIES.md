@@ -7,7 +7,7 @@
 
 **Kanonische Umsetzung:** **`docs/ROADMAP-FAHRPLAN.md`** — dort **Lesekarte** (H.\* vs T.\*), **§ C.0b**, **§ H.0**, **§ H.0-SIMPLE**. Dieses Dokument = **Leitplanke** (Phasen); der Fahrplan = **Womit** und **aktueller Arbeitsstand**.
 
-**Arbeitsstand 2026-11-16 (kurz):** Settings + QA-5er + **Gruppe G1–G4 Live PASS**. **Als Nächstes:** Endabnahme-5er (G3/G4-Stich → TG-Bot → H.32b Voll → Gate Session C / T17). Mesh/APK/H.15-4e/f und **H.37** bleiben Roadmap, nicht parallel.
+**Arbeitsstand 2026-11-16 (kurz):** Settings + QA-5er + **Gruppe G1–G4** + **E1–E3** + **N1–N5 PASS**. **E4** Session C geparkt. **Als Nächstes:** H.1b Mini oder 2. Gerät; T17 Rest später. Mesh/APK/H.15-4e/f und **H.37** bleiben Roadmap, nicht parallel.
 
 ---
 

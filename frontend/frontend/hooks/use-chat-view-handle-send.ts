@@ -133,7 +133,10 @@ import { postTelegramGroupAlarm } from '@/frontend/lib/api/telegram-integrations
 import { resolveChatSendEncryption } from '@/frontend/lib/resolve-chat-send-encryption'
 import {
   buildTelegramMessagePreview,
+  readTelegramNotifyAudience,
+  readTelegramNotifyExtraChatIds,
   readTelegramNotifyOnSend,
+  telegramNotifyAudienceLabel,
   resolveTelegramNotifyRecipientAddress,
 } from '@/frontend/lib/telegram-notify-pref'
 import { resolveOutboundMailboxObjectId } from '@/frontend/lib/outbound-mailbox-routing'
@@ -1291,35 +1294,62 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
 
       if (readTelegramNotifyOnSend() && forcedTransport === 'internet' && isPrivate) {
+        const audience = readTelegramNotifyAudience()
         const notifyAddr = recipient.trim().toLowerCase()
-        if (ADDR_64_LOWER.test(notifyAddr)) {
-          const contactEntry = contactDirectory[notifyAddr]
-          if (contactEntry?.telegramChatId?.trim()) {
-            const preview =
-              message.trim() ||
-              (attachedTxtFile
-                ? attachedTxtFile.text.slice(0, 200) || `[${attachedTxtFile.name}]`
-                : attachedBlobBase64
-                  ? '[Bild-Anhang]'
-                  : attachedAudioBase64
-                    ? '[Audio-Anhang]'
-                    : textSnaps[0]?.slice(0, 200) || 'Neue Morgendrot-Nachricht')
-            const myLabel =
-              contactDirectory[myAddress.trim().toLowerCase()]?.label ||
-              `${myAddress.trim().slice(0, 10)}…`
-            void notifyTelegramContact({
-              recipientAddress: notifyAddr,
-              messagePreview: preview,
-              senderLabel: myLabel,
-              skipJournal: true,
-            }).then((r) => {
-              if (r.delivered) {
-                setStatusMsg(`${statusLine} · Telegram-Hinweis an Kontakt gesendet.`)
-              } else if (r.error) {
-                setStatusMsg(`${statusLine} · Telegram: ${r.error}`)
-              }
-            })
-          }
+        const preview =
+          message.trim() ||
+          (attachedTxtFile
+            ? attachedTxtFile.text.slice(0, 200) || `[${attachedTxtFile.name}]`
+            : attachedBlobBase64
+              ? '[Bild-Anhang]'
+              : attachedAudioBase64
+                ? '[Audio-Anhang]'
+                : textSnaps[0]?.slice(0, 200) || 'Neue Morgendrot-Nachricht')
+        const myLabel =
+          contactDirectory[myAddress.trim().toLowerCase()]?.label ||
+          `${myAddress.trim().slice(0, 10)}…`
+        const wantContact = audience === 'contact' || audience === 'both'
+        const wantSelf = audience === 'self' || audience === 'both'
+        const extraIds = readTelegramNotifyExtraChatIds()
+        const contactOk =
+          ADDR_64_LOWER.test(notifyAddr) && Boolean(contactDirectory[notifyAddr]?.telegramChatId?.trim())
+        const canCallApi = (wantContact && contactOk) || wantSelf || extraIds.length > 0
+
+        if (!canCallApi) {
+          const why = !ADDR_64_LOWER.test(notifyAddr)
+            ? 'nur bei 1:1 mit 0x-Empfänger'
+            : 'Kontakt ohne Telegram-ID im Telefonbuch'
+          setStatusMsg(
+            `${statusLine} · Telegram-Hinweis übersprungen (${why}; Ziel: ${telegramNotifyAudienceLabel(audience)}).`
+          )
+        } else {
+          void notifyTelegramContact({
+            recipientAddress: contactOk ? notifyAddr : undefined,
+            messagePreview: preview,
+            senderLabel: myLabel,
+            skipJournal: true,
+            /** Bei nur-CC: audience contact ohne Adresse → Server skippt Kontakt, sendet extras. */
+            audience: wantSelf ? (wantContact ? 'both' : 'self') : 'contact',
+            extraChatIds: extraIds,
+          }).then((r) => {
+            if (r.delivered) {
+              const parts: string[] = []
+              if (r.deliveredContact) parts.push('Kontakt')
+              if (r.deliveredAdmin) parts.push('dich')
+              if (r.deliveredExtra && r.deliveredExtra > 0) parts.push(`${r.deliveredExtra}× CC`)
+              const note =
+                wantContact && !contactOk && (r.deliveredAdmin || (r.deliveredExtra ?? 0) > 0)
+                  ? ' (Kontakt ohne TG-ID übersprungen)'
+                  : ''
+              setStatusMsg(
+                `${statusLine} · Telegram-Hinweis an ${parts.length ? parts.join(' + ') : telegramNotifyAudienceLabel(audience)} gesendet.${note}`
+              )
+            } else if (r.skipped) {
+              setStatusMsg(`${statusLine} · Telegram-Hinweis: ${r.skipped}`)
+            } else if (r.error) {
+              setStatusMsg(`${statusLine} · Telegram: ${r.error}`)
+            }
+          })
         }
       }
 

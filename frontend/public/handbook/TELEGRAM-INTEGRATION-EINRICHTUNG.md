@@ -25,18 +25,23 @@ System-Alarme = nur Monitor. Für Chat-Hinweise reicht Token + Long Polling (Sch
 Telegram-Chat-ID im **Telefonbuch**. Dann:
 
 - Antworten per Long Polling → Posteingang, oder  
-- Schalter **„Nach IOTA-Chat: Telegram-Push an Kontakt“** (1:1 Online-Send).
+- **Einstellungen → Telegram** → Schalter **„Nach Online-IOTA: Telegram-Hinweis“** → wer: **Kontakt / Ich / Beide** + optional **weitere Chat-IDs (CC, max. 5)** (1:1 Online-Send; **nicht** die Alarmgruppe).
 
-**Test an Kontakt** = Probe an eine eingegebene Partner-ID (≠ Test an mich).
+**Aktion:** Einstellungen → Tab Telegram (nicht am Sendepfad).  
+**Test an Kontakt** = Probe an eine eingegebene Partner-ID (≠ Test an mich).  
+**Sendepfad „Telegram“** im Composer = anderer Kanal (Nachricht nur über Bot, ohne IOTA).
 
 ---
 
 ## Einsatz-Alarmgruppe (nur Boss)
 
-1. Telegram-Gruppe + Bot als Admin (Nachrichten senden)  
-2. Permanenter Link `https://t.me/+…`  
-3. Optional Gruppen-Chat-ID `-100…`  
-4. Einstellungen → Einsatz-Alarmgruppe → Speichern  
+Default **aus**, damit der Bot nicht ungewollt in eine Gruppe schreibt.
+
+1. Telegram-Gruppe + Bot als **Admin** (Nachrichten senden)  
+2. **Gruppen-Chat-ID** `-100…` — **nötig** für SOS / „Team alarmieren“ / Test  
+3. Optional: Bezeichnung + permanenter Link `https://t.me/+…` (Helfer-Beitritt / „An Team senden“)  
+4. Einstellungen → Einsatz-Alarmgruppe: Schalter **aktiv** → Felder → **Speichern**  
+5. Danach „Test an Gruppe“ oder „Team alarmieren“
 
 Helfer: Link aus Handoff / Posteingang — Beitritt optional. Nur Kurz-Hinweise in der Gruppe (kein Seed, keine volle SOS-Lage).
 

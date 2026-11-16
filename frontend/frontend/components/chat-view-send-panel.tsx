@@ -747,8 +747,12 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             {showTelegramField ? (
               <>
                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                  Empfänger · Telegram (Chat-ID, mehrere mit Komma)
+                  Empfänger · Telegram-Sendepfad (Chat-ID, mehrere mit Komma)
                 </label>
+                <p className="mb-1.5 text-[11px] leading-snug text-muted-foreground">
+                  Hier geht die Nachricht <strong className="font-medium text-foreground">direkt über den Bot</strong>{' '}
+                  (ohne IOTA). Der optionale Klingel-Hinweis nach IOTA-Send steht unter Einstellungen → Telegram.
+                </p>
                 <input
                   type="text"
                   list="chat-telegram-recipients"
@@ -1119,7 +1123,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 )}
                 title={
                   isTelegramDelivery
-                    ? 'Telegram-Hinweis senden'
+                    ? 'Direkt per Telegram-Bot senden (kein IOTA)'
                     : primarySendDisabled && sendDisableReason
                       ? sendDisableReason
                       : encryptedOnlineSendBlocked

@@ -279,7 +279,9 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
       <div className="p-8 text-center">
         <MessageCircle className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
         <p className="text-muted-foreground">Noch keine Nachrichten</p>
-        <p className="mt-1 text-xs text-muted-foreground">Mailbox/On-Chain – bei Tests: „Aktualisieren“ klicken.</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Lokal leer (z. B. nach „Einsatz beenden“) — die Chain bleibt. „Aktualisieren“ lädt Mailbox/On-Chain erneut.
+        </p>
       </div>
     )
   }

@@ -1,6 +1,20 @@
 const LS_TELEGRAM_NOTIFY_ON_SEND = 'morgendrot.telegramNotifyOnSend'
+const LS_TELEGRAM_NOTIFY_AUDIENCE = 'morgendrot.telegramNotifyAudience'
+/** Zusätzliche Telegram-Chat-IDs (CC) nach IOTA-Send — max. siehe Cap. */
+const LS_TELEGRAM_NOTIFY_EXTRA_IDS = 'morgendrot.telegramNotifyExtraChatIds'
+export const TELEGRAM_NOTIFY_EXTRA_IDS_CAP = 5
 
-/** Composer: nach erfolgreichem Online-Send optional Telegram-Hinweis an Kontakt (§ H.26 B). */
+/**
+ * Wer den optionalen Telegram-Hinweis nach IOTA-Online-Send bekommt.
+ * Alarmgruppe bewusst nicht — die bleibt SOS / „Team alarmieren“ (B4b).
+ */
+export type TelegramNotifyAudience = 'contact' | 'self' | 'both'
+
+export function isTelegramNotifyAudience(v: unknown): v is TelegramNotifyAudience {
+  return v === 'contact' || v === 'self' || v === 'both'
+}
+
+/** Composer: nach erfolgreichem Online-Send optional Telegram-Hinweis (§ H.26 B). */
 export function readTelegramNotifyOnSend(): boolean {
   if (typeof window === 'undefined') return false
   try {
@@ -17,6 +31,63 @@ export function writeTelegramNotifyOnSend(on: boolean): void {
   } catch {
     /* ignore */
   }
+}
+
+/** Default: nur Kontakt (bisheriges Verhalten). */
+export function readTelegramNotifyAudience(): TelegramNotifyAudience {
+  if (typeof window === 'undefined') return 'contact'
+  try {
+    const raw = window.localStorage.getItem(LS_TELEGRAM_NOTIFY_AUDIENCE)
+    return isTelegramNotifyAudience(raw) ? raw : 'contact'
+  } catch {
+    return 'contact'
+  }
+}
+
+export function writeTelegramNotifyAudience(audience: TelegramNotifyAudience): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(LS_TELEGRAM_NOTIFY_AUDIENCE, audience)
+  } catch {
+    /* ignore */
+  }
+}
+
+export function telegramNotifyAudienceLabel(audience: TelegramNotifyAudience): string {
+  switch (audience) {
+    case 'self':
+      return 'nur dich (Admin-Chat-ID)'
+    case 'both':
+      return 'Kontakt und dich'
+    default:
+      return 'nur den Kontakt'
+  }
+}
+
+/** Optionale weitere Chat-IDs (CC) — getrennt von Audience und Alarmgruppe. */
+export function readTelegramNotifyExtraChatIds(): string[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = window.localStorage.getItem(LS_TELEGRAM_NOTIFY_EXTRA_IDS) || ''
+    return parseTelegramRecipientChatIds(raw).slice(0, TELEGRAM_NOTIFY_EXTRA_IDS_CAP)
+  } catch {
+    return []
+  }
+}
+
+export function writeTelegramNotifyExtraChatIds(raw: string): string[] {
+  const ids = parseTelegramRecipientChatIds(raw).slice(0, TELEGRAM_NOTIFY_EXTRA_IDS_CAP)
+  if (typeof window === 'undefined') return ids
+  try {
+    window.localStorage.setItem(LS_TELEGRAM_NOTIFY_EXTRA_IDS, ids.join(','))
+  } catch {
+    /* ignore */
+  }
+  return ids
+}
+
+export function formatTelegramNotifyExtraChatIdsDisplay(ids: string[]): string {
+  return ids.join(', ')
 }
 
 const ADDR_64 = /^0x[a-f0-9]{64}$/

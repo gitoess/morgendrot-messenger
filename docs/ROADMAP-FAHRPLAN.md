@@ -19,8 +19,8 @@
 
 **Aktueller Arbeitsstand (verbindlich 2026-11-16):**
 1. **UX-Settings + QA-5er + Gruppe G1–G4:** Settings-3er **PASS**; i18n/Wizard/H.32b-Sicht/Handbuch-Stich **PASS**; G2–G4 **Live PASS** (Team-Broadcast Klartext+Enc, Inbox-Filter, Alle inkl. Gruppe).  
-2. **Als Nächstes:** **Endabnahme-5er** unten (G3/G4-Stich → TG-Bot → H.32b Voll → Gate Session C / T17).  
-3. **Nicht jetzt:** T4 Schatten, T56 Purge, P5d/Enc-return, Feature-Wildwuchs parallel zu Session C.  
+2. **Als Nächstes:** nach **N1–N5 PASS** — H.1b Mini-Scheibe oder Session C (2. Gerät); T17 Rest später.  
+3. **Nicht jetzt:** T4 Schatten, T56 Purge, P5d/Enc-return, Session C ohne 2. Gerät, Feature-Wildwuchs.  
 4. **Feld/Mesh/APK:** H.15 **4e/4f**, Meshtastic Phase B — mit 2. Gerät / nach PC-Kern.  
 5. **Multi-Account** = **§ H.37** (Backlog). **Handoff** bleibt Einsatz-Helfer-Pfad (Morgendrot), nicht Solo-Pflicht.
 
@@ -2789,12 +2789,24 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 | # | Ritual | Kernfrage | Status |
 |---|--------|-----------|--------|
 | **E1** | **G3/G4 Stich** | Gruppen-Info + Team-Broadcast bleiben in Gruppe **und** „Alle“? | **PASS 2026-11-16** |
-| **E2** | **Telegram Bot/Alarm** | Freeze/Bot/Notify Volltest (nicht nur Sicht) | Endabnahme |
-| **E3** | **H.32b Einsatz beenden Voll** | Cache/IDs weg, Chain unberührt, neues Handoff | Sicht war PASS; jetzt Voll |
-| **E4** | **Gate Session C** | 2. Gerät da? → H.23 Joint; sonst parken | Gate |
-| **E5** | **T17 Handbuch** | Radikal aufräumen — **ganz am Ende** | geparkt bis E1–E4 |
+| **E2** | **Telegram Bot/Alarm** | Freeze/Bot/Notify Volltest (nicht nur Sicht) | **PASS 2026-11-16** (A+B Notify-Kontakt-only; C Alarmgruppe skip/deaktiviert; D Sendepfad-TG live `tg:603668373`) |
+| **E3** | **H.32b Einsatz beenden Voll** | Cache/IDs weg, Chain unberührt, neues Handoff | **PASS 2026-11-16** (Wipe live → „Noch keine Nachrichten“; Mainnet-Anker abgewählt; Unit 2/2) |
+| **E4** | **Gate Session C** | 2. Gerät da? → H.23 Joint; sonst parken | **geparkt 2026-11-16** (kein 2. Gerät) |
+| **E5** | **T17 Handbuch** | Radikal aufräumen — **ganz am Ende** | aufgelöst in **N4/N5** (Scheiben, nicht Big Bang) |
 
 **Nicht in diesem 5er:** T4/T56, P5d, H.37, Meshtastic-Strategie (T6), Double-Ratchet-Default.
+
+### Nächste fünf — nach Endabnahme (**PASS 2026-11-16**)
+
+| # | Ritual | Status |
+|---|--------|--------|
+| **N1** | Posteingang nach E3 | **PASS** — Chain zurück nach Aktualisieren; Leer-Hint Cache≠Chain; Wallet/Telefonbuch ok |
+| **N2** | Telegram-Hinweis Live (Audience + CC) | **PASS** — UI Audience „Nur ich“ + CC-Feld; Test an mich / Test an Kontakt (`603668373`) → „Test-Hinweis … gesendet“ |
+| **N3** | Alarmgruppe Freeze | **PASS** — bewusst **Inaktiv**; Speichern „Alarmgruppe deaktiviert“; Buttons erklärt |
+| **N4** | T17 Scheibe 1 | **PASS** — Handbuch Telegram = Ist (Audience/CC/Alarmgruppe) + Einstieg Einstellungen→Telegram |
+| **N5** | Commit/Push Welle | siehe Git |
+
+**Danach:** H.1b Mini-Scheiben / Session C wenn 2. Gerät / T17 Rest — nicht parallel wild.
 
 ### Mailbox-UX-Entscheidungen (User 2026-11-16 — umgesetzt / Roadmap)
 
@@ -2804,7 +2816,7 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 | **Kontakt ↔ Mailbox-ID** | Primär **Telefonbuch** → Kontakt → Erweitert · Postfach-ID. Nicht parallel aus Mailbox-Liste. |
 | **Gruppenchat „perfekt“?** | **Nein.** Ist: lokale Gruppe + **1× Team-Broadcast**. **G1–G4 Live PASS 2026-11-16** (1 Gerät). 2-Leser → optional Endabnahme. |
 | **Gruppe + „Alle“** | **Belassen:** Gruppe = nur Team-Kanal; **Alle** = alles inkl. Gruppenzeilen (Fix 2026-11-16). Kein Extra-Chip. |
-| **Modularität** | Dateisplit ja (`hooks/`, `lib/`, Ports) — **Kopplung** teils hoch (`MESSENGER-UI-MODULARITY-STRATEGY.md`). Weiter kleinschrittig, keine Mega-Refactors parallel Live-Ritual. |
+| **Modularität** | **Teil-Ist:** Schichten (Transport ≠ Nachricht ≠ IOTA) + Dateisplit (`hooks/`, `lib/api/`, Ports). **Noch nicht** voll entkoppelt: hohe Kopplung in Send/Inbox (`MESSENGER-UI-MODULARITY-STRATEGY.md`). **Zwiebel-Header** = Wire-Entwurf; **Ameisen** = Rollen (Boss/Kommandant/Arbeiter), kein fertiges Plugin-Nest. Max-Sicherheit = Zielrichtung, kein Ist-Claim. |
 
 ### Mailbox-Produktklarheit (User 2026-11-16 — vor UI-Feinschliff)
 
@@ -2860,7 +2872,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T2 | **Passwort ändern** | Durchgang + ggf. Smoke | **done 2026-11-12** | Unter **Sicherheit**; Session-PW nach Ändern sync; Header vs. voller Lock erklärt |
 | T3 | **Meine Mailboxen** | Durchgang | **Live UX-Klarheit 2026-11-16** | Sendeziel weg; Lesen=Union; Kontakt-Slots→Telefonbuch. Ritual Rest: Haupt/Team/Privat verstehen. § *Mailbox-UX-Entscheidungen* |
 | T4 | **Schatten → Main (Sweep)** | Durchgang | **später** (nach T3; User 2026-11-15) | Mit 2. Account oder nach **§ H.37 Multi-Profil** — nicht im aktuellen Live-Block |
-| T5 | **§ H.32b Einsatz beenden** | Retest | **Sicht-PASS 2026-11-16**; Volltest → **Endabnahme** | Ort = Einsatzleitung. IOTA-Messenger: **weg** (Split-Merkliste). |
+| T5 | **§ H.32b Einsatz beenden** | Retest | **E3 Voll PASS 2026-11-16** | Ort = Einsatzleitung. Wipe → leerer Posteingang; Chain/Wallet unberührt. |
 | T6 | **Funk / Meshtastic** | Strategie-Entscheid | **verschoben** (nach Settings-Durchgang) | Offizielle Meshtastic-App vs. eigene UI — **noch nicht entscheiden**; Ist: Puls/Geräte-Embed |
 | T7 | **Vault-Registry / Chain-Globals** | Durchgang | später | bewusst zurückgestellt |
 | T8 | **Passwort- + Backup-UI → Sicherheit** | UI-Verschiebung | **done 2026-11-12** | Mit Tresor-Landkarte / Notfall unter Sicherheit |
@@ -2901,7 +2913,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T55 | **Optionen-Hub Online** | UX | **done 2026-11-12** | Wire · Hash · Export · Decrypt-JSON · pkg getrennt; Hash nur Optionen. Notizen-Button 1× (Posteingang) |
 | T40 | **Magnet/Haptik** | Entscheidung 2026-11-12 | erledigt | Default **aus**; optional lassen. Nicht weiter aufblasen — Affordance statt Pseudo-Wii |
 | T41 | **Klickbarkeit ohne Magnet** | UX | **Live PASS 2026-11-16** | PWMSG→Verschl.; Eingang-Badge→„nur Eingang“; Composer-Sendepfad unverändert |
-| T42 | **IOTA↔Telegram-Brücke Scope** | Produkt-Freeze | **done 2026-11-13**; **Live-Sicht PASS 2026-11-16** | Freeze-Banner + Bot/Notify-Copy ok. Volltest Bot/Alarm → **Endabnahme**. Token-Klartext bekannt (kein Fix jetzt). |
+| T42 | **IOTA↔Telegram-Brücke Scope** | Produkt-Freeze | **done 2026-11-13**; **E2 Voll PASS 2026-11-16** | Freeze/Bot/Notify + Sendepfad-TG live; Alarmgruppe skip (deaktiviert). Token-Klartext bekannt (kein Fix jetzt). |
 | T43 | **Mailbox-Chat ≠ Zahlungs-Objekt** | Doku | Backlog | Chat-Mailbox = Nachrichten-DF; Escrow/DAO/Abo = andere Move-Objekte (Purse/Treasury). Nicht vermischen |
 | T44 | **Mesh + SignPersonalMessage** | Feature | nach Funk-Strategie T6 | Offline Text+Sig verifizieren (Ist teils Team-Wire); Replay/Nonce; optional später Anker — nicht volle Offline-TX |
 | T45 | **Browser-Link (#) Zustellung** | Produkt | nach T32 / Split | Einweg-Paket + Hash on-chain + Empfangs-Klick; **kein** voller Chat-Ersatz; BYOS später |
