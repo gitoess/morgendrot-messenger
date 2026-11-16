@@ -44,9 +44,9 @@ export async function fetchTeamPlainBroadcastRpcRows(
     throw new Error('TEAM_MAILBOX_ID und PACKAGE_ID müssen gültige 0x-Objekt-IDs sein.')
   }
 
-  const maxPages = Math.min(50, Math.max(1, input.maxDynamicFieldPages ?? 20))
+  const maxPages = Math.min(100, Math.max(1, input.maxDynamicFieldPages ?? 20))
   const offset = Math.max(0, Math.floor(input.offset ?? 0))
-  const limit = Math.min(500, Math.max(1, input.limit ?? 50))
+  const limit = Math.min(10_000, Math.max(1, input.limit ?? 50))
 
   const allEntries: DynEntry[] = []
   let cursor: string | null | undefined

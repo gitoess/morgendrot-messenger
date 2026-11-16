@@ -6,6 +6,10 @@ import { listNftActivity, listNftOwnedSnapshot } from '@/frontend/lib/nft-activi
 import { listNftBearerTreasuriesLocal } from '@/frontend/lib/nft-bearer-treasury-local-store'
 import { listNftGuardedPursesLocal } from '@/frontend/lib/nft-guarded-purse-local-store'
 import { getNftKeycard, listNftKeycards } from '@/frontend/lib/nft-keycard-local-store'
+import {
+  isNftTimeLeaseEscrowActive,
+  listNftTimeLeasesLocal,
+} from '@/frontend/lib/nft-time-lease-local-store'
 import { listParkedNftVaults } from '@/frontend/lib/nft-vault-parked-store'
 
 export type SecuredSpendOption = {
@@ -83,6 +87,30 @@ export function buildSecuredSpendOptions(): SecuredSpendOption[] {
     map.set(k, {
       objectId: k,
       label: `${act?.label || 'NFT'} · ${shortId(k)} · Besitz`,
+      kindHint: 'keycard',
+    })
+  }
+
+  /**
+   * Zurückgeholte / beendete Leihen: NFT wieder wählbar für neue Zeitkapsel-Leihe.
+   * Aktive Escrow-Leihen weglassen (NFT nicht bei dir).
+   */
+  for (const e of listNftTimeLeasesLocal()) {
+    const k = norm(e.nftObjectId)
+    if (!k || isNftTimeLeaseEscrowActive(e)) {
+      map.delete(k)
+      continue
+    }
+    if (map.has(k)) continue
+    const tag =
+      e.status === 'reclaimed' || e.status === 'returned'
+        ? 'zurückgeholt'
+        : e.status === 'cancelled'
+          ? 'Leihe beendet'
+          : 'Leihe'
+    map.set(k, {
+      objectId: k,
+      label: `NFT · ${shortId(k)} · ${tag}`,
       kindHint: 'keycard',
     })
   }

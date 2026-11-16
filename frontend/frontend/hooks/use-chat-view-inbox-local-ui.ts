@@ -911,6 +911,29 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     setTimeout(() => setStatus('idle'), 4000)
   }, [selectedVisibleMessages, setStatus, setStatusMsg])
 
+  const onBulkHashSelected = useCallback(() => {
+    const list = selectedVisibleMessages()
+    if (list.length === 0) return
+    void (async () => {
+      try {
+        const { hashInboxMessagesCanonical } = await import('@/frontend/lib/message-canonical-hash')
+        const r = await hashInboxMessagesCanonical(list)
+        await navigator.clipboard.writeText(r.clipboardText)
+        setStatus('success')
+        setStatusMsg(
+          list.length === 1
+            ? `Hash kopiert: ${r.hashes[0]?.entryHash.slice(0, 16)}…`
+            : `${list.length} Nachrichten-Hashes kopiert (entry_hash je Block).`
+        )
+        setTimeout(() => setStatus('idle'), 6000)
+      } catch (e) {
+        setStatus('error')
+        setStatusMsg(e instanceof Error ? e.message : 'Hash fehlgeschlagen.')
+        setTimeout(() => setStatus('idle'), 6000)
+      }
+    })()
+  }, [selectedVisibleMessages, setStatus, setStatusMsg])
+
   const resetInboxViewFilters = useCallback(() => {
     clearInboxBrowserViewFilters()
     setHiddenInboxIds((prev) => (prev.size === 0 ? prev : new Set()))
@@ -1047,6 +1070,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     onBulkMarkProtokollSelected,
     onBulkCopySelected,
     onBulkExportJsonSelected,
+    onBulkHashSelected,
     selectedVisibleMessages,
     removeInboxPartnerFromQuickList,
     resetInboxViewFilters,

@@ -6,9 +6,9 @@
 
 import { useCallback } from 'react'
 import {
-  downloadEinsatzberichtJson,
-  downloadEinsatzberichtSummaryTxt,
-  downloadEinsatzberichtFullTxt,
+  buildEinsatzberichtJsonFile,
+  buildEinsatzberichtSummaryTxtFile,
+  buildEinsatzberichtFullTxtFile,
   buildEinsatzberichtPayload,
   unlockRememberedPassphraseMessagesForExport,
   type EinsatzberichtContentMode,
@@ -21,10 +21,16 @@ import {
   downloadMorgMediaFilesDirect,
   type MorgMediaKindFilter,
 } from '@/frontend/lib/einsatzprotokoll-export'
+import { commitBrowserFileSave } from '@/frontend/lib/browser-file-save'
 import type { Message } from '@/frontend/lib/types'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { exportDataDeniedReason } from '@/frontend/lib/messenger-capability-gates'
+import type {
+  EinsatzExportRunResult,
+  EinsatzExportUiOpts,
+} from '@/frontend/features/messenger-ports/inbox-export-actions-port'
 
+export type { EinsatzExportRunResult, EinsatzExportUiOpts }
 export type ExportMessagesScope = 'all' | 'visibleChat'
 
 export type UseChatViewEinsatzExportsParams = {
@@ -34,22 +40,15 @@ export type UseChatViewEinsatzExportsParams = {
   protokollMarkedIds: Set<string>
   setStatus: (s: 'idle' | 'success' | 'error') => void
   setStatusMsg: (msg: string) => void
-  /** Aus `useChatViewApiStatusPoll` — bei `true` vor Export zusätzlich bestätigen (§ H.6c). */
+  /** Aus `useChatViewApiStatusPoll` — bei `true` Hinweis in Status (kein Confirm-Blocker). */
   deviceTimeTrustWarn: boolean
   apiStatus?: ApiStatus | null
 }
 
-export type EinsatzExportUiOpts = {
-  scope?: ExportMessagesScope
-  contentMode?: EinsatzberichtContentMode
-}
-
-/** Vor forensischen Downloads: Nutzer explizit einbinden, wenn die Geräte-Uhr unsicher ist. */
+/** @deprecated Confirm blockierte Downloads hinter dem Dialog — nur noch Soft-Hinweis. */
 export function confirmForensicExportIfDeviceTimeUntrusted(deviceTimeTrustWarn: boolean): boolean {
-  if (!deviceTimeTrustWarn || typeof window === 'undefined') return true
-  return window.confirm(
-    'Hinweis: Die Geräte-Uhr ist nicht gegen Basis (HTTP-Datum) oder GPS abgesichert. Zeitstempel im Export können für Auswertung oder Attestation unzuverlässig sein.\n\nTrotzdem exportieren?'
-  )
+  void deviceTimeTrustWarn
+  return true
 }
 
 function parseOptionalMessageIdsFromPrompt(raw: string | null): string[] | undefined {
@@ -97,122 +96,82 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
     [messagesForExport]
   )
 
-  const onExportEinsatzberichtJson = useCallback(
-    async (ui?: EinsatzExportUiOpts) => {
-      if (!guardExport()) return
+  const finishTextualExport = useCallback(
+    async (
+      label: string,
+      ui: EinsatzExportUiOpts | undefined,
+      buildFile: (
+        msgs: Message[],
+        meta: { exportedByAddress?: string },
+        opts?: { contentMode?: EinsatzberichtContentMode }
+      ) => { blob: Blob; filename: string; mime: string; count: number }
+    ): Promise<EinsatzExportRunResult> => {
+      if (!guardExport()) return { ok: false, error: 'Export nicht erlaubt.' }
       if (messagesLength === 0) {
         setStatus('error')
         setStatusMsg('Keine Nachrichten im Posteingang.')
         setTimeout(() => setStatus('idle'), 5000)
-        return
+        return { ok: false, error: 'Keine Nachrichten im Posteingang.' }
       }
-      if (!confirmForensicExportIfDeviceTimeUntrusted(deviceTimeTrustWarn)) return
       try {
-        setStatusMsg('Lade vollständigen Posteingang für Export…')
+        setStatusMsg(`Lade Posteingang für ${label}…`)
         const prep = await prepareExportMessages(ui?.scope, ui?.contentMode)
         if (prep.messages.length === 0) {
           setStatus('error')
           setStatusMsg('Keine Nachrichten von der API.')
           setTimeout(() => setStatus('idle'), 5000)
-          return
+          return { ok: false, error: 'Keine Nachrichten von der API.' }
         }
-        downloadEinsatzberichtJson(prep.messages, { exportedByAddress: myAddress }, { contentMode: ui?.contentMode })
+        const file = buildFile(prep.messages, { exportedByAddress: myAddress }, { contentMode: ui?.contentMode })
+        const saved = await commitBrowserFileSave({
+          filename: file.filename,
+          mime: file.mime,
+          blob: file.blob,
+          reservedHandle: ui?.reservedSaveHandle,
+        })
+        if (saved === 'aborted') {
+          setStatusMsg('Speichern abgebrochen.')
+          setTimeout(() => setStatus('idle'), 4000)
+          return { ok: false, aborted: true, error: 'Speichern abgebrochen.' }
+        }
+        const pending = saved === 'saved' ? undefined : saved
+        const timeWarn = deviceTimeTrustWarn
         setStatus('success')
         setStatusMsg(
-          `JSON – ${prep.messages.length} Nachricht(en)` +
+          `${label} – ${file.count} Nachricht(en) (Vollhistorie API+Mailboxen)` +
             (prep.unlocked || prep.stillSealed
               ? ` · ${prep.unlocked} entsperrt, ${prep.stillSealed} versiegelt`
               : '') +
+            (pending ? ' · falls kein Download: „Datei speichern“ tippen' : '') +
+            (timeWarn ? ' · Hinweis: Geräte-Uhr ungesichert' : '') +
             '.'
         )
-        setTimeout(() => setStatus('idle'), 7000)
+        setTimeout(() => setStatus('idle'), 9000)
+        return { ok: true, count: file.count, pending, timeWarn }
       } catch (e) {
+        const error = e instanceof Error ? e.message : String(e)
         setStatus('error')
-        setStatusMsg(e instanceof Error ? e.message : String(e))
-        setTimeout(() => setStatus('idle'), 6000)
+        setStatusMsg(error)
+        setTimeout(() => setStatus('idle'), 8000)
+        return { ok: false, error }
       }
     },
     [messagesLength, prepareExportMessages, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn, guardExport]
+  )
+
+  const onExportEinsatzberichtJson = useCallback(
+    async (ui?: EinsatzExportUiOpts) => finishTextualExport('JSON', ui, buildEinsatzberichtJsonFile),
+    [finishTextualExport]
   )
 
   const onExportEinsatzberichtTxt = useCallback(
-    async (ui?: EinsatzExportUiOpts) => {
-      if (!guardExport()) return
-      if (messagesLength === 0) {
-        setStatus('error')
-        setStatusMsg('Keine Nachrichten im Posteingang.')
-        setTimeout(() => setStatus('idle'), 5000)
-        return
-      }
-      if (!confirmForensicExportIfDeviceTimeUntrusted(deviceTimeTrustWarn)) return
-      try {
-        setStatusMsg('Lade vollständigen Posteingang für Export…')
-        const prep = await prepareExportMessages(ui?.scope, ui?.contentMode)
-        if (prep.messages.length === 0) {
-          setStatus('error')
-          setStatusMsg('Keine Nachrichten von der API.')
-          setTimeout(() => setStatus('idle'), 5000)
-          return
-        }
-        downloadEinsatzberichtSummaryTxt(prep.messages, { exportedByAddress: myAddress }, {
-          contentMode: ui?.contentMode,
-        })
-        setStatus('success')
-        setStatusMsg(
-          `Text kurz – ${prep.messages.length} Nachricht(en)` +
-            (prep.unlocked || prep.stillSealed
-              ? ` · ${prep.unlocked} entsperrt, ${prep.stillSealed} versiegelt`
-              : '') +
-            '.'
-        )
-        setTimeout(() => setStatus('idle'), 7000)
-      } catch (e) {
-        setStatus('error')
-        setStatusMsg(e instanceof Error ? e.message : String(e))
-        setTimeout(() => setStatus('idle'), 6000)
-      }
-    },
-    [messagesLength, prepareExportMessages, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn, guardExport]
+    async (ui?: EinsatzExportUiOpts) => finishTextualExport('Text kurz', ui, buildEinsatzberichtSummaryTxtFile),
+    [finishTextualExport]
   )
 
   const onExportEinsatzberichtTxtFull = useCallback(
-    async (ui?: EinsatzExportUiOpts) => {
-      if (!guardExport()) return
-      if (messagesLength === 0) {
-        setStatus('error')
-        setStatusMsg('Keine Nachrichten im Posteingang.')
-        setTimeout(() => setStatus('idle'), 5000)
-        return
-      }
-      if (!confirmForensicExportIfDeviceTimeUntrusted(deviceTimeTrustWarn)) return
-      try {
-        setStatusMsg('Lade vollständigen Posteingang für Export…')
-        const prep = await prepareExportMessages(ui?.scope, ui?.contentMode)
-        if (prep.messages.length === 0) {
-          setStatus('error')
-          setStatusMsg('Keine Nachrichten von der API.')
-          setTimeout(() => setStatus('idle'), 5000)
-          return
-        }
-        downloadEinsatzberichtFullTxt(prep.messages, { exportedByAddress: myAddress }, {
-          contentMode: ui?.contentMode,
-        })
-        setStatus('success')
-        setStatusMsg(
-          `TXT vollständig – ${prep.messages.length} Nachricht(en)` +
-            (prep.unlocked || prep.stillSealed
-              ? ` · ${prep.unlocked} entsperrt, ${prep.stillSealed} versiegelt`
-              : '') +
-            '.'
-        )
-        setTimeout(() => setStatus('idle'), 7000)
-      } catch (e) {
-        setStatus('error')
-        setStatusMsg(e instanceof Error ? e.message : String(e))
-        setTimeout(() => setStatus('idle'), 6000)
-      }
-    },
-    [messagesLength, prepareExportMessages, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn, guardExport]
+    async (ui?: EinsatzExportUiOpts) => finishTextualExport('TXT vollständig', ui, buildEinsatzberichtFullTxtFile),
+    [finishTextualExport]
   )
 
   const onExportEinsatzprotokoll = useCallback(

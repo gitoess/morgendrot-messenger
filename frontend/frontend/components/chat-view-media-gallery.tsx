@@ -42,7 +42,7 @@ function objectUrlFor(item: MorgMediaListItem): string | null {
 }
 
 export type ChatViewMediaGalleryProps = {
-  messages: Message[]
+  messages: readonly Message[]
   /** Optional: vollständigen Verlauf laden (nur per Knopf). */
   loadMessages?: () => Promise<Message[]>
   kinds?: MorgMediaKindFilter | null
@@ -114,11 +114,18 @@ export function ChatViewMediaGallery(p: ChatViewMediaGalleryProps) {
     setLoading(true)
     setError('')
     try {
+      const visibleBefore = messagesRef.current.length
       const loader = loadMessagesRef.current
       const loaded = loader ? await loader() : []
       const { mergeAllMessages } = await import('@/frontend/lib/message-dedup')
       const merged = mergeAllMessages([...(loaded.length ? loaded : []), ...messagesRef.current])
       await applyList(merged)
+      setScanNote(
+        `Vollscan: ${loaded.length} von API/Mailboxen · ${merged.length} gesamt` +
+          (loaded.length <= visibleBefore
+            ? ` (sichtbar waren ${visibleBefore} — wenn Medien gleich: keine älteren MORG-Wires)`
+            : ` (vorher sichtbar ${visibleBefore})`)
+      )
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
       setItems([])
@@ -194,11 +201,19 @@ export function ChatViewMediaGallery(p: ChatViewMediaGalleryProps) {
     return <p className="text-xs text-muted-foreground">Keine MORG-Medien in dieser Auswahl.</p>
   }
 
+  const needsFullScanHint = !loading && items.length === 0 && Boolean(p.loadMessages)
+
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         {p.loadMessages ? (
-          <Button type="button" size="sm" variant="outline" disabled={loading} onClick={() => void loadFull()}>
+          <Button
+            type="button"
+            size="sm"
+            variant={needsFullScanHint ? 'default' : 'outline'}
+            disabled={loading}
+            onClick={() => void loadFull()}
+          >
             {loading ? 'Lädt…' : 'Gesamten Verlauf scannen'}
           </Button>
         ) : null}
@@ -207,6 +222,12 @@ export function ChatViewMediaGallery(p: ChatViewMediaGalleryProps) {
         </Button>
         {scanNote ? <span className="text-[10px] text-muted-foreground">{scanNote}</span> : null}
       </div>
+      {needsFullScanHint ? (
+        <p className="text-xs text-foreground">
+          In der sichtbaren Liste keine MORG-Medien. Ältere Posts/Audios/Bilder nur nach „Gesamten Verlauf
+          scannen“ (lädt alle Mailboxen + Unlock).
+        </p>
+      ) : null}
       {loading ? <p className="text-xs text-muted-foreground">Medien werden gelesen…</p> : null}
       {error ? <p className="text-xs text-amber-800 dark:text-amber-200">{error}</p> : null}
       {!loading && items.length > 0 ? (

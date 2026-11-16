@@ -10,12 +10,14 @@ import {
   createDirectIotaClient,
   fetchMailboxInboxRpcRows,
   fetchMessagingEventInboxRpcRows,
+  fetchMessagingEventInboxViaAddressTxs,
   fetchTeamPlainBroadcastRpcRows,
   fetchTeamEncBroadcastRpcRows,
   isLikelyIotaHexId,
   mailboxPlainInboxKey,
   mailboxEncryptedInboxKey,
   normalizeMailboxAddress,
+  resolveIotaIndexerRpcUrl,
   type MessagingEventInboxRpcRow,
 } from '@morgendrot/core/iota'
 import type { InboxApiRow } from '@/frontend/features/inbox/inbox-map-messages'
@@ -202,9 +204,35 @@ function canIncludeEncryptedInDirectInbox(): boolean {
   )
 }
 
+async function resolveDirectInboxPackageIds(primary: string): Promise<string[]> {
+  const out: string[] = []
+  const seen = new Set<string>()
+  const push = (raw: string) => {
+    const id = raw.trim()
+    if (!isLikelyIotaHexId(id)) return
+    const k = id.toLowerCase()
+    if (seen.has(k)) return
+    seen.add(k)
+    out.push(id)
+  }
+  push(primary)
+  try {
+    const { fetchPackageIdHistory } = await import('@/frontend/lib/api/package-id-history')
+    const hist = await fetchPackageIdHistory()
+    if (hist.ok) {
+      if (hist.current) push(hist.current)
+      for (const id of hist.history ?? []) push(id)
+      for (const id of hist.discovered ?? []) push(id)
+    }
+  } catch {
+    /* best-effort — Primary reicht als Fallback */
+  }
+  return out
+}
+
 export async function tryFetchDirectMailboxInboxViaIota(
   opts: TryFetchDirectMailboxInboxViaIotaOpts
-): Promise<{ ok: true; rows: InboxApiRow[] } | { ok: false; error: string }> {
+): Promise<{ ok: true; rows: InboxApiRow[]; hasMore?: boolean } | { ok: false; error: string }> {
   if (isIotaRelayOnlyMode()) {
     return { ok: false, error: 'Modus „Nur Morgendrot-API“: direkter Posteingang per Fullnode ist aus.' }
   }
@@ -391,31 +419,63 @@ export async function tryFetchDirectMailboxInboxViaIota(
       opts.includeMessagingEvents !== false &&
       shouldIncludeMessagingEventsInDirectInbox(mailboxObjectId, snap.mailboxId)
     if (includeEvents) {
-      const eventRows = await fetchMessagingEventInboxRpcRows(client, {
-        packageId: pkg,
-        myAddress: my,
-        limit: fetchWindow,
-        offset: 0,
-        maxEventPages: fetchWindow >= 200 ? 15 : undefined,
-      })
-      const eventApiRows = await mapEventRowsToInboxApi(eventRows, myNorm)
-      for (const row of eventApiRows) {
-        const lk = chainMessageLogicalDedupKey({
-          sender: row.sender ?? '',
-          recipient: row.recipient,
-          nonce: row.nonce ?? '',
+      /**
+       * Wie Backend-Union: alle Package-IDs (Historie). Früher nur snap.packageId + max 15 Event-Seiten
+       * → Posteingang blieb bei ~100 stecken, hasMore tot.
+       */
+      const eventNeed = fetchWindow
+      const pushEventRows = async (eventRows: MessagingEventInboxRpcRow[]) => {
+        const eventApiRows = await mapEventRowsToInboxApi(eventRows, myNorm)
+        for (const row of eventApiRows) {
+          const lk = chainMessageLogicalDedupKey({
+            sender: row.sender ?? '',
+            recipient: row.recipient,
+            nonce: row.nonce ?? '',
+          })
+          if (lk && mailboxLogicalKeys.has(lk)) continue
+          sortable.push({
+            sortTs: inboxTsFromRow(Number(row.ts ?? 0), BigInt(String(row.nonce ?? 0))),
+            row,
+          })
+        }
+      }
+      /** Indexer FromOrToAddress zuerst; Package-queryEvents nur Fallback. */
+      let indexerScanned = 0
+      const indexerUrl = resolveIotaIndexerRpcUrl(rpc)
+      const addrClient = indexerUrl ? createDirectIotaClient({ rpcUrl: indexerUrl }) : client
+      try {
+        const addrRows = await fetchMessagingEventInboxViaAddressTxs(addrClient, {
+          myAddress: my,
+          limit: eventNeed,
+          offset: 0,
+          maxTxPages: Math.min(100, Math.max(25, Math.ceil(eventNeed / 5) + 20)),
         })
-        if (lk && mailboxLogicalKeys.has(lk)) continue
-        sortable.push({
-          sortTs: inboxTsFromRow(Number(row.ts ?? 0), BigInt(String(row.nonce ?? 0))),
-          row,
-        })
+        indexerScanned = addrRows.length
+        await pushEventRows(addrRows)
+      } catch {
+        indexerScanned = 0
+      }
+      if (indexerScanned === 0) {
+        const packageIds = await resolveDirectInboxPackageIds(pkg)
+        const maxEventPages = Math.min(200, Math.max(40, Math.ceil(fetchWindow / 5) + 20))
+        for (const packageId of packageIds) {
+          const eventRows = await fetchMessagingEventInboxRpcRows(client, {
+            packageId,
+            myAddress: my,
+            limit: eventNeed,
+            offset: 0,
+            maxEventPages,
+          })
+          await pushEventRows(eventRows)
+        }
       }
     }
 
+    const totalBeforeSlice = sortable.length
     const pageEntries = sortAndSliceInboxEntries(sortable, opts.limit, opts.offset)
     const rows = await materializeInboxPage(pageEntries)
-    return { ok: true, rows }
+    const hasMore = totalBeforeSlice > opts.offset + opts.limit
+    return { ok: true, rows, hasMore }
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }
   }

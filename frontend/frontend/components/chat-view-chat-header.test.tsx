@@ -27,7 +27,7 @@ describe('TresorSessionBadge (§ H.1a)', () => {
     expect(screen.getByText(/Tresor: gesperrt/)).toBeInTheDocument()
 
     rerender(<TresorSessionBadge sessionLocked={false} hasKeys={false} />)
-    expect(screen.getByText(/Tresor: PW tippen/)).toBeInTheDocument()
+    expect(screen.getByText(/^Signer laden$/)).toBeInTheDocument()
 
     rerender(<TresorSessionBadge sessionLocked={false} hasKeys />)
     expect(screen.getByText(/Tresor: bereit/)).toBeInTheDocument()
@@ -131,7 +131,9 @@ describe('ChatViewChatHeader (§ H.1a)', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: /^Aktualisieren$/i }))
     expect(onRefreshStatus).toHaveBeenCalledTimes(1)
-    expect(screen.getByText(/Tresor:/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Tresor:|Signer laden/i)
+    ).toBeInTheDocument()
   })
 
   it('blendet Aktualisieren aus wenn App-Header darüber (suppressAppChrome)', () => {

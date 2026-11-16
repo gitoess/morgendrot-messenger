@@ -1,8 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, Copy } from 'lucide-react'
 import type { ApiStatus } from '@/frontend/lib/api/status'
+import { fetchPackageIdHistory } from '@/frontend/lib/api/package-id-history'
+import { fetchMailboxIdHistory } from '@/frontend/lib/api/mailbox-id-history'
 import { cn } from '@/lib/utils'
 
 export type NetworkDeployIds = {
@@ -42,7 +44,7 @@ export function buildBossDeployIdExtrasFromApi(apiStatus?: ApiStatus | null) {
     'Upgrade Cap',
     apiStatus?.einsatzConfig?.upgradeCapId,
     'upgrade-cap',
-    'Berechtigung für Package-Upgrades — Boss-.env, selten nötig im Alltag.'
+    'On-Chain-Recht (Object-ID), denselben Move-Package-Code zu ersetzen. Wird beim Erst-Deploy in die Boss-.env geschrieben (UPGRADE_CAP_ID). Nur Boss-PC braucht es — Helfer nicht. Fehlt es → nur Neu-Publish (neue PACKAGE_ID + neues Handoff).'
   )
   return extras
 }
@@ -110,16 +112,79 @@ function NetworkBlock(p: {
   )
 }
 
+function HistoryList(p: {
+  title: string
+  empty: string
+  ids: string[]
+  copyPrefix: string
+  copied: string | null
+  onCopy: (v: string, k: string) => void
+}) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{p.title}</p>
+      {p.ids.length === 0 ? (
+        <p className="text-[10px] text-muted-foreground">{p.empty}</p>
+      ) : (
+        <ul className="space-y-1">
+          {p.ids.map((id, i) => (
+            <li key={`${p.copyPrefix}-${id}`} className="flex items-start gap-2">
+              <span className="min-w-0 flex-1 break-all font-mono text-[10px] text-foreground" title={id}>
+                {id}
+              </span>
+              <button
+                type="button"
+                className="inline-flex shrink-0 items-center gap-1 text-[10px] text-primary hover:underline"
+                onClick={() => p.onCopy(id, `${p.copyPrefix}-${i}`)}
+              >
+                {p.copied === `${p.copyPrefix}-${i}` ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 type Props = {
   testnet?: NetworkDeployIds
   mainnet?: NetworkDeployIds
   /** Globals aus aktiver Boss-.env (Vault-/Command-Registry, Upgrade Cap) — nicht pro Netzprofil. */
   extras?: { label: string; value: string; copyKey: string; hint?: string }[]
   className?: string
+  /** Nach Deploy/Apply Historie neu laden. */
+  refreshToken?: number | string
 }
 
 export function BossNetworkDeployIdsPanel(p: Props) {
   const [copied, setCopied] = useState<string | null>(null)
+  const [pkgHistory, setPkgHistory] = useState<string[]>([])
+  const [mbHistory, setMbHistory] = useState<string[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const [pkg, mb] = await Promise.all([fetchPackageIdHistory(), fetchMailboxIdHistory()])
+      if (cancelled) return
+      const pkgIds = pkg.ok
+        ? [...new Set([...(pkg.history ?? []), ...(pkg.discovered ?? [])])].filter((id) => PKG_RE.test(id))
+        : []
+      const mbIds = mb.ok ? [...new Set(mb.history ?? [])].filter((id) => PKG_RE.test(id)) : []
+      // Aktive IDs aus dem Panel nicht als „alt“ doppelten
+      const activePkg = new Set(
+        [p.testnet?.packageId, p.mainnet?.packageId].map((x) => (x || '').trim().toLowerCase()).filter(Boolean)
+      )
+      const activeMb = new Set(
+        [p.testnet?.mailboxId, p.mainnet?.mailboxId].map((x) => (x || '').trim().toLowerCase()).filter(Boolean)
+      )
+      setPkgHistory(pkgIds.filter((id) => !activePkg.has(id.toLowerCase())))
+      setMbHistory(mbIds.filter((id) => !activeMb.has(id.toLowerCase())))
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [p.refreshToken, p.testnet?.packageId, p.testnet?.mailboxId, p.mainnet?.packageId, p.mainnet?.mailboxId])
 
   if (!hasAnyNetworkDeployIds(p.testnet, p.mainnet) && !(p.extras?.length ?? 0)) {
     return null
@@ -139,12 +204,45 @@ export function BossNetworkDeployIdsPanel(p: Props) {
           Chain-IDs zum Sichern
         </p>
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Pro Netz: Package + Postfach (aus „Wo senden?“). Liegen auch in der Boss-<span className="font-mono">.env</span>
-          / Handoff — Testnet und Mainnet getrennt.
+          Pro Netz: Package + Postfach (aus „Wo senden?“). Liegen auch in der Boss-
+          <span className="font-mono">.env</span> / Handoff — Testnet und Mainnet getrennt. Wechselt die aktive
+          Package-/Mailbox-ID (Neu-Publish), wandert die alte in den Verlauf unten. In-Place-Upgrade ändert die IDs{' '}
+          <strong className="text-foreground">nicht</strong>.
         </p>
       </div>
       <NetworkBlock network="testnet" ids={p.testnet || {}} copied={copied} onCopy={copyId} />
       <NetworkBlock network="mainnet" ids={p.mainnet || {}} copied={copied} onCopy={copyId} />
+
+      <details className="rounded-md border border-border/50 bg-background/40 px-2.5 py-2">
+        <summary className="cursor-pointer text-[11px] font-medium text-muted-foreground">
+          Frühere Package- / Postfach-IDs ({pkgHistory.length + mbHistory.length})
+        </summary>
+        <div className="mt-2 space-y-3">
+          <p className="text-[10px] leading-relaxed text-muted-foreground">
+            Lokal auf dem Boss-PC (
+            <span className="font-mono">.morgendrot-package-id-history</span> /{' '}
+            <span className="font-mono">.morgendrot-mailbox-id-history</span>). Move-Quellcode liegt in{' '}
+            <span className="font-mono">move-test/</span> (Git) — hier nur die On-Chain-Object-IDs.
+          </p>
+          <HistoryList
+            title="Alte Package-IDs"
+            empty="Noch keine früheren Packages — erst nach Neu-Publish / ID-Wechsel."
+            ids={pkgHistory}
+            copyPrefix="hist-pkg"
+            copied={copied}
+            onCopy={copyId}
+          />
+          <HistoryList
+            title="Alte Shared-Postfächer"
+            empty="Noch keine früheren MAILBOX_IDs — werden archiviert, wenn create_globals ein neues Postfach setzt."
+            ids={mbHistory}
+            copyPrefix="hist-mb"
+            copied={copied}
+            onCopy={copyId}
+          />
+        </div>
+      </details>
+
       {(p.extras?.length ?? 0) > 0 ? (
         <details className="rounded-md border border-border/50 bg-background/40 px-2.5 py-2">
           <summary className="cursor-pointer text-[11px] font-medium text-muted-foreground">
@@ -152,9 +250,9 @@ export function BossNetworkDeployIdsPanel(p: Props) {
           </summary>
           <div className="mt-2 space-y-2">
             <p className="text-[10px] leading-relaxed text-muted-foreground">
-              Keine Doppelung von Package/Mailbox. Werte kommen aus der <strong className="font-medium">aktuellen</strong>{' '}
-              Boss-.env (nicht getrennt Testnet/Mainnet in diesem Panel). Vault-Registry = On-Chain-Vault/Purge, nicht
-              der lokale Tresor.
+              Keine Doppelung von Package/Mailbox. Werte kommen aus der{' '}
+              <strong className="font-medium">aktuellen</strong> Boss-.env (nicht getrennt Testnet/Mainnet in diesem
+              Panel). Vault-Registry = On-Chain-Vault/Purge, nicht der lokale Tresor.
             </p>
             {p.extras!.map((row) => (
               <IdRow

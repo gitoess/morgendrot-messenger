@@ -498,7 +498,9 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
       <div className="space-y-2 rounded-lg border border-border bg-background/50 px-3 py-3">
         <p className="text-xs font-semibold text-foreground">2 · Team-Kanal</p>
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Ein gemeinsames Postfach + ein gemeinsames Geheimnis für alle.
+          Team-Postfach = Shared-Object-ID (alle mit derselben ID können Broadcast lesen/schreiben) —{' '}
+          <strong className="text-foreground">kein</strong> WhatsApp-artiger Chain-Gruppenraum. Ohne Postfach: oft nur
+          lokale Gruppe / 1:1. Geheimnis = optional Enc für den Kanal.
         </p>
         <button
           type="button"

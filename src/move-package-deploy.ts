@@ -6,7 +6,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { IotaClient } from '@iota/iota-sdk/client';
-import { CFG, savePackageIdToFile, setEnvKey } from './config.js';
+import { CFG, pushMailboxIdToHistory, savePackageIdToFile, setEnvKey } from './config.js';
 import { writeStoredGlobalsIds } from './vault-sync-chain-config.js';
 
 const HEX64 = /^0x[a-fA-F0-9]{64}$/i;
@@ -305,6 +305,14 @@ export function applyGlobalsCreatedToEnv(ids: GlobalsCreatedIds): {
     errors: string[];
 } {
     const errors: string[] = [];
+    const previousMb = (CFG.MAILBOX_ID || process.env.MAILBOX_ID || '').trim();
+    if (
+        previousMb &&
+        /^0x[a-fA-F0-9]{64}$/i.test(previousMb) &&
+        previousMb.toLowerCase() !== ids.mailboxId.trim().toLowerCase()
+    ) {
+        pushMailboxIdToHistory(previousMb);
+    }
     (CFG as { MAILBOX_ID: string }).MAILBOX_ID = ids.mailboxId;
     process.env.MAILBOX_ID = ids.mailboxId;
     (CFG as { VAULT_REGISTRY_ID: string }).VAULT_REGISTRY_ID = ids.vaultRegistryId;

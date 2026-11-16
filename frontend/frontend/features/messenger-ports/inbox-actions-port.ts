@@ -30,6 +30,7 @@ export type InboxActionsPort = {
   readonly onBulkMarkProtokollSelected: () => void
   readonly onBulkCopySelected: () => void
   readonly onBulkExportJsonSelected: () => void
+  readonly onBulkHashSelected: () => void
   readonly onBulkForwardSelected: (includeSender: boolean) => void
   readonly localPurgeBusy: boolean
   readonly morgPkgFileRef: RefObject<HTMLInputElement | null>

@@ -43,11 +43,16 @@ Badge **Eingang/Ausgang**, **Verschlüsselt**, **PWMSG** oder **NFT-Gate** ankli
 
 | Ort | Wofür |
 |-----|--------|
-| **Nachrichtenzeile** | PWMSG / NFT-Gate: Passphrase bzw. Schlüsselkarte → Klartext in der Bubble |
-| **Optionen → Wire einfügen** | Paste `MORG_PWMSG_V1` + Passphrase (nur PWMSG; ECDH braucht Handshake) |
-| **Optionen → Export / Decrypt-JSON** | Passwort-geschützte Einsatzbericht-JSON wieder öffnen (eigene HTML-Seite) |
+| **Nachrichtenzeile** | **PWMSG** = Passphrase in der Bubble. **NFT-Gate** = Besitz oder Leihe-Empfänger (Verleiher während Leihe **nicht**). ECDH-Schloss = Composer „Verschlüsselt“, anderer Kanal. |
+| **Optionen → Wire einfügen** | Paste `MORG_PWMSG_V1` + Passphrase (**nur** PWMSG). ECDH braucht Handshake; NFT-Gate **nicht** hier. |
+| **Optionen → Export / Decrypt-JSON** | Passwort-geschützte Einsatzbericht-JSON wieder öffnen (eigene HTML-Seite) — nicht Posteingang-Decrypt. |
 
-**Zeitkapsel:** **Senden** = Composer **+** → Zeitkapsel-Nachricht. Nach dem Senden: Composer-Leiste **Dieses NFT verleihen…** (oder Privacy-Panel). **Verleihen / Reclaim** auch Posteingang → **On-Chain / NFT** → Tab Zeitkapsel.
+**Zeitkapsel — zwei Jobs (nicht verwechseln):**
+
+| Job | Wo | Was |
+|-----|-----|-----|
+| **Senden** | Composer **+** → Zeitkapsel-Nachricht | Ciphertext mit Badge **NFT-Gate**; NFT bleibt bei dir → du liest weiter |
+| **Verleihen** | Galerie **Verleihen…** / Tab Zeitkapsel / CTA **Dieses NFT verleihen…** | NFT an **fremde** Wallet; nur Empfänger liest; **Zurückholen** = offene Leihen; nach Reclaim wieder Galerie / „Neue Leihe“ |
 
 ---
 
@@ -284,13 +289,13 @@ Ganzes Private-Mailbox-Object: **Einstellungen → Meine Mailboxen** → Aufräu
 
 | Funktion | Beschreibung |
 |----------|--------------|
-| **Aktualisieren** | Nur **App-Header rechts neben Tresor** (nicht in der Posteingang-Leiste). |
+| **Aktualisieren** | Nur **App-Header rechts neben Tresor** (nicht in der Posteingang-Leiste). Lädt Status **und** Posteingang neu; Toast „Aktualisieren…“ / „Posteingang aktualisiert“. Test: eine neue Chain-/TG-Nachricht senden → tippen → Zeile erscheint (auch wenn die Liste vorher schon voll wirkte). |
 | **Kategorien / Filter** | z. B. Direkt, Klartext (Pinnwand), Gruppe — je nach Kanal und Rolle. |
 | **Antworten** | Menü an der Zeile — übernimmt **Kanal** und **Sendepfad** in den Composer (1:1, Gruppe, Funk, Pinnwand, Telegram). |
 | **Anheften** | Pinnwand-Posts lokal oben halten (`sessionStorage`). |
 | **Handshake-Anfragen** | Grüner Streifen oben: **Annehmen**, **Als Partner**, **Löschen**. Badge in der Posteingang-Toolbar und an der Dashboard-Kachel. |
 | **Badges** | **Mailbox**, **Team-Broadcast** — unterscheidet Speicherart on-chain. |
-| **Optionen** | Wire einfügen · Hash & Prüfen · Export Nachrichtenverlauf (Journal + Medien-ZIP) · Datei-Paket (.morg-pkg) — Inhalt von Paketen landet im Archiv-Sheet, nicht in der normalen Liste. |
+| **Optionen** | Wire einfügen · Hash & Prüfen · Export Nachrichtenverlauf (Journal + Medien-ZIP) · Datei-Paket (.morg-pkg) — Inhalt von Paketen landet im Archiv-Sheet, nicht in der normalen Liste. **Hinweis:** JSON/TXT-Vollhistorie lädt zuerst den gesamten Verlauf von der Chain/Indexer nach — bei vielen Nachrichten kann das **länger dauern** (Status „Lade Posteingang…“); nicht abbrechen, bis der Speichern-Dialog kommt. |
 | **On-Chain / NFT** | Eigener Button in der Posteingang-Leiste (nicht unter Optionen). |
 
 **Offline-Warteschlange:** Bei fehlender Basis werden Sends lokal gequeued; Status-Streifen im Chat.
@@ -364,7 +369,7 @@ Wo welche Funktion liegt (Messenger, Boss):
 | **Move-Upgrade / Chain-Status** | **Einstellungen → IOTA → Package & Move-Upgrade** (nicht mehr unter Einsatzleitung → Erweitert) |
 | **Kontakte** anlegen, Import/Export JSON, verschl. Backup | **Telefonbuch** (`[+]` im Composer, Sidebar, Kontakt-Detail) |
 | **Team-/Private-Mailboxen** aktiv setzen | **Einstellungen → Meine Mailboxen** |
-| **Nachrichten-Forensik** (Verlauf JSON/TXT, Medien-ZIP) | **Posteingang → Optionen → Export Nachrichtenverlauf…** |
+| **Nachrichten-Forensik** (Verlauf JSON/TXT, Medien-ZIP) | **Posteingang → Optionen → Export Nachrichtenverlauf…** — Vollhistorie kann **länger laden** (Chain/Indexer), bevor die Datei speicherbar ist |
 | **Handoff importieren** (Helfer-Gerät) | **Einstellungen → Handoff importieren** (oder Posteingang bei IOTA-Zustellung) |
 
 **Nicht verwechseln:** `npm run bundle:messenger` = Entwickler-Standalone auf dem Server — **kein** Ersatz für die Helfer-Handoff-ZIP.
@@ -553,4 +558,4 @@ Voraussetzung Import: **Handshake** zum Absender der Datei (Peer in `peerMap`).
 
 ---
 
-*Stand: 2026-11-13 — Chats|Posteingang Telegram-Muster (Composer nur rechts); Sendepfad Alle/IOTA/Funk/Telegram; Aktualisieren neben Tresor; Optionen Wire/Hash/Export.*
+*Stand: 2026-11-16 — Export-Vollhistorie kann länger laden; Chats|Posteingang Telegram-Muster; Sendepfad Alle/IOTA/Funk/Telegram; Aktualisieren neben Tresor; Optionen Wire/Hash/Export.*

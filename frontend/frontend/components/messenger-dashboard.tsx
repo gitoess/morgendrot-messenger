@@ -154,6 +154,15 @@ function MessengerDashboardBody({
     }
   }
 
+  /** Status + Posteingang (Header „Aktualisieren“; Chat mit suppressAppChrome). */
+  const onRefreshStatusAndInbox = useCallback(async () => {
+    await s.checkStatus()
+    const { requestMessengerInboxForceRefresh } = await import(
+      '@/frontend/lib/messenger-inbox-force-refresh'
+    )
+    requestMessengerInboxForceRefresh()
+  }, [s.checkStatus])
+
   const vaultSessionLocked = !!(s.locked || s.apiSnapshot?.locked)
   const browserSignerReady = isBrowserSessionSignerReady(s.locked)
   const vaultKeysReady = browserSignerReady
@@ -374,7 +383,7 @@ function MessengerDashboardBody({
             vaultBannerActions={showHomeVaultBadge ? homeVaultActions : undefined}
             sessionLocked={vaultSessionLocked}
             hasKeys={browserSignerReady}
-            onRefreshStatus={s.checkStatus}
+            onRefreshStatus={onRefreshStatusAndInbox}
             subNav={{
               viewTitle:
                 s.activeView.type === 'settings'
@@ -555,7 +564,7 @@ function MessengerDashboardBody({
           vaultBannerActions={showHomeVaultBadge ? homeVaultActions : undefined}
           sessionLocked={vaultSessionLocked}
           hasKeys={browserSignerReady}
-          onRefreshStatus={s.checkStatus}
+          onRefreshStatus={onRefreshStatusAndInbox}
         />
       ) : (
       <header className="border-b border-border bg-card/90 backdrop-blur-sm">

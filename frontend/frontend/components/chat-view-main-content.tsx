@@ -737,7 +737,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       return
     }
     const peer =
-      (inboxPartnerKey && isValidRecipient0x(inboxPartnerKey) ? inboxPartnerKey : '') ||
+      (inboxPartnerKey?.trim() || '') ||
       [recipient, partner].map((s) => (s || '').trim()).find(isValidRecipient0x) ||
       ''
     if (peer) handleOpenContactDetail(peer)
@@ -1069,10 +1069,11 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         }
       : undefined
 
+    /** Info auch für Telegram-/Funk-Kontakte ohne 0x-Adresse. */
     const canOpenInfo = Boolean(
       (isGroup && inboxConversationGroupId) ||
         telegramAlarmSelected ||
-        (inboxPartnerKey && isValidRecipient0x(inboxPartnerKey)) ||
+        (inboxPartnerKey && inboxPartnerKey.trim().length > 0) ||
         [recipient, partner].map((s) => (s || '').trim()).some(isValidRecipient0x)
     )
 

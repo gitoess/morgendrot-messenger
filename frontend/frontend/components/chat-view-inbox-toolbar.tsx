@@ -5,7 +5,7 @@
  * Aktualisieren liegt im App-Header neben Tresor (nicht hier).
  */
 
-import { useState, type ChangeEvent, type ReactNode, type RefObject } from 'react'
+import { useEffect, useState, type ChangeEvent, type ReactNode, type RefObject } from 'react'
 import {
   BookUser,
   ChevronDown,
@@ -64,6 +64,16 @@ import {
   type ChatViewConversationMenuProps,
 } from '@/frontend/components/chat-view-conversation-menu'
 import { ChatViewMediaGallery } from '@/frontend/components/chat-view-media-gallery'
+import {
+  downloadPendingBrowserFileSave,
+  reserveBrowserSaveHandle,
+  revokePendingBrowserFileSave,
+  type PendingBrowserFileSave,
+} from '@/frontend/lib/browser-file-save'
+import type {
+  EinsatzExportRunResult,
+  EinsatzExportUiOpts,
+} from '@/frontend/features/messenger-ports/inbox-export-actions-port'
 
 const DEFAULT_PATH_TOOLS = inboxToolbarToolsForSendPath({
   activeSendPath: 'internet',
@@ -89,18 +99,15 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   apiStatus: ApiStatus | null
   onRefresh: () => void
   loading: boolean
-  onExportEinsatzberichtJson: (opts?: {
-    scope?: 'all' | 'visibleChat'
-    contentMode?: 'asStored' | 'plaintextOnly' | 'redactEncrypted'
-  }) => void | Promise<void>
-  onExportEinsatzberichtTxt: (opts?: {
-    scope?: 'all' | 'visibleChat'
-    contentMode?: 'asStored' | 'plaintextOnly' | 'redactEncrypted'
-  }) => void | Promise<void>
-  onExportEinsatzberichtTxtFull: (opts?: {
-    scope?: 'all' | 'visibleChat'
-    contentMode?: 'asStored' | 'plaintextOnly' | 'redactEncrypted'
-  }) => void | Promise<void>
+  onExportEinsatzberichtJson: (
+    opts?: EinsatzExportUiOpts
+  ) => void | Promise<void | EinsatzExportRunResult>
+  onExportEinsatzberichtTxt: (
+    opts?: EinsatzExportUiOpts
+  ) => void | Promise<void | EinsatzExportRunResult>
+  onExportEinsatzberichtTxtFull: (
+    opts?: EinsatzExportUiOpts
+  ) => void | Promise<void | EinsatzExportRunResult>
   onExportEinsatzberichtEncrypted: () => void | Promise<void>
   /** Vollständigen Verlauf für Medien-Galerie laden. */
   loadMessagesForMediaExport?: () => Promise<import('@/frontend/lib/types').Message[]>
@@ -167,6 +174,7 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   onBulkMarkProtokollSelected?: () => void
   onBulkCopySelected?: () => void
   onBulkExportJsonSelected?: () => void
+  onBulkHashSelected?: () => void
   onBulkForwardSelected?: (includeSender: boolean) => void
   hasHiddenMessages: boolean
   onToggleHideAllVisibleLocal: () => void
@@ -273,6 +281,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     onBulkMarkProtokollSelected,
     onBulkCopySelected,
     onBulkExportJsonSelected,
+    onBulkHashSelected,
     onBulkForwardSelected,
     hasHiddenMessages,
     onToggleHideAllVisibleLocal,
@@ -298,6 +307,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
   const [wirePasteOpen, setWirePasteOpen] = useState(false)
   const [exportHistoryOpen, setExportHistoryOpen] = useState(false)
   const [exportBusy, setExportBusy] = useState(false)
+  const [pendingExportSave, setPendingExportSave] = useState<PendingBrowserFileSave | null>(null)
   const [mediaKinds, setMediaKinds] = useState({
     audio: true,
     image: true,
@@ -318,6 +328,13 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
   const exportDenied = exportDataDeniedReason(apiStatus)
   const exportBlocked = Boolean(exportDenied)
 
+  useEffect(() => {
+    if (exportHistoryOpen) return
+    revokePendingBrowserFileSave(pendingExportSave)
+    setPendingExportSave(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur beim Schließen aufräumen
+  }, [exportHistoryOpen])
+
   const blockExportAction = (run: () => void) => {
     if (!exportBlocked) {
       run()
@@ -328,7 +345,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     setTimeout(() => setStatus('idle'), 6000)
   }
 
-  /** Promise abwarten — sonst schließt der Dialog bevor Download startet / confirm greift. */
+  /** ZIP/Enc: Dialog schließen nach Lauf. */
   const runExportAndClose = (run: () => void | Promise<void>) => {
     blockExportAction(() => {
       setExportBusy(true)
@@ -341,8 +358,46 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     })
   }
 
+  /**
+   * JSON/TXT: Save-Picker in der Klick-Geste reservieren (sonst blockiert der Browser
+   * den Download nach dem langen Posteingang-Fetch). Dialog bleibt bei Pending offen.
+   */
+  const runTextualExport = (
+    suggested: { filename: string; mime: string },
+    run: (reserved: EinsatzExportUiOpts['reservedSaveHandle']) => Promise<void | EinsatzExportRunResult>
+  ) => {
+    blockExportAction(() => {
+      void (async () => {
+        revokePendingBrowserFileSave(pendingExportSave)
+        setPendingExportSave(null)
+        const reserved = await reserveBrowserSaveHandle(suggested)
+        if (reserved === 'aborted') return
+        setExportBusy(true)
+        try {
+          const result = await run(reserved)
+          if (result && typeof result === 'object' && 'ok' in result) {
+            if (result.ok && result.pending) {
+              setPendingExportSave(result.pending)
+              return
+            }
+            if (result.ok) {
+              setExportHistoryOpen(false)
+              return
+            }
+            if (result.aborted) return
+          } else {
+            setExportHistoryOpen(false)
+          }
+        } finally {
+          setExportBusy(false)
+        }
+      })()
+    })
+  }
+
   const exportEmpty = messageCount === 0
   const exportDisabled = exportEmpty || exportBlocked || exportBusy
+  const galleryBlocked = exportEmpty || exportBlocked
 
   return (
     <div className="border-b border-border">
@@ -505,9 +560,11 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Chat · Sicherheit
                   </DropdownMenuLabel>
-                  <p className="px-2 pb-1.5 text-[10px] leading-snug text-muted-foreground">
-                    Nach-Lesen = Modus. Echter Burn: Zeilen-⋯ oder Auswahl.
-                  </p>
+                  {conversationMenu.burnOnRead ? (
+                    <p className="px-2 pb-1.5 text-[10px] leading-snug text-muted-foreground">
+                      Nach-Lesen = Modus. Echter Burn: Zeilen-⋯ oder Auswahl.
+                    </p>
+                  ) : null}
                   <ChatConversationMenuItems
                     {...conversationMenu}
                     /* Gruppe verwalten bleibt in Sidebar / Info — nicht doppelt hier */
@@ -587,7 +644,32 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 </div>
                 <div className="grid gap-2">
                   {exportBusy ? (
-                    <p className="text-xs text-muted-foreground">Export läuft — bitte warten…</p>
+                    <p className="text-xs text-muted-foreground">
+                      Export läuft — Speichern ggf. schon gewählt; Verlauf wird noch geladen…
+                    </p>
+                  ) : null}
+                  {pendingExportSave ? (
+                    <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-2 space-y-2">
+                      <p className="text-xs text-foreground">
+                        Datei bereit ({pendingExportSave.filename}). Browser hat den Auto-Download
+                        oft blockiert — bitte speichern:
+                      </p>
+                      <Button
+                        type="button"
+                        className="w-full"
+                        onClick={() => {
+                          downloadPendingBrowserFileSave(pendingExportSave)
+                          setStatus('success')
+                          setStatusMsg(`Gespeichert: ${pendingExportSave.filename}`)
+                          setTimeout(() => setStatus('idle'), 6000)
+                          revokePendingBrowserFileSave(pendingExportSave)
+                          setPendingExportSave(null)
+                          setExportHistoryOpen(false)
+                        }}
+                      >
+                        Datei speichern
+                      </Button>
+                    </div>
                   ) : null}
                   <Button
                     type="button"
@@ -595,11 +677,16 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     className="h-auto justify-start whitespace-normal py-2.5 text-left"
                     disabled={exportDisabled}
                     onClick={() =>
-                      runExportAndClose(() =>
-                        onExportEinsatzberichtJson({
-                          scope: exportScope,
-                          contentMode: exportContentMode,
-                        })
+                      runTextualExport(
+                        { filename: 'morgendrot-einsatzbericht.json', mime: 'application/json' },
+                        (reservedSaveHandle) =>
+                          Promise.resolve(
+                            onExportEinsatzberichtJson({
+                              scope: exportScope,
+                              contentMode: exportContentMode,
+                              reservedSaveHandle,
+                            })
+                          )
                       )
                     }
                   >
@@ -621,11 +708,19 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     className="h-auto justify-start whitespace-normal py-2.5 text-left"
                     disabled={exportDisabled}
                     onClick={() =>
-                      runExportAndClose(() =>
-                        onExportEinsatzberichtTxtFull({
-                          scope: exportScope,
-                          contentMode: exportContentMode,
-                        })
+                      runTextualExport(
+                        {
+                          filename: 'morgendrot-nachrichtenverlauf-voll.txt',
+                          mime: 'text/plain',
+                        },
+                        (reservedSaveHandle) =>
+                          Promise.resolve(
+                            onExportEinsatzberichtTxtFull({
+                              scope: exportScope,
+                              contentMode: exportContentMode,
+                              reservedSaveHandle,
+                            })
+                          )
                       )
                     }
                   >
@@ -637,11 +732,19 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     className="h-auto justify-start whitespace-normal py-2.5 text-left"
                     disabled={exportDisabled}
                     onClick={() =>
-                      runExportAndClose(() =>
-                        onExportEinsatzberichtTxt({
-                          scope: exportScope,
-                          contentMode: exportContentMode,
-                        })
+                      runTextualExport(
+                        {
+                          filename: 'morgendrot-nachrichtenverlauf-kurz.txt',
+                          mime: 'text/plain',
+                        },
+                        (reservedSaveHandle) =>
+                          Promise.resolve(
+                            onExportEinsatzberichtTxt({
+                              scope: exportScope,
+                              contentMode: exportContentMode,
+                              reservedSaveHandle,
+                            })
+                          )
                       )
                     }
                   >
@@ -710,11 +813,13 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     ))}
                   </div>
                   <p className="text-[10px] text-muted-foreground">
-                    Audio/Bilder nur, wenn MORG-Wire im Verlauf liegt (nicht Telegram-Cloud). Passphrase-Medien
-                    erscheinen nach lokalem Freischalten.
+                    Start: nur sichtbare Inbox-Zeilen. Ältere Medien: „Gesamten Verlauf scannen“. Nur
+                    MORG-Wire (nicht Telegram-Cloud). Passphrase-Medien nach lokalem Freischalten.
                   </p>
-                  {exportDisabled ? (
-                    <p className="text-xs text-muted-foreground">Keine Nachrichten geladen.</p>
+                  {galleryBlocked ? (
+                    <p className="text-xs text-muted-foreground">
+                      {exportBlocked ? exportDenied : 'Keine Nachrichten geladen.'}
+                    </p>
                   ) : (
                     <ChatViewMediaGallery
                       messages={messages}
@@ -1085,6 +1190,15 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 className="rounded-md border border-border px-2 py-1.5 text-left hover:bg-muted disabled:opacity-50"
               >
                 JSON-Snapshot
+              </button>
+              <button
+                type="button"
+                disabled={selectedInboxCount === 0 || !onBulkHashSelected}
+                onClick={() => onBulkHashSelected?.()}
+                className="rounded-md border border-border px-2 py-1.5 text-left hover:bg-muted disabled:opacity-50"
+                title="Kanonische entry_hashes der Auswahl in die Zwischenablage"
+              >
+                Hashes kopieren
               </button>
               <button
                 type="button"

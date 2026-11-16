@@ -105,6 +105,21 @@ describe('fetchInboxFromAllOwnedMailboxes', () => {
     expect(r.messages.some((m) => m.content.includes('via rpc'))).toBe(true)
   })
 
+  it('volle Shared-Seite → hasMore true (Hook stoppt per Novel-Count)', async () => {
+    const rows = Array.from({ length: 50 }, (_, i) => ({
+      sender: '0xs',
+      text: `m${i}`,
+      isPlain: true,
+      nonce: String(i + 1),
+      chainPurgeable: true,
+    }))
+    fetchInbox.mockResolvedValueOnce({ ok: true, messages: rows, hasMore: false })
+    const r = await fetchInboxFromAllOwnedMailboxes({ limit: 50, offset: 50, includePrivateMailboxes: false })
+    expect(r.ok).toBe(true)
+    expect(r.stride).toBe(50)
+    expect(r.hasMore).toBe(true)
+  })
+
   it('ruft Shared und nur die aktive private Mailbox auf', async () => {
     readActiveSendMailboxObjectId.mockReturnValue(MB_A)
     fetchInbox

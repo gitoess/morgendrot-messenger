@@ -151,6 +151,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     onBulkMarkProtokollSelected,
     onBulkCopySelected,
     onBulkExportJsonSelected,
+    onBulkHashSelected,
     onBulkForwardSelected,
     toggleProtokollMark,
     protokollMarkedIds,
@@ -271,6 +272,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         onBulkMarkProtokollSelected={onBulkMarkProtokollSelected}
         onBulkCopySelected={onBulkCopySelected}
         onBulkExportJsonSelected={onBulkExportJsonSelected}
+        onBulkHashSelected={onBulkHashSelected}
         onBulkForwardSelected={onBulkForwardSelected}
         hasHiddenMessages={hiddenInboxCount > 0}
         onToggleHideAllVisibleLocal={onToggleHideAllVisibleLocal}

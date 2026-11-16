@@ -22,10 +22,11 @@
   **Entschlüsseln:** Im Next-Build unter **`/einsatzbericht-decrypt.html`** (Datei `frontend/public/einsatzbericht-decrypt.html`).
 - **ZIP (Klartext):** Archiv mit JSON/TXT; optional zusätzlich **`.zip.enc.json`** (verschlüsselte Hülle um die ZIP-Bytes).
 
-### Stand (2026-03)
+### Stand (2026-03 / Nachtrag 2026-11-16)
 
 - **Posteingang:** Anzeige paginiert (z. B. 50 pro Seite); **„Weitere Nachrichten laden“** lädt ältere Einträge per Offset – **unabhängig** vom Export.
 - **Export:** Vollständiger Verlauf über die API (nicht nur die aktuell sichtbare Seite); siehe auch **`docs/ROADMAP-FAHRPLAN.md`** (Punkt 2).
+- **Dauer:** JSON/TXT (und andere Vollhistorie-Exporte) laden zuerst den gesamten Nachrichtenverlauf (Chain/Indexer, ggf. mehrere Mailboxen). Bei langer Historie kann das **spürbar länger** dauern als ein normaler Posteingang-Refresh — Statuszeile „Lade Posteingang…“ abwarten, nicht vorzeitig abbrechen.
 
 ## Roadmap (erweiterte Vorschläge)
 

@@ -19,6 +19,7 @@ import {
   Copy,
   Download,
   Forward,
+  Hash,
   Inbox,
   Link2,
   Lock,
@@ -659,6 +660,26 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                         : 'Inhalt kopieren'}
                   </DropdownMenuItem>
                   <DropdownMenuItem
+                    onClick={() => {
+                      void (async () => {
+                        try {
+                          const { hashInboxMessageCanonical } = await import(
+                            '@/frontend/lib/message-canonical-hash'
+                          )
+                          const h = await hashInboxMessageCanonical(row.msg)
+                          await navigator.clipboard.writeText(h.clipboardText)
+                          toast.success(`Hash kopiert: ${h.entryHash.slice(0, 16)}…`)
+                        } catch (e) {
+                          toast.error(e instanceof Error ? e.message : 'Hash fehlgeschlagen')
+                        }
+                      })()
+                    }}
+                    title="Kanonischer entry_hash (Inhalt+Absender+Zeit+Ref) — prüfbar unter Optionen → Hash & Prüfen"
+                  >
+                    <Hash className="mr-2 h-4 w-4" />
+                    Hash kopieren
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
                     disabled={!canAddContact}
                     title={
                       canAddContact
@@ -831,15 +852,24 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
         )
       )}
     </ul>
-      {loadMoreInbox && (inboxHasMore || messages.length >= 50) ? (
+      {loadMoreInbox && (inboxHasMore || messages.length > 0) ? (
         <div className="border-t border-border/70 p-3 flex justify-center">
           <button
             type="button"
-            disabled={loadingMore}
+            disabled={loadingMore || !inboxHasMore}
             onClick={loadMoreInbox}
+            title={
+              inboxHasMore
+                ? undefined
+                : 'Keine weiteren Chain-Seiten mehr (letzter Versuch war leer). Aktualisieren zum Zurücksetzen.'
+            }
             className="rounded-lg border border-border bg-muted/40 px-4 py-2 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-60"
           >
-            {loadingMore ? 'Lade ältere Nachrichten…' : 'Weitere Nachrichten laden'}
+            {loadingMore
+              ? 'Lade ältere Nachrichten…'
+              : inboxHasMore
+                ? 'Weitere Nachrichten laden'
+                : 'Keine älteren Chain-Nachrichten'}
           </button>
         </div>
       ) : null}

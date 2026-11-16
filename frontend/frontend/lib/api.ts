@@ -60,6 +60,7 @@ export { meshBuildV2Wires, meshDecryptV2Wire, morgPkgExport, morgPkgImport } fro
 export { fetchInbox, fetchAllInboxMessagesForExport } from '@/frontend/lib/api/inbox'
 
 export { fetchPackageIdHistory } from '@/frontend/lib/api/package-id-history'
+export { fetchMailboxIdHistory } from '@/frontend/lib/api/mailbox-id-history'
 
 export {
   setPackageIdCommand,

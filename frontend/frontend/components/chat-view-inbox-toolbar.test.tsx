@@ -50,6 +50,7 @@ function makeProps(overrides: Partial<ChatViewInboxToolbarProps> = {}): ChatView
     onBulkMarkProtokollSelected: vi.fn(),
     onBulkCopySelected: vi.fn(),
     onBulkExportJsonSelected: vi.fn(),
+    onBulkHashSelected: vi.fn(),
     onBulkForwardSelected: vi.fn(),
     hasHiddenMessages: false,
     onToggleHideAllVisibleLocal: vi.fn(),

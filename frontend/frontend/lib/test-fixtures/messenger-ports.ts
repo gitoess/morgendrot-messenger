@@ -275,6 +275,7 @@ export function testMessengerPorts(over: {
       onBulkMarkProtokollSelected: vi.fn(),
       onBulkCopySelected: vi.fn(),
       onBulkExportJsonSelected: vi.fn(),
+      onBulkHashSelected: vi.fn(),
       onBulkForwardSelected: vi.fn(),
       localPurgeBusy: false,
       morgPkgFileRef: { current: null },

@@ -235,7 +235,10 @@ export function buildSendMailboxTargetOptions(
       objectId: oid,
     })
   }
-  opts.push({ value: 'own', label: 'Meine aktive Mailbox (Team/Privat)' })
+  opts.push({
+    value: 'own',
+    label: 'Eigene Mailbox (nur wenn Sende-Fokus gesetzt, sonst Haupt)',
+  })
   const srv = serverMailboxId?.trim()
   if (srv && HEX_64.test(srv.toLowerCase())) {
     opts.push({

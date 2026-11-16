@@ -322,6 +322,7 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     onBulkMarkProtokollSelected,
     onBulkCopySelected,
     onBulkExportJsonSelected,
+    onBulkHashSelected,
     selectedVisibleMessages,
     removeInboxPartnerFromQuickList,
     resetInboxViewFilters,
@@ -422,6 +423,8 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
         packageId: scope === 'visibleChat' ? inboxPackageFilter.trim() || undefined : undefined,
         bossView: false,
         role,
+        /** Ein großer First-Shot; Pagination nur API, Direct nur Seite 0. */
+        pageSize: 2000,
       })
       let tgJournal: Message[] = []
       if (myAddress.trim()) {
@@ -687,6 +690,7 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     onBulkMarkProtokollSelected,
     onBulkCopySelected,
     onBulkExportJsonSelected,
+    onBulkHashSelected,
     selectedVisibleMessages,
     removeInboxPartnerFromQuickList,
     resetInboxViewFilters,

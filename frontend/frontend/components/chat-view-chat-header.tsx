@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react'
 import { BookOpen, Inbox, Lock, RefreshCw, Settings, StickyNote, Unlock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
-import { isMessengerSessionKeysReady } from '@/frontend/lib/messenger-session-keys-ready'
+import { isBrowserSessionSignerReady } from '@/frontend/lib/messenger-session-keys-ready'
 import {
   isPrivacySoftLocked,
   PRIVACY_SOFT_LOCK_CHANGED_EVENT,
@@ -123,7 +123,7 @@ export function TresorSessionBadge({
         ? 'Tresor weich gesperrt — Passphrasen/Signer aus RAM; Chat lesbar. Tippen zum Entsperren.'
         : 'Tresor gesperrt — Entsperr-Dialog öffnen.'
       : ui === 'no-keys'
-        ? 'API kann entsperrt sein — Browser-Signer fehlt. Tippen → Tresor-Passwort (lädt Signer in diese Sitzung).'
+        ? 'Tresor ist offen — Browser-Signer fehlt (Reload/RAM). Tippen → Passwort → Signer laden (On-Chain/Zeitkapsel).'
         : 'Schlüssel geladen — Signieren und Mailbox senden möglich.'
   const activeTitle = needsVaultPassword
     ? 'Tresor-Passwort eingeben (Session-Signer + Browser-Geheimnisse).'
@@ -132,7 +132,7 @@ export function TresorSessionBadge({
         ? 'Tresor entsperren (Passwort → Signer + Browser-Geheimnisse).'
         : 'Dialog „Tresor entsperren“ öffnen.'
       : ui === 'no-keys'
-        ? 'Tresor-Passwort eingeben — lädt den Signer in den Browser (auch wenn der API-Tresor schon offen ist).'
+        ? 'Signer laden — Tresor-Passwort tippen (Tresor kann schon offen sein; Signer sitzt nur im Browser-RAM).'
         : 'Tresor weich sperren — Signer/Passphrasen aus dem RAM; Chat bleibt offen (kein Login-Fenster).'
 
   const icon =
@@ -150,7 +150,7 @@ export function TresorSessionBadge({
             ? 'Tresor: weich'
             : 'Tresor: gesperrt'
           : ui === 'no-keys'
-            ? 'Tresor: PW tippen'
+            ? 'Signer laden'
             : 'Tresor: bereit'}
     </span>
   )
@@ -171,11 +171,15 @@ export function TresorSessionBadge({
       disabled={busy}
       title={activeTitle}
       aria-label={
-        ui === 'locked' || ui === 'no-keys' || needsVaultPassword
+        needsVaultPassword
           ? 'Tresor-Passwort eingeben'
-          : softLocked && !sessionLocked
-            ? 'Tresor weich sperren'
-            : 'Tresor sperren'
+          : ui === 'locked'
+            ? 'Tresor-Passwort eingeben'
+            : ui === 'no-keys'
+              ? 'Session-Signer laden'
+              : softLocked && !sessionLocked
+                ? 'Tresor weich sperren'
+                : 'Tresor sperren'
       }
       onClick={() => {
         if (ui === 'locked' || ui === 'no-keys' || needsVaultPassword) {
@@ -360,7 +364,8 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                       {showTreasuryBadge && apiStatus ? (
                         <TresorSessionBadge
                           sessionLocked={!!apiStatus.locked}
-                          hasKeys={isMessengerSessionKeysReady(apiStatus)}
+                          /** Grün nur mit Browser-Signer — Server-hasKeys allein war nach Login falsch grün. */
+                          hasKeys={isBrowserSessionSignerReady(!!apiStatus.locked)}
                           actions={vaultBannerActions}
                         />
                       ) : null}

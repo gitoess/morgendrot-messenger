@@ -25,7 +25,7 @@ export function SettingsMyMailboxesSection({
   onReload,
   embedded = false,
 }: SettingsMyMailboxesSectionProps) {
-  const { directory, refresh: refreshContactDirectory } = useContactDirectory()
+  const { directory } = useContactDirectory()
   const addr = myAddress.trim()
   const show = /^0x[a-fA-F0-9]{64}$/i.test(addr)
 
@@ -49,9 +49,9 @@ export function SettingsMyMailboxesSection({
         myAddressLine={addr}
         serverMailboxIdHint={apiStatus?.mailboxId}
         contactDirectory={directory}
-        onContactsChanged={() => void refreshContactDirectory()}
         onStatus={onStatus}
         teamMailboxCreateAllowed={canCreateTeamMailbox(apiStatus)}
+        onReload={onReload}
       />
     </>
   )
@@ -70,7 +70,8 @@ export function SettingsMyMailboxesSection({
           <div>
             <h4 className="font-semibold text-foreground">Meine Mailboxen</h4>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Private und Team-Postfächer — getrennt vom aktiven Package unter „Wo senden?“.
+              Postfach = On-Chain-Speicher. Posteingang: Haupt + bekannte Privat/Team. Wohin geschrieben wird,
+              wählst du beim Senden (Composer). Kontakt-Postfach-IDs: Telefonbuch → Erweitert.
             </p>
           </div>
         </div>

@@ -209,23 +209,73 @@ export function buildEinsatzberichtSummaryText(payload: ReturnType<typeof buildE
   return lines.join('\n')
 }
 
+export function buildEinsatzberichtJsonFile(
+  messages: Message[],
+  meta: { exportedByAddress?: string },
+  opts?: { contentMode?: EinsatzberichtContentMode }
+): { blob: Blob; filename: string; mime: string; count: number } {
+  const payload = buildEinsatzberichtPayload(messages, meta, opts)
+  const json = JSON.stringify(payload, null, 2)
+  return {
+    blob: new Blob([json], { type: 'application/json;charset=utf-8' }),
+    filename: `morgendrot-einsatzbericht-${payload.meta.exportedAt}.json`,
+    mime: 'application/json',
+    count: payload.messagesChronological.length,
+  }
+}
+
+export function buildEinsatzberichtFullTxtFile(
+  messages: Message[],
+  meta: { exportedByAddress?: string },
+  opts?: { contentMode?: EinsatzberichtContentMode }
+): { blob: Blob; filename: string; mime: string; count: number } {
+  const payload = buildEinsatzberichtPayload(messages, meta, opts)
+  const txt = buildEinsatzberichtFullText(payload)
+  return {
+    blob: new Blob([txt], { type: 'text/plain;charset=utf-8' }),
+    filename: `morgendrot-nachrichtenverlauf-voll-${payload.meta.exportedAt}.txt`,
+    mime: 'text/plain',
+    count: payload.messagesChronological.length,
+  }
+}
+
+export function buildEinsatzberichtSummaryTxtFile(
+  messages: Message[],
+  meta: { exportedByAddress?: string },
+  opts?: { contentMode?: EinsatzberichtContentMode }
+): { blob: Blob; filename: string; mime: string; count: number } {
+  const payload = buildEinsatzberichtPayload(messages, meta, opts)
+  const txt = buildEinsatzberichtSummaryText(payload)
+  return {
+    blob: new Blob([txt], { type: 'text/plain;charset=utf-8' }),
+    filename: `morgendrot-nachrichtenverlauf-kurz-${payload.meta.exportedAt}.txt`,
+    mime: 'text/plain',
+    count: payload.messagesChronological.length,
+  }
+}
+
+function triggerBlobDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob)
+  try {
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.rel = 'noopener'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+  } finally {
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  }
+}
+
 export function downloadEinsatzberichtJson(
   messages: Message[],
   meta: { exportedByAddress?: string },
   opts?: { contentMode?: EinsatzberichtContentMode }
 ): void {
-  const payload = buildEinsatzberichtPayload(messages, meta, opts)
-  const json = JSON.stringify(payload, null, 2)
-  const blob = new Blob([json], { type: 'application/json;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `morgendrot-einsatzbericht-${payload.meta.exportedAt}.json`
-  a.rel = 'noopener'
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  URL.revokeObjectURL(url)
+  const file = buildEinsatzberichtJsonFile(messages, meta, opts)
+  triggerBlobDownload(file.blob, file.filename)
 }
 
 export function downloadEinsatzberichtFullTxt(
@@ -233,18 +283,8 @@ export function downloadEinsatzberichtFullTxt(
   meta: { exportedByAddress?: string },
   opts?: { contentMode?: EinsatzberichtContentMode }
 ): void {
-  const payload = buildEinsatzberichtPayload(messages, meta, opts)
-  const txt = buildEinsatzberichtFullText(payload)
-  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `morgendrot-nachrichtenverlauf-voll-${payload.meta.exportedAt}.txt`
-  a.rel = 'noopener'
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  URL.revokeObjectURL(url)
+  const file = buildEinsatzberichtFullTxtFile(messages, meta, opts)
+  triggerBlobDownload(file.blob, file.filename)
 }
 
 export function downloadEinsatzberichtSummaryTxt(
@@ -252,16 +292,6 @@ export function downloadEinsatzberichtSummaryTxt(
   meta: { exportedByAddress?: string },
   opts?: { contentMode?: EinsatzberichtContentMode }
 ): void {
-  const payload = buildEinsatzberichtPayload(messages, meta, opts)
-  const txt = buildEinsatzberichtSummaryText(payload)
-  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `morgendrot-nachrichtenverlauf-kurz-${payload.meta.exportedAt}.txt`
-  a.rel = 'noopener'
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  URL.revokeObjectURL(url)
+  const file = buildEinsatzberichtSummaryTxtFile(messages, meta, opts)
+  triggerBlobDownload(file.blob, file.filename)
 }

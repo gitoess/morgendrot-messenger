@@ -1,26 +1,39 @@
 'use client'
 
+/**
+ * Team-Mailbox existiert on-chain. Diese Karte betrifft nur die Abfrage-Liste
+ * der lokalen Morgendrot-API (TEAM_MAILBOX_IDS in .env) — kein zweites Speichern des Postfachs.
+ */
+
 import { useMemo, useState } from 'react'
 import { Loader2, RefreshCw } from 'lucide-react'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { Button } from '@/components/ui/button'
 import { maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
+import { readMyTeamMailboxes } from '@/frontend/lib/my-team-mailbox-store'
 import {
   diffTeamMailboxSync,
   syncLocalTeamMailboxesToServer,
 } from '@/frontend/lib/team-mailbox-server-sync'
+
+function teamLabelForId(objectId: string): string {
+  const hit = readMyTeamMailboxes().find(
+    (e) => e.objectId.trim().toLowerCase() === objectId.trim().toLowerCase()
+  )
+  return hit?.label?.trim() || 'Team-Postfach'
+}
 
 export function TeamMailboxSyncStatus(p: {
   apiSnapshot?: ApiStatus | null
   backendOnline?: boolean
   onReload?: () => void
   className?: string
-  /** Wizard: nur wenn etwas nicht stimmt */
   variant?: 'full' | 'compact'
 }) {
   const variant = p.variant ?? 'full'
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
+  const [detailsOpen, setDetailsOpen] = useState(false)
 
   const diff = useMemo(
     () =>
@@ -31,6 +44,8 @@ export function TeamMailboxSyncStatus(p: {
     [p.apiSnapshot?.inboxUnionMailboxIds, p.apiSnapshot?.mailboxId]
   )
 
+  const needsPush = diff.missingOnServer.length > 0
+
   const runSync = async () => {
     setBusy(true)
     setMsg('')
@@ -38,7 +53,11 @@ export function TeamMailboxSyncStatus(p: {
       const r = await syncLocalTeamMailboxesToServer({
         privateServerMailboxId: p.apiSnapshot?.mailboxId,
       })
-      setMsg(r.ok ? r.message || 'Synchronisiert.' : r.error || 'Sync fehlgeschlagen.')
+      setMsg(
+        r.ok
+          ? 'Team-ID zur Posteingang-Abfrage hinzugefügt (App-Config). On-Chain war schon da.'
+          : r.error || 'Übernehmen fehlgeschlagen.'
+      )
       if (r.ok) p.onReload?.()
     } finally {
       setBusy(false)
@@ -46,18 +65,26 @@ export function TeamMailboxSyncStatus(p: {
   }
 
   const fmt = (id: string) => maskWalletAddress(id, 6, 4)
+  const missingLabels = diff.missingOnServer.map(
+    (id) => `${teamLabelForId(id)} (${fmt(id)})`
+  )
+
+  if (!needsPush) return null
 
   if (variant === 'compact') {
-    if (diff.missingOnServer.length === 0) return null
     return (
-      <div className={p.className ?? 'rounded-md border border-amber-500/30 bg-amber-500/5 p-3 space-y-2'}>
+      <div className={p.className ?? 'space-y-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3'}>
         <p className="text-xs text-amber-800 dark:text-amber-200">
-          {diff.missingOnServer.length} Team-Postfach/Postfächer nur auf diesem Gerät — auf den Server übernehmen.
+          {missingLabels.join(', ')}: on-chain ok, fehlt in der Posteingang-Abfrage.
         </p>
         {p.backendOnline ? (
           <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void runSync()}>
-            {busy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="mr-1.5 h-3.5 w-3.5" />}
-            Auf Server übernehmen
+            {busy ? (
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+            )}
+            Zur Abfrage hinzufügen
           </Button>
         ) : null}
         {msg ? <p className="text-xs text-muted-foreground">{msg}</p> : null}
@@ -66,44 +93,60 @@ export function TeamMailboxSyncStatus(p: {
   }
 
   return (
-    <div className={p.className ?? 'rounded-md border border-border/80 bg-muted/30 p-3 space-y-2'}>
-      <p className="text-xs font-medium text-foreground">Postfach-Abgleich (Server vs. lokal)</p>
-      <dl className="grid gap-1 text-xs text-muted-foreground">
-        <div className="flex flex-wrap justify-between gap-x-2">
-          <dt>Server-Posteingang-Union</dt>
-          <dd>{diff.serverUnionIds.length} ID(s)</dd>
-        </div>
-        {diff.serverPrivateMailboxId ? (
-          <div className="flex flex-wrap justify-between gap-x-2">
-            <dt>Privat (MAILBOX_ID)</dt>
-            <dd className="font-mono">{fmt(diff.serverPrivateMailboxId)}</dd>
-          </div>
-        ) : null}
-        <div className="flex flex-wrap justify-between gap-x-2">
-          <dt>Lokal Team-Store</dt>
-          <dd>{diff.localTeamIds.length} Postfach/Postfächer</dd>
-        </div>
-      </dl>
-      {diff.missingOnServer.length > 0 ? (
-        <p className="text-xs text-amber-800 dark:text-amber-200">
-          {diff.missingOnServer.length} Team-Postfach/Postfächer nur lokal — nicht in der Server-Union. „Auf Server
-          übernehmen“ oder Team-Mailbox erneut anlegen.
+    <div className={p.className ?? 'space-y-2 rounded-md border border-amber-500/35 bg-amber-500/5 p-3'}>
+      <div className="space-y-1">
+        <p className="text-xs font-medium text-foreground">Abfrage-Liste (nicht On-Chain)</p>
+        <p className="text-[11px] text-muted-foreground">
+          <strong className="text-foreground">{missingLabels.join(' · ')}</strong> liegt bereits{' '}
+          <strong className="text-foreground">on-chain</strong> und in deiner Team-Liste. Die App fragt standardmäßig
+          nur das Hauptpostfach ab — diese Team-ID fehlt noch in der{' '}
+          <strong className="text-foreground">Abfrage-Liste</strong> (lokale Config{' '}
+          <code className="text-[10px]">TEAM_MAILBOX_IDS</code>). Kein zweites Speichern des Postfachs.
+          Browser-Team-Liste wird beim Posteingang ohnehin mitgeladen; der Knopf hält die App-Config synchron.
         </p>
-      ) : diff.inSync && diff.localTeamIds.length > 0 ? (
-        <p className="text-xs text-emerald-800 dark:text-emerald-200">Lokale Team-Postfächer sind in der Server-Union.</p>
-      ) : null}
-      {diff.onlyOnServerUnion.length > 0 ? (
-        <p className="text-xs text-muted-foreground">
-          {diff.onlyOnServerUnion.length} ID(s) nur auf dem Server (History/TEAM_MAILBOX_IDS) — optional lokal per
-          „Team beitreten“.
-        </p>
-      ) : null}
+      </div>
+
       {p.backendOnline ? (
-        <Button type="button" size="sm" variant="outline" disabled={busy || !diff.localTeamIds.length} onClick={() => void runSync()}>
-          {busy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="mr-1.5 h-3.5 w-3.5" />}
-          Auf Server übernehmen
+        <Button type="button" size="sm" disabled={busy} onClick={() => void runSync()}>
+          {busy ? (
+            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+          )}
+          Zur Posteingang-Abfrage hinzufügen
         </Button>
+      ) : (
+        <p className="text-[11px] text-muted-foreground">App-Backend offline — später erneut.</p>
+      )}
+
+      <button
+        type="button"
+        className="text-[10px] text-muted-foreground underline hover:no-underline"
+        onClick={() => setDetailsOpen((v) => !v)}
+      >
+        {detailsOpen ? 'Weniger' : 'Kurz: was liegt wo?'}
+      </button>
+
+      {detailsOpen ? (
+        <ul className="list-disc space-y-1 pl-4 text-[11px] text-muted-foreground">
+          <li>
+            <span className="text-foreground">On-Chain:</span> Team-Objekt {diff.missingOnServer.map(fmt).join(', ')}{' '}
+            — existiert schon (Messenger/Chain).
+          </li>
+          <li>
+            <span className="text-foreground">Browser:</span> lokale Team-Liste unter Meine Mailboxen (Merker).
+          </li>
+          <li>
+            <span className="text-foreground">Abfrage-Liste:</span> Object-IDs in der App-Config für den
+            Server-Pfad — hier fehlt die Team-ID noch.
+          </li>
+          <li>
+            <span className="text-foreground">Hauptpostfach</span> (Karte darunter) = Setup-
+            <code className="text-[10px]">MAILBOX_ID</code>, andere ID, Einsatz-Shared.
+          </li>
+        </ul>
       ) : null}
+
       {msg ? <p className="text-xs text-muted-foreground">{msg}</p> : null}
     </div>
   )

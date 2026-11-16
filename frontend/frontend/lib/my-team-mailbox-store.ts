@@ -100,6 +100,25 @@ export function suggestNextTeamMailboxLabel(
   return `Team #${n}`
 }
 
+/** Nur in die Team-Liste — ohne Sende-Fokus. `true` = neu aufgenommen. */
+export function rememberMyTeamMailbox(entry: MyTeamMailboxEntry): boolean {
+  const objectId = entry.objectId.trim()
+  if (!isValidObjectId(objectId)) return false
+  const archive = readArchiveRaw().filter((e) => e.objectId.toLowerCase() !== objectId.toLowerCase())
+  writeArchiveRaw(archive)
+  const list = readListRaw()
+  if (list.some((e) => e.objectId.toLowerCase() === objectId.toLowerCase())) return false
+  const label = entry.label?.trim() || suggestNextTeamMailboxLabel(list, archive)
+  list.unshift({
+    objectId,
+    label,
+    joinedAtMs: entry.joinedAtMs ?? Date.now(),
+    ...(entry.digest?.trim() ? { digest: entry.digest.trim() } : {}),
+  })
+  writeListRaw(list)
+  return true
+}
+
 export function addMyTeamMailbox(entry: MyTeamMailboxEntry): void {
   const objectId = entry.objectId.trim()
   if (!isValidObjectId(objectId)) return

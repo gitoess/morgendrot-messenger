@@ -35,8 +35,10 @@ export type NftGateMetaV1 = {
   schema: typeof SCHEMA
   gate: NftGateMode
   nftObjectId: string
-  /** Dual / P4a2 / optional P4b Dual-Policy — Signer muss diese Adresse sein. */
+  /** Dual / P4a2 / optional P4b Dual-Policy — eine Adresse (Backcompat; erste aus requiredWallets). */
   requiredWallet?: string
+  /** Dual: Whitelist — Signer muss eine dieser Adressen sein (P4a-dual). */
+  requiredWallets?: string[]
   /** P4a2: ephemeral P-256 uncompressed pub (65 B) base64. */
   ephemeralPubRawB64?: string
   /** P4b: Policy-Hinweis für Broker. */
@@ -46,6 +48,26 @@ export type NftGateMetaV1 = {
   wrapSaltB64: string
   wrapIvB64: string
   wrappedDekB64: string
+}
+
+/** Gültige 0x+64-Hex-Wallets, dedupliziert, sortiert (stabile Capsule). */
+export function normalizeNftGateWalletAllowlist(
+  wallets?: string[] | string | null
+): string[] {
+  const raw = Array.isArray(wallets)
+    ? wallets
+    : typeof wallets === 'string'
+      ? wallets.split(/[\s,;]+/)
+      : []
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const w of raw) {
+    const n = normHex(w || '')
+    if (!HEX64.test(n) || seen.has(n)) continue
+    seen.add(n)
+    out.push(n)
+  }
+  return out.sort()
 }
 
 function bytesToB64(u8: Uint8Array): string {
@@ -75,21 +97,23 @@ function buf(u: Uint8Array): Parameters<SubtleCrypto['importKey']>[1] {
   return u as Parameters<SubtleCrypto['importKey']>[1]
 }
 
-function gateInfoTail(nftObjectId: string, requiredWallet?: string | null): Uint8Array {
+function gateInfoTail(nftObjectId: string, allowlist?: string[] | null): Uint8Array {
   const nft = normHex(nftObjectId)
-  return requiredWallet
-    ? new TextEncoder().encode(`${nft}|w|${normHex(requiredWallet)}`)
-    : new TextEncoder().encode(nft)
+  const list = normalizeNftGateWalletAllowlist(allowlist)
+  if (list.length === 0) return new TextEncoder().encode(nft)
+  /** Eine Adresse: Legacy-Tail `|w|` (bestehende Wires). */
+  if (list.length === 1) return new TextEncoder().encode(`${nft}|w|${list[0]}`)
+  return new TextEncoder().encode(`${nft}|ws|${list.join(',')}`)
 }
 
 /** P4a / Dual: Wrap-Key nur aus Salt + öffentlichen IDs (kein Geheimnis). */
 async function deriveHkdfWrapKey(
   wrapSalt: Uint8Array,
   nftObjectId: string,
-  requiredWallet?: string | null
+  allowlist?: string[] | null
 ): Promise<CryptoKey> {
   const subtle = getSubtle()
-  const tail = gateInfoTail(nftObjectId, requiredWallet)
+  const tail = gateInfoTail(nftObjectId, allowlist)
   const info = new Uint8Array(WRAP_INFO.length + tail.length)
   info.set(WRAP_INFO, 0)
   info.set(tail, WRAP_INFO.length)
@@ -111,7 +135,7 @@ async function deriveEcdhWrapKey(
   requiredWallet: string
 ): Promise<CryptoKey> {
   const subtle = getSubtle()
-  const tail = gateInfoTail(nftObjectId, requiredWallet)
+  const tail = gateInfoTail(nftObjectId, [requiredWallet])
   const info = new Uint8Array(WRAP_INFO.length + tail.length + wrapSalt.length)
   info.set(WRAP_INFO, 0)
   info.set(tail, WRAP_INFO.length)
@@ -146,9 +170,9 @@ export function peekNftGateMeta(content: string): NftGateMetaV1 | null {
   }
 }
 
-/** App-Vorcheck: NFT-Leserecht + ggf. Wallet-Bindung. */
+/** App-Vorcheck: NFT-Leserecht + ggf. Wallet-Bindung (eine oder Whitelist). */
 export function evaluateNftGateAccess(opts: {
-  meta: Pick<NftGateMetaV1, 'gate' | 'requiredWallet'>
+  meta: Pick<NftGateMetaV1, 'gate' | 'requiredWallet' | 'requiredWallets'>
   nftAccessOk: boolean
   signerAddress: string | null | undefined
 }): { ok: true } | { ok: false; error: string } {
@@ -158,17 +182,27 @@ export function evaluateNftGateAccess(opts: {
   const needsWallet =
     opts.meta.gate === 'nft_and_wallet_p4a' ||
     opts.meta.gate === 'nft_and_wallet_pubkey_p4a2' ||
-    (opts.meta.gate === 'nft_seal_p4b' && Boolean(opts.meta.requiredWallet))
+    (opts.meta.gate === 'nft_seal_p4b' &&
+      Boolean(opts.meta.requiredWallet || opts.meta.requiredWallets?.length))
   if (needsWallet) {
-    const need = opts.meta.requiredWallet ? normHex(opts.meta.requiredWallet) : ''
+    const allow = normalizeNftGateWalletAllowlist(
+      opts.meta.requiredWallets?.length
+        ? opts.meta.requiredWallets
+        : opts.meta.requiredWallet
+          ? [opts.meta.requiredWallet]
+          : []
+    )
     const me = opts.signerAddress ? normHex(opts.signerAddress) : ''
-    if (!HEX64.test(need)) {
-      return { ok: false, error: 'Wire: requiredWallet fehlt oder ungültig.' }
+    if (allow.length === 0) {
+      return { ok: false, error: 'Wire: requiredWallet(s) fehlt oder ungültig.' }
     }
-    if (!me || me !== need) {
+    if (!me || !allow.includes(me)) {
       return {
         ok: false,
-        error: 'Falsche Wallet — dieses Gate verlangt die festgelegte Adresse und NFT-Leserecht.',
+        error:
+          allow.length === 1
+            ? 'Falsche Wallet — dieses Gate verlangt die festgelegte Adresse und NFT-Leserecht.'
+            : `Falsche Wallet — Gate erlaubt ${allow.length} Adressen + NFT-Leserecht.`,
       }
     }
   }
@@ -201,18 +235,32 @@ function parseNftGateBlob(content: string): { meta: NftGateMetaV1; body: Uint8Ar
   const nftObjectId = normHex(meta.nftObjectId)
   if (!HEX64.test(nftObjectId)) throw new Error('nftObjectId ungültig.')
   let requiredWallet: string | undefined
+  let requiredWallets: string[] | undefined
   if (
     meta.gate === 'nft_and_wallet_p4a' ||
     meta.gate === 'nft_and_wallet_pubkey_p4a2' ||
-    (meta.gate === 'nft_seal_p4b' && meta.requiredWallet)
+    (meta.gate === 'nft_seal_p4b' && (meta.requiredWallet || meta.requiredWallets?.length))
   ) {
-    requiredWallet = meta.requiredWallet ? normHex(meta.requiredWallet) : ''
-    if (!HEX64.test(requiredWallet)) throw new Error('requiredWallet ungültig.')
+    requiredWallets = normalizeNftGateWalletAllowlist(
+      meta.requiredWallets?.length
+        ? meta.requiredWallets
+        : meta.requiredWallet
+          ? [meta.requiredWallet]
+          : []
+    )
+    if (requiredWallets.length === 0) throw new Error('requiredWallet(s) ungültig.')
+    requiredWallet = requiredWallets[0]
+    meta.requiredWallet = requiredWallet
+    if (requiredWallets.length > 1) meta.requiredWallets = requiredWallets
+    else delete meta.requiredWallets
   }
   if (meta.gate === 'nft_and_wallet_pubkey_p4a2') {
     if (!meta.ephemeralPubRawB64) throw new Error('P4a2: ephemeralPubRawB64 fehlt.')
     const eph = b64ToBytes(meta.ephemeralPubRawB64)
     if (eph.length !== P256_RAW_PUB_LEN) throw new Error('P4a2: ephemeral Pub ungültig.')
+    if (requiredWallets && requiredWallets.length > 1) {
+      throw new Error('P4a2: nur eine requiredWallet (Pubkey-Wrap).')
+    }
   }
   if (meta.gate === 'nft_seal_p4b' && !meta.sealPolicy) {
     meta.sealPolicy = requiredWallet ? 'nft_and_wallet' : 'nft_owner'
@@ -230,8 +278,10 @@ function parseNftGateBlob(content: string): { meta: NftGateMetaV1; body: Uint8Ar
 export async function encryptNftGateMessage(opts: {
   plainUtf8: string
   nftObjectId: string
-  /** Dual / Basis für P4a2 / optional P4b. */
+  /** Dual / Basis für P4a2 / optional P4b — eine Adresse (Backcompat). */
   requiredWallet?: string | null
+  /** Dual: mehrere erlaubte Wallets (P4a-dual). P4a2 nur mit genau einer. */
+  requiredWallets?: string[] | null
   /**
    * P4a2: uncompressed P-256 Pub (65 B) der requiredWallet.
    * Wenn gesetzt → Gate nft_and_wallet_pubkey_p4a2.
@@ -245,12 +295,14 @@ export async function encryptNftGateMessage(opts: {
 }): Promise<{ wire: string; nftObjectId: string; gate: NftGateMode }> {
   const nftObjectId = normHex(opts.nftObjectId)
   if (!HEX64.test(nftObjectId)) throw new Error('NFT Object-ID: 0x + 64 Hex nötig.')
-  const requiredWallet = opts.requiredWallet?.trim()
-    ? normHex(opts.requiredWallet)
-    : undefined
-  if (requiredWallet && !HEX64.test(requiredWallet)) {
-    throw new Error('requiredWallet: 0x + 64 Hex nötig.')
-  }
+  const allowlist = normalizeNftGateWalletAllowlist(
+    opts.requiredWallets?.length
+      ? opts.requiredWallets
+      : opts.requiredWallet
+        ? [opts.requiredWallet]
+        : []
+  )
+  const requiredWallet = allowlist[0]
 
   const sealKey = opts.sealWrapKeyRaw
   const useP4b = Boolean(sealKey && sealKey.length === 32)
@@ -263,15 +315,15 @@ export async function encryptNftGateMessage(opts: {
   if (!useP4b && opts.recipientEcdhPubRaw && !useP4a2) {
     throw new Error('recipientEcdhPubRaw: 65-Byte P-256 uncompressed nötig.')
   }
-  if (useP4a2 && !requiredWallet) {
-    throw new Error('P4a2 braucht requiredWallet.')
+  if (useP4a2 && allowlist.length !== 1) {
+    throw new Error('P4a2 braucht genau eine requiredWallet (Pubkey-Wrap).')
   }
 
   const gate: NftGateMode = useP4b
     ? 'nft_seal_p4b'
     : useP4a2
       ? 'nft_and_wallet_pubkey_p4a2'
-      : requiredWallet
+      : allowlist.length > 0
         ? 'nft_and_wallet_p4a'
         : 'nft_owner_p4a'
 
@@ -294,7 +346,7 @@ export async function encryptNftGateMessage(opts: {
     ephemeralPubRawB64 = bytesToB64(eph.pubRaw)
     shared.fill(0)
   } else {
-    wrapKey = await deriveHkdfWrapKey(wrapSalt, nftObjectId, requiredWallet)
+    wrapKey = await deriveHkdfWrapKey(wrapSalt, nftObjectId, allowlist)
   }
 
   const wrappedDek = new Uint8Array(
@@ -316,6 +368,7 @@ export async function encryptNftGateMessage(opts: {
     gate,
     nftObjectId,
     ...(requiredWallet ? { requiredWallet } : {}),
+    ...(allowlist.length > 1 ? { requiredWallets: allowlist } : {}),
     ...(ephemeralPubRawB64 ? { ephemeralPubRawB64 } : {}),
     ...(useP4b
       ? { sealPolicy: requiredWallet ? 'nft_and_wallet' : 'nft_owner' }
@@ -385,11 +438,14 @@ export async function decryptNftGateMessageWire(
     )
     shared.fill(0)
   } else {
-    wrapKey = await deriveHkdfWrapKey(
-      b64ToBytes(meta.wrapSaltB64),
-      meta.nftObjectId,
-      meta.requiredWallet
+    const allow = normalizeNftGateWalletAllowlist(
+      meta.requiredWallets?.length
+        ? meta.requiredWallets
+        : meta.requiredWallet
+          ? [meta.requiredWallet]
+          : []
     )
+    wrapKey = await deriveHkdfWrapKey(b64ToBytes(meta.wrapSaltB64), meta.nftObjectId, allow)
   }
 
   let dek: Uint8Array

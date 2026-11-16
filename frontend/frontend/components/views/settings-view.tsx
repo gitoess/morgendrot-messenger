@@ -245,8 +245,9 @@ export function SettingsView({
           <div className="rounded-xl border border-border bg-card p-4">
             <p className="mb-1 text-sm font-semibold text-foreground">Package &amp; Move-Upgrade</p>
             <p className="mb-3 text-[12px] text-muted-foreground">
-              Chain-Status und In-Place-Upgrade (gleiche Package-ID). Nur Boss/Kommandant — nicht Chat-Alltag.
-              Früher unter Einsatzleitung → Erweitert; jetzt unter IOTA, weil es das Move-Package betrifft.
+              Prüft, welche Messenger-Move-Funktionen im aktuellen Package liegen, und erlaubt In-Place-Upgrade
+              (gleiche Package-ID, braucht UpgradeCap). Package/Hauptpostfach selbst: Netz / Chain-IDs oben. Nur
+              Boss/Kommandant — nicht Chat-Alltag.
             </p>
             <DashboardEinsatzChainPanel
               apiStatus={advancedIotaStatus}

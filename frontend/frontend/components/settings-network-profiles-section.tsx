@@ -256,7 +256,9 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
                 <div className="min-w-0">
                     <h4 className="font-semibold text-foreground">Wo senden?</h4>
                     <p className="text-xs text-muted-foreground">
-                        Ein aktives Netz — Package, Postfach und RPC für direkten IOTA-Versand.
+                        Welches <strong className="font-medium text-foreground">Netz</strong> (Testnet/Mainnet):
+                        Package + Hauptpostfach + RPC. Nicht das Composer-Ziel einer Nachricht und nicht die Liste unter
+                        Meine Mailboxen.
                     </p>
                     <p className={cn('mt-0.5 text-sm', summary.activeOk ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-200')}>
                         {summary.line}

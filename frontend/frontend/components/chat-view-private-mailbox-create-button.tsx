@@ -14,6 +14,18 @@ export function ChatViewPrivateMailboxCreateButton(p: {
 
   const run = async () => {
     if (!p.walletValid || busy) return
+    const existing = readMyPrivateMailboxes()
+    if (existing.length > 0) {
+      const names = existing
+        .map((e) => e.label?.trim() || `${e.objectId.slice(0, 10)}…`)
+        .slice(0, 3)
+        .join(', ')
+      const ok = window.confirm(
+        `Du hast bereits ${existing.length} private Mailbox${existing.length === 1 ? '' : 'en'} (${names}).\n\n` +
+          `Eine zweite ist selten nötig — beide werden im Posteingang mitgelesen.\n\nTrotzdem neue erstellen?`
+      )
+      if (!ok) return
+    }
     setBusy(true)
     try {
       const r = await createPrivateMailboxOnChain()
@@ -30,7 +42,7 @@ export function ChatViewPrivateMailboxCreateButton(p: {
         const label = readMyPrivateMailboxes().find((e) => e.objectId === r.objectId)?.label || 'Private Mailbox'
         p.onObjectId(r.objectId, { digest: r.digest })
         p.onStatus?.(
-          `„${label}“ erstellt und aktiv (${r.objectId.slice(0, 10)}…). Posteingang „Aktualisieren“, dann Empfänger/Handshake.`,
+          `„${label}“ erstellt (${r.objectId.slice(0, 10)}…). Steht unter Private Mailboxen; Posteingang „Aktualisieren“.`,
           'success'
         )
       } else {

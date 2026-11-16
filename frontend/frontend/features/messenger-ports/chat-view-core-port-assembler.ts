@@ -284,6 +284,7 @@ export type ChatViewInboxActionsSlice = {
   onBulkMarkProtokollSelected: () => void
   onBulkCopySelected: () => void
   onBulkExportJsonSelected: () => void
+  onBulkHashSelected: () => void
   onBulkForwardSelected: (includeSender: boolean) => void
   localPurgeBusy: boolean
   morgPkgFileRef: RefObject<HTMLInputElement | null>
@@ -592,6 +593,7 @@ export function assembleInboxActionsPort(slice: ChatViewInboxActionsSlice): Inbo
     onBulkMarkProtokollSelected: slice.onBulkMarkProtokollSelected,
     onBulkCopySelected: slice.onBulkCopySelected,
     onBulkExportJsonSelected: slice.onBulkExportJsonSelected,
+    onBulkHashSelected: slice.onBulkHashSelected,
     onBulkForwardSelected: slice.onBulkForwardSelected,
     localPurgeBusy: slice.localPurgeBusy,
     morgPkgFileRef: slice.morgPkgFileRef,

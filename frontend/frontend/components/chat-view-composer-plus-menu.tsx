@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Camera, Mic, Plus, Upload } from 'lucide-react'
 import {
   Popover,
@@ -42,8 +42,11 @@ function MenuRow(p: {
 
 /** Anhang, Kamera, STT, Emoji … hinter „+“ (Telegram-Stil). */
 export function ChatViewComposerPlusMenu(p: ChatViewComposerPlusMenuProps) {
+  const [open, setOpen] = useState(false)
+  const close = () => setOpen(false)
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -57,25 +60,45 @@ export function ChatViewComposerPlusMenu(p: ChatViewComposerPlusMenuProps) {
           <Plus className="h-5 w-5" aria-hidden />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-2" align="start" side="top">
+      <PopoverContent
+        className="w-64 p-2"
+        align="start"
+        side="top"
+        onClick={(e) => {
+          const el = e.target as HTMLElement | null
+          if (!el) return
+          /** Checkboxen (Funk) offen lassen; sonst nach Aktion schließen. */
+          if (el.closest('input[type="checkbox"]')) return
+          if (el.closest('button, [role="button"], [data-emoji]')) close()
+        }}
+      >
         <MenuRow
           icon={<Upload className="h-4 w-4" />}
           label="Datei anhängen"
           disabled={p.disabled}
-          onClick={p.onPickFile}
+          onClick={() => {
+            close()
+            p.onPickFile()
+          }}
         />
         <MenuRow
           icon={<Camera className="h-4 w-4" />}
           label="Foto / Kamera"
           disabled={p.disabled}
-          onClick={p.onPickCamera}
+          onClick={() => {
+            close()
+            p.onPickCamera()
+          }}
         />
         {p.showStt && p.onStt ? (
           <MenuRow
             icon={<Mic className="h-4 w-4" />}
             label="Sprache zu Text (STT)"
             disabled={p.disabled}
-            onClick={p.onStt}
+            onClick={() => {
+              close()
+              p.onStt?.()
+            }}
           />
         ) : null}
         {p.extraItems}

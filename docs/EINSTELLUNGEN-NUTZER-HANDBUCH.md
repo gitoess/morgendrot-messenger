@@ -51,13 +51,32 @@ Ein aktives Netz. Signer-Status darunter (Browser-Signer für Direkt-Send).
 
 ### Chain-IDs zum Sichern
 
-Pro Netz: Package + Postfach. Unter „Globals“: Vault-Registry / Command-Registry / Upgrade Cap = aktive `.env` (On-Chain-Objekte, **nicht** lokaler Tresor).
+Pro Netz: Package + **Postfach** (= Hauptpostfach/`MAILBOX_ID` zum Backup). Unter „Globals“: Vault-Registry / Command-Registry / Upgrade Cap = aktive `.env` (On-Chain, **nicht** lokaler Tresor).
+
+**Verlauf:** Unter „Frühere Package- / Postfach-IDs“ — lokale Dateien `.morgendrot-package-id-history` / `.morgendrot-mailbox-id-history` auf dem Boss. Wird aktualisiert bei **Neu-Publish** / Package-Wechsel bzw. wenn `create_globals` ein **neues** Postfach setzt. **In-Place-Upgrade** ändert die IDs nicht → kein neuer Verlaufseintrag. Move-Quellcode = Git/`move-test/`, nicht diese Liste.
+
+**Nicht hier:** Team #n / Private #n — **Meine Mailboxen**.
+
+### UpgradeCap (Boss)
+
+| | |
+|--|--|
+| **Was** | On-Chain-Objekt + Eintrag `UPGRADE_CAP_ID` in Boss-`.env` |
+| **Wozu** | Move-Bytecode unter **derselben** `PACKAGE_ID` ersetzen (Bugfix, neue Funktionen) |
+| **Wer** | Nur Boss/Kommandant — **nicht** Helfer |
+| **Erzeugen** | Automatisch beim Erst-Deploy; sonst Cap-ID aus Explorer/Wallet in `.env` |
+| **Fehlt** | Nur Neu-Publish möglich (neue IDs + Handoff) |
 
 ### Package & Move-Upgrade (Boss/Kommandant)
 
-**Pfad:** Einstellungen → **IOTA** → **Package & Move-Upgrade** (nicht unter Einsatzleitung → Erweitert).
+**Pfad:** Einstellungen → **IOTA** → **Package & Move-Upgrade**.
 
-Chain-Status (Broadcast/Purge/Privat) und **Move upgraden** bei gleicher `PACKAGE_ID`. Helfer sehen den Block nicht.
+| Begriff | Bedeutung |
+|---------|-----------|
+| **Grün (… speichern / löschen)** | RPC-Probe: Move-Funktionen **existieren** im Package |
+| **Move upgraden** | Confirm → Boss-API; braucht UpgradeCap + fehlende Funktionen (oder Probe offen). Danach Backend neu starten. |
+
+Team-Postfächer: **Meine Mailboxen**. Helfer sehen den Block nicht.
 
 ### Passwort / Backup / Mailboxen / Schatten
 
@@ -74,9 +93,12 @@ Chain-Status (Broadcast/Purge/Privat) und **Move upgraden** bei gleicher `PACKAG
 
 | Was | Bedeutung |
 |-----|-----------|
-| **Deploy- / Server-Mailbox** | Die feste `MAILBOX_ID` aus Setup — erscheint oft unter Composer **„Wo senden?“**. Nicht dasselbe wie deine privaten Postfächer hier. |
-| **Privat** | Dein persönliches On-Chain-Postfach. Anlegen → in der Liste erscheint z. B. `Private #1`. **Aktiv** setzen = Sync/Lesen läuft darüber. |
-| **Team** | Boss/Kommandant: gemeinsames Team-Postfach. Mitglieder kommen über Telefonbuch/Rollen, nicht über „eine Chat-ID tippen“. |
+| **Hauptpostfach (`MAILBOX_ID`)** | Setup-Shared. **Dieselbe ID** wie Chain-IDs → Postfach. Immer im Posteingang. |
+| **Senden** | Ziel im **Composer** (Event vs. Postfach). Kein separates „Sendeziel“ mehr unter Meine Mailboxen. |
+| **Team** | Beitreten (ID/QR) / Erstellen (Boss). Liste hier. |
+| **Privat** | Eigenes Objekt; Posteingang lädt bekannte mit. |
+| **Kontakt ↔ Postfach-ID** | **Telefonbuch** → Kontakt bearbeiten → Erweitert · Postfach-ID (optional). |
+| **Amber Abfrage-Liste** | Team on-chain ok; fehlt nur in `TEAM_MAILBOX_IDS`. |
 
 **Ablauf Privat (Smoke):**
 

@@ -270,6 +270,7 @@ export function buildChatViewCoreMessengerPorts(
       onBulkMarkProtokollSelected: inbox.onBulkMarkProtokollSelected,
       onBulkCopySelected: inbox.onBulkCopySelected,
       onBulkExportJsonSelected: inbox.onBulkExportJsonSelected,
+      onBulkHashSelected: inbox.onBulkHashSelected,
       onBulkForwardSelected: (includeSender: boolean) => {
         const list = inbox.selectedVisibleMessages()
         if (list.length === 0) return

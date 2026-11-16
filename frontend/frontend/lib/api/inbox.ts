@@ -5,6 +5,8 @@ import { executeCommand } from '@/frontend/lib/api/execute-command'
 
 /** limit, optional senderFilter (0x…), optional packageId, optional bossView, optional offset (ältere Seiten). */
 const INBOX_FETCH_TIMEOUT_MS = 45_000
+/** Export: ein großer Indexer-Scan darf länger dauern als UI-Poll. */
+const INBOX_EXPORT_TIMEOUT_MS = 180_000
 
 export const fetchInbox = (
   limit = 20,
@@ -15,97 +17,153 @@ export const fetchInbox = (
   mergeLocalInbox = false,
   mailboxObjectId?: string,
   silentFetch?: boolean,
-  mailboxKeysOnly?: boolean
+  mailboxKeysOnly?: boolean,
+  timeoutMs?: number
 ) =>
   executeCommand<Message[]>(
     '/inbox',
     bossView
       ? [String(limit), senderFilter ?? '', packageId ?? '', 'boss', mergeLocalInbox ? 'true' : '', String(offset)]
       : [String(limit), senderFilter ?? '', packageId ?? '', '', mergeLocalInbox ? 'true' : '', String(offset)],
-    { timeoutMs: INBOX_FETCH_TIMEOUT_MS, mailboxObjectId, silentFetch, mailboxKeysOnly }
+    {
+      timeoutMs: timeoutMs ?? INBOX_FETCH_TIMEOUT_MS,
+      mailboxObjectId,
+      silentFetch,
+      mailboxKeysOnly,
+    }
   )
 
-/**
- * Eine Mailbox (Shared = ohne objectId, oder private) vollständig paginiert.
- * Wichtig: private Mailboxen brauchen eigenen Offset — der Union-Fetch setzt bei privaten immer 0.
- */
-async function fetchAllPagesFromOneMailbox(p: {
+export type FetchAllPagesFromOneMailboxOpts = {
   pageSize: number
   packageId?: string
   mailboxObjectId?: string
   mergeLocalInbox?: boolean
-}): Promise<Message[]> {
+  /**
+   * Direct-RPC nur auf der ersten Seite (Export).
+   * Sonst Indexer-Scan × jede Seite → Minuten-Hang.
+   */
+  directOnlyFirstPage?: boolean
+  /** Private/Team: nur MsgKeys, keine Event-Union (Events kommen von Shared). */
+  mailboxKeysOnly?: boolean
+  /** Längerer Timeout (Export-One-Shot). */
+  timeoutMs?: number
+}
+
+/**
+ * Eine Mailbox (Shared = ohne objectId, oder private/team) vollständig paginiert.
+ * API + Direkt-RPC werden **gemerged** (wie UI) — nicht XOR.
+ * Direct standardmäßig nur bei offset=0 (sonst O(n²) Indexer-Rescans).
+ */
+export async function fetchAllPagesFromOneMailbox(p: FetchAllPagesFromOneMailboxOpts): Promise<Message[]> {
   const { mergeAllMessages } = await import('@/frontend/lib/message-dedup')
   const { tryFetchDirectMailboxInboxViaIota } = await import('@/frontend/lib/direct-iota-inbox-fetch')
   const { stampChainMailboxObjectId } = await import('@/frontend/features/inbox/inbox-map-messages')
+  const { shouldSkipMessengerApiRelayFallback } = await import('@/frontend/lib/messenger-standalone-relay')
 
   let offset = 0
   let acc: Message[] = []
   let guard = 0
+  const skipApi = shouldSkipMessengerApiRelayFallback()
+  const isShared = !p.mailboxObjectId
+  const directOnlyFirst = p.directOnlyFirstPage !== false
+  const timeoutMs = p.timeoutMs
 
   for (;;) {
-    let pageMsgs: Message[] = []
-    let pageLen = 0
-    let hasMore = false
+    const pageChunks: Message[] = []
+    let apiStride = 0
+    let apiHasMore = false
+    let directLen = 0
 
-    const direct = await tryFetchDirectMailboxInboxViaIota({
-      limit: p.pageSize,
-      offset,
-      packageIdOverride: p.packageId,
-      mailboxObjectId: p.mailboxObjectId,
-    })
-    if (direct.ok && direct.rows.length > 0) {
-      pageMsgs = mapInboxApiRowsToMessages(direct.rows as InboxApiRow[])
-      pageLen = direct.rows.length
-      hasMore = pageLen >= p.pageSize
-    } else {
+    if (!skipApi) {
       const res = await fetchInbox(
         p.pageSize,
         undefined,
         p.packageId,
         false,
         offset,
-        Boolean(p.mergeLocalInbox && !p.mailboxObjectId),
+        Boolean(p.mergeLocalInbox && isShared),
         p.mailboxObjectId,
-        true
+        true,
+        p.mailboxKeysOnly === true,
+        timeoutMs
       )
       const raw = pickInboxRawMessages(res as { data?: unknown; messages?: unknown })
-      if (!res.ok || raw == null || raw.length === 0) break
-      pageMsgs = mapInboxApiRowsToMessages(raw as InboxApiRow[])
-      pageLen = raw.length
-      hasMore = pickInboxHasMore(res as { hasMore?: unknown }) || pageLen >= p.pageSize
+      if (res.ok && raw != null && raw.length > 0) {
+        let mapped = mapInboxApiRowsToMessages(raw as InboxApiRow[])
+        if (p.mailboxObjectId) mapped = stampChainMailboxObjectId(mapped, p.mailboxObjectId)
+        pageChunks.push(...mapped)
+        apiStride = raw.length
+        apiHasMore = pickInboxHasMore(res as { hasMore?: unknown }) || raw.length >= p.pageSize
+      }
     }
 
-    if (p.mailboxObjectId) {
-      pageMsgs = stampChainMailboxObjectId(pageMsgs, p.mailboxObjectId)
+    const runDirect = !directOnlyFirst || offset === 0
+    if (runDirect) {
+      const direct = await tryFetchDirectMailboxInboxViaIota({
+        limit: p.pageSize,
+        offset,
+        mailboxObjectId: p.mailboxObjectId,
+        includeMessagingEvents: isShared,
+      })
+      if (direct.ok && direct.rows.length > 0) {
+        let mapped = mapInboxApiRowsToMessages(direct.rows as InboxApiRow[])
+        if (p.mailboxObjectId) mapped = stampChainMailboxObjectId(mapped, p.mailboxObjectId)
+        pageChunks.push(...mapped)
+        directLen = direct.rows.length
+        if (skipApi) {
+          apiStride = directLen
+          apiHasMore = direct.hasMore === true || directLen >= p.pageSize
+        } else if (direct.hasMore === true || directLen >= p.pageSize) {
+          apiHasMore = true
+        }
+      }
     }
 
-    if (pageMsgs.length === 0) break
+    if (pageChunks.length === 0) break
+
     const before = acc.length
-    acc = mergeAllMessages([...acc, ...pageMsgs])
+    acc = mergeAllMessages([...acc, ...pageChunks])
+    const stride = apiStride > 0 ? apiStride : directLen
+    if (stride <= 0) break
+    if (!apiHasMore) break
     if (acc.length <= before && offset > 0) break
-    if (!hasMore || pageLen < p.pageSize) break
-    offset += pageLen
+
+    offset += stride
     if (++guard > 250 || offset > 50_000) break
   }
   return acc
 }
 
-/** Alle Posteingangs-Nachrichten (paginiert, Shared + jede private Mailbox separat) – für Exporte. */
+/** Alle Posteingangs-Nachrichten (paginiert, Shared + private + Team) – für Exporte. */
 export async function fetchAllInboxMessagesForExport(p: {
   packageId?: string
   bossView: boolean
   role: string
   pageSize?: number
 }): Promise<Message[]> {
-  const pageSize = Math.min(500, Math.max(1, p.pageSize ?? 200))
+  /**
+   * Ein großer First-Shot (Indexer einmal), danach nur API-Append ohne Direct.
+   * Früher: pageSize 200–500 × (API+Direct) × Mailboxen → Export hing Minuten.
+   */
+  const pageSize = Math.min(5_000, Math.max(500, p.pageSize ?? 2_000))
   const useBoss = p.role === 'boss' && p.bossView
 
   if (useBoss) {
     let offset = 0
     const all: InboxApiRow[] = []
     for (;;) {
-      const res = await fetchInbox(pageSize, undefined, p.packageId, true, offset)
+      const res = await fetchInbox(
+        pageSize,
+        undefined,
+        p.packageId,
+        true,
+        offset,
+        false,
+        undefined,
+        true,
+        false,
+        INBOX_EXPORT_TIMEOUT_MS
+      )
       const raw = pickInboxRawMessages(res as { data?: unknown; messages?: unknown })
       if (!res.ok || raw == null || raw.length === 0) break
       all.push(...(raw as InboxApiRow[]))
@@ -119,6 +177,7 @@ export async function fetchAllInboxMessagesForExport(p: {
   const { mergeAllMessages } = await import('@/frontend/lib/message-dedup')
   const { readMyPrivateMailboxes } = await import('@/frontend/lib/my-private-mailbox-store')
   const { readActiveSendMailboxObjectId } = await import('@/frontend/lib/my-mailbox-active')
+  const { collectInboxAlsoMailboxIds } = await import('@/frontend/lib/inbox-also-mailbox-ids')
 
   const mailboxIds: string[] = []
   const seen = new Set<string>()
@@ -130,24 +189,30 @@ export async function fetchAllInboxMessagesForExport(p: {
   }
   pushMb(readActiveSendMailboxObjectId())
   for (const m of readMyPrivateMailboxes()) pushMb(m.objectId)
+  for (const id of collectInboxAlsoMailboxIds()) pushMb(id)
 
-  /** Shared/Server-Union (Events + Default-Mailbox). */
+  /** Shared: Events + Default-Mailbox (Direct nur Seite 0). */
   const shared = await fetchAllPagesFromOneMailbox({
     pageSize,
     packageId: p.packageId,
     mergeLocalInbox: true,
+    directOnlyFirstPage: true,
+    timeoutMs: INBOX_EXPORT_TIMEOUT_MS,
   })
 
-  const privateChunks: Message[][] = []
-  for (const mb of mailboxIds) {
-    privateChunks.push(
-      await fetchAllPagesFromOneMailbox({
+  /** Private/Team parallel: nur Keys — Event-Union steckt schon in Shared. */
+  const privateChunks = await Promise.all(
+    mailboxIds.map((mb) =>
+      fetchAllPagesFromOneMailbox({
         pageSize,
         packageId: p.packageId,
         mailboxObjectId: mb,
+        directOnlyFirstPage: true,
+        mailboxKeysOnly: true,
+        timeoutMs: INBOX_EXPORT_TIMEOUT_MS,
       })
     )
-  }
+  )
 
-  return mergeAllMessages([shared, ...privateChunks.flat()])
+  return mergeAllMessages([...shared, ...privateChunks.flat()])
 }

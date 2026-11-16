@@ -96,14 +96,14 @@ function mergeFetchedInboxPageIntoState(
 }
 
 const PAGE_SIZE = 50
-/** Erster Load / Aktualisieren: ältere über „Weitere laden“ (50er-Chunks, unbegrenzt solange hasMore). */
+/** Erster Load / Aktualisieren: großes Fenster; Append: 50er-Chunks. */
 const RESET_PAGE_SIZE_WEB = 500
 const RESET_PAGE_SIZE_NATIVE = 200
 function resetPageSize(): number {
   return isCapacitorNativePlatform() ? RESET_PAGE_SIZE_NATIVE : RESET_PAGE_SIZE_WEB
 }
-/** Auto-Append nach Reset: zusätzliche 50er-Chunks (≈ Ziel ~2500 Web / ~1200 APK beim ersten Laden). */
-const AUTO_APPEND_ROUNDS_ON_RESET = 40
+/** Auto-Append nach Reset bei hasMore (Indexer liefert oft schon 500). */
+const AUTO_APPEND_ROUNDS_ON_RESET = 8
 /** Auto-Poll (Status-Tick): klein — volle Union nur bei Aktualisieren. */
 const POLL_PAGE_SIZE = 80
 
@@ -175,13 +175,17 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
   /** Erhöht bei clearInboxRam — verworfene async Loads (Poll/Telegram) landen nicht mehr im State. */
   const inboxLoadEpochRef = useRef(0)
   const inboxLoadInFlightRef = useRef(false)
+  /** Serialisiert alle Loads — kein verlorenes Aktualisieren/Nach-Send durch Early-Return. */
+  const inboxLoadTailRef = useRef(Promise.resolve())
   const inboxLiveSourceRef = useRef<InboxLiveSource | null>(null)
-  /** Nach Reset: bis zu 3 Auto-Append-Runden wenn hasMore (ältere Move-Pakete / Events). */
+  /** Nach Reset: Auto-Append-Budget wenn hasMore. */
   const autoAppendBudgetRef = useRef(0)
   const lastInboxCacheKeyRef = useRef<string | null>(null)
   const lastInboxWalletScopeRef = useRef<string | null>(null)
   const inboxMessageCountRef = useRef(0)
+  const messagesSnapRef = useRef<Message[]>([])
   inboxLiveSourceRef.current = inboxLiveSource
+  messagesSnapRef.current = messages
 
   useEffect(() => {
     inboxMessageCountRef.current = messages.length
@@ -212,21 +216,23 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
   }, [])
 
   const loadMessages = useCallback(
-    async (
+    (
       mode: InboxLoadMode = 'reset',
       overridePackageId?: unknown,
       opts?: InboxLoadMessagesOpts
-    ) => {
+    ): Promise<void> => {
+      const run = async () => {
       if (awaitingManualRefreshRef.current && mode !== 'reset') return
       const silent = opts?.silent === true || mode === 'poll'
       const forceLive = opts?.forceLive === true && mode === 'reset' && !silent
-      if (inboxLoadInFlightRef.current) return
       const trimPkg = (v: unknown): string | undefined =>
         typeof v === 'string' ? v.trim() || undefined : undefined
+      /** Nur expliziter UI-Filter — sonst volle Package-Union (kein Profil-Pin der Historie kürzt). */
+      const explicitPackageFilter = trimPkg(overridePackageId) ?? trimPkg(packageId)
       const pkg =
-        trimPkg(overridePackageId) ??
+        explicitPackageFilter ??
         resolveEffectiveInboxPackageId({
-          inboxFilter: trimPkg(packageId),
+          inboxFilter: undefined,
           apiPackageId: trimPkg(apiPackageId),
         })
       const cacheKey = scopedKey(
@@ -296,7 +302,12 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
         const applyMappedToState = (mapped: Message[], stride: number, chainHasMore: boolean) => {
           if (loadEpoch !== inboxLoadEpochRef.current) return
           if (awaitingManualRefreshRef.current && mode !== 'reset') return
-          const replaceOnReset = mode === 'reset' && (forceLive || walletScopeChanged)
+          /**
+           * Harte Ersetzung nur bei Wallet/Package-Wechsel.
+           * forceLive (Aktualisieren) darf zuvor sichtbare Chain-Zeilen nicht löschen,
+           * wenn der Live-Fetch kürzer ist als Cache/Prior (Regression RESET 500→50).
+           */
+          const replaceOnReset = mode === 'reset' && walletScopeChanged
           if (mode === 'poll') {
             setMessages((prev) => {
               const prevIds = new Set(prev.map((m) => m.id))
@@ -321,22 +332,25 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
           } else {
             mailboxOffsetRef.current += stride
           }
-          if (mode === 'append' && stride === 0) {
-            setInboxHasMore(false)
-          } else {
-            setInboxHasMore(
-              chainHasMore || stride >= pageSize || (mode === 'reset' && mapped.length >= pageSize)
-            )
-          }
-          setMessages((prev) => {
-            const next = mergeFetchedInboxPageIntoState(prev, mapped, {
-              replaceChainRows: replaceOnReset,
-            })
-            if (!replaceOnReset && inboxMessageListSignature(prev) === inboxMessageListSignature(next)) {
-              return prev
-            }
-            return next
+          const prevSnap = messagesSnapRef.current
+          const next = mergeFetchedInboxPageIntoState(prevSnap, mapped, {
+            replaceChainRows: replaceOnReset,
           })
+          if (mode === 'append') {
+            const prevIds = new Set(prevSnap.map((m) => m.id))
+            const prevDedup = new Set(prevSnap.map((m) => m.dedupKey).filter((k): k is string => Boolean(k)))
+            const novel = next.filter(
+              (m) => !prevIds.has(m.id) && (!m.dedupKey || !prevDedup.has(m.dedupKey))
+            )
+            setInboxHasMore(novel.length > 0 && chainHasMore)
+          } else {
+            setInboxHasMore(chainHasMore)
+          }
+          if (!replaceOnReset && inboxMessageListSignature(prevSnap) === inboxMessageListSignature(next)) {
+            return
+          }
+          messagesSnapRef.current = next
+          setMessages(next)
         }
 
         /** Shared (immer) + Team-Postfächer + aktive private Mailbox (M4d), falls gesetzt. */
@@ -348,7 +362,8 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
         const res = await fetchInboxFromAllOwnedMailboxes({
           limit: pageSize,
           offset,
-          packageId: pkg,
+          /** Nur bei gesetztem Filter — sonst Backend-Union über alle Package-IDs. */
+          packageId: explicitPackageFilter,
           mergeLocalInbox: mergeLocal,
           includePrivateMailboxes: true,
           alsoMailboxIds: alsoMbMerged,
@@ -358,7 +373,14 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
         const mappedLength = res.stride
         if (loadEpoch !== inboxLoadEpochRef.current) return
         if (res.ok && raw != null) {
-          const mapped: Message[] = raw
+          let mapped: Message[] = raw
+          /** Aktualisieren: kürzeren Live-Fetch mit Browser-Cache auffüllen (ältere Zeilen behalten). */
+          if (mode === 'reset' && !walletScopeChanged) {
+            const cached = readInboxCache(cacheKey)
+            if (cached && cached.messages.length > mapped.length) {
+              mapped = mergeAllMessages([...cached.messages, ...mapped])
+            }
+          }
           const tgJournal = mode === 'poll' ? [] : await loadTelegramJournalMessages(myAddress)
           const lanInbox = await loadTeamSyncLanInboxMessages(myAddress)
           const page = enrichInboxMessagesWithChainDigests(
@@ -370,9 +392,20 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
           setInboxCacheAgeMinutes(null)
           setInboxLiveSource(liveSource)
           setLoadError(null)
-          applyMappedToState(page, mappedLength, res.hasMore === true)
-          const chainHasMore = res.hasMore === true
-          if (!silent && chainHasMore) {
+          /**
+           * Offset = Chain-Zeilen (ohne Telegram), damit Append nicht in der TG-Masse „hängt“.
+           * Auto-Append nur bei klarem Server-/Direkt-Signal — nicht optimistisch
+           * (sonst leerer Append → Button sofort wieder weg).
+           */
+          const liveChainCount = mapped.length
+          const serverSaysMore =
+            res.hasMore === true || mappedLength >= PAGE_SIZE || liveChainCount >= pageSize
+          const strideForOffset = Math.max(
+            mappedLength,
+            mode === 'reset' ? liveChainCount : Math.min(Math.max(liveChainCount, PAGE_SIZE), pageSize)
+          )
+          applyMappedToState(page, strideForOffset, serverSaysMore)
+          if (!silent && serverSaysMore) {
             if (mode === 'reset') autoAppendBudgetRef.current = AUTO_APPEND_ROUNDS_ON_RESET
             if ((mode === 'reset' || mode === 'append') && autoAppendBudgetRef.current > 0) {
               autoAppendBudgetRef.current -= 1
@@ -432,6 +465,14 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
         setLoading(false)
         setLoadingMore(false)
       }
+      }
+
+      const queued = inboxLoadTailRef.current.then(run, run)
+      inboxLoadTailRef.current = queued.then(
+        () => undefined,
+        () => undefined
+      )
+      return queued
     },
     [packageId, apiPackageId, myAddress, alsoMailboxIds]
   )
@@ -441,6 +482,10 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
 
   const loadMoreInbox = useCallback(() => {
     if (!inboxHasMore || loading || loadingMore) return
+    /** Mindestens eine Seitenbreite vorspringen, falls Stride 0 war. */
+    if (mailboxOffsetRef.current < PAGE_SIZE) {
+      mailboxOffsetRef.current = PAGE_SIZE
+    }
     void loadMessages('append')
   }, [inboxHasMore, loading, loadingMore, loadMessages])
 

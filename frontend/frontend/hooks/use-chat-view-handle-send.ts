@@ -24,6 +24,7 @@ import {
   readPassphraseNftKeycardBindSlotId,
   readPassphraseNftPubkeyWrapP4a2Enabled,
   readPassphraseNftRequiredWallet,
+  readPassphraseNftRequiredWallets,
   readPassphraseNftSealP4bEnabled,
   readPassphraseNftStrongGateEnabled,
   readPassphraseProtectEnabled,
@@ -97,6 +98,7 @@ import {
   resolveGroupTargetsForInternetSend,
   resolveSingleWireSuccessMessage,
 } from '@/frontend/features/send/chat-view-handle-send-group'
+import { buildPrivateDmOptimisticInboxRow } from '@/frontend/lib/group-inbox-optimistic'
 import { createChatViewSendOnePart } from '@/frontend/features/send/chat-view-handle-send-one-part'
 import {
   emergencyFanOutAnyOk,
@@ -419,11 +421,14 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       return false
     }
 
-    /** Nach Mailbox-Send: gestaffelte Reloads (Chain-Index braucht oft >1 s). */
+    /** Nach Mailbox-Send: gestaffelte Reloads (Chain-Index braucht oft >1 s). Erster Reset, dann Poll (nur neue mergen). */
     const scheduleInboxReloadAfterSend = () => {
-      for (const ms of inboxReloadDelaysMs(isGroupChannel)) {
-        setTimeout(() => void loadMessages('reset', undefined, { silent: true }), ms)
-      }
+      const delays = inboxReloadDelaysMs(isGroupChannel)
+      delays.forEach((ms, i) => {
+        setTimeout(() => {
+          void loadMessages(i === 0 ? 'reset' : 'poll', undefined, { silent: true })
+        }, ms)
+      })
     }
 
     const mailboxOptsFor = (to: string) => {
@@ -728,15 +733,14 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       try {
         const wrapped: string[] = []
         const cardOid = readPassphraseNftKeycardBindObjectId()
-        if (zeitkapselMode && (!cardOid || !getNftKeycard(cardOid))) {
+        if (zeitkapselMode && !cardOid) {
           throw new Error(
-            'Zeitkapsel-Nachricht: zuerst ein NFT/Schlüsselkarte wählen (Composer).'
+            'Zeitkapsel-Nachricht: NFT-Object-ID wählen oder einfügen (Composer). Schlüsselkarte merken ist optional.'
           )
         }
+        /** Zeitkapsel = NFTGATE nur mit Object-ID; lokale Schlüsselkarte ist Komfort, kein Muss. */
         const strongGate = Boolean(
-          (zeitkapselMode || readPassphraseNftStrongGateEnabled()) &&
-            cardOid &&
-            getNftKeycard(cardOid)
+          (zeitkapselMode || readPassphraseNftStrongGateEnabled()) && cardOid
         )
 
         if (strongGate) {
@@ -744,12 +748,19 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           const dual = readPassphraseNftDualWalletGateEnabled()
           const p4b = readPassphraseNftSealP4bEnabled()
           const p4a2 = !p4b && dual && readPassphraseNftPubkeyWrapP4a2Enabled()
-          const requiredWallet = dual || (p4b && readPassphraseNftRequiredWallet())
-            ? readPassphraseNftRequiredWallet()
-            : null
-          if (dual && !requiredWallet) {
+          const requiredWallets =
+            dual || (p4b && readPassphraseNftRequiredWallets().length)
+              ? readPassphraseNftRequiredWallets()
+              : []
+          const requiredWallet = requiredWallets[0] ?? null
+          if (dual && requiredWallets.length === 0) {
             throw new Error(
-              'Dual-Gate: erlaubte Wallet-Adresse setzen (0x…), oder „Wallet + NFT“ aus.'
+              'Dual-Gate: mind. eine erlaubte Wallet-Adresse (0x…), oder „Wallet + NFT“ aus.'
+            )
+          }
+          if (p4a2 && requiredWallets.length !== 1) {
+            throw new Error(
+              'P4a2 (Pubkey-Wrap): genau eine Wallet — bei mehreren Adressen Pubkey-Wrap aus oder auf eine kürzen.'
             )
           }
           let recipientEcdhPubRaw: Uint8Array | null = null
@@ -784,19 +795,22 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
               plainUtf8: snap,
               nftObjectId: cardOid!,
               requiredWallet: dual || p4b ? requiredWallet : null,
+              requiredWallets: dual || p4b ? requiredWallets : null,
               recipientEcdhPubRaw,
               sealWrapKeyRaw,
             })
-            bindWireToNftKeycard({
-              objectId: nftObjectId,
-              wireFingerprint: fingerprintPassphraseMessageWire(wire),
-              slotId: readPassphraseNftKeycardBindSlotId(),
-            })
+            if (getNftKeycard(nftObjectId)) {
+              bindWireToNftKeycard({
+                objectId: nftObjectId,
+                wireFingerprint: fingerprintPassphraseMessageWire(wire),
+                slotId: readPassphraseNftKeycardBindSlotId(),
+              })
+            }
             wrapped.push(wire)
             void gate
           }
           textSnaps = wrapped
-          await flushNftKeycardVaultPersist()
+          if (getNftKeycard(cardOid!)) await flushNftKeycardVaultPersist()
           if (cardOid) writeZeitkapselLastNftObjectId(cardOid)
           sharedPassphraseNote = zeitkapselMode
             ? ' Zeitkapsel-Nachricht (NFTGATE) gesendet — Ciphertext im Wire; Leserecht = NFT. Unten „Dieses NFT verleihen…“ oder On-Chain → Zeitkapsel.'
@@ -805,7 +819,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
               : p4a2
                 ? ` Starkes P4a2 (Wallet+NFT+Pubkey): nur ${requiredWallet!.slice(0, 10)}… mit NFT + ECDH-Privatkey. Klartext danach kopierbar.`
                 : dual
-                  ? ` Starkes Dual-Gate (Wallet+NFT): nur Adresse ${requiredWallet!.slice(0, 10)}… mit NFT-Leserecht. Klartext danach kopierbar. Kein Blank-DEK im Vault.`
+                  ? requiredWallets.length > 1
+                    ? ` Starkes Dual-Gate (Wallet+NFT): ${requiredWallets.length} erlaubte Wallets + NFT-Leserecht. Klartext danach kopierbar.`
+                    : ` Starkes Dual-Gate (Wallet+NFT): nur Adresse ${requiredWallet!.slice(0, 10)}… mit NFT-Leserecht. Klartext danach kopierbar. Kein Blank-DEK im Vault.`
                   : ' Starkes NFT-Gate (P4a): Lesen nur mit Besitz/Leihe der Schlüsselkarte — kein Passphrase-Teilen, kein Blank-DEK im Vault. Klartext danach kopierbar.'
         } else {
           const { passphrase: batchPass, reused } = resolvePassphraseForProtectSend(
@@ -1350,6 +1366,29 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         })
         if (optimistic.length > 0) {
           setMessages((prev) => applyGroupOptimisticInboxMerge(prev, optimistic))
+        }
+      } else if (
+        isPrivate &&
+        forcedTransport === 'internet' &&
+        isSendPartSuccess(lastOk)
+      ) {
+        const preview =
+          textSnaps[textSnaps.length - 1]?.trim() ||
+          message.trim() ||
+          (!encrypted ? lastOk.mailboxCapture?.payloadUtf8?.trim() : '') ||
+          ''
+        const to =
+          (recipient || plainMailboxRecipient || encryptedMailboxRecipient || myAddress).trim()
+        const dmOpt = buildPrivateDmOptimisticInboxRow({
+          myAddress,
+          recipient: to,
+          text: preview,
+          encrypted: lastOk.mailboxCapture?.encrypted ?? encrypted,
+          messageNonceU64: lastOk.mailboxCapture?.messageNonceU64,
+          mailboxPersisted: messagingPersistenceMode === 'mailbox',
+        })
+        if (dmOpt) {
+          setMessages((prev) => applyGroupOptimisticInboxMerge(prev, [dmOpt]))
         }
       }
 
