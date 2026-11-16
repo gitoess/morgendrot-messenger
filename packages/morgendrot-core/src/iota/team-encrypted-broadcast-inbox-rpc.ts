@@ -113,7 +113,12 @@ export async function fetchTeamEncBroadcastRpcRows(
           : typeof rawCreated === 'string'
             ? parseInt(rawCreated, 10)
             : Number(rawCreated ?? 0)
-      const tsMs = Number.isFinite(createdNum) && createdNum > 0 ? createdNum : undefined
+      const createdMs = Number.isFinite(createdNum) && createdNum > 0 ? createdNum : undefined
+      const nonceMs = Number(nonce)
+      const tsMs =
+        Number.isFinite(nonceMs) && nonceMs >= 1_000_000_000_000
+          ? nonceMs
+          : createdMs
 
       const ciphertext = coerceMoveU8Vector(f.ciphertext)
       const iv = coerceMoveU8Vector(f.iv)

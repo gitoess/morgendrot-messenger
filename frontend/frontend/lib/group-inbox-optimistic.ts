@@ -89,6 +89,7 @@ export function buildGroupMailboxOptimisticInboxRows(p: {
         id: `optimistic:team:${teamMb}:${nonce}`,
         recipient: teamMb,
         dedupKey: `team:${teamMb}:${me.toLowerCase()}:${nonce}`,
+        chainPurgeKind: 'team-broadcast' as const,
       },
     ]
   }

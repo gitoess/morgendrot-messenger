@@ -294,7 +294,16 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       return
     }
 
-    if (sendEncrypted && isPrivate && !ADDR_64_LOWER.test(encryptedMailboxRecipient)) {
+    /**
+     * `isPrivate` = Dialog-Kanal (1:1 **oder** Gruppe). Enc-Partner-Adresse nur bei 1:1 —
+     * Gruppe nutzt Team-Postfach / Team-Schlüssel (kein Handshake-Empfängerfeld).
+     */
+    if (
+      sendEncrypted &&
+      isPrivate &&
+      !isGroupChannel &&
+      !ADDR_64_LOWER.test(encryptedMailboxRecipient)
+    ) {
       setStatus('error')
       setStatusMsg(
         'Verschlüsselt: gültige 0x-Empfängeradresse im Composer oder Partner (Handshake) eintragen.'
@@ -1369,6 +1378,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         }
       } else if (
         isPrivate &&
+        !isGroupChannel &&
         forcedTransport === 'internet' &&
         isSendPartSuccess(lastOk)
       ) {

@@ -52,10 +52,11 @@ export function ChatViewInboxOutgoingHandshakeRequests(p: ChatViewInboxOutgoingH
               <button
                 type="button"
                 disabled={sending}
+                title="Nur Adresse in Partner/Empfänger laden — Handshake wird nicht angenommen. Nutzen, wenn du den 1:1-Chat öffnen oder Enc vorbereiten willst, während du noch wartest."
                 onClick={() => onUseAsPartner(o.recipient)}
                 className="rounded-md border border-border px-2 py-1 text-[11px] hover:bg-muted"
               >
-                Als Partner
+                Im Chat laden
               </button>
               {onResend ? (
                 <button
@@ -82,8 +83,8 @@ export function ChatViewInboxOutgoingHandshakeRequests(p: ChatViewInboxOutgoingH
         })}
       </ul>
       <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
-        Gesendeter Handshake — Partner kann annehmen/verbinden. „Löschen“ blendet lokal aus; bei Mailbox-Einträgen
-        wird on-chain gepurgt (ENABLE_PURGE + MAILBOX_ID).
+        Gesendet — Partner muss annehmen/verbinden. „Im Chat laden“ = nur Adresse übernehmen (kein Connect).
+        „Erneut senden“ = Handshake nochmal. „Löschen“ = lokal ausblenden (Mailbox ggf. on-chain purgen).
       </p>
     </div>
   )

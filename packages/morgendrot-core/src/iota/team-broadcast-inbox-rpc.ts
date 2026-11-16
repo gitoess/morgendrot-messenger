@@ -106,7 +106,13 @@ export async function fetchTeamPlainBroadcastRpcRows(
           : typeof rawCreated === 'string'
             ? parseInt(rawCreated, 10)
             : Number(rawCreated ?? 0)
-      const tsMs = Number.isFinite(createdNum) && createdNum > 0 ? createdNum : undefined
+      const createdMs = Number.isFinite(createdNum) && createdNum > 0 ? createdNum : undefined
+      /** ms-Nonce (Date.now) hat Vorrang — sonst rutscht die Zeile nach Reload ans Listenende (ts=0). */
+      const nonceMs = Number(nonce)
+      const tsMs =
+        Number.isFinite(nonceMs) && nonceMs >= 1_000_000_000_000
+          ? nonceMs
+          : createdMs
 
       const textBytes = coerceMoveU8Vector(f.text)
       if (textBytes.length === 0) continue

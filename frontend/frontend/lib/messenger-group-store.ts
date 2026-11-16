@@ -190,18 +190,42 @@ function resolveGroupMemberToken(
   return lookupContactAddressByLabel(directory, raw)
 }
 
+export type GroupMemberParseResult = {
+  /** Erkannte 0x-Adressen (dedupliziert). */
+  addresses: string[]
+  /** Tokens die weder 0x noch Telefonbuch-Name waren (Tippfehler / unbekannter Name). */
+  unresolved: string[]
+}
+
+/** Zeilen/Komma: 0x-Adressen oder Telefonbuch-Namen → Adressen + unerkannte Tokens. */
+export function analyzeGroupMemberInput(
+  text: string,
+  directory?: Record<string, ContactMeshEntryClient>
+): GroupMemberParseResult {
+  const addresses: string[] = []
+  const unresolved: string[] = []
+  const seenAddr = new Set<string>()
+  const seenUnresolved = new Set<string>()
+  for (const p of tokenizeGroupMemberInput(text)) {
+    const n = resolveGroupMemberToken(p, directory)
+    if (n) {
+      if (seenAddr.has(n)) continue
+      seenAddr.add(n)
+      addresses.push(n)
+      continue
+    }
+    const key = p.toLowerCase()
+    if (seenUnresolved.has(key)) continue
+    seenUnresolved.add(key)
+    unresolved.push(p)
+  }
+  return { addresses, unresolved }
+}
+
 /** Zeilen/Komma: 0x-Adressen oder Telefonbuch-Namen → normalisierte Adressliste. */
 export function parseGroupMemberInput(
   text: string,
   directory?: Record<string, ContactMeshEntryClient>
 ): string[] {
-  const out: string[] = []
-  const seen = new Set<string>()
-  for (const p of tokenizeGroupMemberInput(text)) {
-    const n = resolveGroupMemberToken(p, directory)
-    if (!n || seen.has(n)) continue
-    seen.add(n)
-    out.push(n)
-  }
-  return out
+  return analyzeGroupMemberInput(text, directory).addresses
 }

@@ -19,6 +19,7 @@ import {
   createMessengerGroupId,
   deleteMessengerGroup,
   getActiveMessengerGroup,
+  analyzeGroupMemberInput,
   parseGroupMemberInput,
   formatGroupMembersDisplay,
   readActiveGroupId,
@@ -53,6 +54,8 @@ export type ChatViewGroupPanelProps = {
   /** Handoff-Runtime: neue Gruppe anlegen / erste Speicherung. */
   groupCreateAllowed?: boolean
   onGroupsChanged?: () => void
+  /** Nach Speichern/Kanal: Gruppe im Chat aktivieren (Kanal + Posteingang-Filter). */
+  onActivateGroup?: (groupId: string) => void
   encrypted?: boolean
   onEncryptedChange?: (encrypted: boolean) => void
   embedded?: boolean
@@ -67,6 +70,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     teamMailboxCreateAllowed = false,
     groupCreateAllowed = true,
     onGroupsChanged,
+    onActivateGroup,
     encrypted = false,
     onEncryptedChange,
     embedded = false,
@@ -120,10 +124,19 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     reload()
   }, [reload])
 
-  const memberAddresses = useMemo(
-    () => parseGroupMemberInput(membersText, contactDirectory),
+  const memberParse = useMemo(
+    () => analyzeGroupMemberInput(membersText, contactDirectory),
     [membersText, contactDirectory]
   )
+  const memberAddresses = memberParse.addresses
+  const unresolvedMembers = memberParse.unresolved
+  const membersMatchSaved = useMemo(() => {
+    if (!activeId) return false
+    const saved = getActiveMessengerGroup()?.memberAddresses ?? []
+    if (saved.length !== memberAddresses.length) return false
+    const set = new Set(saved.map((a) => a.toLowerCase()))
+    return memberAddresses.every((a) => set.has(a.toLowerCase()))
+  }, [activeId, memberAddresses, groups])
 
   const persistGroupDefinition = useCallback(
     (opts?: { teamMbOverride?: string; successMsg?: string }): boolean => {
@@ -156,6 +169,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
       writeActiveGroupId(id)
       reload()
       onGroupsChanged?.()
+      onActivateGroup?.(id)
       if (opts?.successMsg) setMsg(opts.successMsg)
       return true
     },
@@ -164,6 +178,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
       memberAddresses,
       name,
       onGroupsChanged,
+      onActivateGroup,
       reload,
       secondaryChannelIndex,
       secondaryChannelName,
@@ -173,10 +188,18 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
   )
 
   const saveGroup = useCallback(() => {
-    if (!persistGroupDefinition({ successMsg: 'Gruppe gespeichert.' })) {
-      setMsg('Mindestens ein Mitglied aus dem Telefonbuch oder eine 0x-Adresse eintragen.')
+    if (
+      !persistGroupDefinition({
+        successMsg: `Gruppe gespeichert (${memberAddresses.length} Mitglied${memberAddresses.length === 1 ? '' : 'er'}).`,
+      })
+    ) {
+      setMsg(
+        unresolvedMembers.length > 0
+          ? `Nicht erkannt: ${unresolvedMembers.slice(0, 3).join(', ')}${unresolvedMembers.length > 3 ? '…' : ''} — Telefonbuch-Name oder 0x-Adresse nötig.`
+          : 'Mindestens ein Mitglied aus dem Telefonbuch oder eine 0x-Adresse eintragen.'
+      )
     }
-  }, [persistGroupDefinition])
+  }, [persistGroupDefinition, memberAddresses.length, unresolvedMembers])
 
   const selectGroup = useCallback(
     (id: string) => {
@@ -464,6 +487,23 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
           placeholder="Namen oder 0x-Adressen — am einfachsten „Aus Telefonbuch…“"
           className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
         />
+        {membersText.trim() ? (
+          <div className="space-y-1 text-[11px] leading-snug">
+            <p className={memberAddresses.length > 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground'}>
+              {memberAddresses.length > 0
+                ? `${memberAddresses.length} Mitglied${memberAddresses.length === 1 ? '' : 'er'} erkannt${
+                    membersMatchSaved ? ' · in Gruppe gespeichert' : ' · Speichern nicht vergessen'
+                  }`
+                : 'Noch kein gültiges Mitglied erkannt.'}
+            </p>
+            {unresolvedMembers.length > 0 ? (
+              <p className="text-amber-700 dark:text-amber-300">
+                Nicht erkannt: {unresolvedMembers.slice(0, 5).join(', ')}
+                {unresolvedMembers.length > 5 ? '…' : ''} — exakter Telefonbuch-Name oder 0x-Adresse.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         {showMeshtasticSecondary ? (
           <>
             <label className="block text-[10px] font-medium text-muted-foreground">
@@ -599,6 +639,11 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               spellCheck={false}
               autoComplete="off"
             />
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
+              Normal reicht „Kanal einrichten“ oben. Dieser Button legt <strong className="text-foreground">nur</strong> die
+              Shared-Object-ID an (ohne Gruppen-Geheimnis) — z. B. wenn Boss die ID teilt und Mitglieder das Geheimnis per
+              Handoff bekommen.
+            </p>
             <button
               type="button"
               disabled={teamMbBusy || !teamMailboxCreateAllowed}
@@ -608,7 +653,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               }}
               className="rounded-md border border-border px-2 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
             >
-              {teamMbBusy ? '…' : 'Nur Postfach erstellen'}
+              {teamMbBusy ? '…' : 'Nur Postfach-ID erstellen (ohne Geheimnis)'}
             </button>
             {!teamMailboxCreateAllowed ? (
               <p className="text-[10px] text-amber-800 dark:text-amber-200">
@@ -686,6 +731,11 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
         </div>
       ) : null}
 
+      <p className="text-[11px] leading-relaxed text-muted-foreground">
+        <strong className="text-foreground">Speichern</strong> = nur Name/Mitglieder/Postfach-Verknüpfung lokal.
+        <strong className="text-foreground"> Kanal einrichten</strong> speichert mit und legt Postfach/Geheimnis an — für
+        reines Umbenennen oder Klartext-Mitgliederliste reicht Speichern allein.
+      </p>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"

@@ -505,15 +505,22 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
   })
 
   const selectInboxConversationAll = useCallback(() => {
+    writeActiveGroupId(null)
     setInboxPartnerKey(null)
     setInboxConversationGroupId(null)
     setInboxPartnerFiltersArmed(false)
+    setInboxChannelFiltersArmed(false)
+    setInboxSourceFilter('all')
     setInboxOverviewCategory('alle')
+    setInboxDirectionFilter('all')
   }, [
     setInboxPartnerKey,
     setInboxConversationGroupId,
     setInboxPartnerFiltersArmed,
+    setInboxChannelFiltersArmed,
+    setInboxSourceFilter,
     setInboxOverviewCategory,
+    setInboxDirectionFilter,
   ])
 
   const selectInboxConversationPartner = useCallback(
@@ -543,9 +550,25 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
       setInboxPartnerKey(null)
       setInboxConversationGroupId(id)
       setInboxPartnerFiltersArmed(true)
-      setInboxOverviewCategory('direkt')
+      /**
+       * Nicht „direkt“ → der Overview-Chip armiert Quelle „mailbox“ und blendet
+       * Team-Broadcasts aus (isGroupBroadcastInboxRow → false). Wie bei 1:1-Partner:
+       * Kanal-Filter aus, nur Gruppen-Partner-Filter.
+       */
+      setInboxChannelFiltersArmed(false)
+      setInboxSourceFilter('all')
+      setInboxOverviewCategory('alle')
+      setInboxDirectionFilter('all')
     },
-    [setInboxPartnerKey, setInboxConversationGroupId, setInboxPartnerFiltersArmed, setInboxOverviewCategory]
+    [
+      setInboxPartnerKey,
+      setInboxConversationGroupId,
+      setInboxPartnerFiltersArmed,
+      setInboxChannelFiltersArmed,
+      setInboxSourceFilter,
+      setInboxOverviewCategory,
+      setInboxDirectionFilter,
+    ]
   )
 
   const selectInboxPartnerForSend = useCallback(

@@ -7,7 +7,7 @@
 
 **Kanonische Umsetzung:** **`docs/ROADMAP-FAHRPLAN.md`** — dort **Lesekarte** (H.\* vs T.\*), **§ C.0b**, **§ H.0**, **§ H.0-SIMPLE**. Dieses Dokument = **Leitplanke** (Phasen); der Fahrplan = **Womit** und **aktueller Arbeitsstand**.
 
-**Arbeitsstand 2026-11-16 (kurz):** Settings/Messenger-UX-T-Rituale weitgehend PASS; **Settings-Rest** (Sicherheit/Allgemein/Funk) → dann **Session C / H.23 2-Geräte**. Mesh/APK/H.15-4e/f und **H.37 Multi-Profil** bleiben in der Roadmap, nicht parallel erzwingen.
+**Arbeitsstand 2026-11-16 (kurz):** Settings + QA-5er + **Gruppe G1–G4 Live PASS**. **Als Nächstes:** Endabnahme-5er (G3/G4-Stich → TG-Bot → H.32b Voll → Gate Session C / T17). Mesh/APK/H.15-4e/f und **H.37** bleiben Roadmap, nicht parallel.
 
 ---
 

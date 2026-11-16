@@ -270,7 +270,12 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
       const offset = mode === 'append' ? mailboxOffsetRef.current : 0
       if (mode === 'reset') {
         awaitingManualRefreshRef.current = false
-        clearInboxBrowserViewFilters()
+        /**
+         * Nur bei sichtbarem Reload (Aktualisieren) — stille Reloads nach Senden dürfen
+         * Gruppenauswahl / Partner-Filter nicht per sessionStorage-Event killen
+         * (sonst: Nachricht kurz in „Alle“, dann weg / Gruppe zeigt alles).
+         */
+        if (!silent) clearInboxBrowserViewFilters()
         autoAppendBudgetRef.current = 0
       }
       const applyLocalOverlayFallback = () => {

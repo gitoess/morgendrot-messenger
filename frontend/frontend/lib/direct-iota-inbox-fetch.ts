@@ -343,16 +343,17 @@ export async function tryFetchDirectMailboxInboxViaIota(
         offset: 0,
       })
       for (const r of teamRows) {
-        const ts = r.ts ?? 0
+        const sortTs = inboxTsFromRow(r.ts ?? 0, BigInt(r.nonce))
         sortable.push({
-          sortTs: inboxTsFromRow(ts, BigInt(r.nonce)),
+          sortTs,
           row: {
             sender: r.sender,
             recipient: r.teamMailboxObjectId,
             text: r.text,
             isPlain: true,
             nonce: r.nonce,
-            ts,
+            /** Immer sortTs — roh ts=0 würde die UI-Zeile nach Reload „verschwinden“ (unten). */
+            ts: sortTs,
             chainPurgeable: true,
             chainPurgeKind: 'team-broadcast',
             chainMailboxObjectId: r.teamMailboxObjectId,
@@ -367,15 +368,15 @@ export async function tryFetchDirectMailboxInboxViaIota(
         offset: 0,
       })
       for (const r of teamEncRows) {
-        const ts = r.ts ?? 0
+        const sortTs = inboxTsFromRow(r.ts ?? 0, BigInt(r.nonce))
         sortable.push({
-          sortTs: inboxTsFromRow(ts, BigInt(r.nonce)),
+          sortTs,
           teamEnc: {
-            sortTs: inboxTsFromRow(ts, BigInt(r.nonce)),
+            sortTs,
             sender: r.sender,
             teamMailboxObjectId: r.teamMailboxObjectId,
             nonce: r.nonce,
-            ts,
+            ts: sortTs,
             inboxKey: `team-enc:${r.teamMailboxObjectId}:${r.sender}:${r.nonce}`,
             ciphertext: r.ciphertext,
             iv: r.iv,

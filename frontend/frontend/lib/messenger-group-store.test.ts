@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest'
 import {
+  analyzeGroupMemberInput,
   createMessengerGroupId,
   parseGroupMemberInput,
   formatGroupMembersDisplay,
@@ -38,6 +39,16 @@ describe('messenger-group-store', () => {
     const list = parseGroupMemberInput(`${a}, ${b}\n${a}`)
     expect(list).toHaveLength(2)
     expect(list[0]).toBe(a.toLowerCase())
+  })
+
+  it('analyzeGroupMemberInput reports unresolved names', () => {
+    const a = '0x' + 'a'.repeat(64)
+    const directory = {
+      [a]: { label: 'Nicole', address: a },
+    } as Record<string, { label: string; address: string }>
+    const r = analyzeGroupMemberInput(`Nicole\nNikol\n${a}`, directory)
+    expect(r.addresses).toEqual([a.toLowerCase()])
+    expect(r.unresolved).toEqual(['Nikol'])
   })
 
   it('upsert and active group', () => {

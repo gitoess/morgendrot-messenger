@@ -664,8 +664,11 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const handleSelectSidebarAll = useCallback(() => {
     setTelegramAlarmSelected(false)
+    /** Auch aus Gruppe → sonst bleibt Composer auf Team-Kanal, Posteingang wirkt wie „nur Gruppe“. */
     if (
-      (channelMode === 'pinnwand' || channelMode === 'notes') &&
+      (channelMode === 'pinnwand' ||
+        channelMode === 'notes' ||
+        channelMode === 'group') &&
       onChannelModeChange
     ) {
       onChannelModeChange('private')
@@ -1039,6 +1042,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       teamMailboxCreateAllowed: canCreateTeamMailbox(connectionStatusRead.apiStatus),
       groupCreateAllowed: canCreateGroupCapability(connectionStatusRead.apiStatus),
       onGroupsChanged: refreshMessengerGroups,
+      onActivateGroup: handleSelectSidebarGroup,
       encrypted,
       onEncryptedChange: setEncrypted,
       handshake: groupHandshakeActions,
@@ -1048,6 +1052,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       forcedTransport,
       connectionStatusRead.apiStatus,
       refreshMessengerGroups,
+      handleSelectSidebarGroup,
       encrypted,
       setEncrypted,
       groupHandshakeActions,
@@ -1278,6 +1283,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           teamMailboxCreateAllowed={canCreateTeamMailbox(connectionStatusRead.apiStatus)}
           groupCreateAllowed={canCreateGroupCapability(connectionStatusRead.apiStatus)}
           onGroupsChanged={refreshMessengerGroups}
+          onActivateGroup={handleSelectSidebarGroup}
           encrypted={encrypted}
           onEncryptedChange={setEncrypted}
           handshake={groupHandshakeActions}

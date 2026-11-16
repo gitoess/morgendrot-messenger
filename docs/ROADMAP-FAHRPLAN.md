@@ -18,8 +18,8 @@
 **Cursor-„Plan“-Modus** = nur Chat-Modus, **kein** zweites Produktdokument.
 
 **Aktueller Arbeitsstand (verbindlich 2026-11-16):**
-1. **UX-Settings-Durchgang:** Live-5er + Settings-3er (Sicherheit/Allgemein/Funk) **PASS**. PWA-Settings-Karte **entfernt** (Browser/APK/Installer reichen).  
-2. **Als Nächstes:** neues Live-5er unten (i18n → Wizard → H.32b → Handbuch-Stich → Gate Session C).  
+1. **UX-Settings + QA-5er + Gruppe G1–G4:** Settings-3er **PASS**; i18n/Wizard/H.32b-Sicht/Handbuch-Stich **PASS**; G2–G4 **Live PASS** (Team-Broadcast Klartext+Enc, Inbox-Filter, Alle inkl. Gruppe).  
+2. **Als Nächstes:** **Endabnahme-5er** unten (G3/G4-Stich → TG-Bot → H.32b Voll → Gate Session C / T17).  
 3. **Nicht jetzt:** T4 Schatten, T56 Purge, P5d/Enc-return, Feature-Wildwuchs parallel zu Session C.  
 4. **Feld/Mesh/APK:** H.15 **4e/4f**, Meshtastic Phase B — mit 2. Gerät / nach PC-Kern.  
 5. **Multi-Account** = **§ H.37** (Backlog). **Handoff** bleibt Einsatz-Helfer-Pfad (Morgendrot), nicht Solo-Pflicht.
@@ -2780,9 +2780,21 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 | **2** | **Einstiegs-Wizard** | Boss/Helfer/Privat noch Ist? Resume nur Settings? | QA #2 — Smoke, kein Redesign |
 | **3** | **H.32b Einsatz beenden** | Cache/IDs weg, Chain unberührt, neues Handoff möglich? | **Sicht-PASS**; Voll→Endabnahme. Split: IOTA-Messenger **weg**. |
 | **4** | **Handbuch-Stich** | Allgemein/Handoff/PWA/Einsatz-Ort stimmen? | **PASS**; radikal schön = **T17 ganz am Ende** |
-| **5** | **Gate: Session C?** | 2-Geräte jetzt — oder Pause / T17 voll? | **C** → G2 **PASS** → G3 Live; Session C wenn 2 Geräte |
+| **5** | **Gate: Session C?** | 2-Geräte jetzt — oder Pause / T17 voll? | **C** → G2–G4 **PASS**; Session C wenn 2 Geräte |
 
-**Nicht in diesem 5er:** G2–G4 Gruppe, T6 Funk-Strategie, H.37 Multi-Profil, Double-Ratchet-Default, Telegram-Volltest (Endabnahme).
+**Nicht in diesem 5er (damals):** G2–G4 Gruppe → **seitdem Live PASS**; T6 Funk-Strategie, H.37, Double-Ratchet-Default, Telegram-Volltest (jetzt Endabnahme-5er).
+
+### Nächste fünf — Endabnahme nach G4 (2026-11-16)
+
+| # | Ritual | Kernfrage | Status |
+|---|--------|-----------|--------|
+| **E1** | **G3/G4 Stich** | Gruppen-Info + Team-Broadcast bleiben in Gruppe **und** „Alle“? | **PASS 2026-11-16** |
+| **E2** | **Telegram Bot/Alarm** | Freeze/Bot/Notify Volltest (nicht nur Sicht) | Endabnahme |
+| **E3** | **H.32b Einsatz beenden Voll** | Cache/IDs weg, Chain unberührt, neues Handoff | Sicht war PASS; jetzt Voll |
+| **E4** | **Gate Session C** | 2. Gerät da? → H.23 Joint; sonst parken | Gate |
+| **E5** | **T17 Handbuch** | Radikal aufräumen — **ganz am Ende** | geparkt bis E1–E4 |
+
+**Nicht in diesem 5er:** T4/T56, P5d, H.37, Meshtastic-Strategie (T6), Double-Ratchet-Default.
 
 ### Mailbox-UX-Entscheidungen (User 2026-11-16 — umgesetzt / Roadmap)
 
@@ -2790,8 +2802,8 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 |--------------|--------|
 | **Sendeziel/Fokus in Meine Mailboxen** | **entfernt** — Ziel beim Senden (Composer). Lesen = Haupt + bekannte Privat/Team. |
 | **Kontakt ↔ Mailbox-ID** | Primär **Telefonbuch** → Kontakt → Erweitert · Postfach-ID. Nicht parallel aus Mailbox-Liste. |
-| **Gruppenchat „perfekt“?** | **Nein.** Ist: lokale Gruppe + Filter; Persistent oft pairwise / Team-Broadcast. **Scheiben:** (G1–G3) **PASS** (G3 Endabnahme-Retest); **(G4)** 1× Team-Broadcast **Code Ist** (Klartext+Enc) — UI-Labels 2026-11-16 ehrlich; Live-Sicht/Send-Smoke 1 Gerät; 2-Leser → Endabnahme. |
-| **Gruppe + Sendepfad „Alle“** | **Später besprechen** (User 2026-11-16) | Hinweis „Alle meiden“ bei Gruppe ist UX-Empfehlung — Produktentscheid offen: „Alle“ bei Gruppe ausblenden / warnen / belassen? Nicht still verbauen. |
+| **Gruppenchat „perfekt“?** | **Nein.** Ist: lokale Gruppe + **1× Team-Broadcast**. **G1–G4 Live PASS 2026-11-16** (1 Gerät). 2-Leser → optional Endabnahme. |
+| **Gruppe + „Alle“** | **Belassen:** Gruppe = nur Team-Kanal; **Alle** = alles inkl. Gruppenzeilen (Fix 2026-11-16). Kein Extra-Chip. |
 | **Modularität** | Dateisplit ja (`hooks/`, `lib/`, Ports) — **Kopplung** teils hoch (`MESSENGER-UI-MODULARITY-STRATEGY.md`). Weiter kleinschrittig, keine Mega-Refactors parallel Live-Ritual. |
 
 ### Mailbox-Produktklarheit (User 2026-11-16 — vor UI-Feinschliff)

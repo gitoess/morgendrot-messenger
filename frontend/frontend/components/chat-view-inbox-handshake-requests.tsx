@@ -52,10 +52,11 @@ export function ChatViewInboxHandshakeRequests(p: ChatViewInboxHandshakeRequests
               <button
                 type="button"
                 disabled={sending}
+                title="Nur Adresse in Partner/Empfänger laden — ersetzt nicht „Annehmen“. Nutzen, wenn du den Absender im Composer brauchst."
                 onClick={() => onUseAsPartner(o.sender)}
                 className="rounded-md border border-border px-2 py-1 text-[11px] hover:bg-muted"
               >
-                Als Partner
+                Im Chat laden
               </button>
               <button
                 type="button"
