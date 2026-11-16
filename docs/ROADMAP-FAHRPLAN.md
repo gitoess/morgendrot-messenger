@@ -2924,7 +2924,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T50 | **Beweis-Video ohne Pause** | Feature | später | Continuous capture + Dauer↔Hash; Galerie-Import verbieten — schwer fälschungssicher, Erwartung managen |
 | T51 | **Abo/Credits (nicht „NFT verkaufen“)** | Produkt/Recht | nach SaaS-Split | Euro-Abo + Server-Kontingent + Gas-Tank; optional Soulbound-Ausweis on-chain — Nutzer sieht „Pro / Restpunkte“, nie Börsen-NFT |
 | T52 | **PlanRadar / Baustellen-API** | Integration | nach T45/T48 | Webhook Ticket→Beweis-Hash oder Export Ticket+Hash; Pro/Enterprise nötig — nicht Kern-Messenger |
-| T53 | **Einstellungen-Lücken vs Telegram** | UX | mit T12 | Benachrichtigungen (Preview an/aus), Stumm pro Chat, Medien-Auto-Download, App-Sperre/Biometrie, Archiv/Pin, Lesebestätigung ehrlich (T46); TG-Tab: nur Bot/Alarm/Notify — keine TG-Privacy-Kopie |
+| T53 | **Einstellungen-Lücken vs Telegram** | UX | mit T12 · **Teil:** Eingangs-Ton | **Ist 2026-11-16:** In-App-Eingangs-Ton Master+Kanaltypen (1:1/Gruppe/Pinnwand), Default aus, Lautstärke = Klick-Regler — **kein** OS-Push. **Offen:** Stumm pro Chat, Preview an/aus, Medien-Auto-Download, App-Sperre/Biometrie, Archiv/Pin, Lesebestätigung ehrlich (T46); TG-Tab: nur Bot/Alarm/Notify |
 
 ### T57 — `.morg-pkg` Hash/Anker — **verworfen 2026-11-15**
 

@@ -1,0 +1,26 @@
+---
+description: Vor Umsetzen kritisch prüfen, ehrlich einordnen, dann verbessern — Standard für jede Anfrage
+alwaysApply: true
+---
+
+# Kritisch prüfen → verbessern (immer)
+
+Bei Feature-Ideen, Fixes und „mach X“-Anfragen **zuerst** kritisch einordnen, **dann** umsetzen oder bewusst ablehnen/verschieben — nicht blind bauen.
+
+## Pflicht vor Code
+
+1. **Ist prüfen:** Gibt es schon Prefs/Hooks/Doku (Roadmap T.*/H.*, Handbuch)? Wiederverwenden statt Parallelwelt.
+2. **Ziel vs. Wunsch:** Was braucht der Nutzer wirklich? Scope streichen (Big Bang, Doppel-Klingel, Mesh-Kreuz).
+3. **Risiken nennen:** Browser-/PWA-Grenzen, Autoplay, Hintergrund, Akku, Secrets, Regression Send/Inbox.
+4. **Verbessern:** Konkreten **MVP** vorschlagen (kleiner als Wunsch, messbar, optional/Default-aus wo sinnvoll).
+5. **Ehrlichkeit:** Teil-Ist / Vision / nicht-Ziel klar trennen — keine Ist-Claims für Wunschdenken.
+
+## Umsetzen
+
+- Kleine Scheiben; Verhalten dokumentieren; Prefs lokal, Default oft **aus**.
+- Nach Merge: kurze kritische Nachkontrolle (passt Doku? Edge Cases?).
+
+## Nicht
+
+- Feature-Wildwuchs parallel zu Live-Ritual / Mesh-Kern.
+- Telegram-Klingel mit In-App-Ton verwechseln ohne Abgrenzung.

@@ -18,6 +18,16 @@ import {
   readMessengerAppearanceId,
 } from '@/frontend/lib/messenger-appearance-theme'
 import {
+  incomingToneChannelLabel,
+  INCOMING_MESSAGE_TONE_PREFS_CHANGED,
+  persistIncomingToneChannelEnabled,
+  persistIncomingToneMasterEnabled,
+  readIncomingToneChannelEnabled,
+  readIncomingToneMasterEnabled,
+  type IncomingToneChannel,
+} from '@/frontend/lib/incoming-message-tone-prefs'
+import { playIncomingMessageTone } from '@/frontend/lib/incoming-message-tone'
+import {
   persistKlackFeedbackEnabled,
   persistMagnetFeedbackEnabled,
   persistSoundFeedbackEnabled,
@@ -29,6 +39,8 @@ import {
   UI_FEEDBACK_PREFS_CHANGED,
 } from '@/frontend/lib/ui-feedback-prefs'
 import { playKlack, playTapClick } from '@/frontend/lib/ui-tap-feedback'
+
+const INCOMING_TONE_CHANNELS: IncomingToneChannel[] = ['dialog', 'group', 'pinnwand']
 
 const COLOR_FIELDS: { key: keyof CustomAppearanceColors; label: string }[] = [
   { key: 'background', label: 'Hintergrund' },
@@ -48,16 +60,34 @@ export function SettingsAppearanceSection() {
   const [klackOn, setKlackOn] = useState(() => readKlackFeedbackEnabled())
   const [soundVolume, setSoundVolume] = useState(() => readSoundFeedbackVolume())
   const [magnetOn, setMagnetOn] = useState(() => readMagnetFeedbackEnabled())
+  const [incomingMaster, setIncomingMaster] = useState(() => readIncomingToneMasterEnabled())
+  const [incomingChannels, setIncomingChannels] = useState<Record<IncomingToneChannel, boolean>>({
+    dialog: readIncomingToneChannelEnabled('dialog'),
+    group: readIncomingToneChannelEnabled('group'),
+    pinnwand: readIncomingToneChannelEnabled('pinnwand'),
+  })
 
   useEffect(() => {
-    const sync = () => {
+    const syncUi = () => {
       setSoundOn(readSoundFeedbackEnabled())
       setKlackOn(readKlackFeedbackEnabled())
       setSoundVolume(readSoundFeedbackVolume())
       setMagnetOn(readMagnetFeedbackEnabled())
     }
-    window.addEventListener(UI_FEEDBACK_PREFS_CHANGED, sync)
-    return () => window.removeEventListener(UI_FEEDBACK_PREFS_CHANGED, sync)
+    const syncIncoming = () => {
+      setIncomingMaster(readIncomingToneMasterEnabled())
+      setIncomingChannels({
+        dialog: readIncomingToneChannelEnabled('dialog'),
+        group: readIncomingToneChannelEnabled('group'),
+        pinnwand: readIncomingToneChannelEnabled('pinnwand'),
+      })
+    }
+    window.addEventListener(UI_FEEDBACK_PREFS_CHANGED, syncUi)
+    window.addEventListener(INCOMING_MESSAGE_TONE_PREFS_CHANGED, syncIncoming)
+    return () => {
+      window.removeEventListener(UI_FEEDBACK_PREFS_CHANGED, syncUi)
+      window.removeEventListener(INCOMING_MESSAGE_TONE_PREFS_CHANGED, syncIncoming)
+    }
   }, [])
 
   const selectPreset = useCallback((id: MessengerAppearanceId) => {
@@ -263,8 +293,59 @@ export function SettingsAppearanceSection() {
             aria-valuenow={soundVolume}
           />
           <p className="text-[11px] text-muted-foreground">
-            Nach dem Loslassen Probe-Ton. 0 = stumm, 100 = laut. Hard-Refresh falls der Regler noch stumm wirkt.
+            Nach dem Loslassen Probe-Ton. 0 = stumm, 100 = laut. Gilt auch für Eingangs-Töne. Hard-Refresh falls
+            der Regler noch stumm wirkt.
           </p>
+        </div>
+        <div className="space-y-2 rounded-lg border border-border bg-muted/20 px-3 py-2">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <Label htmlFor="ui-incoming-tone" className="text-sm text-foreground">
+                Eingangs-Ton (neue Nachricht)
+              </Label>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                Nur bei offenem Tab/App — kein System-Push. Default aus. Eigene Nachrichten ohne Ton.
+              </p>
+            </div>
+            <Switch
+              id="ui-incoming-tone"
+              checked={incomingMaster}
+              onCheckedChange={(on) => {
+                setIncomingMaster(on)
+                persistIncomingToneMasterEnabled(on)
+                if (on) playIncomingMessageTone('dialog', { force: true })
+              }}
+            />
+          </div>
+          <div className={`space-y-2 pt-1 ${incomingMaster ? '' : 'opacity-50'}`}>
+            {INCOMING_TONE_CHANNELS.map((ch) => (
+              <div key={ch} className="flex items-center justify-between gap-3">
+                <Label htmlFor={`ui-incoming-${ch}`} className="text-xs text-foreground">
+                  {incomingToneChannelLabel(ch)}
+                </Label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="text-[11px] text-primary underline-offset-2 hover:underline"
+                    disabled={!incomingMaster}
+                    onClick={() => playIncomingMessageTone(ch, { force: true })}
+                  >
+                    Probe
+                  </button>
+                  <Switch
+                    id={`ui-incoming-${ch}`}
+                    checked={incomingChannels[ch]}
+                    disabled={!incomingMaster}
+                    onCheckedChange={(on) => {
+                      setIncomingChannels((prev) => ({ ...prev, [ch]: on }))
+                      persistIncomingToneChannelEnabled(ch, on)
+                      if (on && incomingMaster) playIncomingMessageTone(ch, { force: true })
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
         <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
           <Label htmlFor="ui-magnet" className="text-sm text-foreground">

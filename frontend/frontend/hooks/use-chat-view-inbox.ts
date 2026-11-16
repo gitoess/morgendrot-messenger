@@ -43,6 +43,7 @@ import {
   tryAutoRestoreDirectIotaSessionSignerAsync,
 } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 import type { Message } from '@/frontend/lib/types'
+import { notifyIncomingMessagesTone } from '@/frontend/lib/incoming-message-tone'
 import { buildInboxCacheKey, buildInboxWalletScopeKey } from '@/frontend/lib/inbox-cache-key'
 import { resolveEffectiveInboxPackageId } from '@/frontend/lib/package-profile-inbox'
 import { scopedKey } from '@/frontend/lib/package-profile-namespace'
@@ -314,6 +315,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
            */
           const replaceOnReset = mode === 'reset' && walletScopeChanged
           if (mode === 'poll') {
+            let novelForTone: Message[] = []
             setMessages((prev) => {
               const prevIds = new Set(prev.map((m) => m.id))
               const prevDedup = new Set(prev.map((m) => m.dedupKey).filter((k): k is string => Boolean(k)))
@@ -328,8 +330,12 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
                 ...localOverlay,
               ])
               if (inboxMessageListSignature(prev) === inboxMessageListSignature(next)) return prev
+              novelForTone = novel
               return next
             })
+            if (novelForTone.length > 0) {
+              notifyIncomingMessagesTone(novelForTone, myAddress)
+            }
             return
           }
           if (mode === 'reset') {

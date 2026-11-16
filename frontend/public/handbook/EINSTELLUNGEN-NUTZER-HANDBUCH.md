@@ -8,7 +8,7 @@
 
 | Tab | Für wen | Kern |
 |-----|---------|------|
-| **Allgemein** | alle | Sprache, Wizard, Erscheinungsbild (Klack / Klick-Ton / Magnet), Expertenmodus, Handbuch, **Handoff importieren** (Helfer). Kein PWA-„App installieren“ mehr — Browser-Menü / APK / Installer. **Einsatz beenden** → Einsatzleitung (nicht hier). |
+| **Allgemein** | alle | Sprache, Wizard, Erscheinungsbild (Klack / Klick-Ton / **Eingangs-Ton** / Magnet), Expertenmodus, Handbuch, **Handoff importieren** (Helfer). Kein PWA-„App installieren“ mehr — Browser-Menü / APK / Installer. **Einsatz beenden** → Einsatzleitung (nicht hier). |
 | **IOTA** | alle | Netz (Boss/Kommandant), Gas, Chain-IDs, Mailboxen; Boss: **Package & Move-Upgrade** |
 | **Funk** | Einsatz | Meshtastic/Puls — Strategie später (offizielle App vs. eigene UI) |
 | **Telegram** | Boss (+ Helfer Join) | Bot, Alarme, optional Gruppenalarm, Hinweis nach Online-Send |
@@ -26,6 +26,7 @@
 | Package / Mailbox / RPC (aktiv) | Netzprofil + oft Boss-`.env` |
 | Telegram Bot-Token, Admin-Chat-ID, Alarmgruppe | **`.morgendrot-runtime-config.json`** (Boss-PC) — **nicht** Vault |
 | „Hinweis nach Online-Send“ an/aus | Browser **localStorage** |
+| Eingangs-Ton (Master + 1:1/Gruppe/Pinnwand) | Browser **localStorage** — nur offener Tab, kein OS-Push |
 | Kontakt-Telegram-ID | **Telefonbuch** |
 | Chat-Klartext-Cache | `.inbox.enc` — nicht Vault |
 
