@@ -115,12 +115,33 @@ function resolveMeshNodeId(msg: Message, directory: Record<string, ContactMeshEn
   return lookupMeshNodeId(directory, counterparty0x)
 }
 
-function resolveTelegramChatId(msg: Message, myAddress: string): string | null {
-  const cp = messageCounterpartyAddress(msg, myAddress)
+function toTgRecipientKey(raw: string): string | null {
+  const t = raw.trim()
+  if (!t) return null
+  const lower = t.toLowerCase()
+  if (lower.startsWith('tg:') && /^-?\d{1,20}$/.test(lower.slice(3))) return lower
+  if (/^-?\d{1,20}$/.test(t)) return `tg:${t}`
+  return null
+}
+
+/**
+ * Telegram-Antwortziel: Journal-`chatId` hat Vorrang (auch wenn Gegenüber 0x aus Telefonbuch ist).
+ * Sonst tg:-Gegenüber / Ziffern / Chat-ID aus Kontaktverzeichnis.
+ */
+function resolveTelegramChatId(msg: Message, ctx: InboxReplyResolveCtx): string | null {
+  const fromMeta = toTgRecipientKey(msg.telegramMeta?.chatId ?? '')
+  if (fromMeta) return fromMeta
+
+  const cp = messageCounterpartyAddress(msg, ctx.myAddress)
   if (!cp) return null
-  const t = cp.trim()
-  if (t.startsWith('tg:')) return t
-  if (/^\d+$/.test(t)) return `tg:${t}`
+  const direct = toTgRecipientKey(cp)
+  if (direct) return direct
+
+  if (isValid0x(cp)) {
+    const entry = ctx.contactDirectory[norm(cp)]
+    const fromDir = toTgRecipientKey(entry?.telegramChatId ?? '')
+    if (fromDir) return fromDir
+  }
   return null
 }
 
@@ -236,8 +257,10 @@ export function resolveReplyContextFromInboxMessage(
   }
 
   if (messageTouchesTelegramTransport(msg)) {
-    const tg = resolveTelegramChatId(msg, me)
+    const tg = resolveTelegramChatId(msg, ctx)
     if (!tg) return null
+    const cp = messageCounterpartyAddress(msg, me)
+    const partner0x = cp && isValid0x(cp) ? cp : ''
     return {
       kind: 'single',
       variant: {
@@ -247,9 +270,12 @@ export function resolveReplyContextFromInboxMessage(
         forcedTransport: 'internet',
         composerDelivery: 'telegram',
         recipient: tg,
-        partner: '',
+        partner: partner0x,
         encrypted: false,
         quoteText: buildQuoteText(msg),
+        hint: partner0x
+          ? 'Antwort geht an Telegram (Chat-ID); 0x-Kontakt bleibt im Kontext.'
+          : undefined,
       },
     }
   }

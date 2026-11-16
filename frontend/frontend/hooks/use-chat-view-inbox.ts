@@ -527,6 +527,8 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
   /** Telegram + LAN-Team-Sync: periodisch in den Posteingang mergen (ohne Full-Inbox-Reload). */
   useEffect(() => {
     if (!myAddress.trim()) return
+    /** Erster Sync = Baseline (alte Journal-Zeilen) — kein Chime-Sturm. */
+    let toneArmed = false
     const refreshOverlay = async () => {
       if (awaitingManualRefreshRef.current) return
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
@@ -534,18 +536,22 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
         loadTelegramJournalMessages(myAddress),
         loadTeamSyncLanInboxMessages(myAddress),
       ])
-      if (tg.length === 0 && lan.length === 0) return
-      const incoming = [...lan, ...tg]
-      let novelForTone: Message[] = []
-      setMessages((prev) => {
-        const novel = collectNovelInboxMessages(prev, incoming)
-        const next = mergeJournalIntoInboxIfChanged(prev, incoming)
-        if (next !== prev && novel.length > 0) novelForTone = novel
-        return next
-      })
-      if (novelForTone.length > 0) {
-        notifyIncomingMessagesTone(novelForTone, myAddress)
+      if (tg.length === 0 && lan.length === 0) {
+        toneArmed = true
+        return
       }
+      const incoming = [...lan, ...tg]
+      const prev = messagesSnapRef.current
+      const novel = collectNovelInboxMessages(prev, incoming)
+      const next = mergeJournalIntoInboxIfChanged(prev, incoming)
+      if (next !== prev) {
+        messagesSnapRef.current = next
+        setMessages(next)
+        if (toneArmed && novel.length > 0) {
+          notifyIncomingMessagesTone(novel, myAddress)
+        }
+      }
+      toneArmed = true
     }
     void refreshOverlay()
     const iv = window.setInterval(() => void refreshOverlay(), 8_000)

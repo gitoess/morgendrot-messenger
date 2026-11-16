@@ -32,13 +32,50 @@ function stopLiveOscillators(): void {
   }
 }
 
+const afterPrimeListeners = new Set<() => void>()
+
+/** Nach User-Geste / Audio-Unlock (z. B. wartender Eingangs-Chime). */
+export function registerAudioPrimeListener(fn: () => void): () => void {
+  afterPrimeListeners.add(fn)
+  return () => {
+    afterPrimeListeners.delete(fn)
+  }
+}
+
+function emitAudioPrimed(): void {
+  for (const fn of afterPrimeListeners) {
+    try {
+      fn()
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+/** Sync: läuft der geteilte Context schon? (Eingangs-Ton sonst queue’n). */
+export function isSharedAudioRunning(): boolean {
+  try {
+    const ctx = getAudioContext()
+    return Boolean(ctx && ctx.state === 'running')
+  } catch {
+    return false
+  }
+}
+
 /** Im Klick/Tastendruck aufrufen — Resume zählt nur in der User-Geste, nicht nach await. */
 export function primeAudioFromUserGesture(): void {
   const ctx = getAudioContext()
   if (!ctx) return
   if (ctx.state !== 'running') {
     stopLiveOscillators()
-    void ctx.resume().catch(() => undefined)
+    void ctx
+      .resume()
+      .then(() => {
+        if (ctx.state === 'running') emitAudioPrimed()
+      })
+      .catch(() => undefined)
+  } else {
+    emitAudioPrimed()
   }
 }
 

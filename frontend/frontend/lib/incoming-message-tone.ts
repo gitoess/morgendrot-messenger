@@ -11,7 +11,11 @@ import {
   type IncomingToneChannel,
 } from '@/frontend/lib/incoming-message-tone-prefs'
 import { readSoundFeedbackVolume } from '@/frontend/lib/ui-feedback-prefs'
-import { whenAudioRunning } from '@/frontend/lib/ui-tap-feedback'
+import {
+  isSharedAudioRunning,
+  registerAudioPrimeListener,
+  whenAudioRunning,
+} from '@/frontend/lib/ui-tap-feedback'
 import type { Message } from '@/frontend/lib/types'
 
 /** Frequenzen bewusst außerhalb der Klick-Töne (soft 380 / select 520 / confirm 660 / hover 440). */
@@ -50,6 +54,26 @@ const PRIORITY: IncomingToneChannel[] = ['group', 'pinnwand', 'dialog']
 
 let lastPlayAt = 0
 const MIN_GAP_MS = 1200
+/** Wenn Browser Audio noch sperrt: nach nächster User-Geste nachholen. */
+let pendingIncomingChannel: IncomingToneChannel | null = null
+let primeListenerInstalled = false
+
+function ensurePendingToneFlush(): void {
+  if (primeListenerInstalled || typeof window === 'undefined') return
+  primeListenerInstalled = true
+  registerAudioPrimeListener(() => {
+    const ch = pendingIncomingChannel
+    if (!ch) return
+    if (!readIncomingToneMasterEnabled()) {
+      pendingIncomingChannel = null
+      return
+    }
+    pendingIncomingChannel = null
+    const volPct = readSoundFeedbackVolume()
+    if (volPct <= 0) return
+    whenAudioRunning((ctx) => playChimeOnContext(ctx, ch, volPct))
+  })
+}
 
 export function classifyIncomingToneChannel(
   msg: Pick<Message, 'pinnwandPost' | 'chainPurgeKind'>
@@ -123,12 +147,22 @@ function playChimeOnContext(ctx: AudioContext, ch: IncomingToneChannel, volPct: 
 /** Probe-Ton aus Einstellungen (User-Geste → `force`). */
 export function playIncomingMessageTone(ch: IncomingToneChannel, opts?: { force?: boolean }): void {
   try {
+    ensurePendingToneFlush()
     if (!opts?.force && !shouldPlayIncomingTone(ch, { documentHidden: false })) return
     const volPct = readSoundFeedbackVolume()
     if (volPct <= 0) return
     const now = Date.now()
     if (!opts?.force && now - lastPlayAt < MIN_GAP_MS) return
     lastPlayAt = now
+    if (!opts?.force && !isSharedAudioRunning()) {
+      pendingIncomingChannel = ch
+      whenAudioRunning((ctx) => {
+        pendingIncomingChannel = null
+        playChimeOnContext(ctx, ch, volPct)
+      })
+      return
+    }
+    pendingIncomingChannel = null
     whenAudioRunning((ctx) => playChimeOnContext(ctx, ch, volPct))
   } catch {
     /* ignore */
