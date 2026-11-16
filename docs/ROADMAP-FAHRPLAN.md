@@ -2780,7 +2780,7 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 | **2** | **Einstiegs-Wizard** | Boss/Helfer/Privat noch Ist? Resume nur Settings? | QA #2 — Smoke, kein Redesign |
 | **3** | **H.32b Einsatz beenden** | Cache/IDs weg, Chain unberührt, neues Handoff möglich? | **Sicht-PASS**; Voll→Endabnahme. Split: IOTA-Messenger **weg**. |
 | **4** | **Handbuch-Stich** | Allgemein/Handoff/PWA/Einsatz-Ort stimmen? | **PASS**; radikal schön = **T17 ganz am Ende** |
-| **5** | **Gate: Session C?** | 2-Geräte jetzt — oder Pause / T17 voll? | **C gewählt** (kein 2. Gerät) → kleines Zwischending **G2** |
+| **5** | **Gate: Session C?** | 2-Geräte jetzt — oder Pause / T17 voll? | **C** → G2 **PASS** → G3 Live; Session C wenn 2 Geräte |
 
 **Nicht in diesem 5er:** G2–G4 Gruppe, T6 Funk-Strategie, H.37 Multi-Profil, Double-Ratchet-Default, Telegram-Volltest (Endabnahme).
 
@@ -2790,7 +2790,8 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 |--------------|--------|
 | **Sendeziel/Fokus in Meine Mailboxen** | **entfernt** — Ziel beim Senden (Composer). Lesen = Haupt + bekannte Privat/Team. |
 | **Kontakt ↔ Mailbox-ID** | Primär **Telefonbuch** → Kontakt → Erweitert · Postfach-ID. Nicht parallel aus Mailbox-Liste. |
-| **Gruppenchat „perfekt“?** | **Nein.** Ist: lokale Gruppe + Filter; Persistent oft pairwise / Team-Broadcast. **Scheiben:** (G1) Copy **PASS**; (G2) Composer-Hinweis Online/Team vs Funk **Ist 2026-11-16** (Live-Ritual); (G3) Mitglieder + Team-ID ohne Settings-Umweg; (G4) optional 1× Broadcast (`TEAM-MAILBOX-BROADCAST-1TX`). |
+| **Gruppenchat „perfekt“?** | **Nein.** Ist: lokale Gruppe + Filter; Persistent oft pairwise / Team-Broadcast. **Scheiben:** (G1) Copy **PASS**; (G2) Composer-Hinweis Online/Team vs Funk **Ist 2026-11-16**; (G3) Mitglieder + Team-ID in Gruppen-Info (Chat) **Ist 2026-11-16**; (G4) optional 1× Broadcast (`TEAM-MAILBOX-BROADCAST-1TX`). |
+| **Gruppe + Sendepfad „Alle“** | **Später besprechen** (User 2026-11-16) | Hinweis „Alle meiden“ bei Gruppe ist UX-Empfehlung — Produktentscheid offen: „Alle“ bei Gruppe ausblenden / warnen / belassen? Nicht still verbauen. |
 | **Modularität** | Dateisplit ja (`hooks/`, `lib/`, Ports) — **Kopplung** teils hoch (`MESSENGER-UI-MODULARITY-STRATEGY.md`). Weiter kleinschrittig, keine Mega-Refactors parallel Live-Ritual. |
 
 ### Mailbox-Produktklarheit (User 2026-11-16 — vor UI-Feinschliff)

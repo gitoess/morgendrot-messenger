@@ -1672,7 +1672,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           open={groupInfoOpen}
           onOpenChange={setGroupInfoOpen}
           title={activeGroupForInfo?.name ? `Info · ${activeGroupForInfo.name}` : 'Gruppen-Info'}
-          description="Technische IDs und Schlüssel-Status — ohne Secrets. Bearbeiten unter „Gruppe verwalten“."
+          description="Mitglieder + Team-Postfach-ID hier (Chat) — ohne Settings→IOTA. Secrets nur Status; Bearbeiten: „Gruppe verwalten“."
           sections={groupInfoSections}
           primaryAction={{
             label: 'Gruppe verwalten…',

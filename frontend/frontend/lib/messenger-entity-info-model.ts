@@ -157,6 +157,23 @@ export function buildGroupInfoSections(p: {
     overview,
     field('members', 'Mitglieder', String(g.memberAddresses.length), { copyable: false })
   )
+  /** G3: Team-ID oben sichtbar — kein Settings→Mailboxen-Umweg. */
+  push(
+    overview,
+    field(
+      'team-mb-overview',
+      'Team-Postfach-ID',
+      g.teamMailboxObjectId?.trim()
+        ? g.teamMailboxObjectId.trim()
+        : 'fehlt — „Gruppe verwalten“ (Chat), nicht Settings→IOTA',
+      {
+        copyable: Boolean(g.teamMailboxObjectId?.trim()),
+        hint: g.teamMailboxObjectId?.trim()
+          ? 'Shared Object-ID — kopieren/teilen. Bearbeiten nur unter Gruppe verwalten.'
+          : undefined,
+      }
+    )
+  )
 
   const members: MessengerInfoField[] = []
   g.memberAddresses.forEach((addr, i) => {
