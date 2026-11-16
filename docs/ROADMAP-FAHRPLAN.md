@@ -3,13 +3,17 @@
 **Zweck:** **Priorisierte** Lieferliste – nur was **Nutzen** bringt; **geringer Aufwand** oben.  
 **Übergeordnet:** Phasen **A → B → C** in **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Meshtastic-First, kein Feature-Wildwuchs).  
 
-### Lesekarte (2026-11-16) — eine Datei, drei Ebenen
+### Lesekarte (2026-11-16) — eine Datei, mehrere Buchstaben-Ebenen
 
-| Ebene | Was | Wo in dieser Datei / daneben |
-|-------|-----|------------------------------|
-| **Leitplanke** | Phasen A→B→C, was *nicht* parallel | `PROJECT-FOCUS-AND-PRIORITIES.md` |
-| **H.\*** | Technik/Produkt (Privacy H.23, Mesh H.3, Handy H.15, Multi-Profil H.37, Telegram H.26, …) | Abschnitte **§ H.** unten + Fortschrittstabellen oben |
-| **T.\*** | Gemeinsame UX-Rituale (Settings/Messenger-Durchgang) | Tabelle **„Gemeinsam testen“** (T1–T57) am Dateiende |
+| Ebene | Was | Wo |
+|-------|-----|-----|
+| **Leitplanke** | Projekt-Phasen **A→B→C** (Stabilität → Mesh → Gateway) | `PROJECT-FOCUS-AND-PRIORITIES.md` |
+| **§ A–I** | Kapitel im Fahrplan (nicht „Feature-Buchstaben“): **A** = alte 8-Punkte-Technik; **B** Ergänzungen; **C** Prioritäts-Reihenfolge (C.0/C.0b); **D** Datei-Index; **E** Macro; **F** Heartbeat; **G** Notfall; **I** Zentralserver/Relay — **kein H** dazwischen (H = eigene Spur) | Inhaltsverzeichnis **§ C.0** |
+| **§ H.\*** | Produkt/Technik-Spur (H.0 UX … **H.23 Verschlüsselung** … H.37 Multi-Profil) | Abschnitte **§ H.** |
+| **H.23 Unterbuchstaben** | **B1** Team-Key · **B2** NFT/Zeitkapsel/Purse · **C1** Double Ratchet (Spec+Codec, **kein** Default) | Fortschrittstabelle + `MESSENGER-DOUBLE-RATCHET-C1-SPEC.md` / `MESSENGER-E2EE-ZIELARCHITEKTUR.md` |
+| **T.\*** | Gemeinsame UX-Rituale (dieser Durchgang) | Tabelle **„Gemeinsam testen“** (T1–T57) |
+
+**Verschlüsselung (kurz):** Produktiv = **ECDH + AES-GCM** (Handshake), plus Passphrase / NFT-Gate / Team-Key. **Double Ratchet = H.23 C1** — Spec/Codec Ist, **kein** Composer-Default; Forward Secrecy = Phase-3-Backlog. Funk = Klartext (Meshtastic-PSK = H.3o Backlog).
 
 **Cursor-„Plan“-Modus** = nur Chat-Modus, **kein** zweites Produktdokument.
 
