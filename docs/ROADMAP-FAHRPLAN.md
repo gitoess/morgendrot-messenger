@@ -2804,7 +2804,7 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 | **N2** | Telegram-Hinweis Live (Audience + CC) | **PASS** — UI Audience „Nur ich“ + CC-Feld; Test an mich / Test an Kontakt (`603668373`) → „Test-Hinweis … gesendet“ |
 | **N3** | Alarmgruppe Freeze | **PASS** — bewusst **Inaktiv**; Speichern „Alarmgruppe deaktiviert“; Buttons erklärt |
 | **N4** | T17 Scheibe 1 | **PASS** — Handbuch Telegram = Ist (Audience/CC/Alarmgruppe) + Einstieg Einstellungen→Telegram |
-| **N5** | Commit/Push Welle | siehe Git |
+| **N5** | Commit/Push Welle | **PASS** — `ab9e36e` auf `cursor/settings-iota-telegram-ux` |
 
 **Danach:** H.1b Mini-Scheiben / Session C wenn 2. Gerät / T17 Rest — nicht parallel wild.
 
