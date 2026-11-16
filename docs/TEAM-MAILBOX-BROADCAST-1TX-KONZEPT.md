@@ -1,7 +1,7 @@
 # Team-Mailbox: 1× Fee / Gruppen-Multicast (Konzept)
 
-**Stand:** 2026-05-20 · **Status:** Backlog (nach § H.22 M2c / Team-E2EE)  
-**Problem:** Gruppenchat sendet heute **pairwise** (N Empfänger → N Mailbox-TX). Team-Mailbox ist on-chain nur ein weiteres `Mailbox`-Object mit denselben `MsgKey(sender, recipient)`-Feldern.
+**Stand:** 2026-05-20 · **Nachzug 2026-11-16:** Klartext- + Enc-Team-Broadcast **Ist** (M2c / H.23 B1). Dieses Blatt bleibt Architektur-Referenz; „Backlog“ unten nur noch Vault-`.team-keys.enc` / Feld-2-Geräte.  
+**Historisches Problem (gelöst für Mailbox+IOTA+Gruppe):** pairwise N× TX → jetzt **1×** `store_team_*_broadcast` an Team-Postfach.
 
 ---
 
@@ -92,15 +92,14 @@ Abgrenzung zu heutigem `Mailbox`: Shared/Team-**Pairwise** bleibt für 1:1; **Te
 
 **Erledigt (Move M2c+):** `purge_team_plaintext_broadcast` — Rebate pro Broadcast (Sender jederzeit; nach TTL jeder). UI: Posteingang → ⋯ → Auf Chain löschen.
 
-### Phase 3 — Team-Key im Handoff (Ist + Nachzug)
+### Phase 3 — Team-Key / Enc (Stand 2026-11)
 
-| Thema | Plan |
-|-------|------|
-| **Problem heute** | Nur **Klartext**-Broadcast — für Einsatz mit Vertraulichkeit reicht das nicht |
-| **Team-Key** | 32-Byte symmetrisch, **nie** on-chain; Boss erzeugt, im Handoff-ZIP (verschlüsselt) oder Vault |
-| **Env-Skizze** | `MESSENGER_GROUP_TEAM_KEY_ENC=…` (AEAD, Passwort aus Handoff-ZIP) |
-| **Move** | `store_team_encrypted_broadcast` (Backlog) |
-| **Bis dahin** | Klartext + Funk-Secondary für Echtzeit; pairwise verschlüsselt pro Person möglich |
+| Thema | Stand |
+|-------|--------|
+| **Enc-Broadcast** | **Ist** — `store_team_encrypted_broadcast` + Client-Crypto |
+| **Team-Key** | 32-Byte symmetrisch, nie on-chain; erzeugen/rotieren in Gruppe verwalten; Handoff-ZIP |
+| **Offen** | Vault `.team-keys.enc` (Keys teils noch localStorage); 2-Geräte-Feldtest / Endabnahme |
+| **UI-Klarheit** | Gruppe: „Enc · Team-Schlüssel“ vs „Klartext · Broadcast“ — beides 1× Postfach, nicht „1:1 je Person“ |
 
 ---
 

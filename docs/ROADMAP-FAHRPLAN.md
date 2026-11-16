@@ -2790,7 +2790,7 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 |--------------|--------|
 | **Sendeziel/Fokus in Meine Mailboxen** | **entfernt** — Ziel beim Senden (Composer). Lesen = Haupt + bekannte Privat/Team. |
 | **Kontakt ↔ Mailbox-ID** | Primär **Telefonbuch** → Kontakt → Erweitert · Postfach-ID. Nicht parallel aus Mailbox-Liste. |
-| **Gruppenchat „perfekt“?** | **Nein.** Ist: lokale Gruppe + Filter; Persistent oft pairwise / Team-Broadcast. **Scheiben:** (G1) Copy **PASS**; (G2) Composer-Hinweis Online/Team vs Funk **Ist 2026-11-16**; (G3) Mitglieder + Team-ID in Gruppen-Info **Live PASS 2026-11-16** — **Retest in Endabnahme**; (G4) optional 1× Broadcast (`TEAM-MAILBOX-BROADCAST-1TX`) Backlog. |
+| **Gruppenchat „perfekt“?** | **Nein.** Ist: lokale Gruppe + Filter; Persistent oft pairwise / Team-Broadcast. **Scheiben:** (G1–G3) **PASS** (G3 Endabnahme-Retest); **(G4)** 1× Team-Broadcast **Code Ist** (Klartext+Enc) — UI-Labels 2026-11-16 ehrlich; Live-Sicht/Send-Smoke 1 Gerät; 2-Leser → Endabnahme. |
 | **Gruppe + Sendepfad „Alle“** | **Später besprechen** (User 2026-11-16) | Hinweis „Alle meiden“ bei Gruppe ist UX-Empfehlung — Produktentscheid offen: „Alle“ bei Gruppe ausblenden / warnen / belassen? Nicht still verbauen. |
 | **Modularität** | Dateisplit ja (`hooks/`, `lib/`, Ports) — **Kopplung** teils hoch (`MESSENGER-UI-MODULARITY-STRATEGY.md`). Weiter kleinschrittig, keine Mega-Refactors parallel Live-Ritual. |
 

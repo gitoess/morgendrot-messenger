@@ -369,7 +369,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               encrypted && 'ring-1 ring-emerald-500/30'
             )}
             role="group"
-            aria-label="Verschlüsselung"
+            aria-label="Gruppen-Inhaltsschutz (beides = 1× Team-Postfach-Broadcast)"
           >
             <button
               type="button"
@@ -377,7 +377,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               title={
                 forcedTransport === 'mesh'
                   ? 'Verschlüsselung nur über Sendepfad online. Funk = Klartext.'
-                  : undefined
+                  : '1× Enc-Broadcast an Team-Postfach — braucht Gruppen-Geheimnis (Handoff), kein N× ECDH.'
               }
               onClick={() => onEncryptedChange(true)}
               className={cn(
@@ -387,10 +387,11 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               )}
             >
               <Lock className="h-3 w-3" aria-hidden />
-              1:1 je Person
+              Enc · Team-Schlüssel
             </button>
             <button
               type="button"
+              title="1× Klartext-Broadcast an Team-Postfach — Inhalt öffentlich on-chain."
               onClick={() => {
                 if (encrypted) setPlainWarnOpen(true)
               }}
@@ -400,7 +401,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               )}
             >
               <Unlock className="h-3 w-3" aria-hidden />
-              Gemeinsames Postfach
+              Klartext · Broadcast
             </button>
           </div>
         ) : null}

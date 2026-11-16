@@ -204,7 +204,9 @@ export function buildGroupInfoSections(p: {
       field(
         'broadcast',
         'Broadcast-Modus',
-        g.useTeamBroadcast === false ? '1:1 je Person (Handshake)' : 'Gemeinsames Postfach',
+        g.useTeamBroadcast === false
+          ? 'Pairwise je Mitglied (Sonderfall)'
+          : '1× Team-Postfach-Broadcast',
         { copyable: false }
       )
     )
