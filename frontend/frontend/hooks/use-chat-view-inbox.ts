@@ -43,7 +43,10 @@ import {
   tryAutoRestoreDirectIotaSessionSignerAsync,
 } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 import type { Message } from '@/frontend/lib/types'
-import { notifyIncomingMessagesTone } from '@/frontend/lib/incoming-message-tone'
+import {
+  collectNovelInboxMessages,
+  notifyIncomingMessagesTone,
+} from '@/frontend/lib/incoming-message-tone'
 import { buildInboxCacheKey, buildInboxWalletScopeKey } from '@/frontend/lib/inbox-cache-key'
 import { resolveEffectiveInboxPackageId } from '@/frontend/lib/package-profile-inbox'
 import { scopedKey } from '@/frontend/lib/package-profile-namespace'
@@ -532,9 +535,20 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
         loadTeamSyncLanInboxMessages(myAddress),
       ])
       if (tg.length === 0 && lan.length === 0) return
-      setMessages((prev) => mergeJournalIntoInboxIfChanged(prev, [...lan, ...tg]))
+      const incoming = [...lan, ...tg]
+      let novelForTone: Message[] = []
+      setMessages((prev) => {
+        const novel = collectNovelInboxMessages(prev, incoming)
+        const next = mergeJournalIntoInboxIfChanged(prev, incoming)
+        if (next !== prev && novel.length > 0) novelForTone = novel
+        return next
+      })
+      if (novelForTone.length > 0) {
+        notifyIncomingMessagesTone(novelForTone, myAddress)
+      }
     }
-    const iv = window.setInterval(() => void refreshOverlay(), 15_000)
+    void refreshOverlay()
+    const iv = window.setInterval(() => void refreshOverlay(), 8_000)
     return () => window.clearInterval(iv)
   }, [myAddress])
 

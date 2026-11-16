@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   classifyIncomingToneChannel,
+  collectNovelInboxMessages,
   pickIncomingToneChannel,
 } from '@/frontend/lib/incoming-message-tone'
+import type { Message } from '@/frontend/lib/types'
 
 const ME = `0x${'1'.repeat(64)}`
 const PEER = `0x${'2'.repeat(64)}`
@@ -36,5 +38,16 @@ describe('incoming-message-tone (§ kritisch MVP)', () => {
     expect(
       pickIncomingToneChannel([{ from: PEER, pinnwandPost: true }], ME)
     ).toBe('pinnwand')
+  })
+
+  it('collectNovel erkennt neue Telegram-Zeilen', () => {
+    const prev: Message[] = [
+      { id: 'tg-1', from: 'tg:1', content: 'alt', timestamp: 1, source: 'telegram' },
+    ]
+    const incoming: Message[] = [
+      prev[0]!,
+      { id: 'tg-2', from: 'tg:1', content: 'neu', timestamp: 2, source: 'telegram' },
+    ]
+    expect(collectNovelInboxMessages(prev, incoming).map((m) => m.id)).toEqual(['tg-2'])
   })
 })

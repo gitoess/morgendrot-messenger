@@ -62,7 +62,8 @@ const TONES: Record<TapFeedbackKind, { freq: number; durMs: number; gain: number
   hover: { freq: 440, durMs: 45, gain: 0.1 },
 }
 
-function whenAudioRunning(run: (ctx: AudioContext) => void): void {
+/** Geteilter AudioContext (auch Eingangs-Chime) — nur spielen wenn `running` (nach User-Geste / prime). */
+export function whenAudioRunning(run: (ctx: AudioContext) => void): void {
   const ctx = getAudioContext()
   if (!ctx) return
   if (ctx.state === 'running') {

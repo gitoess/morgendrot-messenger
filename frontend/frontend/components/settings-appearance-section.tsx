@@ -27,6 +27,7 @@ import {
   type IncomingToneChannel,
 } from '@/frontend/lib/incoming-message-tone-prefs'
 import { playIncomingMessageTone } from '@/frontend/lib/incoming-message-tone'
+import { playKlack, playTapClick, primeAudioFromUserGesture } from '@/frontend/lib/ui-tap-feedback'
 import {
   persistKlackFeedbackEnabled,
   persistMagnetFeedbackEnabled,
@@ -38,8 +39,6 @@ import {
   readSoundFeedbackVolume,
   UI_FEEDBACK_PREFS_CHANGED,
 } from '@/frontend/lib/ui-feedback-prefs'
-import { playKlack, playTapClick } from '@/frontend/lib/ui-tap-feedback'
-
 const INCOMING_TONE_CHANNELS: IncomingToneChannel[] = ['dialog', 'group', 'pinnwand']
 
 const COLOR_FIELDS: { key: keyof CustomAppearanceColors; label: string }[] = [
@@ -313,7 +312,10 @@ export function SettingsAppearanceSection() {
               onCheckedChange={(on) => {
                 setIncomingMaster(on)
                 persistIncomingToneMasterEnabled(on)
-                if (on) playIncomingMessageTone('dialog', { force: true })
+                if (on) {
+                  primeAudioFromUserGesture()
+                  playIncomingMessageTone('dialog', { force: true })
+                }
               }}
             />
           </div>

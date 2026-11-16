@@ -1,6 +1,7 @@
 /**
  * Zwei-/Drei-Ton-Chime bei neuem Inbox-Eingang (Tab offen).
  * Bewusst anders als UI-Klick (kurzer Triangle-Piep 380–660 Hz) — Glocken-Charakter, tiefer/länger.
+ * Nutzt denselben AudioContext wie Klack/Klick (`whenAudioRunning`) — sonst nur Probe in Einstellungen hörbar.
  * Kein OS-Push — das bleibt T53 / H.6f.
  */
 
@@ -10,6 +11,7 @@ import {
   type IncomingToneChannel,
 } from '@/frontend/lib/incoming-message-tone-prefs'
 import { readSoundFeedbackVolume } from '@/frontend/lib/ui-feedback-prefs'
+import { whenAudioRunning } from '@/frontend/lib/ui-tap-feedback'
 import type { Message } from '@/frontend/lib/types'
 
 /** Frequenzen bewusst außerhalb der Klick-Töne (soft 380 / select 520 / confirm 660 / hover 440). */
@@ -81,16 +83,41 @@ export function shouldPlayIncomingTone(ch: IncomingToneChannel, opts?: { documen
   return true
 }
 
-let sharedCtx: AudioContext | null = null
-
-function getAudioContext(): AudioContext | null {
-  if (typeof window === 'undefined') return null
-  const AC =
-    window.AudioContext ||
-    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-  if (!AC) return null
-  if (!sharedCtx) sharedCtx = new AC()
-  return sharedCtx
+function playChimeOnContext(ctx: AudioContext, ch: IncomingToneChannel, volPct: number): void {
+  const chime = CHIMES[ch]
+  const t0 = ctx.currentTime
+  const peak = Math.max(0.015, chime.gain * (volPct / 100))
+  for (const note of chime.notes) {
+    const osc = ctx.createOscillator()
+    const partial = ctx.createOscillator()
+    const gain = ctx.createGain()
+    const noteStart = t0 + note.startMs / 1000
+    const noteEnd = noteStart + note.durMs / 1000
+    /** Sine + leichte Quinte = Glocke; Klick nutzt Triangle + Pitch-Drop. */
+    osc.type = 'sine'
+    partial.type = 'sine'
+    osc.frequency.setValueAtTime(note.freq, noteStart)
+    partial.frequency.setValueAtTime(note.freq * 1.5, noteStart)
+    gain.gain.setValueAtTime(0, noteStart)
+    gain.gain.linearRampToValueAtTime(peak, noteStart + 0.018)
+    gain.gain.exponentialRampToValueAtTime(0.001, noteEnd)
+    osc.connect(gain)
+    partial.connect(gain)
+    gain.connect(ctx.destination)
+    osc.start(noteStart)
+    partial.start(noteStart)
+    osc.stop(noteEnd + 0.03)
+    partial.stop(noteEnd + 0.03)
+    osc.onended = () => {
+      try {
+        osc.disconnect()
+        partial.disconnect()
+        gain.disconnect()
+      } catch {
+        /* ignore */
+      }
+    }
+  }
 }
 
 /** Probe-Ton aus Einstellungen (User-Geste → `force`). */
@@ -102,56 +129,13 @@ export function playIncomingMessageTone(ch: IncomingToneChannel, opts?: { force?
     const now = Date.now()
     if (!opts?.force && now - lastPlayAt < MIN_GAP_MS) return
     lastPlayAt = now
-    const chime = CHIMES[ch]
-    const ctx = getAudioContext()
-    if (!ctx) return
-    const start = () => {
-      const t0 = ctx.currentTime
-      const peak = Math.max(0.015, chime.gain * (volPct / 100))
-      for (const note of chime.notes) {
-        const osc = ctx.createOscillator()
-        const partial = ctx.createOscillator()
-        const gain = ctx.createGain()
-        const noteStart = t0 + note.startMs / 1000
-        const noteEnd = noteStart + note.durMs / 1000
-        /** Sine + leichte Quinte = Glocke; Klick nutzt Triangle + Pitch-Drop. */
-        osc.type = 'sine'
-        partial.type = 'sine'
-        osc.frequency.setValueAtTime(note.freq, noteStart)
-        partial.frequency.setValueAtTime(note.freq * 1.5, noteStart)
-        gain.gain.setValueAtTime(0, noteStart)
-        gain.gain.linearRampToValueAtTime(peak, noteStart + 0.018)
-        gain.gain.exponentialRampToValueAtTime(0.001, noteEnd)
-        osc.connect(gain)
-        partial.connect(gain)
-        gain.connect(ctx.destination)
-        osc.start(noteStart)
-        partial.start(noteStart)
-        osc.stop(noteEnd + 0.03)
-        partial.stop(noteEnd + 0.03)
-        osc.onended = () => {
-          try {
-            osc.disconnect()
-            partial.disconnect()
-            gain.disconnect()
-          } catch {
-            /* ignore */
-          }
-        }
-      }
-    }
-    if (ctx.state === 'running') start()
-    else {
-      void ctx.resume().then(() => {
-        if (ctx.state === 'running') start()
-      }).catch(() => undefined)
-    }
+    whenAudioRunning((ctx) => playChimeOnContext(ctx, ch, volPct))
   } catch {
     /* ignore */
   }
 }
 
-/** Nach Poll: höchstens ein Ton für die Novel-Menge. */
+/** Nach Poll / Journal-Merge: höchstens ein Ton für die Novel-Menge. */
 export function notifyIncomingMessagesTone(
   novel: Array<Pick<Message, 'pinnwandPost' | 'chainPurgeKind' | 'from'>>,
   myAddress: string
@@ -160,4 +144,16 @@ export function notifyIncomingMessagesTone(
   if (!ch) return
   if (!shouldPlayIncomingTone(ch)) return
   playIncomingMessageTone(ch)
+}
+
+/** Novel-Zeilen für Ton — gleiche Dedup-Regel wie Journal-Merge. */
+export function collectNovelInboxMessages(prev: Message[], incoming: Message[]): Message[] {
+  if (incoming.length === 0) return []
+  const prevIds = new Set(prev.map((m) => m.id))
+  const prevDedup = new Set(prev.map((m) => m.dedupKey).filter((k): k is string => Boolean(k)))
+  return incoming.filter((m) => {
+    if (prevIds.has(m.id)) return false
+    if (m.dedupKey && prevDedup.has(m.dedupKey)) return false
+    return true
+  })
 }
