@@ -13,6 +13,8 @@ export function isIotaMessengerProduct(): boolean {
 export const IOTA_MESSENGER_UI = {
   hideBossHandoff: true,
   hideEinsatzleitung: true,
+  /** H.32b — Einsatz-Zyklus; gemerkt Split 2026-11-16 (noch verdrahten wenn Panel außerhalb Einsatzleitung). */
+  hideEinsatzEnd: true,
   hideFunk: true,
   hideTelegram: true,
   hideSos: true,

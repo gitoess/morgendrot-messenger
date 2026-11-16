@@ -2778,9 +2778,9 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 |---|--------|-----------|-----------|
 | **1** | **i18n DE↔EN** | Settings + Chat-Kern ohne Hardcoded-DE-Brüche? | QA #1 — Stichprobe, keine Vollübersetzung jetzt |
 | **2** | **Einstiegs-Wizard** | Boss/Helfer/Privat noch Ist? Resume nur Settings? | QA #2 — Smoke, kein Redesign |
-| **3** | **H.32b Einsatz beenden** | Cache/IDs weg, Chain unberührt, neues Handoff möglich? | QA #3 / T5 — **ein** Durchlauf, vorsichtig |
-| **4** | **Handbuch-Stich** | Allgemein/Handoff/PWA/Einsatz-Ort stimmen? | Mini-T17; kein radikales T17 |
-| **5** | **Gate: Session C?** | 2-Geräte jetzt — oder Pause / T17 voll? | Nur entscheiden. **Nicht** T4/T56/P5d |
+| **3** | **H.32b Einsatz beenden** | Cache/IDs weg, Chain unberührt, neues Handoff möglich? | **Sicht-PASS**; Voll→Endabnahme. Split: IOTA-Messenger **weg**. |
+| **4** | **Handbuch-Stich** | Allgemein/Handoff/PWA/Einsatz-Ort stimmen? | **PASS**; radikal schön = **T17 ganz am Ende** |
+| **5** | **Gate: Session C?** | 2-Geräte jetzt — oder Pause / T17 voll? | **C gewählt** (kein 2. Gerät) → kleines Zwischending **G2** |
 
 **Nicht in diesem 5er:** G2–G4 Gruppe, T6 Funk-Strategie, H.37 Multi-Profil, Double-Ratchet-Default, Telegram-Volltest (Endabnahme).
 
@@ -2790,7 +2790,7 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 |--------------|--------|
 | **Sendeziel/Fokus in Meine Mailboxen** | **entfernt** — Ziel beim Senden (Composer). Lesen = Haupt + bekannte Privat/Team. |
 | **Kontakt ↔ Mailbox-ID** | Primär **Telefonbuch** → Kontakt → Erweitert · Postfach-ID. Nicht parallel aus Mailbox-Liste. |
-| **Gruppenchat „perfekt“?** | **Nein.** Ist: lokale Gruppe + Filter; Persistent oft pairwise / Team-Broadcast. **Nächste Scheiben (nach Settings-Durchgang):** (G1) Copy ehrlich „kein Chain-Gruppenraum“; (G2) Sendepfad Gruppe nur Online/Team klar; (G3) Mitglieder + Team-Mailbox-ID ohne Settings-Umweg; (G4) optional 1× Team-Broadcast statt N× pairwise (`TEAM-MAILBOX-BROADCAST-1TX`). Kein Big-Bang. |
+| **Gruppenchat „perfekt“?** | **Nein.** Ist: lokale Gruppe + Filter; Persistent oft pairwise / Team-Broadcast. **Scheiben:** (G1) Copy **PASS**; (G2) Composer-Hinweis Online/Team vs Funk **Ist 2026-11-16** (Live-Ritual); (G3) Mitglieder + Team-ID ohne Settings-Umweg; (G4) optional 1× Broadcast (`TEAM-MAILBOX-BROADCAST-1TX`). |
 | **Modularität** | Dateisplit ja (`hooks/`, `lib/`, Ports) — **Kopplung** teils hoch (`MESSENGER-UI-MODULARITY-STRATEGY.md`). Weiter kleinschrittig, keine Mega-Refactors parallel Live-Ritual. |
 
 ### Mailbox-Produktklarheit (User 2026-11-16 — vor UI-Feinschliff)
@@ -2847,7 +2847,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T2 | **Passwort ändern** | Durchgang + ggf. Smoke | **done 2026-11-12** | Unter **Sicherheit**; Session-PW nach Ändern sync; Header vs. voller Lock erklärt |
 | T3 | **Meine Mailboxen** | Durchgang | **Live UX-Klarheit 2026-11-16** | Sendeziel weg; Lesen=Union; Kontakt-Slots→Telefonbuch. Ritual Rest: Haupt/Team/Privat verstehen. § *Mailbox-UX-Entscheidungen* |
 | T4 | **Schatten → Main (Sweep)** | Durchgang | **später** (nach T3; User 2026-11-15) | Mit 2. Account oder nach **§ H.37 Multi-Profil** — nicht im aktuellen Live-Block |
-| T5 | **§ H.32b Einsatz beenden** | Retest | bewusst später | = QA #3 |
+| T5 | **§ H.32b Einsatz beenden** | Retest | **Sicht-PASS 2026-11-16**; Volltest → **Endabnahme** | Ort = Einsatzleitung. IOTA-Messenger: **weg** (Split-Merkliste). |
 | T6 | **Funk / Meshtastic** | Strategie-Entscheid | **verschoben** (nach Settings-Durchgang) | Offizielle Meshtastic-App vs. eigene UI — **noch nicht entscheiden**; Ist: Puls/Geräte-Embed |
 | T7 | **Vault-Registry / Chain-Globals** | Durchgang | später | bewusst zurückgestellt |
 | T8 | **Passwort- + Backup-UI → Sicherheit** | UI-Verschiebung | **done 2026-11-12** | Mit Tresor-Landkarte / Notfall unter Sicherheit |
@@ -2859,7 +2859,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T14 | **SOS Hilferuf fertigstellen** | Feature + Produkt-Split | später | Button Ist unvollständig (Sheet/Fan-out Teil-Ist). **IOTA-Messenger:** geplant `hideSos: true` (Einsatz-Feature). Morgendrot behält SOS |
 | T15 | **Wallet-Lücken vs. IOTA-Wallet/Rebased** | Abgleich | Backlog nach Durchgang | Bewusst **nicht** 1:1: kein Staking/Ledger/Multi-Profil-UI. Stärken bei uns: Gesichert/Guthaben, Zeitkapsel-Leihe, Aktivität/Msg-Burn. Lücken notieren, nicht blind nachbauen |
 | T16 | **Eigenes Logo + Start-Sound** | Branding | **ganz am Ende** | Nicht während Messenger-Durchgang |
-| T17 | **Handbuch radikal** | Doku/UX | **am Schluss** (mit T12) | ≥2 Messenger-Einstiege; Links **Handbuch → Aktion**; inkl. formelles Gegenlesen T32 (§ Drei Entschlüsseln / zwei Jobs). Keine Settings→Handbuch-Pfeile |
+| T17 | **Handbuch radikal** | Doku/UX | **am Schluss** (mit T12) — User 2026-11-16: Ist „grausam“, erst wenn Kern fertig | ≥2 Messenger-Einstiege; Links **Handbuch → Aktion**; T32-Gegenlesen; Schönheit/Lesbarkeit. Stich-PASS 2026-11-16 (Inhalt ok genug zum Weitergehen). |
 | T18 | **NFT-Bilder in Fremd-Wallets** | Display-Standard | später | ImageNFT oft ohne IOTA-`Display`/`image_url`. Data-URL `data:image/…;base64,…` hilft **nur** wenn öffentlich im Display — Konflikt mit verschlüsselten Evidence-Bildern. Entscheidung: Preview-Thumbnail vs. Privacy |
 | T19 | **Wallet Send UX** | UI | **done 2026-11-13** | Frei vs. Gesichert hinter NFT klar; Empfänger aus Telefonbuch (Favoriten zuerst); Notiz nur lokal (nicht on-chain) |
 | T20 | **Coins aus Composer** | Produkt/Recht | Entscheidung später | Chat+Zahlung mischen oft verwirrend/regulierungsnah — Default: **getrennt** im Wallet; Composer nur wenn klar als optionaler Hinweis |
@@ -2907,25 +2907,40 @@ Nicht umsetzen. Bei späterem Bedarf neu spezifizieren (nur Ciphertext-Hash, nie
 
 **Nicht** parallel zu Session C / Zeitkapsel-Feldtest starten.
 
-### Entwurf: Was wohin? (Entscheidung am Schluss — Stand 2026-11-12)
+### Merkliste Produkt-Split: Morgendrot vs IOTA-Messenger (lebendig — Entscheidung am Schluss)
 
-| Feature (Allgemein / verwandt) | Morgendrot (Einsatz) | IOTA-Messenger (only) | Notiz |
-|--------------------------------|----------------------|------------------------|-------|
-| **Hauptpostfach / `MAILBOX_ID` (Einsatz-Shared)** | behalten (Deploy) | **prüfen / oft weg oder umbenennen** | User 2026-11-16: Einsatz ≠ schlanker IOTA-Messenger. UI: gleiche ID wie Chain-IDs→Postfach; Fokus bleibt getrennt. |
-| **Team beitreten/erstellen Ort** | Settings IOTA (Ist) | Chat/Team später | User 2026-11-16: Beitreten eher bei Chat-Teams denkbar — Backlog, nicht jetzt umziehen. |
-| Expertenmodus (Package-ID Posteingang) | behalten | optional / aus | Nur Browser-Toggle; ≠ Server-Simple |
-| Aktives Profil (Settings-Zeile) | **entfernt** 2026-11-12 | weg | Badge im Chat-Header reicht |
-| Handoff importieren | behalten (Text gekürzt 2026-11-12) | **weg** (Overlay) | Kurz: ZIP → neu laden → entsperren |
-| Einsatz beenden | behalten (+ Einsatzleitung) | **weg** (Overlay) | Löscht lokale Caches, nicht Wallet — **Retest später** (QA-Tabelle #3) |
-| Hobby-Disclaimer | behalten (kurz) | behalten | Inhalt ok / kürzer als `DISCLAIMER.md` |
-| Erweiterte .env | **nur ganz unten** (Link „Konfiguration öffnen“) | minimal | Nicht in Allgemein; System&Identität bei Boss/Kommandant entfernt 2026-11-12 |
-| System & Identität | **weg** bei Boss/Kommandant | schlank/Helfer | Adresse → Gas/Wallet; Package/RPC → Wo senden; Signer-Strip → unter Wo senden |
-| Funk / Telegram / SOS / Einsatzleitung | Morgendrot | **weg** im IOTA-only | Overlay-Flags bereits |
-| Passwort ändern / Vault-Backup | Ziel: **Sicherheit** (T8) | behalten | **Nicht** Allgemein — Tresor, kein Theme/Sprache |
-| Schatten-Sweep | Ziel: **Sicherheit** (T9) | optional/weg | Jetzt noch unter IOTA — verschieben nach Durchgang |
-| Funk-Tab / Meshtastic-UI | Morgendrot; Strategie **T6** | **weg** | Offizielle App vs. eigene UI — Entscheid später |
-| Einsatz-Alarmgruppe (B4b) | Morgendrot Boss | **weg** | Kein IOTA-Messenger-only; kein Expertenmodus — Einsatz-Feature |
-| Telegram Bot-Token / Chat-IDs | Runtime-JSON (Boss-PC) | optional/weg | **Nicht** im Vault — siehe T11 |
+**Zweck:** Dinge sammeln, die der **schlanke IOTA-Messenger** nicht braucht. Overlay-Ist: `tools/iota-messenger/overlays/product-identity.ts`. **Noch keine finale Abnahme** — nur merken.
+
+#### IOTA-Messenger braucht **nicht** (Merkliste)
+
+| Feature | Status Merkliste | Overlay / Notiz |
+|---------|------------------|-----------------|
+| **Einsatz beenden (H.32b)** | **gemerkt 2026-11-16** (User) | `hideEinsatzEnd` in Overlay; Panel heute unter Einsatzleitung (`hideEinsatzleitung` deckt mit ab) |
+| **Einsatzleitung** (Hub / Helfer einrichten) | gemerkt | `hideEinsatzleitung` Ist |
+| **Handoff** import/export | gemerkt | Einsatz-Provisioning |
+| **SOS** | gemerkt | `hideSos` Ist / T14 |
+| **Funk / Meshtastic-Tab** | gemerkt | T6; Phase B |
+| **Telegram Bot / Alarmgruppe / Einsatz-TG** | gemerkt | optional später nur Klingel — Einsatz-Boss eher weg |
+| **Package & Move-Upgrade** (Boss-Chain-Admin) | gemerkt | Alltagschat braucht das nicht |
+| **Hauptpostfach als „Einsatz-Shared“-Narrativ** | prüfen | Mailbox-Technik kann bleiben, Einsatz-Label weg |
+
+#### Entwurf-Tabelle (Detail — Stand fortgeschrieben)
+
+| Feature | Morgendrot (Einsatz) | IOTA-Messenger (only) | Notiz |
+|---------|----------------------|------------------------|-------|
+| **Hauptpostfach / `MAILBOX_ID`** | behalten (Deploy) | prüfen / umbenennen | User 2026-11-16 |
+| **Team beitreten Ort** | Settings IOTA (Ist) | Chat/Team später | Backlog |
+| Expertenmodus | behalten | optional / aus | |
+| Handoff importieren | behalten | **weg** | Merkliste |
+| **Einsatz beenden** | behalten (Einsatzleitung) | **weg** | Merkliste 2026-11-16; Sicht-PASS; Voll→Endabnahme |
+| Hobby-Disclaimer | kurz | behalten | |
+| .env-Link | ganz unten | minimal | |
+| Funk / Telegram-Alarm / SOS / Einsatzleitung | Morgendrot | **weg** | Overlay teils Ist |
+| Passwort / Vault-Backup | Sicherheit | behalten | |
+| Schatten-Sweep | Sicherheit | optional/weg | T4 später |
+| Funk-Tab | Morgendrot; T6 | **weg** | |
+| Einsatz-Alarmgruppe (B4b) | Boss | **weg** | |
+| PWA „App installieren“ Settings | **entfernt** 2026-11-16 | weg | Browser/APK/Installer |
 
 ---
 

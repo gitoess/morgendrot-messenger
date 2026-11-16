@@ -47,6 +47,7 @@ import {
   type ChatViewActiveConversationBarProps,
 } from '@/frontend/components/chat-view-active-conversation-bar'
 import { ChatViewEncryptionModeToggle } from '@/frontend/components/chat-view-encryption-mode-toggle'
+import { ChatViewEncryptionContextHint } from '@/frontend/components/chat-view-encryption-context-hint'
 import { PassphraseProtectComposerToggle } from '@/frontend/components/chat-view-passphrase-protect-toggle'
 import {
   readPassphraseProtectEnabled,
@@ -907,6 +908,15 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             dropHover && !dropDisabled && 'border-primary/50 bg-primary/5 ring-2 ring-primary/25'
           )}
         >
+          {isGroupChannel ? (
+            <ChatViewEncryptionContextHint
+              className="mb-2"
+              forcedTransport={forcedTransport}
+              encrypted={encrypted}
+              isGroupChannel
+              groupTeamBroadcastReady={groupTeamBroadcastReady}
+            />
+          ) : null}
           {!encrypted && forcedTransport === 'mesh' && (
             <div className="mb-2 rounded-md border border-orange-600/45 bg-orange-950/35 px-3 py-2 text-xs tabular-nums text-orange-50">
               <span className="font-semibold">Klartext-Funk</span> · {[...message].length}/{MESH_PLAINTEXT_MAX_CHARS}{' '}
