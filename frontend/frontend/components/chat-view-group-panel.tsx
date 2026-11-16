@@ -318,6 +318,10 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
   const teamKeyReady = mbOk && hasTeamBroadcastKey(teamMailboxObjectId)
   void teamKeyTick
   const teamKeyEpoch = teamKeyReady ? readTeamBroadcastKeyEpoch(teamMailboxObjectId) : null
+  /** G4: Enc + Team-Postfach = 1× Broadcast mit Team-Schlüssel — kein Handshake je Person. */
+  const teamBroadcastEncPath = mbOk && active?.useTeamBroadcast !== false
+  const showPairwiseHandshake =
+    Boolean(encrypted && handshake && forcedTransport === 'internet' && active?.useTeamBroadcast === false)
 
   const connectedSet = useMemo(
     () => new Set((handshake?.connectedAddresses ?? []).map((a) => a.trim().toLowerCase()).filter(Boolean)),
@@ -615,13 +619,21 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
         ) : null}
       </div>
 
-      {/* 3 — Handshake nur bei Pairwise-Enc */}
-      {encrypted && handshake && forcedTransport === 'internet' ? (
+      {encrypted && forcedTransport === 'internet' && teamBroadcastEncPath ? (
+        <p className="text-[11px] leading-relaxed text-muted-foreground">
+          <strong className="text-foreground">Kein Handshake nötig.</strong> Enc · Team-Schlüssel = 1× Broadcast.
+          Nach „Kanal einrichten“ Geheimnis per Handoff an Mitglieder. Toast „Tresor lokal sichern?“ betrifft nur
+          Vault-Keys — die Gruppe bleibt gespeichert, nicht neu anlegen.
+        </p>
+      ) : null}
+
+      {/* 3 — Handshake nur bei explizitem Pairwise-Enc (useTeamBroadcast === false) */}
+      {showPairwiseHandshake ? (
         <div className="space-y-2 rounded-lg border border-border bg-background/50 px-3 py-3">
           <p className="text-xs font-semibold text-foreground">3 · Handshake je Person</p>
           <p className="text-[11px] leading-relaxed text-muted-foreground">
-            Nur bei „1:1 je Person“: mit jedem Mitglied einzeln verbinden (wie Direktchat). Bei „Gemeinsames
-            Postfach“ reicht Kanal einrichten — kein Handshake hier.
+            Nur Sonderfall Pairwise (kein Team-Broadcast). Normal: „Klartext · Broadcast“ oder „Enc · Team-Schlüssel“
+            + Kanal einrichten — ohne Handshake.
           </p>
           {handshakeMembers.length === 0 ? (
             <p className="text-[11px] text-amber-700 dark:text-amber-300">Noch keine 0x-Mitglieder — Telefonbuch nutzen.</p>
