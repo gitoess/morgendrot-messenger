@@ -6,6 +6,7 @@
 
 import { encodeImageDataToWebp } from '@/frontend/lib/image-encode/wasm-webp'
 import { dataUrlToImageBitmap, scaleBitmapMaxDim } from '@/frontend/lib/image-encode/wasm-lora-canvas'
+import { sha256Bytes } from '@/frontend/lib/sha256-bytes'
 
 export { dataUrlToImageBitmap, scaleBitmapMaxDim }
 
@@ -64,7 +65,5 @@ export async function encodeChromaPngFromBitmap(
 }
 
 export async function sha256OfBlob(blob: Blob): Promise<Uint8Array> {
-  const buf = await blob.arrayBuffer()
-  const digest = await crypto.subtle.digest('SHA-256', buf)
-  return new Uint8Array(digest)
+  return sha256Bytes(await blob.arrayBuffer())
 }

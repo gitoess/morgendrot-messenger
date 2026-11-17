@@ -1,7 +1,9 @@
 /**
  * § H.12 / `docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md` — `canonical_msg_ref` (32 Byte, v1).
- * Reine Krypto über Web Crypto (`crypto.subtle`), lauffähig in Node (Vitest) und Browser.
+ * SHA-256: Web Crypto wenn Secure Context, sonst `@noble/hashes` (LAN-HTTP / Surface).
  */
+
+import { sha256Bytes } from '../../crypto/sha256-bytes'
 
 const te = new TextEncoder()
 
@@ -19,11 +21,6 @@ export function normalizeMailboxAddressUtf8(addr: string): string {
 export function stableOfflineMailboxThreadId(addressA: string, addressB: string): string {
   const [x, y] = [normalizeMailboxAddressUtf8(addressA), normalizeMailboxAddressUtf8(addressB)].sort()
   return `${x}\n${y}`
-}
-
-async function sha256(u8: Uint8Array): Promise<Uint8Array> {
-  const buf = await crypto.subtle.digest('SHA-256', new Uint8Array(u8))
-  return new Uint8Array(buf)
 }
 
 function concatParts(parts: readonly Uint8Array[]): Uint8Array {
@@ -60,7 +57,7 @@ async function deriveMailboxQueueNonceU64(
     Uint8Array.of(0),
     te.encode(payloadUtf8),
   ])
-  const h = await sha256(blob)
+  const h = await sha256Bytes(blob)
   return new DataView(h.buffer, h.byteOffset, 8).getBigUint64(0, true)
 }
 
@@ -82,7 +79,7 @@ export async function computeCanonicalMsgRefV1(input: ComputeCanonicalMsgRefV1In
     input.messageNonceU64 !== undefined && input.messageNonceU64 !== null
       ? input.messageNonceU64 & U64_MASK
       : await deriveMailboxQueueNonceU64(sender, recipient, thread, input.payloadUtf8)
-  const contentHash = await sha256(te.encode(input.payloadUtf8))
+  const contentHash = await sha256Bytes(te.encode(input.payloadUtf8))
   const inner = concatParts([
     te.encode('morg_msg_ref_v1'),
     Uint8Array.of(0),
@@ -96,7 +93,7 @@ export async function computeCanonicalMsgRefV1(input: ComputeCanonicalMsgRefV1In
     Uint8Array.of(0),
     contentHash,
   ])
-  const ref = await sha256(inner)
+  const ref = await sha256Bytes(inner)
   let hex = ''
   for (let i = 0; i < ref.length; i++) hex += ref[i].toString(16).padStart(2, '0')
   return hex

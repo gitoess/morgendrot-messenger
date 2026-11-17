@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { decryptEvidenceImageBytes } from '@/frontend/lib/evidence-image-crypto'
 import { mintEvidenceImageNft } from '@/frontend/lib/evidence-image-mint'
+import { sha256HexOfBytes } from '@/frontend/lib/sha256-bytes'
 import {
   burnEvidenceImageNft,
   transferEvidenceImageNft,
@@ -363,10 +364,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
     let cancelled = false
     void (async () => {
       const buf = new Uint8Array(await mintFile.arrayBuffer())
-      const dig = await crypto.subtle.digest('SHA-256', buf)
-      const hex = Array.from(new Uint8Array(dig))
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join('')
+      const hex = await sha256HexOfBytes(buf)
       if (!cancelled) setMintHashPreview(hex)
     })()
     return () => {

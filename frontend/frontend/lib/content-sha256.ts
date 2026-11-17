@@ -1,24 +1,11 @@
 /**
  * SHA-256 für Text / Dateien — Besitz-/Integritätsnachweis (lokal prüfen).
+ * LAN-HTTP: `crypto.subtle` fehlt → Fallback in `sha256-bytes`.
  */
-
-function bytesToHex(buf: ArrayBuffer): string {
-  const a = new Uint8Array(buf)
-  let hex = ''
-  for (let i = 0; i < a.length; i++) hex += a[i]!.toString(16).padStart(2, '0')
-  return hex
-}
+import { sha256HexOfBytes as sha256HexOfBytesImpl } from '@/frontend/lib/sha256-bytes'
 
 export async function sha256HexOfBytes(data: ArrayBuffer | Uint8Array): Promise<string> {
-  /** Immer kopieren — SharedArrayBuffer/Offset-Views knacken sonst crypto.subtle.digest. */
-  const bytes =
-    data instanceof Uint8Array
-      ? data
-      : new Uint8Array(data)
-  const copy = new Uint8Array(bytes.byteLength)
-  copy.set(bytes)
-  const dig = await crypto.subtle.digest('SHA-256', copy.buffer)
-  return bytesToHex(dig)
+  return sha256HexOfBytesImpl(data)
 }
 
 export async function sha256HexOfUtf8(text: string): Promise<string> {

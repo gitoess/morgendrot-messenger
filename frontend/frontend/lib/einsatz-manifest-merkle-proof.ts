@@ -2,6 +2,7 @@
  * § H.33d — Merkle-Proof über sortierte entry_hash (gleicher Baum wie merkleRootFromEntryHashes).
  */
 import { merkleRootFromEntryHashes } from '@/frontend/lib/einsatz-manifest-v1'
+import { sha256Bytes as sha256BytesSecure } from '@/frontend/lib/sha256-bytes'
 
 function hexToBytes(hex: string): Uint8Array {
     const h = hex.trim().toLowerCase().replace(/^0x/, '')
@@ -16,11 +17,7 @@ function bytesToHex(bytes: Uint8Array): string {
 }
 
 async function sha256Bytes(data: Uint8Array): Promise<Uint8Array> {
-    const digest = await crypto.subtle.digest(
-        'SHA-256',
-        data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer
-    )
-    return new Uint8Array(digest)
+    return sha256BytesSecure(data)
 }
 
 function normalizeLeafHex(h: string): string {

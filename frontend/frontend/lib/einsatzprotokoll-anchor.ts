@@ -17,6 +17,7 @@ import {
   buildProtokollFullWireChunks,
   MORG_PROTOKOLL_FULL_CHUNK_MARKER,
 } from '@/frontend/lib/einsatzprotokoll-anchor-chunks'
+import { sha256HexOfBytes } from '@/frontend/lib/sha256-bytes'
 
 export const MORG_PROTOKOLL_ANCHOR_PREFIX = '[[MORG_PROTOKOLL_ANCHOR_V1:'
 export const MORG_PROTOKOLL_ANCHOR_SUFFIX = ']]'
@@ -54,11 +55,7 @@ export function canonicalJsonForAnchorHash(messages: readonly Message[]): string
 }
 
 export async function sha256HexUtf8(s: string): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))
-  const a = new Uint8Array(buf)
-  let hex = ''
-  for (let i = 0; i < a.length; i++) hex += a[i]!.toString(16).padStart(2, '0')
-  return hex
+  return sha256HexOfBytes(new TextEncoder().encode(s))
 }
 
 export function buildAnchorHashWire(hex64: string, meta: { exportedAt: number; messageCount: number }): string {

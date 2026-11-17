@@ -2,6 +2,8 @@
  * Browser-Variante von lora-bridge emergency-binary v2 (nur Parse + SHA256-Vergleich).
  * Layout: [0]=2, [1..4] nonce BE, [5..36] sha256(utf8 iota addr), [37..] ciphertext
  */
+import { sha256HexOfBytes } from '@/frontend/lib/sha256-bytes'
+
 export const EMERGENCY_BINARY_VERSION = 2
 const HEADER_LEN = 37
 
@@ -25,17 +27,11 @@ export function tryParseEmergencyBinaryV2(raw: Uint8Array, maxTotalBytes: number
   }
 }
 
-function hexSha256(buf: ArrayBuffer): string {
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('')
-}
-
 /** SHA-256 der normalisierten IOTA-Adresse (UTF-8), wie im Backend emergency-binary. */
 export async function iotaAddressFingerprintHex(address: string): Promise<string | null> {
   const a = address.trim().toLowerCase()
   if (!/^0x[a-f0-9]{64}$/.test(a)) return null
-  const enc = new TextEncoder().encode(a)
-  const buf = await crypto.subtle.digest('SHA-256', enc)
-  return hexSha256(buf)
+  return sha256HexOfBytes(new TextEncoder().encode(a))
 }
 
 /** Findet 0x-Adresse im Verzeichnis, deren Fingerprint dem Wire-Header entspricht. */
