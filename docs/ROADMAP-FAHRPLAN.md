@@ -2948,6 +2948,7 @@ Nicht umsetzen. Bei späterem Bedarf neu spezifizieren (nur Ciphertext-Hash, nie
 | **Telegram Bot / Alarmgruppe / Einsatz-TG** | gemerkt | optional später nur Klingel — Einsatz-Boss eher weg |
 | **Package & Move-Upgrade** (Boss-Chain-Admin) | gemerkt | Alltagschat braucht das nicht |
 | **Hauptpostfach als „Einsatz-Shared“-Narrativ** | prüfen | Mailbox-Technik kann bleiben, Einsatz-Label weg |
+| **Auto-Execute / Coin-Fernsteuerung** (`ENABLE_AUTO_EXECUTE`) | **gemerkt 2026-11-17** | Edition-Default **aus**; kein Auto-Execute aus Chat; Lock-Fernsteuerung weg oder nur Boss/Lock-Produkt — Spec `IOTA-MESSENGER-EDITION-V1.md` §1.1 |
 
 #### Entwurf-Tabelle (Detail — Stand fortgeschrieben)
 

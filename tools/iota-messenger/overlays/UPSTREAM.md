@@ -29,3 +29,4 @@ node scripts/apply-product-patches.mjs
 | Einsatz-Organisation, Boss, Handoff | Jeder Nutzer eigenständig |
 | Multi-Transport | Nur IOTA |
 | Volle Plattform | Chat + Gruppen + Wallet |
+| Lock / `ENABLE_AUTO_EXECUTE` oft für Fernwirkung | **Default `ENABLE_AUTO_EXECUTE=false`** — kein Auto-Execute aus Chat; Coin-Fernsteuerung kein Kern (Entscheidung 2026-11-17) |
