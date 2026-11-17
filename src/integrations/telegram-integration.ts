@@ -499,7 +499,8 @@ export function truncateTelegramMessagePreview(text: string, max = 200): string 
 export function formatTelegramNotifyText(senderLabel: string, messagePreview: string): string {
     const from = (senderLabel || 'Morgendrot').trim().slice(0, 64) || 'Morgendrot';
     const preview = truncateTelegramMessagePreview(messagePreview);
-    return `📩 Morgendrot\nVon: ${from}\n${preview}`;
+    /** „von Name:“ + Leerzeile — Absender klar getrennt vom Nachrichtentext (nicht „Von: ich“ als Textstart). */
+    return `📩 Morgendrot\nvon ${from}:\n\n${preview}`;
 }
 
 export async function postTelegramNotifyViaRelay(

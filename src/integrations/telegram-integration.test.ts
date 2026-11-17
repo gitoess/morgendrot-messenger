@@ -36,10 +36,10 @@ describe('telegram-integration', () => {
     });
 
     it('formats notify text', () => {
-        const text = formatTelegramNotifyText('Partner B', 'Hallo Welt');
+        const text = formatTelegramNotifyText('ich', 'Hallo Welt');
         expect(text).toContain('📩');
-        expect(text).toContain('Partner B');
-        expect(text).toContain('Hallo');
+        expect(text).toBe('📩 Morgendrot\nvon ich:\n\nHallo Welt');
+        expect(text).not.toMatch(/^📩 Morgendrot\nVon:/);
     });
 
     it('truncates preview', () => {
