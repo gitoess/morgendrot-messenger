@@ -7,7 +7,14 @@
 
 **Kanonische Umsetzung:** **`docs/ROADMAP-FAHRPLAN.md`** — dort **Lesekarte** (H.\* vs T.\*), **§ C.0b**, **§ H.0**, **§ H.0-SIMPLE**. Dieses Dokument = **Leitplanke** (Phasen); der Fahrplan = **Womit** und **aktueller Arbeitsstand**.
 
-**Arbeitsstand 2026-11-17 (kurz):** N1–N5 + Ton/Stumm + LAN-SHA256 + **PC-5er** (T17-2 Handbuch, H.23 Absender-Label, T53 Preview, i18n Mute/Ton/TG, Burn/Reuse-Checkliste). WhatsApp/Paywall **gestrichen**; Linkify nur Ideen-Backlog. **Session C → Schluss.** **Als Nächstes:** PC-Stabilität nach Bedarf; kein Mesh/APK/H.25a/H.37/P5d parallel.
+**Arbeitsstand 2026-11-17 (kurz):** PC-Messenger-Durchgang **in `main`** (PR #1). WhatsApp/Paywall **gestrichen**; Linkify nur Ideen-Backlog.  
+
+**Als Nächstes (verbessert, User 2026-11-17):**  
+1. **Standalone PC + Handy** — Schreibtisch `test:h15-direct-submit` / `smoke:standalone-desk`, dann APK + Handoff laut **`docs/STANDALONE-SMOKE-CHECKLIST.md`** (**4b–4d** zuerst, 1 Gerät).  
+2. **Zwei Standalone-Geräte Alltags-Chat** (**4e/4f** / „C2“ = zweites Gerät senden/empfangen) — **nicht** Session-C-NFT.  
+3. **Session C** (Privacy/NFT 2-Geräte) **ganz am Schluss**.  
+
+**Nicht parallel:** H.25a Funk-Bild, H.37 Multi-Profil, P5d, Feature-Wildwuchs.
 
 ---
 
