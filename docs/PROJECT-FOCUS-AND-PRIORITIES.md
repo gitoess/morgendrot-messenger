@@ -7,7 +7,7 @@
 
 **Kanonische Umsetzung:** **`docs/ROADMAP-FAHRPLAN.md`** — dort **Lesekarte** (H.\* vs T.\*), **§ C.0b**, **§ H.0**, **§ H.0-SIMPLE**. Dieses Dokument = **Leitplanke** (Phasen); der Fahrplan = **Womit** und **aktueller Arbeitsstand**.
 
-**Arbeitsstand 2026-11-16 (kurz):** Settings + QA-5er + **Gruppe G1–G4** + **E1–E3** + **N1–N5 PASS** + **H.1b Mini PASS** + **Eingangs-Ton MVP** (T53 Teil, Default aus). **E4** Session C geparkt. **Als Nächstes:** 2. Gerät / Stumm-pro-Chat / weitere H.1b-Mini; T17 Rest später. Mesh/APK/H.15-4e/f und **H.37** bleiben Roadmap, nicht parallel.
+**Arbeitsstand 2026-11-17 (kurz):** N1–N5 + H.1b-Mini + Eingangs-Ton + **Stumm pro Chat** (T53). WhatsApp/Paywall **gestrichen**; Linkify nur Ideen-Backlog. **Als Nächstes:** **Session C** (2. Gerät). Mesh/APK/H.15-4e/f und **H.37** nicht parallel.
 
 ---
 

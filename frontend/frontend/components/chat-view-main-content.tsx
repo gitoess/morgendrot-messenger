@@ -47,6 +47,12 @@ import { ChatViewMediaGallery } from '@/frontend/components/chat-view-media-gall
 import { ChatViewMessengerSearch } from '@/frontend/components/chat-view-messenger-search'
 import { resolveContactSidebarDisplayName } from '@/frontend/lib/conversation-sidebar-items'
 import { readMessengerGroups } from '@/frontend/lib/messenger-group-store'
+import { muteKeyForConversation } from '@/frontend/lib/inbox-chat-mute-key'
+import {
+  INBOX_CHAT_MUTE_PREFS_CHANGED,
+  isChatMuted,
+  toggleChatMuted,
+} from '@/frontend/lib/inbox-chat-mute-prefs'
 import {
   buildGroupInfoSections,
   buildTelegramAlarmInfoSections,
@@ -968,6 +974,43 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     [activeSendPath, iotaPathFocus]
   )
 
+  const conversationMuteKey = useMemo(() => {
+    if (telegramAlarmSelected) return null
+    const group = inboxConversationGroupId
+      ? readMessengerGroups().find((g) => g.id === inboxConversationGroupId)
+      : activeGroup
+    return muteKeyForConversation({
+      inboxPartnerKey,
+      inboxConversationGroupId,
+      teamMailboxObjectId: group?.teamMailboxObjectId,
+      isPinnwand: onPinnwandTab || isPinnwandChannel(channelMode ?? 'private'),
+    })
+  }, [
+    telegramAlarmSelected,
+    inboxPartnerKey,
+    inboxConversationGroupId,
+    activeGroup,
+    onPinnwandTab,
+    channelMode,
+  ])
+
+  const [chatMuted, setChatMutedUi] = useState(false)
+  useEffect(() => {
+    const sync = () => {
+      setChatMutedUi(conversationMuteKey ? isChatMuted(conversationMuteKey) : false)
+    }
+    sync()
+    window.addEventListener(INBOX_CHAT_MUTE_PREFS_CHANGED, sync)
+    return () => window.removeEventListener(INBOX_CHAT_MUTE_PREFS_CHANGED, sync)
+  }, [conversationMuteKey])
+
+  const handleToggleChatMute = useCallback(() => {
+    if (!conversationMuteKey) return
+    const next = toggleChatMuted(conversationMuteKey)
+    setChatMutedUi(next)
+    toast.success(next ? 'Eingangs-Ton für diesen Chat stumm.' : 'Eingangs-Ton für diesen Chat wieder an.')
+  }, [conversationMuteKey])
+
   const mergedChatHeaderProps = useMemo(
     () => ({
       ...chatHeaderProps,
@@ -978,6 +1021,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       hideTitleRow: showConversationSidebar,
       onOpenNotes: onChannelModeChange ? handleSelectSidebarNotes : undefined,
       suppressAppChrome: c.suppressAppChrome === true,
+      chatMuted,
+      onToggleChatMute: conversationMuteKey ? handleToggleChatMute : undefined,
       onRefreshStatus: async () => {
         await chatHeaderProps.onRefreshStatus?.()
         inboxPanelProps.onRefresh?.()
@@ -991,6 +1036,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       handleSelectSidebarNotes,
       c.suppressAppChrome,
       inboxPanelProps.onRefresh,
+      chatMuted,
+      conversationMuteKey,
+      handleToggleChatMute,
     ]
   )
 

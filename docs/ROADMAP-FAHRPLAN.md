@@ -19,8 +19,8 @@
 
 **Aktueller Arbeitsstand (verbindlich 2026-11-16):**
 1. **UX-Settings + QA-5er + Gruppe G1–G4:** Settings-3er **PASS**; i18n/Wizard/H.32b-Sicht/Handbuch-Stich **PASS**; G2–G4 **Live PASS** (Team-Broadcast Klartext+Enc, Inbox-Filter, Alle inkl. Gruppe).  
-2. **Als Nächstes:** nach **N1–N5 PASS** + **H.1b Mini PASS** (Telegram-Notify-Plan → `lib/`) — Session C (2. Gerät) oder weitere H.1b-Mini; T17 Rest später.  
-3. **Nicht jetzt:** T4 Schatten, T56 Purge, P5d/Enc-return, Session C ohne 2. Gerät, Feature-Wildwuchs.  
+2. **Als Nächstes:** **Session C** (2. Gerät, z. B. PC+Surface); Stumm-pro-Chat / T17-Scheiben bei PC-Arbeit.  
+3. **Nicht jetzt:** T4 Schatten, T56 Purge, P5d/Enc-return, WhatsApp/Paywall (**gestrichen**), Linkify nur Ideen-Backlog, Feature-Wildwuchs.  
 4. **Feld/Mesh/APK:** H.15 **4e/4f**, Meshtastic Phase B — mit 2. Gerät / nach PC-Kern.  
 5. **Multi-Account** = **§ H.37** (Backlog). **Handoff** bleibt Einsatz-Helfer-Pfad (Morgendrot), nicht Solo-Pflicht.
 
@@ -2806,7 +2806,7 @@ Nach dem aktuellen UI-/Settings-Durchgang (vor weiterem Roadmap-Featurebau) gezi
 | **N4** | T17 Scheibe 1 | **PASS** — Handbuch Telegram = Ist (Audience/CC/Alarmgruppe) + Einstieg Einstellungen→Telegram |
 | **N5** | Commit/Push Welle | **PASS** — `ab9e36e` auf `cursor/settings-iota-telegram-ux` |
 
-**Danach:** **H.1b Mini PASS** (Notify-Plan → `lib/telegram-notify-after-send`) — weitere Mini-Scheiben / Session C wenn 2. Gerät / T17 Rest — nicht parallel wild.
+**Danach:** H.1b Mini + Eingangs-Ton + **Stumm pro Chat** (T53 Teil) — **nächster gemeinsamer Block = Session C** (2. Gerät). T17 Rest nur Scheiben. WhatsApp/Paywall gestrichen; Linkify → `IDEEN-BACKLOG.md`.
 
 ### Mailbox-UX-Entscheidungen (User 2026-11-16 — umgesetzt / Roadmap)
 
@@ -2924,7 +2924,7 @@ Erst Settings-Durchgang zu Ende lesen, **dann** diese Rituale. Neue „lass uns 
 | T50 | **Beweis-Video ohne Pause** | Feature | später | Continuous capture + Dauer↔Hash; Galerie-Import verbieten — schwer fälschungssicher, Erwartung managen |
 | T51 | **Abo/Credits (nicht „NFT verkaufen“)** | Produkt/Recht | nach SaaS-Split | Euro-Abo + Server-Kontingent + Gas-Tank; optional Soulbound-Ausweis on-chain — Nutzer sieht „Pro / Restpunkte“, nie Börsen-NFT |
 | T52 | **PlanRadar / Baustellen-API** | Integration | nach T45/T48 | Webhook Ticket→Beweis-Hash oder Export Ticket+Hash; Pro/Enterprise nötig — nicht Kern-Messenger |
-| T53 | **Einstellungen-Lücken vs Telegram** | UX | mit T12 · **Teil:** Eingangs-Ton | **Ist 2026-11-16:** In-App-Eingangs-Ton Master+Kanaltypen (1:1/Gruppe/Pinnwand), Default aus, Lautstärke = Klick-Regler — **kein** OS-Push. **Offen:** Stumm pro Chat, Preview an/aus, Medien-Auto-Download, App-Sperre/Biometrie, Archiv/Pin, Lesebestätigung ehrlich (T46); TG-Tab: nur Bot/Alarm/Notify |
+| T53 | **Einstellungen-Lücken vs Telegram** | UX | mit T12 · **Teil:** Ton+Stumm | **Ist 2026-11-17:** Eingangs-Ton Master+Kanaltypen + **Stumm pro Chat** (Header, nur Ton); **kein** OS-Push. **Offen:** Preview an/aus, Medien-Auto-Download, App-Sperre/Biometrie, Archiv/Pin, Lesebestätigung ehrlich (T46); TG-Tab: nur Bot/Alarm/Notify |
 
 ### T57 — `.morg-pkg` Hash/Anker — **verworfen 2026-11-15**
 

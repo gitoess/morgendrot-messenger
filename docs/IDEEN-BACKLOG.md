@@ -4,6 +4,14 @@ Kurznotizen für spätere Phasen — **kein** Implementierungsversprechen.
 
 ---
 
+## Chat: klickbare Links (Linkify) — Zukunftsidee
+
+**Idee:** `https://`-URLs in Posteingangszeilen als Links öffnen (`rel="noopener"`, ggf. Bestätigung).  
+**Status:** nur merken — **kein** nächster Schritt, keine Pflicht. (Kein eigener Feature-Ordner im Repo; ggf. später `lib/`-Helfer.)  
+**Nicht:** WhatsApp-Verknüpfung, Paywall/Mikrozahlung pro Nachricht — **gestrichen** (2026-11-17).
+
+---
+
 ## Telegram: verschlüsselter Overlay-Transport (IOTA-Handshake + Payload über Telegram)
 
 **Idee:** Session-Key wie heute über IOTA-Mailbox (`/handshake`, `/connect`); verschlüsselte Blobs (`MORG_TG_V1|…`) nur als Zustell-Hülle über Telegram Bot/Relay.

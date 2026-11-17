@@ -129,6 +129,8 @@ Telegram = **optionaler Push/Hinweis**, kein Chat-Ersatz für IOTA/Funk.
 
 **IOTA→Telegram-Klingel (Hinweis nach Online-Send):** Genau das, wofür sie gebaut ist — **Aufmerksamkeits-Ping**, kein zweiter Messenger. Bedeutung: „Es liegt was in Morgendrot“ (Handy vibriert über Telegram, App muss nicht offen sein). Inhalt/Verlauf bleiben in Morgendrot; Telegram ersetzt weder IOTA noch Funk.
 
+**Eingangs-Ton (App):** Einstellungen → Erscheinungsbild — Master + 1:1/Gruppe/Pinnwand. **Stumm pro Chat:** im Chat-Kopf „Ton/Stumm“ — nur der In-App-Chime, kein On-Chain-Block.
+
 | Einstellung | Bedeutung |
 |-------------|-----------|
 | **System-Alarme** | Nur Monitor/Sensor → deine Chat-ID. Kann aus bleiben für normalen Chat. |

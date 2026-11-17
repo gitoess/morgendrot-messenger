@@ -11,6 +11,8 @@ import {
   type IncomingToneChannel,
 } from '@/frontend/lib/incoming-message-tone-prefs'
 import { readSoundFeedbackVolume } from '@/frontend/lib/ui-feedback-prefs'
+import { isChatMuted } from '@/frontend/lib/inbox-chat-mute-prefs'
+import { muteKeyForInboxMessage } from '@/frontend/lib/inbox-chat-mute-key'
 import {
   isSharedAudioRunning,
   registerAudioPrimeListener,
@@ -84,13 +86,15 @@ export function classifyIncomingToneChannel(
 }
 
 export function pickIncomingToneChannel(
-  messages: Array<Pick<Message, 'pinnwandPost' | 'chainPurgeKind' | 'from'>>,
+  messages: Array<Pick<Message, 'pinnwandPost' | 'chainPurgeKind' | 'from' | 'recipient'>>,
   myAddress: string
 ): IncomingToneChannel | null {
   const my = myAddress.trim().toLowerCase()
   const kinds = new Set<IncomingToneChannel>()
   for (const m of messages) {
     if (my && m.from.trim().toLowerCase() === my) continue
+    const muteKey = muteKeyForInboxMessage(m, myAddress)
+    if (muteKey && isChatMuted(muteKey)) continue
     kinds.add(classifyIncomingToneChannel(m))
   }
   if (kinds.size === 0) return null

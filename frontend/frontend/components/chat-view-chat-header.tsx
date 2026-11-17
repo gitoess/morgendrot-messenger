@@ -6,7 +6,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { BookOpen, Inbox, Lock, RefreshCw, Settings, StickyNote, Unlock } from 'lucide-react'
+import { Bell, BellOff, BookOpen, Inbox, Lock, RefreshCw, Settings, StickyNote, Unlock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { isBrowserSessionSignerReady } from '@/frontend/lib/messenger-session-keys-ready'
@@ -69,6 +69,9 @@ export type ChatViewChatHeaderProps = {
   suppressAppChrome?: boolean
   /** Kein Titel/Icon (Sidebar-Layout: Posteingang bündig mit Chats). */
   hideTitleRow?: boolean
+  /** T53: Eingangs-Ton für diesen Chat stumm (localStorage). */
+  chatMuted?: boolean
+  onToggleChatMute?: () => void
 }
 
 type TresorSessionUi = 'locked' | 'no-keys' | 'ready'
@@ -264,6 +267,8 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
     suppressAppChrome = false,
     hideTitleRow = false,
     onRefreshStatus,
+    chatMuted = false,
+    onToggleChatMute,
   } = p
 
   const channelTitle =
@@ -292,7 +297,12 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
     isPrivate && statusPollAttempted && basisUnreachable && queuePending > 0
 
   const showChromeActions =
-    showHeaderRefresh || showTreasuryBadge || showHandbook || (onOpenNotes && channelMode === 'notes') || showSettingsBtn
+    showHeaderRefresh ||
+    showTreasuryBadge ||
+    showHandbook ||
+    (onOpenNotes && channelMode === 'notes') ||
+    showSettingsBtn ||
+    Boolean(onToggleChatMute)
 
   return (
     <>
@@ -347,6 +357,32 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                         >
                           {channelTitle}
                         </h2>
+                        {onToggleChatMute ? (
+                          <button
+                            type="button"
+                            onClick={onToggleChatMute}
+                            className={cn(
+                              'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-semibold transition-colors',
+                              chatMuted
+                                ? 'border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200'
+                                : 'border-border bg-muted/40 text-muted-foreground hover:text-foreground'
+                            )}
+                            title={
+                              chatMuted
+                                ? 'Eingangs-Ton für diesen Chat wieder an'
+                                : 'Eingangs-Ton für diesen Chat stumm'
+                            }
+                            aria-pressed={chatMuted}
+                            aria-label={chatMuted ? 'Chat-Ton an' : 'Chat stumm'}
+                          >
+                            {chatMuted ? (
+                              <BellOff className="h-3 w-3" aria-hidden />
+                            ) : (
+                              <Bell className="h-3 w-3" aria-hidden />
+                            )}
+                            {chatMuted ? 'Stumm' : 'Ton'}
+                          </button>
+                        ) : null}
                         {showProfileBadges ? <ChatNetworkBadge /> : null}
                         {showProfileBadges ? <ActiveProfileBadge status={apiStatus} compact /> : null}
                       </div>
@@ -359,6 +395,34 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                   <div className="min-w-0 flex-1" />
                 )}
                 <div className="flex max-w-full flex-col items-stretch gap-2 sm:max-w-none sm:items-end">
+                  {onToggleChatMute && hideTitleRow ? (
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={onToggleChatMute}
+                        className={cn(
+                          'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors',
+                          chatMuted
+                            ? 'border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200'
+                            : 'border-border bg-card text-muted-foreground hover:text-foreground'
+                        )}
+                        title={
+                          chatMuted
+                            ? 'Eingangs-Ton für diesen Chat wieder an'
+                            : 'Eingangs-Ton für diesen Chat stumm'
+                        }
+                        aria-pressed={chatMuted}
+                        aria-label={chatMuted ? 'Chat-Ton an' : 'Chat stumm'}
+                      >
+                        {chatMuted ? (
+                          <BellOff className="h-3.5 w-3.5" aria-hidden />
+                        ) : (
+                          <Bell className="h-3.5 w-3.5" aria-hidden />
+                        )}
+                        {chatMuted ? 'Stumm' : 'Ton'}
+                      </button>
+                    </div>
+                  ) : null}
                   {showHeaderRefresh || showTreasuryBadge ? (
                     <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                       {showTreasuryBadge && apiStatus ? (
