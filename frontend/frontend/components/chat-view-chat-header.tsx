@@ -28,6 +28,7 @@ import { ActiveProfileBadge } from '@/frontend/components/active-profile-badge'
 import { ChatNetworkBadge } from '@/frontend/components/chat-network-badge'
 import { ChatViewSendPathCompact, type ChatViewSendPathCompactProps } from '@/frontend/components/chat-view-send-path-compact'
 import type { OfflineStatusSnapshot } from '@/frontend/hooks/use-offline-status'
+import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
 /** Optional: Tresor-Badge wird klickbar (Sperren / zur Startseite bei gesperrter Sitzung). */
 export type ChatViewVaultBannerActions = {
@@ -247,6 +248,7 @@ function MessengerHandbookLink() {
 }
 
 export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
+  const { t } = useAppTranslation('dashboard')
   const {
     isPrivate,
     encrypted,
@@ -367,20 +369,16 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                                 ? 'border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200'
                                 : 'border-border bg-muted/40 text-muted-foreground hover:text-foreground'
                             )}
-                            title={
-                              chatMuted
-                                ? 'Eingangs-Ton für diesen Chat wieder an'
-                                : 'Eingangs-Ton für diesen Chat stumm'
-                            }
+                            title={chatMuted ? t('chatMute.titleUnmute') : t('chatMute.titleMute')}
                             aria-pressed={chatMuted}
-                            aria-label={chatMuted ? 'Chat-Ton an' : 'Chat stumm'}
+                            aria-label={chatMuted ? t('chatMute.ariaUnmute') : t('chatMute.ariaMute')}
                           >
                             {chatMuted ? (
                               <BellOff className="h-3 w-3" aria-hidden />
                             ) : (
                               <Bell className="h-3 w-3" aria-hidden />
                             )}
-                            {chatMuted ? 'Stumm' : 'Ton'}
+                            {chatMuted ? t('chatMute.off') : t('chatMute.on')}
                           </button>
                         ) : null}
                         {showProfileBadges ? <ChatNetworkBadge /> : null}
@@ -406,20 +404,16 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                             ? 'border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200'
                             : 'border-border bg-card text-muted-foreground hover:text-foreground'
                         )}
-                        title={
-                          chatMuted
-                            ? 'Eingangs-Ton für diesen Chat wieder an'
-                            : 'Eingangs-Ton für diesen Chat stumm'
-                        }
+                        title={chatMuted ? t('chatMute.titleUnmute') : t('chatMute.titleMute')}
                         aria-pressed={chatMuted}
-                        aria-label={chatMuted ? 'Chat-Ton an' : 'Chat stumm'}
+                        aria-label={chatMuted ? t('chatMute.ariaUnmute') : t('chatMute.ariaMute')}
                       >
                         {chatMuted ? (
                           <BellOff className="h-3.5 w-3.5" aria-hidden />
                         ) : (
                           <Bell className="h-3.5 w-3.5" aria-hidden />
                         )}
-                        {chatMuted ? 'Stumm' : 'Ton'}
+                        {chatMuted ? t('chatMute.off') : t('chatMute.on')}
                       </button>
                     </div>
                   ) : null}

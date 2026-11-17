@@ -17,6 +17,7 @@ import {
   writeTelegramNotifyOnSend,
   type TelegramNotifyAudience,
 } from '@/frontend/lib/telegram-notify-pref'
+import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
 const AUDIENCE_OPTIONS: { value: TelegramNotifyAudience; title: string; hint: string }[] = [
   {
@@ -37,6 +38,7 @@ const AUDIENCE_OPTIONS: { value: TelegramNotifyAudience; title: string; hint: st
 ]
 
 export function SettingsTelegramNotifyOnSend() {
+  const { t } = useAppTranslation('dashboard')
   const [on, setOn] = useState(false)
   const [audience, setAudience] = useState<TelegramNotifyAudience>('contact')
   const [extraDraft, setExtraDraft] = useState('')
@@ -55,23 +57,17 @@ export function SettingsTelegramNotifyOnSend() {
         </div>
         <div className="min-w-0 flex-1 space-y-3">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-foreground">
-              Nach Online-IOTA: Telegram-Hinweis (Klingel)
-            </p>
+            <p className="text-sm font-semibold text-foreground">{t('telegramNotify.title')}</p>
             <Switch
               checked={on}
               onCheckedChange={(v) => {
                 writeTelegramNotifyOnSend(v)
                 setOn(v)
               }}
-              aria-label="Nach Online-IOTA Telegram-Hinweis"
+              aria-label={t('telegramNotify.aria')}
             />
           </div>
-          <p className="text-xs text-muted-foreground">
-            Optionaler Kurz-Ping nach erfolgreichem <strong className="font-medium text-foreground">1:1-IOTA-Send
-            über Online</strong> — nicht der Sendepfad „Telegram“ (Nachricht nur über Bot). Kein E2EE. Die
-            Einsatz-Alarmgruppe wird hier <em>nicht</em> angeschrieben.
-          </p>
+          <p className="text-xs text-muted-foreground">{t('telegramNotify.hint')}</p>
 
           {on ? (
             <div className="space-y-3">

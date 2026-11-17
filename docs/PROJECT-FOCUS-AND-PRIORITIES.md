@@ -7,7 +7,7 @@
 
 **Kanonische Umsetzung:** **`docs/ROADMAP-FAHRPLAN.md`** — dort **Lesekarte** (H.\* vs T.\*), **§ C.0b**, **§ H.0**, **§ H.0-SIMPLE**. Dieses Dokument = **Leitplanke** (Phasen); der Fahrplan = **Womit** und **aktueller Arbeitsstand**.
 
-**Arbeitsstand 2026-11-17 (kurz):** N1–N5 + H.1b-Mini + Eingangs-Ton + **Stumm pro Chat** (T53). WhatsApp/Paywall **gestrichen**; Linkify nur Ideen-Backlog. **Als Nächstes:** **Session C** (2. Gerät). Mesh/APK/H.15-4e/f und **H.37** nicht parallel.
+**Arbeitsstand 2026-11-17 (kurz):** N1–N5 + Ton/Stumm + LAN-SHA256 + **PC-5er** (T17-2 Handbuch, H.23 Absender-Label, T53 Preview, i18n Mute/Ton/TG, Burn/Reuse-Checkliste). WhatsApp/Paywall **gestrichen**; Linkify nur Ideen-Backlog. **Session C → Schluss.** **Als Nächstes:** PC-Stabilität nach Bedarf; kein Mesh/APK/H.25a/H.37/P5d parallel.
 
 ---
 

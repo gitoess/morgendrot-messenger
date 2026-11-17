@@ -11,6 +11,10 @@ import {
   planFluentLoraImage,
 } from '@/frontend/features/send/lora-image-morg-seg-v1-policy'
 import { ChatViewWebcamCaptureDialog } from '@/frontend/components/chat-view-webcam-capture-dialog'
+import {
+  ATTACHMENT_PREVIEW_PREFS_CHANGED,
+  readAttachmentPreviewEnabled,
+} from '@/frontend/lib/attachment-preview-prefs'
 
 export type ChatViewAttachmentBarProps = AttachmentBarPort & {
   /** z. B. STT, Sprachmemo — rechts neben „Von Kamera“. */
@@ -45,6 +49,13 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
 
   const cameraCaptureRef = useRef<HTMLInputElement>(null)
   const [webcamOpen, setWebcamOpen] = useState(false)
+  const [previewOn, setPreviewOn] = useState(() => readAttachmentPreviewEnabled())
+
+  useEffect(() => {
+    const sync = () => setPreviewOn(readAttachmentPreviewEnabled())
+    window.addEventListener(ATTACHMENT_PREVIEW_PREFS_CHANGED, sync)
+    return () => window.removeEventListener(ATTACHMENT_PREVIEW_PREFS_CHANGED, sync)
+  }, [])
 
   const openCameraImport = useCallback(() => {
     if (prefersFileCameraCapture()) {
@@ -182,7 +193,7 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
           {fluentLoraHint}
         </p>
       ) : null}
-      {compactPreviewUrl && (
+      {previewOn && compactPreviewUrl ? (
         <div className="mb-2">
           <p className="mb-1 text-xs text-muted-foreground">Vorschau (Canvas color-Blend wie im Chat):</p>
           <img
@@ -191,8 +202,8 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
             className="max-h-40 max-w-full rounded-md border border-border object-contain"
           />
         </div>
-      )}
-      {loraPreviewUrl && (
+      ) : null}
+      {previewOn && loraPreviewUrl ? (
         <div className="mb-2">
           <p className="mb-1 text-xs text-muted-foreground">
             Vorschau Flüchtig (LoRa): zuerst Luma (S/W), dann Chroma. Senden über Funk (Heltec) mit MORG_SEG_V1-Segmenten.
@@ -203,7 +214,7 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
             className="max-h-40 max-w-full rounded-md border border-border object-contain"
           />
         </div>
-      )}
+      ) : null}
       {attachedLora != null && loraMeshProgressLine ? (
         <div
           className="mb-2 space-y-1.5 rounded-md border border-border bg-muted/30 px-2 py-1.5"
@@ -216,7 +227,7 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
           </div>
         </div>
       ) : null}
-      {attachedTxtFile != null && !attachedBlobBase64 && (
+      {previewOn && attachedTxtFile != null && !attachedBlobBase64 ? (
         <div className="mb-2 max-h-28 overflow-auto rounded-md border border-border bg-muted/20 p-2">
           <p className="mb-1 text-xs text-muted-foreground">Vorschau .txt (gekürzt):</p>
           <pre className="whitespace-pre-wrap break-words text-xs text-foreground">
@@ -225,7 +236,7 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
               : attachedTxtFile.text}
           </pre>
         </div>
-      )}
+      ) : null}
     </>
   )
 }

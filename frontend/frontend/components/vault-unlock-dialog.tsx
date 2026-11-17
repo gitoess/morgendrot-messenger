@@ -361,10 +361,12 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
           ) : null}
           {!standaloneApk && p.apiSnapshot?.error && p.apiSnapshot.backendRunning !== true ? (
             <p className="rounded-md border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-950 dark:text-amber-100">
-              <strong>Backend nicht erreichbar.</strong> Tresor-Entsperren braucht die API auf Port{' '}
-              <span className="font-mono">3342</span>. Im Repo-Root starten:{' '}
-              <span className="font-mono">npm run dev:messenger</span> (nicht nur{' '}
-              <span className="font-mono">cd frontend && npm run dev:messenger</span>).
+              <strong>Backend nicht erreichbar.</strong> Tresor-Entsperren braucht die API (Next leitet{' '}
+              <span className="font-mono">/api</span> weiter). Im <em>gleichen</em> Ordner wie die UI im Repo-Root
+              starten: <span className="font-mono">npm run dm</span> bzw.{' '}
+              <span className="font-mono">npm run dev:messenger</span> — nicht nur{' '}
+              <span className="font-mono">cd frontend && npm run dev:messenger</span>. Surface-Instanz:{' '}
+              <span className="font-mono">morgendrot-surface</span> → Ports <span className="font-mono">3351/3352</span>.
             </p>
           ) : null}
           {streamlined ? (

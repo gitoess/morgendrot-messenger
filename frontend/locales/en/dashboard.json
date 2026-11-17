@@ -187,5 +187,24 @@
     "title": "Operations lead",
     "bossHint": "Set up helpers (profile + rights) at top. TTL/purge → Existing devices. Chain/Move → Settings → IOTA. WLAN QR → helper setup.",
     "handbookLink": "Handbook"
+  },
+  "appearance": {
+    "incomingTone": "Incoming tone (new message)",
+    "incomingToneHint": "Bell chime (not click beep). Open tab only — no system push. Default off.",
+    "attachmentPreview": "Composer attachment preview",
+    "attachmentPreviewHint": "Show image / LoRa luma / .txt before send. Default on."
+  },
+  "chatMute": {
+    "on": "Tone",
+    "off": "Mute",
+    "titleMute": "Mute incoming tone for this chat",
+    "titleUnmute": "Unmute incoming tone for this chat",
+    "ariaMute": "Mute chat",
+    "ariaUnmute": "Unmute chat tone"
+  },
+  "telegramNotify": {
+    "title": "After online IOTA: Telegram chime",
+    "aria": "Telegram notify after online IOTA",
+    "hint": "Optional short ping after a successful 1:1 online IOTA send — not the Telegram send path. No E2EE. Does not message the ops alarm group."
   }
 }

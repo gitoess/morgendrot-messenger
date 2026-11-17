@@ -24,7 +24,7 @@ Voraussetzung: Messenger offen (http://127.0.0.1:3341/), Tresor schon entsperrt.
 2. Oben auf **Unverschlüsselt** stellen (oder Passphrase-Schutz anhaken — das schaltet Verschlüsselt automatisch aus).  
 3. Haken **Passphrase-Schutz** setzen. Adressfeld `0x…` muss sichtbar sein.  
 4. Kurzen Text tippen → **Senden**.  
-5. In der Statuszeile steht die Passphrase (und „gemerkt“, wenn Checkbox an).
+5. In der Statuszeile steht die Passphrase (und „gemerkt“, wenn **Für mich auf diesem Gerät merken (Absender)** an ist — nur lokal, nicht an den Empfänger).
 
 ### B) Privacy sperren (Chat bleibt sichtbar)
 
@@ -49,7 +49,8 @@ Unter dem Namen (**ich** / Kontakt) auf **Empfänger leeren / ändern** klicken 
 | 7 | NFT als Schlüsselkarte | Galerie → Als Schlüsselkarte merken → Sidecar `nftKeycard.enc.v1` |
 | 8 | Optional Slot / Mint an Slot | Galerie Multi-Slot; Mint → Karte; optional `[morg-keycard]` |
 | 9 | Composer Key binden | Passphrase-Schutz → Karte + Slot |
-| 10 | Schlüssel erneuern / Burn-on-read | Direktchat-⋮ → Epoch bzw. Burn nur mit Confirm |
+| 10 | Schlüssel erneuern / Burn-on-read | Optionen → Chat · Sicherheit → Nach-Lesen-Modus; echter Burn = Zeilen-⋯ / Auswahl → Von Chain löschen (Confirm) |
+| 11 | Passphrase wiederverwenden | Composer Passphrase-Schutz → Checkbox: An = gleiche PW nach Send; Aus = neu würfeln |
 
 **2-Geräte-Feldtest** (Team-Key-Handoff, Erneut-sperren auf Empfängergerät, NFT-Transfer): bewusst **später** — siehe Fahrplan.
 
@@ -105,7 +106,7 @@ Chat ⋮ → **Double Ratchet (Experiment)** setzt nur ein LocalStorage-Flag. **
 | Composer **Passphrase-Schutz** | Enc pro Sendung (oder wiederverwendet) |
 | **Passphrase wiederverwenden** | Gleiche Passphrase, neuer Salt/IV |
 | **Key an NFT-Schlüsselkarte binden** | Optional: Karte + Slot; Wire-Fingerprint lokal |
-| Absender-Remember | Checkbox **„Auf diesem Gerät merken“** (Default an): nur diese Nachricht auto-Klartext nach Unlock. Aus = nach Lock nur Ciphertext (manuell eingeben). **Wiederverwenden** = Composer-Default bis „Neu würfeln“, entschlüsselt Posteingang **nicht** automatisch |
+| Absender-Remember | Checkbox **„Für mich auf diesem Gerät merken (Absender)“** (Default an): nur lokal auto-Klartext nach Unlock — **nicht** an Empfänger. Aus = bewusst nur Ciphertext. **Wiederverwenden** = Composer-Default bis „Neu würfeln“, entschlüsselt Posteingang **nicht** automatisch |
 | Bubble **Verbergen** | Weich ausblenden |
 | Bubble **Im Vault löschen** | Hart: Merker für diese Nachricht weg (neben Wire kopieren); wieder Eingabe |
 | Posteingang **Optionen → Wire einfügen** | Paste Wire + Passphrase → lokaler Klartext |

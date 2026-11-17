@@ -451,10 +451,13 @@ export function PassphraseProtectComposerToggle(p: {
               }}
             />
             <span>
-              <span className="font-medium text-foreground">Auf diesem Gerät merken</span>
+              <span className="font-medium text-foreground">
+                Für mich auf diesem Gerät merken (Absender)
+              </span>
               {' — '}
-              An: Nachrichten-Passphrase lokal merken → Posteingang öffnet Klartext ohne erneutes Tippen.
-              Optional Vault-Unlock = dauerhaft über Neuladen. Aus: nur Ciphertext, Passphrase jedes Mal manuell.
+              Nur <em>deine</em> lokale Lesepforte: An → Passphrase hier speichern, Posteingang öffnet Klartext ohne
+              Tippen. Optional mit Vault-Session dauerhaft über Neuladen. Aus (bewusst) → nur Ciphertext, Passphrase
+              jedes Mal manuell. Wird <strong>nicht</strong> an den Empfänger gesendet.
             </span>
           </label>
           {rememberOnDevice && !vaultSessionOpen ? (
@@ -539,8 +542,8 @@ export function PassphraseProtectComposerToggle(p: {
             <span>
               <span className="font-medium text-foreground">Passphrase wiederverwenden</span>
               {' — '}
-              An: Feld bleibt nach jedem Send. Aus: nach Send automatisch neu würfeln. Verbindet
-              Nachrichten <em>nicht</em> on-chain mit einem NFT — nur dieselbe PW lokal.
+              An: Feld bleibt nach jedem Send (gleiche PW lokal). Aus: nach Send neu würfeln. Verbindet
+              Nachrichten <em>nicht</em> on-chain mit einem NFT.
             </span>
           </label>
 

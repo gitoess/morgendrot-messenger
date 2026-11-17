@@ -10,6 +10,8 @@
 
 ## Einträge
 
+| **2026-11-17** | PC (Windows), **PC-5er T17-2 / H.23 Label / T53 Preview / i18n / Burn-Checkliste** | Handbuch Ton/Stumm/Klingel; Absender-Passphrase-Wording; Composer-Vorschau-Pref Default an; DE↔EN Mute/Ton/TG; ANLEITUNG §0 #10/#11; Vitest preview-prefs | **PASS (Code+Doku)** — Live Burn/Reuse optional am Schreibtisch |
+
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
 | **2026-11-09** | PC (Windows), **Reclaim-Hub + Purse-Liste + NFT-Aktualisieren** | Zeitkapsel: Liste aller offenen Leases + Einzel-Reclaim; sticky **Aktualisieren** + Reclaim-Badge im NFT-Dialog; Purse Guthaben: Summe+Anzahl, einklappbare scrollbare Positionen + Filter ab 8. | **PASS (Code)** — User-Retest Reclaim-Liste / viele Vaults. |

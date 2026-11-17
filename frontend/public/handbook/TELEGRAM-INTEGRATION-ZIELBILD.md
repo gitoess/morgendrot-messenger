@@ -186,7 +186,7 @@ Erlaubte eingehende Telegram-Texte erscheinen als **Merge-Zeilen** im Posteingan
 | Aspekt | Wert |
 |--------|------|
 | **Auslöser** | Erfolgreicher Send **und** Nutzer-Opt-in (`morgendrot.telegramNotifyOnSend`) |
-| **Empfänger** | Wählbar: **Kontakt** / **Ich** (`adminChatId`) / **Beide** — **nicht** die Einsatz-Alarmgruppe |
+| **Empfänger** | Wählbar: **Kontakt** (Telefonbuch-`telegramChatId`) / **Ich** (`adminChatId`) / **Beide** (`morgendrot.telegramNotifyAudience`) — **nicht** die Einsatz-Alarmgruppe |
 | **Transport** | API **`/api/integrations/telegram/notify`** → Relay **`/morgendrot-telegram/notify`** |
 | **Fehler** | **Nicht blockierend** für IOTA/Mesh-Send |
 
@@ -200,7 +200,7 @@ Erlaubte eingehende Telegram-Texte erscheinen als **Merge-Zeilen** im Posteingan
 }
 ```
 
-Composer-Checkbox **„Telegram-Hinweis“** — Default **aus**.
+Settings-Schalter **„Nach Online-IOTA: Telegram-Hinweis“** + Audience **Kontakt / Ich / Beide** — Default **aus** / Audience **contact**. (Composer-Sendepfad „Telegram“ ist ein anderer Kanal.)
 
 ---
 

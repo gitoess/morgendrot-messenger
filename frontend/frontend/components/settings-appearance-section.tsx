@@ -39,6 +39,13 @@ import {
   readSoundFeedbackVolume,
   UI_FEEDBACK_PREFS_CHANGED,
 } from '@/frontend/lib/ui-feedback-prefs'
+import {
+  ATTACHMENT_PREVIEW_PREFS_CHANGED,
+  persistAttachmentPreviewEnabled,
+  readAttachmentPreviewEnabled,
+} from '@/frontend/lib/attachment-preview-prefs'
+import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
+
 const INCOMING_TONE_CHANNELS: IncomingToneChannel[] = ['dialog', 'group', 'pinnwand']
 
 const COLOR_FIELDS: { key: keyof CustomAppearanceColors; label: string }[] = [
@@ -52,6 +59,7 @@ const COLOR_FIELDS: { key: keyof CustomAppearanceColors; label: string }[] = [
 ]
 
 export function SettingsAppearanceSection() {
+  const { t } = useAppTranslation('dashboard')
   const [active, setActive] = useState<MessengerAppearanceId>(() => readMessengerAppearanceId())
   const [customOn, setCustomOn] = useState(() => readCustomAppearanceEnabled())
   const [custom, setCustom] = useState<CustomAppearanceColors>(() => readCustomAppearanceColors())
@@ -60,6 +68,7 @@ export function SettingsAppearanceSection() {
   const [soundVolume, setSoundVolume] = useState(() => readSoundFeedbackVolume())
   const [magnetOn, setMagnetOn] = useState(() => readMagnetFeedbackEnabled())
   const [incomingMaster, setIncomingMaster] = useState(() => readIncomingToneMasterEnabled())
+  const [attachmentPreview, setAttachmentPreview] = useState(() => readAttachmentPreviewEnabled())
   const [incomingChannels, setIncomingChannels] = useState<Record<IncomingToneChannel, boolean>>({
     dialog: readIncomingToneChannelEnabled('dialog'),
     group: readIncomingToneChannelEnabled('group'),
@@ -81,11 +90,14 @@ export function SettingsAppearanceSection() {
         pinnwand: readIncomingToneChannelEnabled('pinnwand'),
       })
     }
+    const syncPreview = () => setAttachmentPreview(readAttachmentPreviewEnabled())
     window.addEventListener(UI_FEEDBACK_PREFS_CHANGED, syncUi)
     window.addEventListener(INCOMING_MESSAGE_TONE_PREFS_CHANGED, syncIncoming)
+    window.addEventListener(ATTACHMENT_PREVIEW_PREFS_CHANGED, syncPreview)
     return () => {
       window.removeEventListener(UI_FEEDBACK_PREFS_CHANGED, syncUi)
       window.removeEventListener(INCOMING_MESSAGE_TONE_PREFS_CHANGED, syncIncoming)
+      window.removeEventListener(ATTACHMENT_PREVIEW_PREFS_CHANGED, syncPreview)
     }
   }, [])
 
@@ -300,11 +312,9 @@ export function SettingsAppearanceSection() {
           <div className="flex items-center justify-between gap-3">
             <div>
               <Label htmlFor="ui-incoming-tone" className="text-sm text-foreground">
-                Eingangs-Ton (neue Nachricht)
+                {t('appearance.incomingTone')}
               </Label>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">
-                Glocken-Chime (nicht Klick-Piep). Nur offener Tab — kein System-Push. Default aus.
-              </p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">{t('appearance.incomingToneHint')}</p>
             </div>
             <Switch
               id="ui-incoming-tone"
@@ -348,6 +358,22 @@ export function SettingsAppearanceSection() {
               </div>
             ))}
           </div>
+        </div>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
+          <div>
+            <Label htmlFor="ui-attachment-preview" className="text-sm text-foreground">
+              {t('appearance.attachmentPreview')}
+            </Label>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">{t('appearance.attachmentPreviewHint')}</p>
+          </div>
+          <Switch
+            id="ui-attachment-preview"
+            checked={attachmentPreview}
+            onCheckedChange={(on) => {
+              setAttachmentPreview(on)
+              persistAttachmentPreviewEnabled(on)
+            }}
+          />
         </div>
         <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
           <Label htmlFor="ui-magnet" className="text-sm text-foreground">

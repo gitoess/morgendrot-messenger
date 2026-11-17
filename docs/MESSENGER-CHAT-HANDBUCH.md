@@ -2,7 +2,7 @@
 
 **Zweck:** Ausführliche Hinweise, die früher direkt in der Chat-UI standen — hier gebündelt für Nachlesen (PWA-Handbuch, offline nach erstem Abruf möglich).
 
-**Stand:** 2026-11-13 — Settings-Kurzblatt: `EINSTELLUNGEN-NUTZER-HANDBUCH.md`. Chat-UI: Sidebar | Posteingang (kurz), Composer volle Breite darunter; Sendepfad Alle/IOTA/Funk/Telegram; Aktualisieren im App-Header neben Tresor.
+**Stand:** 2026-11-17 — Settings-Kurzblatt: `EINSTELLUNGEN-NUTZER-HANDBUCH.md` (Ton/Stumm/TG-Klingel). Chat-UI: Sidebar | Posteingang (kurz), Composer volle Breite darunter; Sendepfad Alle/IOTA/Funk/Telegram; Aktualisieren im App-Header neben Tresor.
 
 **Verwandt:** `docs/PWA-HANDBUCH-OFFLINE.md`, `docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`, `docs/MESSENGER-CAPABILITIES-OVERVIEW.md`, `docs/GRUPPENCHAT-ZIELBILD.md`, `docs/EXPORT-ASSISTENT-REFERENZ.md`.  
 **Privacy / Vault / NFT-Schlüsselkarte (alle Ist-Funktionen + 1-Gerät-Test):** → **`docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`**.  
@@ -15,7 +15,7 @@
 | Bereich | Inhalt |
 |---------|--------|
 | **App-Header** (Boss/Messenger) | **Tresor**, **Aktualisieren** (Status + Posteingang + Kontakte), Handbuch, Einstellungen — **nicht** in der Posteingang-Leiste. In **Nachrichten** / **Einsatzleitung**: nur das **Gegenstück** als Schalter. In **Einstellungen**: Titel + Sprünge zu Nachrichten und Einsatzleitung |
-| **Chat-Kopf** | Sendepfad (**Alle** / Funk / **IOTA** / Telegram), **SOS — Hilferuf** (1:1, nicht Telegram). Mit Sidebar: **kein** großer Kanal-/Posteingang-Titel |
+| **Chat-Kopf** | Sendepfad (**Alle** / Funk / **IOTA** / Telegram), **Ton/Stumm** (nur In-App-Eingangs-Chime für diesen Chat), **SOS — Hilferuf** (1:1, nicht Telegram). Mit Sidebar: **kein** großer Kanal-/Posteingang-Titel |
 | **Seitenleiste** (Desktop) | **Chats** gleiche Höhe wie Posteingang (`min(70vh,44rem)`), scrollt |
 | **Posteingang** (rechts) | Nachrichten + Toolbar; **Auswahl** ≈ Nachrichten-⋯ (Kopieren, Protokoll, Weiterleiten, JSON, Ausblenden, Burn) |
 | **Composer** | **Volle Breite unter beiden Spalten** (eigene Leiste, kein Overlap): `[+]` = Datei, Kamera, STT, Telefonbuch, **An Adresse senden**, **Sprachnachricht**, **Passphrase-Schutz**, **Zeitkapsel-Nachricht**; Text; Senden. Empfänger-Wallet bei aktivem Chat ausgeblendet |
@@ -26,6 +26,16 @@
 | **Browser** | Zurück/Vor navigiert Dashboard-Ansichten (`morgView`) |
 
 **Dashboard:** Kachel **Nachrichten** öffnet den Chat. **Telefonbuch** zusätzlich über `[+]` im Composer, Sidebar oder Kontakt-Detail.
+
+### Ton, Stumm, Telegram-Klingel — nicht verwechseln
+
+| Was | Wo | Was es ist | Was es nicht ist |
+|-----|-----|------------|------------------|
+| **Eingangs-Ton** | Einstellungen → Erscheinungsbild | Glocken-Chime bei neuer Nachricht im **offenen Tab** (Master + 1:1/Gruppe/Pinnwand). Default **aus**. | Kein OS-Push, kein Telegram |
+| **Stumm (pro Chat)** | Chat-Kopf **Ton/Stumm** | Schaltet nur den In-App-Chime für **diesen** Chat stumm | Blockiert weder On-Chain noch Telegram |
+| **IOTA→Telegram-Klingel** | Einstellungen → Telegram → Hinweis nach Online-Send | Aufmerksamkeits-Ping auf dem Handy nach erfolgreichem Online-IOTA-Send (App muss nicht offen sein) | Kein zweiter Messenger; kein Ersatz für Posteingang; ≠ Composer-Sendepfad „Telegram“ |
+
+Details + Tabelle: **`EINSTELLUNGEN-NUTZER-HANDBUCH.md`**.
 
 ### Drei Menüs — nicht verwechseln
 
