@@ -23,10 +23,10 @@
 
 ## 0. Schreibtisch (Blocker — vor dem Handy)
 
-- [ ] `cd frontend` → **`npm run test:h15-direct-submit`** grün (Stand Repo; aktuell **73** Tests).
-- [ ] **Oder Root:** **`npm run smoke:standalone-desk`** (führt H.15-Tests + druckt §0/§A–C Hinweise).
+- [ ] `cd frontend` → **`npm run test:h15-direct-submit`** grün (Stand Repo; **2026-11-17:** **87** Tests).
+- [ ] **Oder Root:** **`npm run smoke:standalone-desk`** (führt H.15-Tests + druckt §0/§A–C Hinweise; warnt bei **veralteter** Debug-APK >14 Tage).
 - [ ] Optional Root: **`npm run test:smoke`**.
-- [ ] APK bauen: **`npm run apk:debug:build`** → `frontend/android/app/build/outputs/apk/debug/app-debug.apk`.
+- [ ] APK **frisch** bauen: **`npm run apk:debug:build`** → `frontend/android/app/build/outputs/apk/debug/app-debug.apk` (altes Artefakt reicht nicht).
 - [ ] Zwei **Handoff-ZIPs** (verschiedene Profile/Adressen) vom Boss oder Test-Export — je ~3 KB, **ohne** Secrets im Chat.
 
 **Ergebnis:** nur bei grün → Gerätetest starten.
