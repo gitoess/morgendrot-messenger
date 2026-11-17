@@ -10,6 +10,7 @@
 
 ## Einträge
 
+| **2026-11-17** | PC (Windows), **Phase A CI-Spiegel `npm run check:frontend`** | Lint: ungültige eslint-disable (fehlende Plugins); tsc: PreviewMeta.hash + handshake null; Vitest Emoji unter +-Menü; Script `typecheck` | **PASS** — Core 106 + frontend lint/circular/tsc + Vitest 1641 |
 | **2026-11-17** | PC (Windows), **PC-5er T17-2 / H.23 Label / T53 Preview / i18n / Burn-Checkliste** | Handbuch Ton/Stumm/Klingel; Absender-Passphrase-Wording; Composer-Vorschau-Pref Default an; DE↔EN Mute/Ton/TG; ANLEITUNG §0 #10/#11; Vitest preview-prefs | **PASS (Code+Doku)** — Live Burn/Reuse optional am Schreibtisch |
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |

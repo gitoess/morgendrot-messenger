@@ -139,6 +139,8 @@ type PreviewMeta = {
   attrs?: EvidenceAttrPair[]
   encryptedFlag?: boolean
   objectId?: string
+  /** SHA-256 Hex der Bildbytes (Mint/Vorschau). */
+  hash?: string
   /** embedded = image_data; url = HTTP/IPFS */
   source?: 'embedded' | 'url'
   /** IPFS-CID für Gateway-Fallback / Browser-Link */

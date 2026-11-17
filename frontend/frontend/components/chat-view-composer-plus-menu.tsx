@@ -67,8 +67,9 @@ export function ChatViewComposerPlusMenu(p: ChatViewComposerPlusMenuProps) {
         onClick={(e) => {
           const el = e.target as HTMLElement | null
           if (!el) return
-          /** Checkboxen (Funk) offen lassen; sonst nach Aktion schließen. */
+          /** Checkboxen (Funk) und Emoji-Trigger offen lassen (verschachteltes Popover); sonst schließen. */
           if (el.closest('input[type="checkbox"]')) return
+          if (el.closest('[data-testid="chat-composer-emoji-trigger"]')) return
           if (el.closest('button, [role="button"], [data-emoji]')) close()
         }}
       >

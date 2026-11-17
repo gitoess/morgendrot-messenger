@@ -705,15 +705,17 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
                     >
                       {connected ? 'verbunden' : 'offen'}
                     </span>
-                    <button
-                      type="button"
-                      disabled={handshake.sending}
-                      onClick={() => void handshake.onHandshakeForAddress(addr)}
-                      className="shrink-0 rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
-                    >
-                      Handshake
-                    </button>
-                    {handshake.onConnectAcceptForAddress ? (
+                    {handshake ? (
+                      <button
+                        type="button"
+                        disabled={handshake.sending}
+                        onClick={() => void handshake.onHandshakeForAddress(addr)}
+                        className="shrink-0 rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
+                      >
+                        Handshake
+                      </button>
+                    ) : null}
+                    {handshake?.onConnectAcceptForAddress ? (
                       <button
                         type="button"
                         disabled={handshake.sending}

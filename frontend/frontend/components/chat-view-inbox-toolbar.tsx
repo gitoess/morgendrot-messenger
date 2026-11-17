@@ -332,7 +332,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     if (exportHistoryOpen) return
     revokePendingBrowserFileSave(pendingExportSave)
     setPendingExportSave(null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur beim Schließen aufräumen
+    // Nur beim Schließen aufräumen (kein react-hooks-Plugin in eslint.config).
   }, [exportHistoryOpen])
 
   const blockExportAction = (run: () => void) => {

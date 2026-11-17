@@ -144,7 +144,7 @@ export function ChatViewMediaGallery(p: ChatViewMediaGalleryProps) {
         return {}
       })
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur kinds / compact-Wechsel
+    // kinds / compact-Wechsel (kein react-hooks-Plugin in eslint.config).
   }, [kindsKey, p.compact, loadVisible])
 
   const byKind = useMemo(() => {
@@ -282,7 +282,6 @@ export function ChatViewMediaGallery(p: ChatViewMediaGalleryProps) {
                             </span>
                           </span>
                           {preview ? (
-                            // eslint-disable-next-line @next/next/no-img-element
                             <img src={preview} alt="" className="h-14 w-full rounded object-cover" />
                           ) : (
                             <span className="flex h-14 items-center justify-center rounded bg-muted/40 text-[10px] text-muted-foreground">
