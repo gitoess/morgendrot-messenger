@@ -127,6 +127,8 @@ Team-Postfächer: **Meine Mailboxen**. Helfer sehen den Block nicht.
 
 Telegram = **optionaler Push/Hinweis**, kein Chat-Ersatz für IOTA/Funk.
 
+**IOTA→Telegram-Klingel (Hinweis nach Online-Send):** Genau das, wofür sie gebaut ist — **Aufmerksamkeits-Ping**, kein zweiter Messenger. Bedeutung: „Es liegt was in Morgendrot“ (Handy vibriert über Telegram, App muss nicht offen sein). Inhalt/Verlauf bleiben in Morgendrot; Telegram ersetzt weder IOTA noch Funk.
+
 | Einstellung | Bedeutung |
 |-------------|-----------|
 | **System-Alarme** | Nur Monitor/Sensor → deine Chat-ID. Kann aus bleiben für normalen Chat. |
@@ -137,7 +139,7 @@ Telegram = **optionaler Push/Hinweis**, kein Chat-Ersatz für IOTA/Funk.
 | **Test an mich** | An deine Admin-Chat-ID. |
 | **Test an Kontakt** | An manuell eingegebene Partner-Chat-ID — nicht dasselbe. |
 | **Einsatz-Alarmgruppe** | Boss: eine Telegram-**Gruppe** als Klingel für SOS / „Team alarmieren“. Default **aus** (kein versehentliches Gruppen-Schreiben). Aktiv = Schalter an + **Gruppen-Chat-ID (-100…)** + Speichern; Einladungslink nur für Helfer-Beitritt. |
-| **Hinweis nach Online-Send** | Nach erfolgreichem **IOTA-1:1 Online**: optionaler Kurz-Ping. Empfänger: **Kontakt / Ich / Beide** + optional **weitere Chat-IDs (CC, max. 5)**. Nicht die Alarmgruppe. Composer-Sendepfad „Telegram“ = **anderer** Kanal (nur Bot, ohne IOTA). |
+| **Hinweis nach Online-Send** | Nach erfolgreichem **IOTA-1:1 Online**: optionaler Kurz-Ping (**Klingel**, siehe Absatz oben). Empfänger: **Kontakt / Ich / Beide** + optional **weitere Chat-IDs (CC, max. 5)**. Nicht die Alarmgruppe. Composer-Sendepfad „Telegram“ = **anderer** Kanal (nur Bot, ohne IOTA). |
 
 **Einstieg:** App → **Einstellungen → Telegram** (Handbuch-Karte unter Allgemein → „Öffnen“ führt ins Handbuch; Telegram-Tab = Aktion). Kurz-Setup: `TELEGRAM-INTEGRATION-EINRICHTUNG.md`.
 
