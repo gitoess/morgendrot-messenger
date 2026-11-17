@@ -22,6 +22,8 @@ import {
   buildReturnEarlyNftTimeLeaseTransaction,
 } from '@/frontend/lib/nft-time-lease-txb'
 import {
+  dropPendingNftTimeLeasesForNft,
+  isPendingNftTimeLeaseId,
   patchNftTimeLeaseLocal,
   upsertNftTimeLeaseLocal,
 } from '@/frontend/lib/nft-time-lease-local-store'
@@ -80,6 +82,11 @@ function abortCodeInDetail(d: string, code: number): boolean {
   )
 }
 
+function looksLikeNftTimeLeaseType(objectType: string | undefined): boolean {
+  const t = (objectType || '').toLowerCase()
+  return t.includes('nft_time_lease') || t.includes('nfttimelease')
+}
+
 /** Lease-Object-ID aus create_lease Effects / objectChanges / Events. */
 function pickCreatedLeaseId(
   effects: unknown,
@@ -89,28 +96,46 @@ function pickCreatedLeaseId(
   try {
     const changes = Array.isArray(objectChanges) ? objectChanges : []
     for (const c of changes) {
-      const row = c as { type?: string; objectId?: string; objectType?: string }
-      if (row.type !== 'created') continue
-      const t = (row.objectType || '').toLowerCase()
-      if (!t.includes('nft_time_lease')) continue
-      const id = coerceHex64Id(row.objectId)
+      const row = c as {
+        type?: string
+        objectId?: string
+        objectType?: string
+        id?: { id?: string } | string
+      }
+      if (row.type && row.type !== 'created') continue
+      if (!looksLikeNftTimeLeaseType(row.objectType)) continue
+      const id =
+        coerceHex64Id(row.objectId) ||
+        coerceHex64Id(typeof row.id === 'string' ? row.id : row.id?.id)
       if (id) return { leaseObjectId: id }
     }
     const e = effects as {
-      created?: Array<{ reference?: { objectId?: string }; owner?: unknown }>
+      created?: Array<{
+        reference?: { objectId?: string }
+        objectId?: string
+        owner?: unknown
+      }>
     }
     for (const c of e.created || []) {
-      const id = coerceHex64Id(c.reference?.objectId)
+      const id = coerceHex64Id(c.reference?.objectId) || coerceHex64Id(c.objectId)
       if (id) return { leaseObjectId: id }
     }
     const evs = Array.isArray(events) ? events : []
     for (const ev of evs) {
       const row = ev as {
         type?: string
-        parsedJson?: { lease_id?: unknown; unlock_ms?: unknown; unlockMs?: unknown }
+        parsedJson?: {
+          lease_id?: unknown
+          leaseId?: unknown
+          unlock_ms?: unknown
+          unlockMs?: unknown
+        }
       }
-      if (!row.type?.includes('::nft_time_lease::LeaseCreated')) continue
-      const id = coerceHex64Id(row.parsedJson?.lease_id)
+      const typ = (row.type || '').toLowerCase()
+      if (!typ.includes('leasecreated') && !typ.includes('nft_time_lease')) continue
+      if (typ.includes('leasecancelled') || typ.includes('leasereclaimed')) continue
+      const id =
+        coerceHex64Id(row.parsedJson?.lease_id) || coerceHex64Id(row.parsedJson?.leaseId)
       const unlockRaw = row.parsedJson?.unlock_ms ?? row.parsedJson?.unlockMs
       const unlockMs =
         typeof unlockRaw === 'number'
@@ -122,6 +147,31 @@ function pickCreatedLeaseId(
     }
   } catch {
     /* ignore */
+  }
+  return {}
+}
+
+async function resolveLeaseIdFromDigest(
+  client: ReturnType<typeof createDirectIotaClient>,
+  digest: string
+): Promise<{ leaseObjectId?: string; unlockMs?: number }> {
+  const delays = [0, 400, 1200, 2500]
+  for (const wait of delays) {
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait))
+    try {
+      const tx = await client.getTransactionBlock({
+        digest,
+        options: { showEffects: true, showEvents: true, showObjectChanges: true },
+      })
+      const picked = pickCreatedLeaseId(
+        tx.effects,
+        (tx as { objectChanges?: unknown }).objectChanges,
+        (tx as { events?: unknown }).events
+      )
+      if (picked.leaseObjectId) return picked
+    } catch {
+      /* retry */
+    }
   }
   return {}
 }
@@ -196,39 +246,53 @@ export async function createNftTimeLease(input: {
     if (!isDirectChainExecutionSuccess(out.digest, out.status) || !out.digest) {
       return { ok: false, error: mapCreateLeaseError(out.errorDetail) }
     }
-    let leaseObjectId: string | undefined
-    let unlockMsFromChain: number | undefined
+    // Sofort aus Execute-Payload (falls vorhanden), sonst Digest mit Retries.
+    let picked = pickCreatedLeaseId(
+      (out as { effects?: unknown }).effects,
+      (out as { objectChanges?: unknown }).objectChanges,
+      (out as { events?: unknown }).events
+    )
+    if (!picked.leaseObjectId) {
+      picked = await resolveLeaseIdFromDigest(client, out.digest)
+    }
+    const unlockMs =
+      typeof picked.unlockMs === 'number' && picked.unlockMs > 0
+        ? picked.unlockMs
+        : Date.now() + Math.max(1, Math.floor(input.durationMs))
+    // Immer lokal merken — auch ohne Lease-ID (pending), damit Zeitkapsel-Hub die NFT zeigt.
+    const leaseObjectId = picked.leaseObjectId || `pending:${out.digest}`
+    upsertNftTimeLeaseLocal({
+      leaseObjectId,
+      nftObjectId: input.nftObjectId,
+      lender: sender,
+      borrower: input.borrowerAddress,
+      unlockMs,
+      reclaimCancelled: false,
+      status: 'active',
+      createDigest: out.digest,
+    })
     try {
-      const tx = await client.getTransactionBlock({
-        digest: out.digest,
-        options: { showEffects: true, showEvents: true, showObjectChanges: true },
-      })
-      const picked = pickCreatedLeaseId(
-        tx.effects,
-        (tx as { objectChanges?: unknown }).objectChanges,
-        (tx as { events?: unknown }).events
+      const { recordNftActivity, noteNftNoLongerOwned } = await import(
+        '@/frontend/lib/nft-activity-local-log'
       )
-      leaseObjectId = picked.leaseObjectId
-      unlockMsFromChain = picked.unlockMs
-    } catch {
-      /* Lease-ID manuell nachtragen */
-    }
-    if (leaseObjectId) {
-      upsertNftTimeLeaseLocal({
-        leaseObjectId,
-        nftObjectId: input.nftObjectId,
-        lender: sender,
-        borrower: input.borrowerAddress,
-        unlockMs:
-          typeof unlockMsFromChain === 'number' && unlockMsFromChain > 0
-            ? unlockMsFromChain
-            : Date.now() + Math.max(1, Math.floor(input.durationMs)),
-        reclaimCancelled: false,
-        status: 'active',
-        createDigest: out.digest,
+      const oid = input.nftObjectId.trim().toLowerCase()
+      const borrower = input.borrowerAddress.trim().toLowerCase()
+      recordNftActivity({
+        kind: 'sent',
+        objectId: oid,
+        counterparty: borrower,
+        digest: out.digest,
+        label: `Zeitkapsel-Verleih → ${borrower.slice(0, 10)}…`,
       })
+      noteNftNoLongerOwned(oid)
+    } catch {
+      /* Aktivität lokal optional */
     }
-    return { ok: true, digest: out.digest, leaseObjectId }
+    return {
+      ok: true,
+      digest: out.digest,
+      leaseObjectId: picked.leaseObjectId,
+    }
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }
   }
@@ -280,9 +344,94 @@ export async function returnEarlyNftTimeLease(input: {
       return { ok: false, error: mapLeaseAbortError('return_early', out.errorDetail) }
     }
     patchNftTimeLeaseLocal(input.leaseObjectId, { status: 'returned' })
+    try {
+      const { listNftTimeLeasesLocal } = await import('@/frontend/lib/nft-time-lease-local-store')
+      const row = listNftTimeLeasesLocal().find((l) => l.leaseObjectId === input.leaseObjectId)
+      const nftId = row?.nftObjectId?.trim().toLowerCase()
+      if (nftId) {
+        const { recordNftActivity, noteNftNowOwned } = await import(
+          '@/frontend/lib/nft-activity-local-log'
+        )
+        recordNftActivity({
+          kind: 'received',
+          objectId: nftId,
+          digest: out.digest,
+          label: 'Zeitkapsel: früh zurückgegeben (Borrower)',
+        })
+        noteNftNowOwned(nftId)
+      }
+    } catch {
+      /* optional */
+    }
     return { ok: true, digest: out.digest, leaseObjectId: input.leaseObjectId }
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }
+  }
+}
+
+/** Lease-Object von Chain lesen → lokalen Index füllen (wenn Browser-Merker fehlt). */
+export async function importNftTimeLeaseFromChain(leaseObjectIdRaw: string): Promise<
+  | { ok: true; leaseObjectId: string; nftObjectId: string; unlockMs: number }
+  | { ok: false; error: string }
+> {
+  const leaseObjectId = coerceHex64Id(leaseObjectIdRaw)
+  if (!leaseObjectId) return { ok: false, error: 'Lease-Object-ID: 0x + 64 Hex.' }
+  const rpc = getConfiguredDirectIotaRpcUrl()
+  if (!rpc) return { ok: false, error: 'Keine Direkt-RPC-URL.' }
+  if (isIotaRelayOnlyMode()) {
+    return { ok: false, error: 'Braucht Direkt-RPC (nicht „Nur Morgendrot-API“).' }
+  }
+  try {
+    const client = createDirectIotaClient({ rpcUrl: rpc })
+    const res = await client.getObject({
+      id: leaseObjectId,
+      options: { showContent: true, showType: true },
+    })
+    const content = res.data?.content as
+      | {
+          dataType?: string
+          type?: string
+          fields?: Record<string, unknown>
+        }
+      | undefined
+    if (!content || content.dataType !== 'moveObject' || !content.fields) {
+      return { ok: false, error: 'Objekt nicht gefunden oder kein Move-Objekt.' }
+    }
+    const typeStr = String(content.type || '')
+    if (!typeStr.includes('nft_time_lease::NftTimeLease')) {
+      return {
+        ok: false,
+        error: `Kein NftTimeLease (Typ: ${typeStr.slice(0, 80) || '—'}).`,
+      }
+    }
+    const f = content.fields
+    const nftObjectId = coerceHex64Id(f.nft_id)
+    const lender = coerceHex64Id(f.lender) || String(f.lender || '').trim().toLowerCase()
+    const borrower = coerceHex64Id(f.borrower) || String(f.borrower || '').trim().toLowerCase()
+    const unlockRaw = f.unlock_ms ?? f.unlockMs
+    const unlockMs =
+      typeof unlockRaw === 'number'
+        ? unlockRaw
+        : typeof unlockRaw === 'string'
+          ? Number(unlockRaw)
+          : 0
+    const reclaimCancelled = Boolean(f.reclaim_cancelled ?? f.reclaimCancelled)
+    if (!nftObjectId || !HEX64.test(lender) || !HEX64.test(borrower)) {
+      return { ok: false, error: 'Lease-Felder unvollständig (nft_id/lender/borrower).' }
+    }
+    dropPendingNftTimeLeasesForNft(nftObjectId)
+    upsertNftTimeLeaseLocal({
+      leaseObjectId,
+      nftObjectId,
+      lender,
+      borrower,
+      unlockMs: Number.isFinite(unlockMs) ? unlockMs : 0,
+      reclaimCancelled,
+      status: 'active',
+    })
+    return { ok: true, leaseObjectId, nftObjectId, unlockMs: Number.isFinite(unlockMs) ? unlockMs : 0 }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
 }
 
@@ -291,6 +440,13 @@ export async function reclaimNftTimeLease(input: {
   leaseObjectId: string
   imageNftPackageId?: string
 }): Promise<NftTimeLeaseActionResult> {
+  if (isPendingNftTimeLeaseId(input.leaseObjectId)) {
+    return {
+      ok: false,
+      error:
+        'Lease-Object-ID fehlt noch lokal — unter „Lease-ID von Chain laden“ die echte 0x… eintragen, dann Reclaim.',
+    }
+  }
   const prep = await prepare()
   if (!prep.ok) return prep
   const { client, signer, sender } = prep
@@ -307,6 +463,25 @@ export async function reclaimNftTimeLease(input: {
       return { ok: false, error: mapLeaseAbortError('reclaim', out.errorDetail) }
     }
     patchNftTimeLeaseLocal(input.leaseObjectId, { status: 'reclaimed' })
+    try {
+      const { listNftTimeLeasesLocal } = await import('@/frontend/lib/nft-time-lease-local-store')
+      const row = listNftTimeLeasesLocal().find((l) => l.leaseObjectId === input.leaseObjectId)
+      const nftId = row?.nftObjectId?.trim().toLowerCase()
+      if (nftId) {
+        const { recordNftActivity, noteNftNowOwned } = await import(
+          '@/frontend/lib/nft-activity-local-log'
+        )
+        recordNftActivity({
+          kind: 'received',
+          objectId: nftId,
+          digest: out.digest,
+          label: 'Zeitkapsel: Verleih zurückgeholt',
+        })
+        noteNftNowOwned(nftId)
+      }
+    } catch {
+      /* optional */
+    }
     return { ok: true, digest: out.digest, leaseObjectId: input.leaseObjectId }
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }

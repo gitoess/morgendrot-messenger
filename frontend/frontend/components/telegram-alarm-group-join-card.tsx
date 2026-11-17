@@ -97,15 +97,16 @@ export function TelegramAlarmGroupJoinCard(p: {
       >
         <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
           <Check className="h-4 w-4 text-emerald-500" aria-hidden />
-          {label || 'Einsatz-Alarmgruppe'} — beigetreten
+          {label || 'Einsatz-Alarmgruppe'}
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          In der Chat-Sidebar unter „Gruppen“ sichtbar. Kein Morgendrot-Gruppenchat.
+          „Beigetreten“ = du bist in der Telegram-Gruppe. Optional Chat-ID (-100…) speichern, damit der Bot die
+          Gruppe anschreiben kann — kein Morgendrot-Gruppenchat, kein Nachrichtenverlauf hier.
         </p>
         <TelegramAlarmGroupChatIdCapture compact={!panel} />
         {hasChatId ? null : (
           <p className="mt-2 text-[11px] text-muted-foreground">
-            Chat-ID kann jederzeit hier oder unter Einstellungen → Telegram ergänzt werden.
+            Chat-ID hier oder unter Einstellungen → Telegram. Entfernen: „Chat-ID entfernen“.
           </p>
         )}
       </div>

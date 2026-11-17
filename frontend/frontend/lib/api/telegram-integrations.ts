@@ -114,6 +114,35 @@ export async function saveTelegramIntegration(body: {
   }
 }
 
+/** Runtime-Bot-Config + lokales Journal leeren (Notfall). .env bleibt. */
+export async function wipeTelegramIntegration(): Promise<{
+  ok: boolean
+  message?: string
+  error?: string
+  journalCleared?: boolean
+}> {
+  try {
+    const fr = await fetchApiText(API_BASE, '/api/integrations/telegram/wipe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    })
+    if (!fr.ok) return { ok: false, error: fr.error }
+    let body: { ok?: boolean; message?: string; error?: string; journalCleared?: boolean }
+    try {
+      body = JSON.parse(fr.text) as typeof body
+    } catch {
+      return { ok: false, error: 'Wipe-Antwort ist kein JSON — Backend neu starten?' }
+    }
+    if (fr.response.status < 200 || fr.response.status >= 300 || body.ok === false) {
+      return { ok: false, error: body.error || `HTTP ${fr.response.status}` }
+    }
+    return { ok: true, message: body.message, journalCleared: body.journalCleared === true }
+  } catch (e) {
+    return { ok: false, error: formatFetchFailureMessage(e) }
+  }
+}
+
 export async function testTelegramAlarm(): Promise<{ ok: boolean; message?: string; error?: string }> {
   try {
     const fr = await fetchApiText(API_BASE, '/api/integrations/telegram/test-alarm', {

@@ -4,8 +4,10 @@ import { VAULT_OVERLAY_ATTR } from '@/frontend/components/native-modal-shell'
 import { clearStuckRadixBodyLockAttrs } from '@/frontend/lib/release-modal-pointer-events-attrs'
 import { forceReleaseNativeBodyLock } from '@/frontend/lib/native-body-lock'
 
-const MAX_DIALOG_CLOSE_WAIT_MS = 600
+const MAX_DIALOG_CLOSE_WAIT_MS = 900
 const DIALOG_CLOSE_POLL_MS = 50
+/** Erst nach Exit-Animation/Unmount aufräumen — sonst Flackern beim X. */
+const CLOSE_CLEANUP_DELAY_MS = 320
 
 function countOpenDialogSurfaces(): number {
   if (typeof document === 'undefined') return 0
@@ -72,7 +74,9 @@ function releaseAfterDialogsClosed(deadlineMs: number): void {
 export function scheduleReleaseStuckModalPointerEvents(): void {
   if (typeof window === 'undefined') return
   const deadlineMs = Date.now() + MAX_DIALOG_CLOSE_WAIT_MS
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => releaseAfterDialogsClosed(deadlineMs))
-  })
+  window.setTimeout(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => releaseAfterDialogsClosed(deadlineMs))
+    })
+  }, CLOSE_CLEANUP_DELAY_MS)
 }

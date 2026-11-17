@@ -84,6 +84,25 @@ export function appendTelegramJournalEntry(input: {
     return entry;
 }
 
+/** Lokales Journal-File leeren / entfernen (Notfall-Löschung). */
+export function clearTelegramJournalFile(): { ok: true; removed: boolean; path: string } {
+    const p = filePath();
+    try {
+        if (fs.existsSync(p)) {
+            fs.unlinkSync(p);
+            return { ok: true, removed: true, path: p };
+        }
+    } catch {
+        try {
+            writeFile({ entries: [] });
+            return { ok: true, removed: true, path: p };
+        } catch {
+            return { ok: true, removed: false, path: p };
+        }
+    }
+    return { ok: true, removed: false, path: p };
+}
+
 export function listTelegramJournalEntries(opts: {
     contactKey?: string;
     chatId?: string;

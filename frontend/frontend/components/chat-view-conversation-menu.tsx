@@ -1,8 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Download, Eraser, Flame, FlaskConical, Info, KeyRound, MoreVertical, Settings2, Users } from 'lucide-react'
-import { ChatViewEncryptionModeToggle } from '@/frontend/components/chat-view-encryption-mode-toggle'
+import { Eraser, Flame, FlaskConical, Info, KeyRound, MoreVertical, Settings2, Users } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import {
   RATCHET_EXPERIMENT_CHANGED,
   readRatchetExperimentEnabled,
@@ -25,8 +23,6 @@ export type ChatViewConversationMenuProps = {
   canExport: boolean
   /** Info: IDs / Mailbox / TX / Telegram — nicht Einstellungen. */
   onViewInfo?: () => void
-  /** @deprecated Prefer onViewInfo */
-  onViewProfile?: () => void
   onExportHistory?: () => void
   onClearHistory?: () => void
   onRenewEncryptionKeys?: () => void | Promise<void>
@@ -39,25 +35,21 @@ export type ChatViewConversationMenuProps = {
   }
   onManageGroup?: () => void
   onCreateGroup?: () => void
-  encryptionToggle?: {
-    encrypted: boolean
-    onEncryptedChange: (v: boolean) => void
-    forcedTransport?: ForcedTransport
-  }
   /**
-   * Chain-Sicherheit (Burn-on-read, Schlüssel erneuern, Double Ratchet).
-   * Aus bei Funk/Telegram — gehört nicht in den Posteingang-„Optionen“-Menü.
+   * Chain-Sicherheit (Nach-Lesen-Modus, Schlüssel erneuern, Double Ratchet).
+   * Aus bei Funk/Telegram.
    */
   showChainSecurityTools?: boolean
+  /** header = Titelzeile + ⋮; items = nur Menüeinträge (z. B. in Optionen). */
+  variant?: 'header' | 'toolbar' | 'items'
 }
 
-/** Telegram-ähnliches ⋮-Menü — Kernpunkte immer sichtbar (disabled wenn nicht anwendbar). */
-export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
-  const enc = p.encryptionToggle
+/** Menüeinträge — unter Posteingang → Optionen → Chat · Sicherheit (und optional Header-Menü). */
+export function ChatConversationMenuItems(p: ChatViewConversationMenuProps) {
   const burn = p.burnOnRead
   const chainSecurity = p.showChainSecurityTools !== false
   const hasGroupActions = Boolean(p.onManageGroup || p.onCreateGroup)
-  const onInfo = p.onViewInfo ?? p.onViewProfile
+  const onInfo = p.onViewInfo
   const [ratchetExp, setRatchetExp] = useState(false)
 
   useEffect(() => {
@@ -72,6 +64,129 @@ export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
   }, [])
 
   const infoLabel = p.onManageGroup ? 'Gruppen-Info' : 'Info'
+
+  return (
+    <>
+      {onInfo || hasGroupActions ? (
+        <>
+          {onInfo ? (
+            <DropdownMenuItem onSelect={() => onInfo()}>
+              <Info className="mr-2 h-4 w-4" />
+              {infoLabel}
+            </DropdownMenuItem>
+          ) : null}
+          {p.onManageGroup ? (
+            <DropdownMenuItem onSelect={() => p.onManageGroup?.()}>
+              <Settings2 className="mr-2 h-4 w-4" />
+              Gruppe verwalten…
+            </DropdownMenuItem>
+          ) : null}
+          {p.onCreateGroup ? (
+            <DropdownMenuItem onSelect={() => p.onCreateGroup?.()}>
+              <Users className="mr-2 h-4 w-4" />
+              {p.onManageGroup ? 'Neue Gruppe erstellen' : 'Gruppen verwalten…'}
+            </DropdownMenuItem>
+          ) : null}
+          <DropdownMenuSeparator />
+        </>
+      ) : (
+        <DropdownMenuItem disabled title="Partner in der Liste wählen">
+          <Info className="mr-2 h-4 w-4" />
+          Info
+        </DropdownMenuItem>
+      )}
+
+      {chainSecurity ? (
+        <>
+          <DropdownMenuItem
+            disabled={!p.onRenewEncryptionKeys}
+            title={
+              p.onRenewEncryptionKeys
+                ? p.renewEncryptionHint ??
+                  'Session-Epoch erhöhen (Forward Secrecy ab Rotation). Alte Nachrichten bleiben lesbar.'
+                : 'Nur bei 1:1 mit gültiger Partner-0x'
+            }
+            onSelect={() => void p.onRenewEncryptionKeys?.()}
+          >
+            <KeyRound className="mr-2 h-4 w-4" />
+            {p.renewEncryptionLabel ?? 'Schlüssel erneuern'}
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
+            disabled={!burn}
+            title={
+              burn
+                ? 'Nur Modus: nach dem Lesen Burn vorschlagen. Löscht nichts sofort — Von Chain löschen: Nachrichten-⋯ oder Auswahl.'
+                : 'Nach-Lesen-Löschen hier nicht verfügbar'
+            }
+            onSelect={() => burn?.onEnabledChange(!burn.enabled)}
+          >
+            <Flame className={burn?.enabled ? 'mr-2 h-4 w-4 text-orange-600' : 'mr-2 h-4 w-4'} />
+            {burn?.enabled ? 'Nach Lesen löschen: an (nur Modus)' : 'Nach Lesen löschen: aus (nur Modus)'}
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
+            title={
+              ratchetExp
+                ? 'Experiment an — ändert Senden noch nicht (Composer bleibt Envelope v2). FS heute: Schlüssel erneuern.'
+                : 'Experiment — ändert Senden noch nicht. Opt-in H.23 C1; beide Seiten brauchen Flag, wenn Wire verdrahtet ist.'
+            }
+            onSelect={() => {
+              const next = !ratchetExp
+              writeRatchetExperimentEnabled(next)
+              setRatchetExp(next)
+            }}
+          >
+            <FlaskConical className={ratchetExp ? 'mr-2 h-4 w-4 text-amber-700' : 'mr-2 h-4 w-4'} />
+            {ratchetExp
+              ? 'Double Ratchet: an (ändert Senden nicht)'
+              : 'Double Ratchet (Exp. — ändert Senden nicht)'}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+        </>
+      ) : null}
+      <DropdownMenuItem
+        disabled={!p.onClearHistory || !p.canClearHistory}
+        className="text-destructive focus:text-destructive"
+        title={
+          !p.onClearHistory
+            ? 'Lokal leeren hier nicht angebunden'
+            : !p.canClearHistory
+              ? 'Keine sichtbaren Nachrichten'
+              : undefined
+        }
+        onSelect={() => p.onClearHistory?.()}
+      >
+        <Eraser className="mr-2 h-4 w-4" />
+        Verlauf leeren (lokal)
+      </DropdownMenuItem>
+    </>
+  )
+}
+
+/** Telegram-ähnliches ⋮-Menü — Kernpunkte immer sichtbar (disabled wenn nicht anwendbar). */
+export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
+  const onInfo = p.onViewInfo
+  const infoLabel = p.onManageGroup ? 'Gruppen-Info' : 'Info'
+  const itemsOnly = p.variant === 'items'
+  const toolbarOnly = p.variant === 'toolbar'
+
+  if (itemsOnly) return <ChatConversationMenuItems {...p} />
+
+  const menu = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Chat-Optionen">
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-[14rem]">
+        <ChatConversationMenuItems {...p} />
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+
+  if (toolbarOnly) return menu
 
   return (
     <div className="flex items-center justify-between gap-2 border-b border-border/60 px-3 py-2.5">
@@ -94,132 +209,7 @@ export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
           </>
         )}
       </div>
-      {enc ? (
-        <ChatViewEncryptionModeToggle
-          compact
-          encrypted={enc.encrypted}
-          forcedTransport={enc.forcedTransport ?? 'internet'}
-          onEncryptedChange={enc.onEncryptedChange}
-          className="shrink-0 shadow-sm"
-        />
-      ) : null}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Chat-Optionen">
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-[14rem]">
-          {onInfo || hasGroupActions ? (
-            <>
-              {onInfo ? (
-                <DropdownMenuItem onSelect={() => onInfo()}>
-                  <Info className="mr-2 h-4 w-4" />
-                  {infoLabel}
-                </DropdownMenuItem>
-              ) : null}
-              {p.onManageGroup ? (
-                <DropdownMenuItem onSelect={() => p.onManageGroup?.()}>
-                  <Settings2 className="mr-2 h-4 w-4" />
-                  Gruppe verwalten…
-                </DropdownMenuItem>
-              ) : null}
-              {p.onCreateGroup ? (
-                <DropdownMenuItem onSelect={() => p.onCreateGroup?.()}>
-                  <Users className="mr-2 h-4 w-4" />
-                  {p.onManageGroup ? 'Neue Gruppe erstellen' : 'Gruppen verwalten…'}
-                </DropdownMenuItem>
-              ) : null}
-              <DropdownMenuSeparator />
-            </>
-          ) : (
-            <DropdownMenuItem disabled title="Partner in der Liste wählen">
-              <Info className="mr-2 h-4 w-4" />
-              Info
-            </DropdownMenuItem>
-          )}
-
-          <DropdownMenuItem
-            disabled={!p.onExportHistory || !p.canExport}
-            title={
-              !p.onExportHistory
-                ? 'Export hier nicht angebunden'
-                : !p.canExport
-                  ? 'Keine Nachrichten zum Export'
-                  : undefined
-            }
-            onSelect={() => p.onExportHistory?.()}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Verlauf exportieren
-          </DropdownMenuItem>
-
-          {chainSecurity ? (
-            <>
-              <DropdownMenuItem
-                disabled={!p.onRenewEncryptionKeys}
-                title={
-                  p.onRenewEncryptionKeys
-                    ? p.renewEncryptionHint ??
-                      'Session-Epoch erhöhen (Forward Secrecy ab Rotation). Alte Nachrichten bleiben lesbar.'
-                    : 'Nur bei 1:1 mit gültiger Partner-0x'
-                }
-                onSelect={() => void p.onRenewEncryptionKeys?.()}
-              >
-                <KeyRound className="mr-2 h-4 w-4" />
-                {p.renewEncryptionLabel ?? 'Schlüssel erneuern'}
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                disabled={!burn}
-                title={
-                  burn
-                    ? 'Bei burnbaren Chain-Nachrichten nach dem Lesen Burn vorschlagen (mit Bestätigung).'
-                    : 'Burn-on-read hier nicht verfügbar'
-                }
-                onSelect={() => burn?.onEnabledChange(!burn.enabled)}
-              >
-                <Flame className={burn?.enabled ? 'mr-2 h-4 w-4 text-orange-600' : 'mr-2 h-4 w-4'} />
-                {burn?.enabled ? 'Burn-on-read: an' : 'Burn-on-read: aus'}
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                title={
-                  ratchetExp
-                    ? 'Experiment an — ändert Senden noch nicht (Composer bleibt Envelope v2). FS heute: Schlüssel erneuern.'
-                    : 'Experiment — ändert Senden noch nicht. Opt-in H.23 C1; beide Seiten brauchen Flag, wenn Wire verdrahtet ist.'
-                }
-                onSelect={() => {
-                  const next = !ratchetExp
-                  writeRatchetExperimentEnabled(next)
-                  setRatchetExp(next)
-                }}
-              >
-                <FlaskConical className={ratchetExp ? 'mr-2 h-4 w-4 text-amber-700' : 'mr-2 h-4 w-4'} />
-                {ratchetExp
-                  ? 'Double Ratchet: an (ändert Senden nicht)'
-                  : 'Double Ratchet (Exp. — ändert Senden nicht)'}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-            </>
-          ) : null}
-          <DropdownMenuItem
-            disabled={!p.onClearHistory || !p.canClearHistory}
-            className="text-destructive focus:text-destructive"
-            title={
-              !p.onClearHistory
-                ? 'Lokal leeren hier nicht angebunden'
-                : !p.canClearHistory
-                  ? 'Keine sichtbaren Nachrichten'
-                  : undefined
-            }
-            onSelect={() => p.onClearHistory?.()}
-          >
-            <Eraser className="mr-2 h-4 w-4" />
-            Verlauf leeren (lokal)
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {menu}
     </div>
   )
 }

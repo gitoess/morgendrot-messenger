@@ -57,11 +57,33 @@ describe('messenger-entity-info-model', () => {
     expect(teamKey?.copyable).toBe(false)
     expect(JSON.stringify(sections)).not.toMatch(/keyBase64/)
     expect(sections.some((s) => s.id === 'members')).toBe(true)
+    const overview = sections.find((s) => s.id === 'overview')
+    expect(overview?.fields.some((f) => f.id === 'team-mb-overview' && f.copyable)).toBe(true)
+  })
+
+  it('buildGroupInfoSections G3: ohne Team-Postfach Hinweis in Übersicht', () => {
+    const sections = buildGroupInfoSections({
+      group: {
+        id: 'g2',
+        name: 'Beta',
+        memberAddresses: [WALLET],
+      },
+    })
+    const overviewMb = sections
+      .find((s) => s.id === 'overview')
+      ?.fields.find((f) => f.id === 'team-mb-overview')
+    expect(overviewMb?.value).toMatch(/fehlt/)
+    expect(overviewMb?.copyable).toBe(false)
   })
 
   it('buildTelegramAlarmInfoSections: Token nur maskiert', () => {
     const sections = buildTelegramAlarmInfoSections({
-      membership: { inviteLink: 'https://t.me/+x', groupChatId: '-1001', label: 'Alarm' },
+      membership: {
+        inviteLink: 'https://t.me/+x',
+        groupChatId: '-1001',
+        label: 'Alarm',
+        confirmedAtMs: 1,
+      },
       integration: {
         enabled: true,
         botTokenConfigured: true,

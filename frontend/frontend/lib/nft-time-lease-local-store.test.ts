@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import {
+  evaluateNftGateAppAccess,
   findNftTimeLeaseByNft,
   isNftTimeLeaseBorrowerActive,
   listNftTimeLeasesLocal,
@@ -33,6 +34,19 @@ describe('nft-time-lease-local-store B2-P5b', () => {
     expect(isNftTimeLeaseBorrowerActive(findNftTimeLeaseByNft(NFT), W2)).toBe(true)
     expect(isNftTimeLeaseBorrowerActive(findNftTimeLeaseByNft(NFT), W1)).toBe(false)
     const badge = nftTimeLeaseBadgeText(findNftTimeLeaseByNft(NFT)!)
-    expect(badge).toMatch(/Geplante Veröffentlichung|Nur mit NFT/)
+    expect(badge).toMatch(/Leihe aktiv|nur Empfänger-Wallet|Borrower/)
+    const lease = findNftTimeLeaseByNft(NFT)
+    expect(
+      evaluateNftGateAppAccess({ signerAddress: W1, addressOwned: true, lease }).ok
+    ).toBe(false)
+    expect(
+      evaluateNftGateAppAccess({ signerAddress: W1, addressOwned: true, lease }).lenderBlocked
+    ).toBe(true)
+    expect(
+      evaluateNftGateAppAccess({ signerAddress: W2, addressOwned: false, lease }).ok
+    ).toBe(true)
+    expect(
+      evaluateNftGateAppAccess({ signerAddress: W1, addressOwned: true, lease: null }).ok
+    ).toBe(true)
   })
 })

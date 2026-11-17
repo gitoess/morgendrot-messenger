@@ -29,6 +29,7 @@ import {
   type ContactHandshakeBadgeKind,
 } from '@/frontend/lib/contact-handshake-ui'
 import { ContactHandshakeBadge } from '@/frontend/components/contact-handshake-badge'
+import { playTapClick } from '@/frontend/lib/ui-tap-feedback'
 
 export type ChatViewMessengerSearchProps = {
   directory: Record<string, ContactMeshEntryClient>
@@ -128,20 +129,27 @@ export function ChatViewMessengerSearch(p: ChatViewMessengerSearchProps) {
           type="search"
           value={p.query}
           onChange={(e) => p.onQueryChange(e.target.value)}
-          onFocus={() => setFocused(true)}
+          onFocus={() => {
+            setFocused(true)
+            playTapClick('soft')
+          }}
           onBlur={() => window.setTimeout(() => setFocused(false), 150)}
           placeholder={p.placeholder ?? 'Chats, Personen, Nachrichten…'}
           className={cn(
-            'w-full rounded-lg border border-border bg-background py-2 pl-8 pr-8 text-xs',
-            p.compact && 'py-1.5'
+            'w-full rounded-xl border-2 border-foreground/20 bg-background py-2.5 pl-9 pr-8 text-sm font-medium shadow-sm placeholder:text-muted-foreground focus-visible:border-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/15',
+            p.compact && 'py-2 text-xs'
           )}
           aria-label="Messenger durchsuchen"
+          data-tap-feedback
         />
         {p.query ? (
           <button
             type="button"
             className="absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            onClick={() => p.onQueryChange('')}
+            onClick={() => {
+              playTapClick('soft')
+              p.onQueryChange('')
+            }}
             aria-label="Suche leeren"
           >
             <X className="h-3.5 w-3.5" />
@@ -165,6 +173,7 @@ export function ChatViewMessengerSearch(p: ChatViewMessengerSearchProps) {
                   className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-muted/70"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
+                    playTapClick('select')
                     if (g.kind === 'telegram-alarm') p.onSelectTelegramAlarmGroup?.()
                     else p.onSelectGroup(g.groupId)
                     p.onQueryChange('')
@@ -192,6 +201,7 @@ export function ChatViewMessengerSearch(p: ChatViewMessengerSearchProps) {
                   className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-muted/70"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
+                    playTapClick('select')
                     p.onSelectContact(c.address)
                     p.onQueryChange('')
                     setFocused(false)
@@ -220,6 +230,7 @@ export function ChatViewMessengerSearch(p: ChatViewMessengerSearchProps) {
                   className="flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-muted/70"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
+                    playTapClick('select')
                     p.onSelectMessageHit(hit)
                     setFocused(false)
                   }}

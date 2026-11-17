@@ -18,6 +18,7 @@ import {
   enqueueAttestationManifestDraft,
 } from '@/frontend/lib/attestation-queue'
 import { formatTxDigestStatusSuffix } from '@/frontend/lib/iota-tx-explorer-hint'
+import { sha256Bytes, sha256BytesToHex } from '@/frontend/lib/sha256-bytes'
 
 /** Delayed-Mirror-/send-Pfad: Nonce-Marker setzen, damit `canonical_msg_ref` mit der Kette übereinstimmt. */
 export function prependMailboxNonceIfMissingForEncryptedWire(wireUtf8: string): string {
@@ -40,10 +41,7 @@ export async function sha256HexFromBase64Bytes(b64: string): Promise<string | nu
     const bin = atob(b64.trim())
     const u8 = new Uint8Array(bin.length)
     for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i) & 0xff
-    const buf = new Uint8Array(await crypto.subtle.digest('SHA-256', u8))
-    let hex = ''
-    for (let i = 0; i < buf.length; i++) hex += buf[i]!.toString(16).padStart(2, '0')
-    return hex
+    return sha256BytesToHex(await sha256Bytes(u8))
   } catch {
     return null
   }

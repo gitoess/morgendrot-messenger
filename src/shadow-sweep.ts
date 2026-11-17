@@ -87,8 +87,10 @@ export type ShadowSweepResult = {
     digest?: string;
     shadowAddress: string;
     mainAddress: string;
-    /** Bech32 Secret Key – einmal sichern (Tresor), nicht erneut abrufbar. */
-    mainSecretKey: string;
+    /** true = neues Keypair. false = Sweep auf eine mitgegebene Adresse, kein neues Secret. */
+    createdNewMain: boolean;
+    /** Bech32 Secret Key – nur bei createdNewMain, einmal sichern, nicht erneut abrufbar. */
+    mainSecretKey?: string;
     transferredObjectCount: number;
     sentMistApprox: string;
     note?: string;
@@ -97,25 +99,45 @@ export type ShadowSweepResult = {
 export type ShadowSweepError = { ok: false; error: string };
 
 /**
- * Erzeugt neues Main-Keypair und sweep’t von Schatten-Mnemonic.
- * @param shadowMnemonic 12+ Wörter
+ * Sweep von Schatten-Mnemonic.
+ * Ohne destinationAddress: neues Main-Keypair (Secret einmal in der Antwort).
+ * Mit destinationAddress: auf diese bestehende 0x — kein neues Secret.
  */
-export async function executeShadowSweep(client: IotaClient, shadowMnemonic: string): Promise<ShadowSweepResult | ShadowSweepError> {
+export async function executeShadowSweep(
+    client: IotaClient,
+    shadowMnemonic: string,
+    opts?: { destinationAddress?: string }
+): Promise<ShadowSweepResult | ShadowSweepError> {
     const words = String(shadowMnemonic || '').trim();
     if (countMnemonicWords(words) < 12) {
         return { ok: false, error: 'Schatten-Mnemonic: mindestens 12 Wörter.' };
     }
 
     const shadowKp = Ed25519Keypair.deriveKeypair(words, CFG.WALLET_DERIVATION_PATH || undefined);
-    const mainKp = new Ed25519Keypair();
+    const rawDest = String(opts?.destinationAddress || '').trim();
+    const createdNewMain = rawDest.length === 0;
+    const mainKp = createdNewMain ? new Ed25519Keypair() : null;
 
     let shadowAddress = String(shadowKp.getPublicKey().toIotaAddress() || '').trim();
     if (shadowAddress && !/^0x/i.test(shadowAddress)) shadowAddress = '0x' + shadowAddress;
     shadowAddress = normAddr(shadowAddress);
 
-    let mainAddress = String(mainKp.getPublicKey().toIotaAddress() || '').trim();
-    if (mainAddress && !/^0x/i.test(mainAddress)) mainAddress = '0x' + mainAddress;
-    mainAddress = normAddr(mainAddress);
+    let mainAddress = '';
+    if (mainKp) {
+        mainAddress = String(mainKp.getPublicKey().toIotaAddress() || '').trim();
+        if (mainAddress && !/^0x/i.test(mainAddress)) mainAddress = '0x' + mainAddress;
+        mainAddress = normAddr(mainAddress);
+    } else {
+        mainAddress = /^0x/i.test(rawDest) ? rawDest : '0x' + rawDest;
+        mainAddress = normAddr(normalizeAddress(mainAddress) || mainAddress);
+    }
+
+    if (mainAddress === shadowAddress) {
+        return {
+            ok: false,
+            error: 'Ziel ist dieselbe Adresse wie der Schatten-Seed. Altes Wallet zurück: Seed im Tresor importieren, nicht auf sich selbst sweepen.',
+        };
+    }
 
     if (!/^0x[a-f0-9]{64}$/.test(shadowAddress) || !/^0x[a-f0-9]{64}$/.test(mainAddress)) {
         return { ok: false, error: 'Adressableitung fehlgeschlagen.' };
@@ -165,7 +187,7 @@ export async function executeShadowSweep(client: IotaClient, shadowMnemonic: str
         }
     }
 
-    const mainSecretKey = mainKp.getSecretKey();
+    const mainSecretKey = mainKp ? mainKp.getSecretKey() : undefined;
     const signer = shadowKp as unknown as Signer;
 
     try {
@@ -180,6 +202,7 @@ export async function executeShadowSweep(client: IotaClient, shadowMnemonic: str
             digest,
             shadowAddress,
             mainAddress,
+            createdNewMain,
             mainSecretKey,
             transferredObjectCount: nftIds.length + 1,
             sentMistApprox: sendAmount.toString(),

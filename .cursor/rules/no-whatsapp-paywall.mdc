@@ -1,0 +1,13 @@
+---
+description: WhatsApp-Verknüpfung und Chat-Paywall sind gestrichen; Linkify nur Zukunftsidee
+alwaysApply: true
+---
+
+# Gestrichen / nicht bauen
+
+- **WhatsApp verknüpfen:** gestrichen (2026-11-17). Keine API-Integration, kein Parallel-Chat.
+- **Paywall / Mikrozahlung pro Nachricht:** gestrichen. App-Filter/Stumm ok; kein „Cent pro Zeile“.
+
+# Zukunftsidee (nicht jetzt)
+
+- **Linkify** (`https://` klickbar im Posteingang) — nur merken (`docs/IDEEN-BACKLOG.md`). Nicht parallel zur Kern-Roadmap.

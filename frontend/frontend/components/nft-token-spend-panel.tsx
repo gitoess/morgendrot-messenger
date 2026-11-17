@@ -879,7 +879,7 @@ export function NftTokenSpendPanel(p: { nftObjectId: string; disabled?: boolean 
                     const r = await copyTextSafe(bundle)
                     if (!r.ok) {
                       setErr(r.error)
-                      setInfo(`Zum manuellen Kopieren:\n${text}`)
+                      setInfo(`Zum manuellen Kopieren:\n${bundle}`)
                       return
                     }
                     setErr('')

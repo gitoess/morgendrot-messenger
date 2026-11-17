@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+﻿import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import {
   ChatViewChatHeader,
@@ -27,7 +27,7 @@ describe('TresorSessionBadge (§ H.1a)', () => {
     expect(screen.getByText(/Tresor: gesperrt/)).toBeInTheDocument()
 
     rerender(<TresorSessionBadge sessionLocked={false} hasKeys={false} />)
-    expect(screen.getByText(/Signer: PW tippen/)).toBeInTheDocument()
+    expect(screen.getByText(/^Signer laden$/)).toBeInTheDocument()
 
     rerender(<TresorSessionBadge sessionLocked={false} hasKeys />)
     expect(screen.getByText(/Tresor: bereit/)).toBeInTheDocument()
@@ -42,7 +42,7 @@ describe('TresorSessionBadge (§ H.1a)', () => {
         actions={{ onLockSession: vi.fn(), onNavigateHomeWhenLocked }}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Vault-Passwort eingeben/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Tresor-Passwort eingeben/i }))
     expect(onNavigateHomeWhenLocked).toHaveBeenCalledTimes(1)
   })
 
@@ -60,7 +60,7 @@ describe('TresorSessionBadge (§ H.1a)', () => {
     expect(onLockSession).toHaveBeenCalledTimes(1)
   })
 
-  it('ohne Vault-Sitzung: Badge „Vault: Passwort“ öffnet Sync statt zu sperren', () => {
+  it('ohne Tresor-Sitzung: Badge „Tresor: Passwort“ öffnet Sync statt zu sperren', () => {
     setVaultPasswordSession(null)
     const onNavigateHomeWhenLocked = vi.fn()
     const onLockSession = vi.fn()
@@ -71,8 +71,8 @@ describe('TresorSessionBadge (§ H.1a)', () => {
         actions={{ onLockSession, onNavigateHomeWhenLocked }}
       />
     )
-    expect(screen.getByText(/Vault: Passwort/)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /Vault-Passwort eingeben/i }))
+    expect(screen.getByText(/Tresor: Passwort/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Tresor-Passwort eingeben/i }))
     expect(onNavigateHomeWhenLocked).toHaveBeenCalledTimes(1)
     expect(onLockSession).not.toHaveBeenCalled()
   })
@@ -98,7 +98,7 @@ describe('ChatViewChatHeader (§ H.1a)', () => {
     )
     expect(screen.getByRole('heading', { name: /Chat mit Max/i })).toBeInTheDocument()
     expect(screen.getByText('0xabc')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Online/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Alle$/i })).toBeInTheDocument()
   })
 
   it('verlinkt Handbuch direkt ins Messenger-Handbuch', () => {
@@ -117,6 +117,58 @@ describe('ChatViewChatHeader (§ H.1a)', () => {
       />
     )
     expect(screen.getByRole('button', { name: /Einstellungen/i })).toBeInTheDocument()
+  })
+
+  it('zeigt Aktualisieren rechts neben Tresor wenn onRefreshStatus gesetzt', () => {
+    const onRefreshStatus = vi.fn()
+    render(
+      <ChatViewChatHeader
+        {...baseHeader({
+          channelMode: 'private',
+          onRefreshStatus,
+        })}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /^Aktualisieren$/i }))
+    expect(onRefreshStatus).toHaveBeenCalledTimes(1)
+    expect(
+      screen.getByText(/Tresor:|Signer laden/i)
+    ).toBeInTheDocument()
+  })
+
+  it('blendet Aktualisieren aus wenn App-Header darüber (suppressAppChrome)', () => {
+    render(
+      <ChatViewChatHeader
+        {...baseHeader({
+          channelMode: 'private',
+          onRefreshStatus: vi.fn(),
+          suppressAppChrome: true,
+        })}
+      />
+    )
+    expect(screen.queryByRole('button', { name: /^Aktualisieren$/i })).not.toBeInTheDocument()
+  })
+
+  it('blendet Titelzeile aus wenn hideTitleRow', () => {
+    render(
+      <ChatViewChatHeader
+        {...baseHeader({
+          channelMode: 'private',
+          conversationTitle: 'Posteingang Alle',
+          hideTitleRow: true,
+          suppressAppChrome: true,
+          sendPath: {
+            visible: true,
+            channelMode: 'private',
+            encrypted: true,
+            forcedTransport: 'internet',
+            onForcedTransportChange: vi.fn(),
+          },
+        })}
+      />
+    )
+    expect(screen.queryByRole('heading', { name: /^Posteingang Alle$/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Alle$/i })).toBeInTheDocument()
   })
 
   it('warnt bei unsicherer Geräte-Uhr (§ H.6c)', () => {

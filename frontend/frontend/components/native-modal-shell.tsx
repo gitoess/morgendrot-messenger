@@ -11,7 +11,13 @@ export const NATIVE_MODAL_PANEL_ATTR = 'data-morgendrot-native-modal-panel' as c
 /** Tresor nutzt dasselbe Attribut — einheitliche Erkennung für Pointer-Event-Cleanup. */
 export const VAULT_OVERLAY_ATTR = NATIVE_MODAL_OVERLAY_ATTR
 
-export const NativeOverlayOpenContext = createContext(false)
+/** APK: Shell-Zweig wählen — `open` steuert Sichtbarkeit, ohne beim Schließen auf Radix-Portal umzuschalten. */
+export type NativeOverlayContextValue = { useShell: boolean; open: boolean }
+
+export const NativeOverlayOpenContext = createContext<NativeOverlayContextValue>({
+  useShell: false,
+  open: false,
+})
 
 export { forceReleaseNativeBodyLock } from '@/frontend/lib/native-body-lock'
 
@@ -71,5 +77,6 @@ export function NativeModalShell(p: {
 }
 
 export function useNativeOverlayOpen(): boolean {
-  return useContext(NativeOverlayOpenContext)
+  const c = useContext(NativeOverlayOpenContext)
+  return c.useShell && c.open
 }

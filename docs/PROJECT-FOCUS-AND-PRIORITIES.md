@@ -1,10 +1,13 @@
 # Ausrichtung, Prioritäten und Reihenfolge (Morgendrot Messenger)
 
 **Zweck:** Ein gemeinsames Bild für Mensch und KI — **gegen Feature-Creep** und **falsche Parallelität**.  
-**Stand:** **2026-05-20** — **Strategie:** IOTA **bleibt gekoppelt** (Boss-Deploy, Mailbox, E2EE online, Pfad 4, Outbox) — im Feld aber **nicht immer sichtbar** (`mesh-first`, `SIMPLE_MODE`). **Default-Transport = LoRa**; **Delayed LoRa → IOTA** = Phase B. Simple Mode = **weniger UI**, nicht ohne Chain. Kanonisch: **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**.  
+**Stand:** **2026-05-20** (Strategie) · **Navigations-Nachzug 2026-11-16**.  
+**Strategie (unverändert):** IOTA **bleibt gekoppelt** (Boss-Deploy, Mailbox, E2EE online, Pfad 4, Outbox) — im Feld aber **nicht immer sichtbar** (`mesh-first`, `SIMPLE_MODE`). **Default-Transport = LoRa**; **Delayed LoRa → IOTA** = Phase B. Simple Mode = **weniger UI**, nicht ohne Chain. Kanonisch: **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**.  
 **Merge-Ritual (Messenger/Frontend):** **`TESTING.md`** § *Qualitätsritual vor Merge* + CI **`frontend-checks`**.
 
-**Kanonische Umsetzung:** **`docs/ROADMAP-FAHRPLAN.md`** **§ C.0b**, **§ H.0**, **§ H.0-SIMPLE** — dieses Dokument definiert die **Leitplanke**; der Fahrplan füllt **Womit** und **Priorität**.
+**Kanonische Umsetzung:** **`docs/ROADMAP-FAHRPLAN.md`** — dort **Lesekarte** (H.\* vs T.\*), **§ C.0b**, **§ H.0**, **§ H.0-SIMPLE**. Dieses Dokument = **Leitplanke** (Phasen); der Fahrplan = **Womit** und **aktueller Arbeitsstand**.
+
+**Arbeitsstand 2026-11-17 (kurz):** N1–N5 + Ton/Stumm + LAN-SHA256 + **PC-5er** (T17-2 Handbuch, H.23 Absender-Label, T53 Preview, i18n Mute/Ton/TG, Burn/Reuse-Checkliste). WhatsApp/Paywall **gestrichen**; Linkify nur Ideen-Backlog. **Session C → Schluss.** **Als Nächstes:** PC-Stabilität nach Bedarf; kein Mesh/APK/H.25a/H.37/P5d parallel.
 
 ---
 

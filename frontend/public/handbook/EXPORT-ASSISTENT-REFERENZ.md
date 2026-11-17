@@ -1,11 +1,11 @@
-# Export-Assistent — vollständige Referenz
+# Helfer einrichten / Export-Assistent — vollständige Referenz
 
 **Stand:** 2026-06-02  
 **Zweck:** Alle Einstellungen, IDs und `.env`-Keys des Boss-Handoffs — **implementiert** vs. **geplant** — an einem Ort.  
-**UI:** Einsatzleitung → **Export-Assistent** · API: `POST /api/standalone-smartphone-handoff-zip`  
-**Verwandt:** `docs/HANDOFF-EXPORT-HYBRID.md`, `docs/HANDOFF-IMPORT-UX.md`, `docs/MESSENGER-CHAT-HANDBUCH.md` (Orientierung, .env vs. Move)
+**UI (Einsatzleitung):** **Helfer einrichten** — ein Formular (`layout=compact` in `BossHandoffExportPanel`); voller **Export-Assistent** (Schritt 1/2) nur noch außerhalb der Einsatzleitung falls eingebettet. **API:** `POST /api/standalone-smartphone-handoff-zip`  
+**Verwandt:** `docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`, `docs/GERAET-PROVISIONIEREN-WIZARD.md`, `docs/HANDOFF-EXPORT-HYBRID.md`, `docs/HANDOFF-IMPORT-UX.md`, `docs/MESSENGER-CHAT-HANDBUCH.md`, **`docs/MOVE-MESSENGER-KONFIGURATION.md`**, **`docs/EINSATZ-BOSS-ABLAUF.md`**, **`docs/TEAM-MEMBER-UPDATE-WIZARD-SPEC.md`** (Einstiegs-Wizard / Team-Sync — **kein** Duplikat dieses Exports)
 
-> **Nicht verwechseln:** Die **komplette** Liste aller `.env`-Keys in **Messenger → Einstellungen** (Erweiterte Konfiguration) steht in **`docs/ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md`**. Dieses Dokument hier ist nur **Handoff-Export** + ZIP-Inhalt.
+> **Nicht verwechseln:** Die **komplette** Liste aller `.env`-Keys in **Messenger → Einstellungen** (Erweiterte Konfiguration) steht in **`docs/ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md`**. **Move on-chain vs. Handoff** steht in **`docs/MOVE-MESSENGER-KONFIGURATION.md`**. Dieses Dokument hier ist nur **Handoff-Export** + ZIP-Inhalt.
 
 ---
 
@@ -15,7 +15,8 @@
 |----------|-------------|--------|
 | **`morgendrot-standalone-handoff.env`** | **Ja** (pro ZIP) | Öffentliche Geräte-Konfiguration — **kein** Seed/Passwort |
 | **`.morgendrot-runtime-config.json`** | **Ja** | Capabilities-Matrix (Transport LoRa/Telegram/IOTA) |
-| **`README-HANDOFF.txt`** | **Ja** | Ablauf, Kurzparameter, optional LoRa-PSK / IOTA-Archiv |
+| **`README-HANDOFF.txt`** | **Ja** | Ablauf, Kurzparameter, optional LoRa-PSK / IOTA-Archiv / **Telegram-Alarmgruppe (Link)** |
+| **`.morgendrot-handoff-extras.json`** | **Ja** (B4b.2) | Optional: `telegramAlarmGroup` — **`docs/TELEGRAM-INTEGRATION-ZIELBILD.md`** §6.6.1 |
 | **`handoff.morg.enc`** | Optional | Verschlüsselte `.env` statt Klartext (Passwort-Schutz) |
 | **Move-Deploy / neues Package** | **Nein** | `PACKAGE_ID` wird **referenziert**, nicht neu deployed |
 | **Smartphone-Bundle** | **Nein** | Separat: `npm run bundle:standalone-smartphone` auf dem Boss-PC |
@@ -24,32 +25,42 @@
 
 ---
 
-## 2. UI — alle Felder des Export-Assistenten
+## 2. UI — alle Felder
 
-### 2.1 Schritt 1 (schnell) — **Ist**
+### 2.0 Einsatzleitung — **Helfer einrichten** (`layout=compact`) — **Ist**
+
+| Bereich | Inhalt |
+|---------|--------|
+| **Kopf** | Bezeichnung, Vorlage, Profil-Karten (Helfer/Führer/Spezial) |
+| **Rechte** | Capabilities-Matrix + Schnellprofile (Medic, Reporter, …) |
+| **Team & Partner** | Checkboxen |
+| **Aktionen** | **ZIP + Seed + QR** (neues Wallet), **Nur ZIP**, **IOTA**, **WLAN-QR** |
+| **Neues Gerät** | Registry inline (Custody B) — kein separater Wizard-Dialog |
+| **Bestehende Geräte** | TTL, Purge, Boss-.env, Handoff-ZIP — **TTL nicht** im Experten |
+| **Experte** | ROLE_ID, RPC, Chain-IDs, Vorlage speichern, Partner manuell |
+
+### 2.1 Schritt 1 (Legacy `layout=steps`) — **Ist** (außerhalb Einsatzleitung)
 
 | UI-Element | API / Wirkung | Status |
 |------------|---------------|--------|
-| **Zusammenfassung** (grüne Box) | Nur Anzeige aus Preset + Auswahl | Ist |
 | **Bezeichnung** | `handoffLabel` → `HANDOFF_LABEL` + README | Ist |
-| **Profil Helfer** | Preset `helfer` → ROLE, ROLE_ID, TRANSPORT, SIMPLE_MODE, UI | Ist (Standard) |
-| **Profil Führer** | Preset `fuehrer` | Ist |
-| **Profil Spezial** | Preset `spezial` (z. B. ROLE_ID=4) | Ist |
-| **Vorlage laden** (Dropdown) | Lädt `.morgendrot-einsatz-templates.json` → Preset + ROLE_ID | Ist |
-| **Weiter** | Wechsel zu Schritt 2 | Ist |
+| **Profil Helfer / Führer / Spezial** | Presets → ROLE, ROLE_ID, TRANSPORT, SIMPLE_MODE, UI | Ist |
+| **Schnellprofile Medic / Reporter** | `capabilitiesOverride` via Matrix | Ist |
+| **Vorlage laden** | `.morgendrot-einsatz-templates.json` | Ist |
+| **Weiter** | Wechsel zu Schritt 2 | Ist (nur steps-Layout) |
 
-### 2.2 Schritt 2 — Team, Partner, Download — **Ist**
+### 2.2 Schritt 2 / Compact — Team, Partner, Download — **Ist**
 
 | UI-Element | API / Wirkung | Status |
 |------------|---------------|--------|
-| **Team-Postfächer** (Checkboxen) | `mailboxId` (primär), `teamMailboxIds` | Ist |
-| **Partner im Einsatz** (Checkboxen) | `partnerAddresses` → PARTNER_ADDRESS(S) | Ist |
-| **IOTA-Archiv im README** | `includeIotaArchivReadme`, `readmeExtra` | Ist (nur mesh-first, ohne Passwort) |
-| **Mit Passwort schützen** | Client: `handoff.morg.enc` | Ist |
-| **ZIP-Paket herunterladen (Profil)** | `format=zip` | Ist |
-| **Nochmal: letztes Preset** | Gleicher Download, anderes Preset in UI | Ist |
-| **Per IOTA an Partner** | `sendHandoffZipViaIota` | Ist |
-| **Zurück** | Schritt 1 | Ist |
+| **Team-Postfächer** | `mailboxId`, `teamMailboxIds` | Ist |
+| **Partner** | `partnerAddresses` | Ist |
+| **IOTA-Archiv** | `includeIotaArchivReadme` | Ist (mesh-first, ohne Passwort) |
+| **Passwort** | `handoff.morg.enc` | Ist |
+| **ZIP** | `format=zip` | Ist |
+| **Letztes Preset** | Repeat-Download | Ist |
+| **IOTA** | `sendHandoffZipViaIota` | Ist |
+| **WLAN-QR** | `LanInstallQrPanel` inline; `GET /api/lan-install-urls` | Ist |
 
 ### 2.3 Experte (ausklappbar) — **Ist**
 
@@ -66,7 +77,8 @@
 | **BOSS_ADDRESS, MAILBOX_ID, COMMAND_REGISTRY_ID, VAULT_REGISTRY_ID** | jeweilige Felder | Ist |
 | **NEXT_PUBLIC_DIRECT_IOTA_RPC_URL** | `nextPublicDirectIotaRpcUrl` | Ist |
 | **Partner manuell (Textarea)** | `partnerAddresses` | Ist |
-| **LoRa / .env-Erklärung** | Nur Text | Ist (Doku) |
+| **LoRa / .env-Erklärung** | README-Block | Ist |
+| **DEFAULT_TTL_DAYS** | — | **Nur** Block „Bestehende Geräte“ (nicht Export-Experte); API übernimmt Boss-`DEFAULT_TTL_DAYS` |
 
 ### 2.4 UI — geplant / Backlog (noch nicht oder nur Doku)
 
@@ -78,16 +90,20 @@
 | `historyFromNewest` / Package-History in UI | API-Feld **ja**, UI **nein** |
 | `initialProfile` / Kontakte **im** ZIP | **Nein** — Telefonbuch-Export separat; Handoff nur `.env` |
 | Ein-Klick „alle Team-Postfächer“ | **Nein** — manuell anhaken |
-| Wizard Schritt 3 „Vorschau .env“ | **Backlog** |
+| **Gruppe + Team-Postfach im ZIP** | **Ja (M2c)** — `MESSENGER_GROUP_HANDOFF` bei Team-Postfach im Export |
+| Wizard Schritt 3 „Vorschau .env“ | **Backlog** → **§ H.36 P0** (`docs/TEAM-MEMBER-UPDATE-WIZARD-SPEC.md`) |
 | Helfer-Bundle **im** ZIP mitliefern | **Nein** — Medium getrennt (Bundle + Handoff-ZIP) |
 
-### 2.5 Entfernte / nicht mehr in Einsatzleitung
+### 2.5 Entfernte / verschoben
 
 | Element | Ort heute |
 |---------|-----------|
+| Grüne Summary-Box, lange Hilfetexte | **Entfernt** (2026-06) |
+| TTL im Export-Experten | **Entfernt** → **Bestehende Geräte** |
+| WLAN-QR | **Helfer einrichten** (neben IOTA), nicht Erweitert |
+| Export-Assistent (eigene Karte) | **Helfer einrichten** (compact) |
 | Kontakte importieren/exportieren | **Telefonbuch** |
 | Forensik-Export | **Posteingang** |
-| Messenger `npm run bundle:messenger` | Handbuch / Erweiterte Technik (Hinweis) |
 
 ---
 
@@ -113,9 +129,12 @@
 | `uiVariant` | full \| messenger | Preset | `UI_VARIANT` |
 | `transportProfile` | mesh-first \| iota-anchored \| iota-full | Preset | `TRANSPORT_PROFILE` |
 | `simpleMode` | boolean | Preset | `SIMPLE_MODE` |
+| `exportTtlDays` | number? | Boss `DEFAULT_TTL_DAYS` (automatisch beim Export aus Server) | `DEFAULT_TTL_DAYS` — UI nur **Bestehende Geräte** |
+| `exportEnablePurge` | boolean? | Boss `ENABLE_PURGE` | `ENABLE_PURGE` |
 | `capabilitiesOverride` | object? | Matrix-UI | `.morgendrot-runtime-config.json` |
 | `includeIotaArchivReadme` | boolean | Checkbox | README-Block |
 | `readmeExtra` | string? | IOTA-Archiv-Text | README |
+| `messengerGroupHandoff` | string? | JSON | `MESSENGER_GROUP_HANDOFF` (Gruppe + Team-Postfach, M2c) |
 | `format` | zip \| parts | Client setzt | — |
 
 **Berechtigung API:** `ROLE=boss` oder `kommandant`.
@@ -139,7 +158,8 @@ Quelle: `buildStandaloneSmartphoneHandoffEnv` in `src/config.ts`. Import-Allowli
 
 | Key | Im ZIP typisch | Bedeutung |
 |-----|----------------|-----------|
-| **RPC_URL** | Ja | IOTA-Fullnode für Helfer-Node/PWA |
+| **RPC_URL** | Ja | IOTA-Fullnode für Helfer-Node/PWA — **Mainnet** (Modus B/C) oder **Testnet** (Modus A); siehe **`docs/ROADMAP-FAHRPLAN.md` § H.33** |
+| **EINSATZ_CHAIN_MODE** | **Ist (H.33)** | `mainnet-direct` \| `testnet-with-mainnet-anchor` \| `mainnet-direct-no-rollup` — Export Experte + Banner + Anker-UI |
 | **PACKAGE_ID** | Ja | Move-Package des **Einsatzes** (gemeinsam mit Boss) |
 | **MAILBOX_ID** | Oft | Primäres Shared/Team-Postfach (Object-ID 0x…) |
 | **USE_MAILBOX** | Mit MAILBOX_ID | Persistente Mailbox auf Chain |
@@ -167,6 +187,18 @@ Quelle: `buildStandaloneSmartphoneHandoffEnv` in `src/config.ts`. Import-Allowli
 | **ENABLE_PLAINTEXT_CHANNEL** | Ja | false (Handoff-Default) |
 | **NEXT_PUBLIC_DIRECT_IOTA_RPC_URL** | Optional | PWA Light-Client RPC |
 
+**Nur Boss-`.env` (nicht im Helfer-ZIP, Modus A):**
+
+| Key | Bedeutung |
+|-----|-----------|
+| **EINSATZ_MANIFEST_REGISTRY_ID** | Shared Object `EinsatzManifestRegistry` auf Mainnet (nach Deploy) |
+| **MAINNET_RPC_URL** | Mainnet-Fullnode nur für Boss-Anker-TXs |
+| **MAINNET_PACKAGE_ID** | Mainnet-`PACKAGE_ID` für `store_einsatz_manifest` (kann ≠ Testnet-Package) |
+
+Deploy: **`docs/DEPLOY-MOVE-H33-EINSATZ-MANIFEST.md`** — bevorzugt UI **Mainnet-Registry anlegen** (Einsatzleitung → Erweitert); alternativ Terminal `print:create-einsatz-manifest-registry` → `apply:einsatz-manifest-registry-from-tx`.
+
+**API (Boss-PC, optional):** **`GET /api/einsatz-manifest/config|anchors|probe`** — **`docs/API-EINSATZ-MANIFEST.md`**, Smoke **`docs/EINSATZ-MANIFEST-API-SMOKE.md`**. UI nutzt API mit Direct-RPC-Fallback.
+
 **Niemals im Handoff:** Mnemonic, Vault-Passwort, Private Keys, `.morgendrot-vault` Dateien.
 
 ### Feste Defaults im Generator (nicht im UI)
@@ -192,7 +224,7 @@ Diese Werte schreibt der Server **immer** so — kein separates UI-Feld:
 | **COMMAND_REGISTRY_ID** | `0x` + 64 Hex | Deploy / Boss-.env | Chain-Registry Befehle |
 | **VAULT_REGISTRY_ID** | `0x` + 64 Hex | Deploy / Boss-.env | Chain-Registry Tresor |
 | **STREAMS_ANCHOR_ID** | `0x` + 64 Hex | Optional Puls | **Nicht** im Standard-Handoff |
-| **BROADCAST_PINNWAND_ADDRESS** | `0x` + 64 Hex | Boss-.env Pinnwand | **Nicht** im Standard-Handoff |
+| **BROADCAST_PINNWAND_ADDRESS** | `0x` + 64 Hex | Boss-.env Pinnwand | **Automatisch** im Handoff wenn Boss `ENABLE_BROADCAST_PINNWAND` aktiv (Helfer konfiguriert nichts) |
 | **Meshtastic Node-ID** | `!…` | Gerät / Telefonbuch | **Nicht** in .env — Kanal-PSK mündlich/README |
 
 ### Move vs. .env (Merksatz)
@@ -220,11 +252,15 @@ Diese Werte schreibt der Server **immer** so — kein separates UI-Feld:
 | Feld Vorlage | In Handoff-ZIP? |
 |--------------|-----------------|
 | `id`, `label` | Nur Auswahl-UI |
-| `chainRole` | → Preset-Karte |
-| `roleId` | → `ROLE_ID` |
-| `defaultDeploymentChannelTag` | **Nein** (nur Doku/Hinweis) |
+| `chainRole`, `roleId` | Legacy-Fallback wenn kein `handoffSnapshot` |
+| `handoffSnapshot` (Phase 4) | **Ist** — wird beim Laden in Export-Assistent übernommen |
+| `handoffSnapshot.presetId` | Profil-Karte |
+| `handoffSnapshot.tuning` | ROLE_ID, ROLE, Simple Mode, Team-Mailboxen aus |
+| `handoffSnapshot.capabilitiesOverride` | → Runtime-JSON im ZIP |
+| `handoffSnapshot.export.teamMailboxIds` | → `teamMailboxIds` / `mailboxId` |
+| `handoffSnapshot.export.partnerAddresses` | → `partnerAddresses` |
+| `handoffSnapshot.export.*` Chain-IDs | Experten-Felder (optional) |
 | `iconHint` | **Nein** |
-| Partner / Team-IDs | **Nein** — pro Export in Schritt 2 |
 
 ---
 

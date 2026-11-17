@@ -2,7 +2,14 @@
  * Kammer „Inbox/Fetch“: Nachrichten von Chain laden, entschlüsseln, mit lokalem Cache mergen.
  */
 import { logger } from '../logger.js';
-import { CFG, isMessengerMailboxModeActive, readMailboxIdHistory, readPackageIdHistory, readTeamMailboxIds } from '../config.js';
+import {
+    CFG,
+    ensurePackageIdInHistory,
+    isMessengerMailboxModeActive,
+    readMailboxIdHistory,
+    readPackageIdHistory,
+    readTeamMailboxIds,
+} from '../config.js';
 import { isPrivateMailboxObjectIdOverrideActive } from '../mailbox-object-id-scope.js';
 import { getClient, getHandshakeFromMailbox, findPeerHandshakeFrom } from '../chain-access.js';
 import {
@@ -22,11 +29,14 @@ import type { PeerState } from './peer-state.js';
 import { getWalletPassword } from './messenger-session-password.js';
 import {
     chainMessageLogicalDedupKey,
+    createDirectIotaClient,
     fetchMailboxInboxRpcRows,
     fetchMessagingEventInboxRpcRows,
+    fetchMessagingEventInboxViaAddressTxs,
     fetchTeamPlainBroadcastRpcRows,
     mailboxEncryptedInboxKey,
     mailboxPlainInboxKey,
+    resolveIotaIndexerRpcUrl,
     type MailboxInboxRpcRow,
     type MessagingEventInboxRpcRow,
     type TeamPlainBroadcastRpcRow,
@@ -37,6 +47,20 @@ type CoreIotaClient = Parameters<typeof fetchMailboxInboxRpcRows>[0];
 
 function coreRpcClient(): CoreIotaClient {
     return getClient() as unknown as CoreIotaClient;
+}
+
+/** Explorer-Indexer falls Fullnode `FromOrToAddress` nicht kann. */
+function indexerRpcClientOrNull(): CoreIotaClient | null {
+    const rpc = (CFG.RPC_URL || '').trim();
+    const indexer = resolveIotaIndexerRpcUrl(rpc);
+    if (!indexer || indexer.replace(/\/+$/, '').toLowerCase() === rpc.replace(/\/+$/, '').toLowerCase()) {
+        return null;
+    }
+    try {
+        return createDirectIotaClient({ rpcUrl: indexer }) as unknown as CoreIotaClient;
+    } catch {
+        return null;
+    }
 }
 
 function pushUniqueMsgItem(items: MsgItem[], keySeen: Set<string>, item: MsgItem): void {
@@ -226,16 +250,22 @@ export type FetchedMessage = {
 
 const PACKAGE_ID_HEX = /^0x[a-fA-F0-9]{64}$/i;
 
-/** Events (verschlüsselt + Klartext) für ein Move-Paket — Posteingang-Union, unabhängig von USE_MAILBOX. */
-function maxEventPagesForInboxFetch(inboxLimit: number, isPrimaryPackage: boolean): number {
+/**
+ * Events für Posteingang-Union — fetchWindow (skip+count+1).
+ * Core blättert bis genug **eigene** Treffer; dieses Cap ist die Obergrenze gegen Endlosschleifen.
+ */
+function maxEventPagesForInboxFetch(fetchWindow: number, isPrimaryPackage: boolean): number {
+    const w = Math.max(1, Math.floor(fetchWindow));
     if (!isPrimaryPackage) {
-        if (inboxLimit >= 200) return 8;
-        if (inboxLimit >= 80) return 4;
-        return 2;
+        if (w >= 500) return 60;
+        if (w >= 200) return 40;
+        if (w >= 80) return 25;
+        return 15;
     }
-    if (inboxLimit >= 200) return 15;
-    if (inboxLimit >= 80) return 8;
-    return 4;
+    if (w >= 500) return 120;
+    if (w >= 200) return 80;
+    if (w >= 80) return 50;
+    return 30;
 }
 
 async function appendMailboxInboxFromCoreRpc(
@@ -253,6 +283,7 @@ async function appendMailboxInboxFromCoreRpc(
     if (!PACKAGE_ID_HEX.test(pkg)) return;
     const client = coreRpcClient();
     const includePlain = Boolean(CFG.MAILBOX_STORE_PLAINTEXT);
+    const dfPages = Math.min(100, Math.max(20, Math.ceil(fetchWindow / 100) + 10))
     const rows = await fetchMailboxInboxRpcRows(client, {
         mailboxObjectId: parentId,
         packageId: pkg,
@@ -261,6 +292,7 @@ async function appendMailboxInboxFromCoreRpc(
         includeEncrypted: true,
         limit: fetchWindow,
         offset: 0,
+        maxDynamicFieldPages: dfPages,
     });
     for (const row of rows) {
         if (!rowMatchesPeerFilters(row.sender, row.recipient, myNorm, matchesPeer, matchesCounterparty)) {
@@ -273,6 +305,7 @@ async function appendMailboxInboxFromCoreRpc(
         packageId: pkg,
         limit: fetchWindow,
         offset: 0,
+        maxDynamicFieldPages: dfPages,
     });
     for (const row of teamRows) {
         if (!matchesCounterparty(row.sender)) continue;
@@ -306,6 +339,78 @@ async function appendMessagingEventsFromCoreRpc(
         if (eventAlreadyInMailbox(keySeen, row.sender, row.recipient, row.nonce)) continue;
         if (keySeen.has(row.inboxKey)) continue;
         pushUniqueMsgItem(items, keySeen, eventRpcRowToMsgItem(row));
+    }
+}
+
+/**
+ * Explorer-Pfad: Adress-TXs am Indexer → Messaging-Events (auch wenn queryEvents gepruned).
+ * @returns `scanned` = Rohzeilen vom Indexer (auch wenn Dedup nichts Neues lässt)
+ */
+async function appendMessagingEventsFromAddressTxs(
+    myAddress: string,
+    myNorm: string,
+    items: MsgItem[],
+    matchesPeer: (s: string) => boolean,
+    matchesCounterparty: (peerAddr: string | undefined) => boolean,
+    keySeen: Set<string>,
+    fetchWindow: number
+): Promise<{ scanned: number }> {
+    const indexer = indexerRpcClientOrNull() ?? coreRpcClient();
+    const discovered = new Set<string>();
+    const rows = await fetchMessagingEventInboxViaAddressTxs(indexer, {
+        myAddress,
+        limit: fetchWindow,
+        offset: 0,
+        maxTxPages: Math.min(100, Math.max(25, Math.ceil(fetchWindow / 5) + 20)),
+        discoveredPackageIds: discovered,
+    });
+    for (const pkg of discovered) ensurePackageIdInHistory(pkg);
+    for (const row of rows) {
+        const peerAddr = normalizeAddress(row.sender) === myNorm ? row.recipient : row.sender;
+        if (!matchesPeer(peerAddr) || !matchesCounterparty(peerAddr)) continue;
+        if (eventAlreadyInMailbox(keySeen, row.sender, row.recipient, row.nonce)) continue;
+        if (keySeen.has(row.inboxKey)) continue;
+        pushUniqueMsgItem(items, keySeen, eventRpcRowToMsgItem(row));
+    }
+    return { scanned: rows.length };
+}
+
+/** Indexer zuerst; Package-queryEvents nur Fallback wenn Indexer leer/unnutzbar. */
+async function appendMessagingEventsPreferIndexerThenPackages(
+    packageIdForQuery: string,
+    mailboxPackageId: string,
+    myAddress: string,
+    myNorm: string,
+    items: MsgItem[],
+    matchesPeer: (s: string) => boolean,
+    matchesCounterparty: (peerAddr: string | undefined) => boolean,
+    keySeen: Set<string>,
+    fetchWindow: number
+): Promise<void> {
+    const { scanned } = await appendMessagingEventsFromAddressTxs(
+        myAddress,
+        myNorm,
+        items,
+        matchesPeer,
+        matchesCounterparty,
+        keySeen,
+        fetchWindow
+    );
+    if (scanned > 0) return;
+    const primaryPkg = mailboxPackageId.trim().toLowerCase();
+    for (const pkg of packageIdsForInboxUnion(packageIdForQuery)) {
+        const isPrimary = pkg.trim().toLowerCase() === primaryPkg;
+        await appendMessagingEventsFromCoreRpc(
+            pkg,
+            myAddress,
+            myNorm,
+            items,
+            matchesPeer,
+            matchesCounterparty,
+            keySeen,
+            fetchWindow,
+            { maxEventPages: maxEventPagesForInboxFetch(fetchWindow, isPrimary) }
+        );
     }
 }
 
@@ -427,39 +532,31 @@ export async function fetchLastMessages(
             );
         }
         if (!opts?.skipMessagingEvents) {
-            const primaryPkg = mailboxPackageId.trim().toLowerCase();
-            for (const pkg of packageIdsForInboxUnion(packageIdForQuery)) {
-                const isPrimary = pkg.trim().toLowerCase() === primaryPkg;
-                await appendMessagingEventsFromCoreRpc(
-                    pkg,
-                    myAddress,
-                    myNorm,
-                    items,
-                    matchesPeer,
-                    matchesCounterparty,
-                    keySeen,
-                    fetchWindow,
-                    { maxEventPages: maxEventPagesForInboxFetch(count, isPrimary) }
-                );
-            }
-        }
-    } else if (!opts?.skipMessagingEvents) {
-        const keySeen = new Set<string>();
-        const primaryPkg = mailboxPackageId.trim().toLowerCase();
-        for (const pkg of packageIdsForInboxUnion(packageIdForQuery)) {
-            const isPrimary = pkg.trim().toLowerCase() === primaryPkg;
-            await appendMessagingEventsFromCoreRpc(
-                pkg,
+            await appendMessagingEventsPreferIndexerThenPackages(
+                packageIdForQuery,
+                mailboxPackageId,
                 myAddress,
                 myNorm,
                 items,
                 matchesPeer,
                 matchesCounterparty,
                 keySeen,
-                fetchWindow,
-                { maxEventPages: maxEventPagesForInboxFetch(count, isPrimary) }
+                fetchWindow
             );
         }
+    } else if (!opts?.skipMessagingEvents) {
+        const keySeen = new Set<string>();
+        await appendMessagingEventsPreferIndexerThenPackages(
+            packageIdForQuery,
+            mailboxPackageId,
+            myAddress,
+            myNorm,
+            items,
+            matchesPeer,
+            matchesCounterparty,
+            keySeen,
+            fetchWindow
+        );
     }
 
     if (standalone && items.length > 0) {
@@ -500,8 +597,12 @@ export async function fetchLastMessages(
         if (tb !== ta) return tb - ta;
         return a.nonce > b.nonce ? -1 : a.nonce < b.nonce ? 1 : 0;
     });
-    const hasMore = items.length > skip + count;
     const toShow = items.slice(skip, skip + count);
+    /**
+     * hasMore: echte Restmenge ODER volles Probe-Fenster (fetchWindow = skip+count+1).
+     * Wenn die Quellen exakt skip+count liefern, ist Schluss; wenn fetchWindow voll ist, gibt es weiter.
+     */
+    const hasMore = items.length > skip + count || (toShow.length === count && items.length >= fetchWindow);
 
     for (const m of toShow) {
         if (seenKeys?.has(m.key)) continue;

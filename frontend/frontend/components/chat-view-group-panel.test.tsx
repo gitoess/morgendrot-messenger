@@ -35,7 +35,7 @@ describe('ChatViewGroupPanel (§ H.1a)', () => {
     })
     fireEvent.change(document.querySelector('textarea')!, { target: { value: MEMBER_A } })
     fireEvent.click(screen.getByRole('button', { name: /^Speichern$/i }))
-    expect(screen.getByText(/Gruppe gespeichert/)).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(/Gruppe gespeichert \(1 Mitglied\)/)
     expect(screen.getByRole('button', { name: /Alpha Team \(1\)/i })).toBeInTheDocument()
   })
 
@@ -44,11 +44,11 @@ describe('ChatViewGroupPanel (§ H.1a)', () => {
     expect(screen.getByPlaceholderText(/Index 0-7/i)).toBeInTheDocument()
   })
 
-  it('deaktiviert Pro-Mitglied-Enc bei funk', () => {
+  it('deaktiviert Enc bei funk', () => {
     render(
       <ChatViewGroupPanel contactDirectory={{}} forcedTransport="mesh" onEncryptedChange={vi.fn()} encrypted />
     )
-    expect(screen.getByRole('button', { name: /Pro Mitglied/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Enc · Team-Schlüssel/i })).toBeDisabled()
   })
 
   it('warnt vor Klartext per Dialog', () => {
@@ -56,7 +56,7 @@ describe('ChatViewGroupPanel (§ H.1a)', () => {
     render(
       <ChatViewGroupPanel contactDirectory={{}} encrypted onEncryptedChange={onEncryptedChange} />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Team-Broadcast/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Klartext · Broadcast/i }))
     fireEvent.click(screen.getByRole('button', { name: /Verstanden, fortfahren/i }))
     expect(onEncryptedChange).toHaveBeenCalledWith(false)
   })
@@ -65,6 +65,18 @@ describe('ChatViewGroupPanel (§ H.1a)', () => {
     render(<ChatViewGroupPanel contactDirectory={{}} />)
     expect(screen.getByRole('button', { name: /Aus Telefonbuch/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Telefonbuch$/i })).not.toBeInTheDocument()
+  })
+
+  it('zeigt erkannte und unerkannte Mitglieder live', () => {
+    const directory = {
+      [MEMBER_A]: { label: 'Nicole', address: MEMBER_A },
+    } as Record<string, { label: string; address: string }>
+    render(<ChatViewGroupPanel contactDirectory={directory} />)
+    fireEvent.change(document.querySelector('textarea')!, {
+      target: { value: 'Nicole\nNikol' },
+    })
+    expect(screen.getByText(/1 Mitglied erkannt/i)).toBeInTheDocument()
+    expect(screen.getByText(/Nicht erkannt: Nikol/i)).toBeInTheDocument()
   })
 
   it('blockiert Neue Gruppe ohne Berechtigung', () => {

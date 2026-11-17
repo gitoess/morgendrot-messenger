@@ -1,7 +1,8 @@
 'use client'
 
 /**
- * Schnellfilter: Partner-Chips, Kanal (Eingang/Ausgang + Quelle), optional Inhalt (Klartext/Verschlüsselt).
+ * Schnellfilter: Partner-Chips und Kanal (Eingang/Ausgang + Quelle).
+ * Verschlüsselt/Klartext ist nur noch der Sendeschalter im Chat — kein Listenfilter.
  * Filter wirken nur wenn die jeweilige Toolbar-Sektion eingeschaltet ist (armed).
  */
 
@@ -58,8 +59,15 @@ function PartnerChipSection(p: {
     opts: { hideMatchingMessages: boolean; messageTransport: 'mesh' | 'iota' | 'all' }
   ) => void
 }) {
-  const { title, options, partnerKey, onPartnerKeyChange, onPartnerSelectForSend, stripTransport, onRemoveFromQuickList } =
-    p
+  const {
+    title,
+    options,
+    partnerKey,
+    onPartnerKeyChange,
+    onPartnerSelectForSend,
+    stripTransport,
+    onRemoveFromQuickList,
+  } = p
   const [overflowOpen, setOverflowOpen] = useState(false)
   if (options.length === 0) return null
 
@@ -223,13 +231,16 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
       {showWireSection ? (
       <div className="space-y-1.5">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Posteingang (Inhalt)
+          <span
+            className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+            title="Nur Listen-Filter oben — unabhängig vom Composer unten (ECDH / Passphrase-Schutz)."
+          >
+            Liste filtern
           </span>
           {(
             [
               ['all', 'Alles'],
-              ['encrypted', 'Verschlüsselt'],
+              ['encrypted', 'Verschlüsselte'],
               ['plaintext', 'Klartext'],
             ] as const
           ).map(([id, label]) => (
@@ -248,6 +259,9 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
             </button>
           ))}
         </div>
+        <p className="text-[11px] text-muted-foreground">
+          Blendet Zeilen ein oder aus. Wie du sendest, steht am Schalter „Verschlüsselt / Klartext“ im Chat-Kopf.
+        </p>
       </div>
       ) : null}
       {showChannelSection ? (

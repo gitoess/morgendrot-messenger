@@ -171,6 +171,25 @@ export function suggestNextPrivateMailboxLabel(
   return `Private #${n}`
 }
 
+/** Nur in die Besitz-Liste — ohne Sende-Fokus zu setzen. `true` = neu aufgenommen. */
+export function rememberMyPrivateMailbox(entry: MyPrivateMailboxEntry): boolean {
+  const objectId = entry.objectId.trim()
+  if (!isValidObjectId(objectId)) return false
+  const archive = readArchiveRaw().filter((e) => e.objectId.toLowerCase() !== objectId.toLowerCase())
+  writeArchiveRaw(archive)
+  const list = readListRaw()
+  if (list.some((e) => e.objectId.toLowerCase() === objectId.toLowerCase())) return false
+  const label = entry.label?.trim() || suggestNextPrivateMailboxLabel(list, archive)
+  list.unshift({
+    objectId,
+    label,
+    ...(entry.createdAtMs ? { createdAtMs: entry.createdAtMs } : { createdAtMs: Date.now() }),
+    ...(entry.digest?.trim() ? { digest: entry.digest.trim() } : {}),
+  })
+  writeListRaw(list)
+  return true
+}
+
 export function addMyPrivateMailbox(entry: MyPrivateMailboxEntry): void {
   const objectId = entry.objectId.trim()
   if (!isValidObjectId(objectId)) return

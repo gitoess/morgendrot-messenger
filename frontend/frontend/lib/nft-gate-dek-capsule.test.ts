@@ -134,6 +134,27 @@ describe('nft-gate-dek-capsule B2-P4a / dual / P4a2', () => {
     ).toBe('nur mit broker')
   })
 
+  it('Dual-Whitelist: mehrere Wallets + NFT', async () => {
+    const W2 = '0x' + '22'.repeat(32)
+    const { wire } = await encryptNftGateMessage({
+      plainUtf8: 'zwei wallets',
+      nftObjectId: OID,
+      requiredWallets: [OTHER, WALLET],
+    })
+    const meta = peekNftGateMeta(wire)
+    expect(meta?.gate).toBe('nft_and_wallet_p4a')
+    expect(meta?.requiredWallets?.length).toBe(2)
+    expect(
+      await decryptNftGateMessageWire(wire, { nftAccessOk: true, signerAddress: WALLET })
+    ).toBe('zwei wallets')
+    expect(
+      await decryptNftGateMessageWire(wire, { nftAccessOk: true, signerAddress: OTHER })
+    ).toBe('zwei wallets')
+    await expect(
+      decryptNftGateMessageWire(wire, { nftAccessOk: true, signerAddress: W2 })
+    ).rejects.toThrow(/Wallet/)
+  })
+
   it('lehnt ungültige Object-ID ab', async () => {
     await expect(
       encryptNftGateMessage({ plainUtf8: 'x', nftObjectId: '0xabc' })

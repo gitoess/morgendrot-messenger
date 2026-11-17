@@ -20,8 +20,21 @@
 | Boss / Helfer / Handoff / Remote-Signer / API_AUTH_TOKEN-Provisioning | | ✓ |
 | LoRa / SOS-Funk / Telegram / Lock / Shop / Einsatzleitung | | ✓ |
 | On-chain-Gruppenraum (ein TX für alle) | | ✓ (Backlog: `TEAM-MAILBOX-BROADCAST-1TX`) |
+| Auto-Execute empfangener Chat-Befehle / Coin-Fernsteuerung | | ✓ (siehe §1.1) |
 
 **Kern:** „**IOTA Messenger**“ = **Wallet + Mailbox-Chat + Gruppen + IOTA-Transfer** — wie eine schlanke Messenger-App, nur dass Transport und Speicher **IOTA/Move** sind. **Kein** Organisationsmodell.
+
+### 1.1 Sicherheit — Auto-Execute / Coins (Entscheidung 2026-11-17, verbindlich)
+
+**Merken / bei Edition-Umsetzung:**
+
+- Chat-Produkt = **Nachrichten**. Fernsteuerungs-Coins und Auto-Befehle aus dem Posteingang sind **kein** Kern.
+- `ENABLE_AUTO_EXECUTE=false` als **Default** der Edition (besser aus als Lock-/Morgendrot-Default).
+- **Kein** Auto-Execute empfangener Chat-Befehle („sende X coins“ o. Ä.).
+- **Lock-Fernsteuerung** weglassen oder nur separates Boss/Lock-Produkt — nicht im schlanken IOTA-Messenger.
+- Optional später nur als **explizites** Spezialfeature (Whitelist/Limits) — nie stiller Default.
+
+Cursor-Regel: `.cursor/rules/iota-messenger-no-auto-execute.mdc`.
 
 ---
 

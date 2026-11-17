@@ -423,11 +423,12 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
         }
       }
     }
-    if (inboxChannelFiltersArmed) {
+    /** Richtung immer — Eingang/Ausgang filtert sofort. */
+    if (inboxDirectionFilter !== 'all') {
       rows = filterInboxMessagesByPartnerAndDirection(rows, myAddress, null, inboxDirectionFilter)
-      if (inboxSourceFilter !== 'all') {
-        rows = rows.filter((m) => messageMatchesInboxSourceFilter(m, inboxSourceFilter, sourceFilterCtx))
-      }
+    }
+    if (inboxChannelFiltersArmed && inboxSourceFilter !== 'all') {
+      rows = rows.filter((m) => messageMatchesInboxSourceFilter(m, inboxSourceFilter, sourceFilterCtx))
     }
     return rows
   }, [
@@ -444,10 +445,11 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     sendPathInboxSourceFilter,
   ])
 
+  /** Inhalt-Chips wirken sofort — „Alles“ = kein Wire-Filter. */
   const wireFilteredMessages = useMemo(() => {
-    if (!inboxWireFiltersArmed || inboxWireFilter === 'all') return partnerFilteredMessages
+    if (inboxWireFilter === 'all') return partnerFilteredMessages
     return partnerFilteredMessages.filter((m) => messageMatchesInboxWireFilter(m, inboxWireFilter))
-  }, [partnerFilteredMessages, inboxWireFilter, inboxWireFiltersArmed])
+  }, [partnerFilteredMessages, inboxWireFilter])
 
   useEffect(() => {
     setPartnerLastSeenMap(readPartnerLastSeenMap(inboxScopeKey(myAddress)))
@@ -797,6 +799,13 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       setTimeout(() => setStatus('idle'), 7000)
       return
     }
+    if (
+      !window.confirm(
+        `${list.length} Nachricht(en) von der Chain löschen (Burn)? Storage-Rebate; Explorer behält Send-TX.`
+      )
+    ) {
+      return
+    }
     setSending(true)
     try {
       for (const msg of list) {
@@ -820,6 +829,110 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       setTimeout(() => setStatus('idle'), 6000)
     }
   }, [sortedFilteredDisplayMessages, selectedInboxIds, loadMessages, setMessages, setSending, setStatus, setStatusMsg])
+
+  const selectedVisibleMessages = useCallback(
+    () => sortedFilteredDisplayMessages.filter((m) => selectedInboxIds.has(m.id)),
+    [sortedFilteredDisplayMessages, selectedInboxIds]
+  )
+
+  const onBulkMarkProtokollSelected = useCallback(() => {
+    const ids = [...selectedInboxIds]
+    if (ids.length === 0) return
+    setProtokollMarkedIds((prev) => {
+      const n = new Set(prev)
+      for (const id of ids) n.add(id)
+      try {
+        sessionStorage.setItem('morg.protokoll.marked.ids', JSON.stringify([...n]))
+      } catch {
+        /* ignore */
+      }
+      return n
+    })
+    setStatus('success')
+    setStatusMsg(`${ids.length} für Protokoll markiert.`)
+    setTimeout(() => setStatus('idle'), 4000)
+  }, [selectedInboxIds, setStatus, setStatusMsg])
+
+  const onBulkCopySelected = useCallback(() => {
+    const list = selectedVisibleMessages()
+    if (list.length === 0) return
+    const text = list.map((m) => `${m.content ?? ''}`).join('\n\n---\n\n')
+    void navigator.clipboard.writeText(text).then(
+      () => {
+        setStatus('success')
+        setStatusMsg(
+          list.length === 1
+            ? 'Inhalt/Wire kopiert.'
+            : `${list.length} Inhalte/Wires in die Zwischenablage.`
+        )
+        setTimeout(() => setStatus('idle'), 4000)
+      },
+      () => {
+        setStatus('error')
+        setStatusMsg('Kopieren fehlgeschlagen.')
+        setTimeout(() => setStatus('idle'), 5000)
+      }
+    )
+  }, [selectedVisibleMessages, setStatus, setStatusMsg])
+
+  const onBulkExportJsonSelected = useCallback(() => {
+    const list = selectedVisibleMessages()
+    if (list.length === 0) return
+    const json = JSON.stringify(
+      {
+        schema: 'morgendrot.sneakernet.bulk.v1',
+        exportedAt: Date.now(),
+        count: list.length,
+        messages: list.map((msg) => ({
+          id: msg.id,
+          from: msg.from,
+          timestamp: msg.timestamp,
+          encryptedFlag: msg.encrypted === true,
+          recipient: msg.recipient ?? null,
+          transports: msg.transports ?? null,
+          content: msg.content,
+        })),
+      },
+      null,
+      2
+    )
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `morgendrot-selection-${list.length}.json`
+    a.rel = 'noopener'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+    setStatus('success')
+    setStatusMsg(`JSON-Snapshot: ${list.length} Nachricht(en).`)
+    setTimeout(() => setStatus('idle'), 4000)
+  }, [selectedVisibleMessages, setStatus, setStatusMsg])
+
+  const onBulkHashSelected = useCallback(() => {
+    const list = selectedVisibleMessages()
+    if (list.length === 0) return
+    void (async () => {
+      try {
+        const { hashInboxMessagesCanonical } = await import('@/frontend/lib/message-canonical-hash')
+        const r = await hashInboxMessagesCanonical(list)
+        await navigator.clipboard.writeText(r.clipboardText)
+        setStatus('success')
+        setStatusMsg(
+          list.length === 1
+            ? `Hash kopiert: ${r.hashes[0]?.entryHash.slice(0, 16)}…`
+            : `${list.length} Nachrichten-Hashes kopiert (entry_hash je Block).`
+        )
+        setTimeout(() => setStatus('idle'), 6000)
+      } catch (e) {
+        setStatus('error')
+        setStatusMsg(e instanceof Error ? e.message : 'Hash fehlgeschlagen.')
+        setTimeout(() => setStatus('idle'), 6000)
+      }
+    })()
+  }, [selectedVisibleMessages, setStatus, setStatusMsg])
 
   const resetInboxViewFilters = useCallback(() => {
     clearInboxBrowserViewFilters()
@@ -845,28 +958,17 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     const reasons: string[] = []
     if (hiddenLocal > 0) reasons.push(`${hiddenLocal} lokal ausgeblendet`)
     if (inboxPartnerFiltersArmed && inboxPartnerKey) reasons.push('Partner-Filter')
-    if (inboxChannelFiltersArmed && inboxDirectionFilter !== 'all') {
-      reasons.push(`Kanal „${inboxDirectionFilter === 'in' ? 'Eingang' : 'Ausgang'}“`)
+    if (inboxDirectionFilter !== 'all') {
+      reasons.push(`Richtung „${inboxDirectionFilter === 'in' ? 'Eingang' : 'Ausgang'}“`)
+    }
+    if (inboxWireFilter !== 'all') {
+      reasons.push(inboxWireFilter === 'encrypted' ? 'nur verschlüsselt' : 'nur Klartext')
     }
     if (sendPathInboxSourceFilter !== 'all') {
       reasons.push(`Sendepfad „${sendPathInboxSourceFilter}“`)
     } else if (inboxChannelFiltersArmed && inboxSourceFilter !== 'all') {
       reasons.push(`Quelle „${inboxSourceFilter}“`)
     }
-    if (inboxWireFilter === 'encrypted') reasons.push('Inhalt „Verschlüsselt“')
-    if (inboxWireFilter === 'plaintext') reasons.push('Inhalt „Klartext“')
-
-    const encLoaded = inboxMessages.filter((m) => m.encrypted === true).length
-    const encVisible = filteredDisplayMessages.filter((m) => m.encrypted === true).length
-    if (encLoaded > 0 && encVisible === 0 && inboxWireFilter === 'plaintext') {
-      reasons.push(`${encLoaded} verschlüsselt (unter „Klartext“ ausgeblendet)`)
-    }
-    const plainLoaded = inboxMessages.filter((m) => m.encrypted !== true).length
-    const plainVisible = filteredDisplayMessages.filter((m) => m.encrypted !== true).length
-    if (plainLoaded > 0 && plainVisible === 0 && inboxWireFilter === 'encrypted') {
-      reasons.push(`${plainLoaded} Klartext (unter „Verschlüsselt“ ausgeblendet)`)
-    }
-
     if (reasons.length === 0) {
       return `${inboxMessages.length} Nachrichten geladen, Anzeige leer — Filter unter Partner / Kanal / Posteingang prüfen.`
     }
@@ -879,22 +981,18 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     inboxChannelFiltersArmed,
     inboxPartnerFiltersArmed,
     inboxDirectionFilter,
-    inboxSourceFilter,
     inboxWireFilter,
-    inboxWireFiltersArmed,
+    inboxSourceFilter,
     sendPathInboxSourceFilter,
   ])
 
-  /** Transport/Partner blockieren Mailbox — zurücksetzen (nicht bei bewusstem Inhalt-Filter Klartext/Verschlüsselt). */
+  /** Transport/Partner blockieren Mailbox — zurücksetzen. */
   useEffect(() => {
     /** Sendepfad-Filter: leerer Posteingang (z. B. Funk ohne Mesh) ist erwartet — nicht zurücksetzen. */
     if (sendPathInboxSourceFilter !== 'all') return
     if (inboxPartnerFiltersArmed && inboxPartnerKey?.trim()) return
     if (messages.length === 0) return
     if (displayMessages.length === 0) return
-    if (inboxWireFiltersArmed && inboxWireFilter !== 'all') return
-    const encLoaded = messages.filter((m) => m.encrypted === true).length
-    const encVisible = filteredDisplayMessages.filter((m) => m.encrypted === true).length
     const mbLoaded = messages.filter((m) => m.chainPurgeable === true).length
     const mbVisible = filteredDisplayMessages.filter((m) => m.chainPurgeable === true).length
     const transportFilterBlocksMailbox =
@@ -906,12 +1004,9 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       hiddenInboxIds.size > 0 ||
       (inboxPartnerFiltersArmed && inboxPartnerKey != null) ||
       (inboxChannelFiltersArmed &&
-        (inboxDirectionFilter !== 'all' || inboxSourceFilter !== 'all')) ||
-      (inboxWireFiltersArmed && inboxWireFilter !== 'all')
+        (inboxDirectionFilter !== 'all' || inboxSourceFilter !== 'all'))
     const needsReset =
-      (filteredDisplayMessages.length === 0 && filtersActive) ||
-      (encLoaded > 0 && encVisible === 0 && filtersActive) ||
-      transportFilterBlocksMailbox
+      (filteredDisplayMessages.length === 0 && filtersActive) || transportFilterBlocksMailbox
     if (!needsReset) return
     resetInboxViewFilters()
   }, [
@@ -926,8 +1021,6 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     inboxDirectionFilter,
     inboxSourceFilter,
     resetInboxViewFilters,
-    inboxWireFilter,
-    inboxWireFiltersArmed,
   ])
 
   return {
@@ -974,6 +1067,11 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     onHideAllVisibleLocal,
     onBulkHideSelected,
     onBulkPurgeSelected,
+    onBulkMarkProtokollSelected,
+    onBulkCopySelected,
+    onBulkExportJsonSelected,
+    onBulkHashSelected,
+    selectedVisibleMessages,
     removeInboxPartnerFromQuickList,
     resetInboxViewFilters,
     inboxVisibilityHint,

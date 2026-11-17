@@ -10,7 +10,7 @@ import {
   readPassphraseNftKeycardBindSlotId,
   readPassphraseNftDualWalletGateEnabled,
   readPassphraseNftPubkeyWrapP4a2Enabled,
-  readPassphraseNftRequiredWallet,
+  readPassphraseNftRequiredWallets,
   readPassphraseNftSealP4bEnabled,
   readPassphraseNftStrongGateEnabled,
   readPassphraseProtectEnabled,
@@ -24,7 +24,7 @@ import {
   writePassphraseNftKeycardBindObjectId,
   writePassphraseNftKeycardBindSlotId,
   writePassphraseNftPubkeyWrapP4a2Enabled,
-  writePassphraseNftRequiredWallet,
+  writePassphraseNftRequiredWallets,
   writePassphraseNftSealP4bEnabled,
   writePassphraseNftStrongGateEnabled,
   writePassphraseProtectEnabled,
@@ -34,12 +34,19 @@ import {
   writeZeitkapselLastNftObjectId,
 } from '@/frontend/lib/passphrase-message-local-store'
 import { NftKeycardImagePreview } from '@/frontend/components/nft-keycard-image-preview'
-import { listNftKeycards } from '@/frontend/lib/nft-keycard-local-store'
-import { getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
 import {
-  isPrivacySoftLocked,
-  PRIVACY_SOFT_LOCK_CHANGED_EVENT,
-} from '@/frontend/lib/privacy-soft-lock'
+  listNftKeycards,
+  normalizeNftObjectIdInput,
+  NFT_KEYCARD_VAULT_CHANGED_EVENT,
+} from '@/frontend/lib/nft-keycard-local-store'
+import { NFT_ACTIVITY_CHANGED_EVENT } from '@/frontend/lib/nft-activity-local-log'
+import {
+  buildSecuredSpendOptions,
+  type SecuredSpendOption,
+} from '@/frontend/lib/nft-secured-spend-options'
+import { MESSENGER_INBOX_FORCE_REFRESH_EVENT } from '@/frontend/lib/messenger-inbox-force-refresh'
+import { getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
+import { PRIVACY_SOFT_LOCK_CHANGED_EVENT } from '@/frontend/lib/privacy-soft-lock'
 import { hasVaultPasswordSession } from '@/frontend/lib/vault-password-session'
 
 function shortOid(id: string): string {
@@ -65,12 +72,15 @@ export function PassphraseProtectComposerToggle(p: {
   const [dualWallet, setDualWallet] = useState(false)
   const [pubkeyWrapP4a2, setPubkeyWrapP4a2] = useState(false)
   const [sealP4b, setSealP4b] = useState(false)
-  const [requiredWallet, setRequiredWallet] = useState('')
+  const [requiredWalletsText, setRequiredWalletsText] = useState('')
   const [rememberOnDevice, setRememberOnDevice] = useState(true)
   const [vaultSessionOpen, setVaultSessionOpen] = useState(() => hasVaultPasswordSession())
   const [cards, setCards] = useState<{ objectId: string; label?: string; slotIds: string[] }[]>([])
+  const [nftOptions, setNftOptions] = useState<SecuredSpendOption[]>([])
   const [lastZeitkapselNft, setLastZeitkapselNft] = useState<string | null>(null)
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [manualOidDraft, setManualOidDraft] = useState('')
+  const [manualOidOpen, setManualOidOpen] = useState(false)
 
   useEffect(() => {
     const sync = () => {
@@ -80,13 +90,15 @@ export function PassphraseProtectComposerToggle(p: {
       setRememberOnDevice(readPassphraseRememberOnDeviceEnabled())
       setVaultSessionOpen(hasVaultPasswordSession())
       setSharedPass(getDefaultPassphraseMessagePassphrase() ?? '')
-      setBindOid(readPassphraseNftKeycardBindObjectId() ?? '')
+      const bound = readPassphraseNftKeycardBindObjectId() ?? ''
+      setBindOid(bound)
+      if (bound) setManualOidDraft(bound)
       setBindSlot(readPassphraseNftKeycardBindSlotId())
       setStrongGate(readPassphraseNftStrongGateEnabled())
       setDualWallet(readPassphraseNftDualWalletGateEnabled())
       setPubkeyWrapP4a2(readPassphraseNftPubkeyWrapP4a2Enabled())
       setSealP4b(readPassphraseNftSealP4bEnabled())
-      setRequiredWallet(readPassphraseNftRequiredWallet() ?? '')
+      setRequiredWalletsText(readPassphraseNftRequiredWallets().join('\n'))
       setLastZeitkapselNft(readZeitkapselLastNftObjectId())
       setCards(
         listNftKeycards().map(({ objectId, entry }) => ({
@@ -95,13 +107,21 @@ export function PassphraseProtectComposerToggle(p: {
           slotIds: entry.slots.map((s) => s.id),
         }))
       )
+      setNftOptions(buildSecuredSpendOptions())
     }
     sync()
     window.addEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, sync)
     window.addEventListener(PRIVACY_SOFT_LOCK_CHANGED_EVENT, sync)
+    /** Mint/Galerie „als Schlüsselkarte merken“ — sonst bleibt Composer bei „Keine … gemerkt“. */
+    window.addEventListener(NFT_KEYCARD_VAULT_CHANGED_EVENT, sync)
+    window.addEventListener(NFT_ACTIVITY_CHANGED_EVENT, sync)
+    window.addEventListener(MESSENGER_INBOX_FORCE_REFRESH_EVENT, sync)
     return () => {
       window.removeEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, sync)
       window.removeEventListener(PRIVACY_SOFT_LOCK_CHANGED_EVENT, sync)
+      window.removeEventListener(NFT_KEYCARD_VAULT_CHANGED_EVENT, sync)
+      window.removeEventListener(NFT_ACTIVITY_CHANGED_EVENT, sync)
+      window.removeEventListener(MESSENGER_INBOX_FORCE_REFRESH_EVENT, sync)
     }
   }, [])
 
@@ -116,16 +136,12 @@ export function PassphraseProtectComposerToggle(p: {
     }
   }, [p.encrypted, on, zeitkapsel])
 
-  /** Wiederverwenden: bestehende Vault-Default behalten — nie still neu würfeln nach Lock. */
+  /** Bestehende Default behalten; sonst neu würfeln (RAM/Tab — Vault optional für Dauerpersistenz). */
   const ensureSharedPass = () => {
-    const existing = getDefaultPassphraseMessagePassphrase()
-    if (existing) {
+    const existing = getDefaultPassphraseMessagePassphrase()?.trim() || ''
+    if (existing.length >= 8) {
       setSharedPass(existing)
       return existing
-    }
-    if (isPrivacySoftLocked() || !hasVaultPasswordSession()) {
-      setSharedPass('')
-      return ''
     }
     const fresh = generatePassphraseMessageSharePassphrase()
     setDefaultPassphraseMessagePassphrase(fresh)
@@ -134,35 +150,96 @@ export function PassphraseProtectComposerToggle(p: {
   }
 
   const pickNft = (v: string) => {
-    setBindOid(v)
-    writePassphraseNftKeycardBindObjectId(v || null)
-    const card = cards.find((c) => c.objectId === v)
+    const oid = v ? normalizeNftObjectIdInput(v) : ''
+    const ok = Boolean(oid && /^0x[a-f0-9]{64}$/.test(oid))
+    setBindOid(ok ? oid : '')
+    setManualOidDraft(ok ? oid : v)
+    writePassphraseNftKeycardBindObjectId(ok ? oid : null)
+    writePassphraseNftStrongGateEnabled(ok)
+    if (ok) {
+      writeZeitkapselLastNftObjectId(oid)
+      setLastZeitkapselNft(oid)
+    }
+    const card = cards.find((c) => c.objectId === oid)
     const nextSlot = card?.slotIds.includes(bindSlot) ? bindSlot : card?.slotIds[0] || 'default'
     setBindSlot(nextSlot)
-    writePassphraseNftKeycardBindSlotId(v ? nextSlot : null)
+    writePassphraseNftKeycardBindSlotId(ok ? nextSlot : null)
   }
 
   const nftSelect = (
     <div className="flex flex-col gap-1.5">
-      {cards.length === 0 ? (
-        <p className="text-[11px] text-amber-800 dark:text-amber-200">
-          Keine Schlüsselkarte gemerkt — zuerst unter On-Chain / NFT eine Karte minten oder in der
-          Galerie zuordnen.
-        </p>
+      {nftOptions.length > 0 ? (
+        <>
+          <select
+            className="rounded border border-border bg-background px-2 py-1.5 text-[11px] text-foreground"
+            value={nftOptions.some((o) => o.objectId === bindOid) ? bindOid : ''}
+            onChange={(e) => pickNft(e.target.value)}
+            aria-label="NFT auswählen"
+          >
+            <option value="">— NFT wählen —</option>
+            {nftOptions.map((o) => (
+              <option key={o.objectId} value={o.objectId}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <ul className="max-h-36 space-y-0.5 overflow-y-auto rounded border border-border/60 bg-background/60 p-1">
+            {nftOptions.map((o) => {
+              const active = o.objectId === bindOid
+              return (
+                <li key={`list-${o.objectId}`}>
+                  <button
+                    type="button"
+                    className={
+                      active
+                        ? 'flex w-full items-center gap-2 rounded bg-muted px-2 py-1.5 text-left text-[11px] font-medium text-foreground'
+                        : 'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[11px] text-foreground hover:bg-muted/60'
+                    }
+                    onClick={() => pickNft(o.objectId)}
+                  >
+                    <span className="min-w-0 flex-1 truncate">{o.label}</span>
+                    {active ? <span className="shrink-0 text-[10px] text-muted-foreground">aktiv</span> : null}
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </>
       ) : (
-        <select
-          className="rounded border border-border bg-background px-2 py-1.5 text-[11px] text-foreground"
-          value={bindOid}
-          onChange={(e) => pickNft(e.target.value)}
-        >
-          <option value="">— NFT wählen —</option>
-          {cards.map((c) => (
-            <option key={c.objectId} value={c.objectId}>
-              {(c.label || 'Karte') + ' · ' + c.objectId.slice(0, 12) + '…'}
-            </option>
-          ))}
-        </select>
+        <p className="text-[11px] text-muted-foreground">
+          Noch keine NFTs in der Liste — On-Chain → Tab „Eigene“ einmal laden (oder minten). Dann
+          erscheinen sie hier zum Anklicken.
+        </p>
       )}
+      <button
+        type="button"
+        className="self-start text-[10px] text-muted-foreground underline hover:no-underline"
+        onClick={() => setManualOidOpen((v) => !v)}
+      >
+        {manualOidOpen ? 'Object-ID ausblenden' : 'Oder Object-ID eintippen'}
+      </button>
+      {manualOidOpen ? (
+        <label className="flex flex-col gap-0.5">
+          <span className="text-[10px] font-medium text-foreground">NFT Object-ID (0x…)</span>
+          <input
+            className="rounded border border-border bg-background px-2 py-1.5 font-mono text-[11px] text-foreground"
+            value={manualOidDraft}
+            placeholder="0x… aus Galerie / Explorer kopieren"
+            onChange={(e) => {
+              const raw = e.target.value
+              setManualOidDraft(raw)
+              const oid = normalizeNftObjectIdInput(raw)
+              if (/^0x[a-f0-9]{64}$/.test(oid)) pickNft(oid)
+              else if (!raw.trim()) pickNft('')
+            }}
+          />
+        </label>
+      ) : null}
+      {bindOid ? (
+        <p className="text-[10px] text-foreground">Aktiv: {shortOid(bindOid)}</p>
+      ) : manualOidOpen && manualOidDraft.trim() ? (
+        <p className="text-[10px] text-amber-800 dark:text-amber-200">Ungültige Object-ID (0x + 64 Hex).</p>
+      ) : null}
       {bindOid ? <NftKeycardImagePreview objectId={bindOid} compact /> : null}
     </div>
   )
@@ -187,7 +264,10 @@ export function PassphraseProtectComposerToggle(p: {
         <span>
           <span className="font-medium text-foreground">Seal / Key-Broker (P4b)</span>
           {' — '}
-          DEK nur mit Broker-Key nach NFT-AddressOwner. Wire allein reicht nicht.
+          Extra-Schloss: der Textschlüssel liegt nicht im Wire. Zum Lesen fragt die App den
+          Boss-Key-Broker; der gibt den Schlüssel nur, wenn die Chain sagt „diese Wallet besitzt
+          das NFT jetzt“. Ohne Broker/Boss kein Klartext — auch mit Wire-Kopie. Für Solo-Tests
+          meist auslassen.
         </span>
       </label>
       <label className="flex flex-wrap items-start gap-2">
@@ -199,11 +279,11 @@ export function PassphraseProtectComposerToggle(p: {
             const next = e.target.checked
             setDualWallet(next)
             writePassphraseNftDualWalletGateEnabled(next)
-            if (next && !requiredWallet) {
+            if (next && !requiredWalletsText.trim()) {
               const me = getDirectIotaSessionSignerAddress()?.trim() || ''
               if (me) {
-                setRequiredWallet(me)
-                writePassphraseNftRequiredWallet(me)
+                setRequiredWalletsText(me)
+                writePassphraseNftRequiredWallets([me])
               }
             }
           }}
@@ -211,20 +291,28 @@ export function PassphraseProtectComposerToggle(p: {
         <span>
           <span className="font-medium text-foreground">Wallet + NFT (Dual)</span>
           {' — '}
-          Lesen nur wenn Signer = festgelegte Adresse <em>und</em> NFT-Leserecht.
+          Lesen nur wenn Signer = eine der erlaubten Adressen <em>und</em> NFT-Leserecht.
         </span>
       </label>
       {dualWallet ? (
         <>
-          <input
-            className="w-full rounded border border-border bg-background px-2 py-1 font-mono text-[11px] text-foreground"
-            value={requiredWallet}
-            placeholder="0x… erlaubte Wallet"
-            onChange={(e) => {
-              setRequiredWallet(e.target.value)
-              writePassphraseNftRequiredWallet(e.target.value || null)
-            }}
-          />
+          <label className="flex flex-col gap-0.5">
+            <span className="text-[10px] text-foreground">Erlaubte Wallets (eine pro Zeile oder Komma)</span>
+            <textarea
+              className="min-h-[3.5rem] w-full rounded border border-border bg-background px-2 py-1 font-mono text-[11px] text-foreground"
+              value={requiredWalletsText}
+              placeholder={'0x…\n0x…'}
+              onChange={(e) => {
+                const raw = e.target.value
+                setRequiredWalletsText(raw)
+                const list = raw
+                  .split(/[\s,;]+/)
+                  .map((x) => x.trim().toLowerCase())
+                  .filter((x) => /^0x[a-f0-9]{64}$/.test(x))
+                writePassphraseNftRequiredWallets(list.length ? [...new Set(list)] : null)
+              }}
+            />
+          </label>
           <label className="flex flex-wrap items-start gap-2">
             <input
               type="checkbox"
@@ -244,7 +332,8 @@ export function PassphraseProtectComposerToggle(p: {
             <span>
               <span className="font-medium text-foreground">Pubkey-Wrap (P4a2)</span>
               {' — '}
-              DEK zusätzlich an ECDH-Pubkey der erlaubten Wallet.
+              Nur mit <strong>genau einer</strong> Wallet: Textschlüssel zusätzlich mit deren
+              ECDH-Pubkey. Später.
               {sealP4b ? ' (aus: P4b aktiv)' : ''}
             </span>
           </label>
@@ -268,28 +357,31 @@ export function PassphraseProtectComposerToggle(p: {
               setOn(false)
               setStrongGate(true)
               if (p.encrypted) p.onEncryptedChange?.(false)
-              if (!bindOid && cards[0]) pickNft(cards[0].objectId)
+              const opts = buildSecuredSpendOptions()
+              setNftOptions(opts)
+              if (!bindOid && opts[0]) pickNft(opts[0].objectId)
             }
           }}
         />
         <span>
-          <span className="font-medium text-foreground">Zeitkapsel-Nachricht (NFT-Leserecht)</span>
+          <span className="font-medium text-foreground">Zeitkapsel-Nachricht</span>
           {' — '}
-          Ciphertext als Wire (NFTGATE); NFT = Leserecht. Kein Nachrichten-Passwort. Danach unter
-          On-Chain → Zeitkapsel verleihen.
+          nur mit NFT-Besitz/Leihe lesbar (Ciphertext on-chain). Verleihen ist ein{' '}
+          <em>eigener</em> Schritt (CTA unten oder On-Chain → Tab Zeitkapsel) — nicht dasselbe wie
+          Senden. Geht nicht zusammen mit Composer-„Verschlüsselt“ (ECDH).
         </span>
       </label>
 
       {zeitkapsel ? (
         <div className="ml-5 space-y-2 rounded-md border border-border/70 bg-muted/20 px-2.5 py-2">
-          <p className="text-[11px] font-medium text-foreground">NFT fürs Gate wählen</p>
+          <p className="text-[11px] font-medium text-foreground">NFT wählen</p>
           {nftSelect}
           <button
             type="button"
             className="text-[11px] font-medium text-foreground underline hover:no-underline"
             onClick={() => setAdvancedOpen((v) => !v)}
           >
-            {advancedOpen ? 'Erweitert ausblenden' : 'Erweitert (Dual / Seal)'}
+            {advancedOpen ? 'Erweitert aus' : 'Erweitert'}
           </button>
           {advancedOpen ? advancedGate : null}
         </div>
@@ -297,15 +389,13 @@ export function PassphraseProtectComposerToggle(p: {
 
       {lastZeitkapselNft ? (
         <div className="ml-5 flex flex-wrap items-center gap-2 rounded-md border border-border/70 bg-muted/10 px-2.5 py-2">
-          <span className="text-[11px] text-foreground">
-            Letzte Zeitkapsel-Nachricht an {shortOid(lastZeitkapselNft)}
-          </span>
+          <span className="text-[11px] text-foreground">Zuletzt: {shortOid(lastZeitkapselNft)}</span>
           <button
             type="button"
             className="rounded border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
             onClick={() => requestOpenZeitkapselLease(lastZeitkapselNft)}
           >
-            Dieses NFT verleihen…
+            Verleihen…
           </button>
           <button
             type="button"
@@ -315,7 +405,7 @@ export function PassphraseProtectComposerToggle(p: {
               setLastZeitkapselNft(null)
             }}
           >
-            Ausblenden
+            Weg
           </button>
         </div>
       ) : null}
@@ -333,6 +423,9 @@ export function PassphraseProtectComposerToggle(p: {
             if (next && p.encrypted) p.onEncryptedChange?.(false)
             if (next) {
               setZeitkapsel(false)
+              writePassphraseZeitkapselModeEnabled(false)
+              // Rest-OID von Zeitkapsel nicht stillschweigend mit PWMSG verknüpfen
+              pickNft('')
               ensureSharedPass()
             }
           }}
@@ -340,8 +433,7 @@ export function PassphraseProtectComposerToggle(p: {
         <span>
           <span className="font-medium text-foreground">Passphrase-Schutz</span>
           {' — '}
-          eigenes Nachrichten-Passwort (ohne Handshake). Schaltet „Verschlüsselt“ (ECDH) aus — beides
-          gleichzeitig geht nicht. Für Zeitkapsel lieber den Modus oben.
+          eigenes Nachrichten-Passwort (ohne Handshake). Nicht zusammen mit ECDH „Verschlüsselt“.
         </span>
       </label>
 
@@ -359,17 +451,20 @@ export function PassphraseProtectComposerToggle(p: {
               }}
             />
             <span>
-              <span className="font-medium text-foreground">Auf diesem Gerät merken</span>
+              <span className="font-medium text-foreground">
+                Für mich auf diesem Gerät merken (Absender)
+              </span>
               {' — '}
-              An: diese Nachricht nach Unlock wieder Klartext. Aus: nach Lock/Unlock nur Ciphertext,
-              bis du die Passphrase manuell eingibst (auch wenn „Wiederverwenden“ an ist).
+              Nur <em>deine</em> lokale Lesepforte: An → Passphrase hier speichern, Posteingang öffnet Klartext ohne
+              Tippen. Optional mit Vault-Session dauerhaft über Neuladen. Aus (bewusst) → nur Ciphertext, Passphrase
+              jedes Mal manuell. Wird <strong>nicht</strong> an den Empfänger gesendet.
             </span>
           </label>
           {rememberOnDevice && !vaultSessionOpen ? (
             <p className="text-[11px] text-amber-800 dark:text-amber-200">
-              Vault-Sitzung fehlt — oben rechts Badge{' '}
-              <span className="font-semibold text-foreground">„Vault: Passwort“</span> tippen, Passwort
-              eingeben, dann „Signer laden“. Ohne das ist Senden mit Merken blockiert.
+              Merken geht auch ohne Vault (dieser Tab). Badge{' '}
+              <span className="font-semibold text-foreground">„Vault: Passwort“</span> ={' '}
+              <em>Tresor</em>-Passwort für Dauer-Speicher — nicht die Nachrichten-Passphrase unten.
               {p.onRequestVaultSession ? (
                 <>
                   {' '}
@@ -378,7 +473,7 @@ export function PassphraseProtectComposerToggle(p: {
                     className="font-semibold text-foreground underline hover:no-underline"
                     onClick={() => p.onRequestVaultSession?.()}
                   >
-                    Jetzt Passwort eingeben
+                    Tresor entsperren
                   </button>
                 </>
               ) : null}
@@ -447,29 +542,30 @@ export function PassphraseProtectComposerToggle(p: {
             <span>
               <span className="font-medium text-foreground">Passphrase wiederverwenden</span>
               {' — '}
-              An: Feld bleibt nach jedem Send. Aus: nach Send automatisch neu würfeln. Verbindet
-              Nachrichten <em>nicht</em> on-chain mit einem NFT — nur dieselbe PW lokal.
+              An: Feld bleibt nach jedem Send (gleiche PW lokal). Aus: nach Send neu würfeln. Verbindet
+              Nachrichten <em>nicht</em> on-chain mit einem NFT.
             </span>
           </label>
 
-          {cards.length > 0 ? (
+          {nftOptions.length > 0 ? (
             <div className="flex flex-col gap-1.5">
               <span className="font-medium text-foreground">
-                Key an NFT-Schlüsselkarte binden (optional, nur lokal)
+                Key an NFT binden (optional, nur lokal)
               </span>
               <span className="text-[11px] text-muted-foreground">
-                Soft-Bind: Wire-Fingerprint an die Karte — kein starkes On-Chain-Gate. Für echte
-                Zeitkapsel-Semantik den Modus „Zeitkapsel-Nachricht“ oben nutzen.
+                Nur bei Passphrase-Nachrichten (PWMSG). Klartext, ECDH „Verschlüsselt“ und Telegram
+                haben keinen PWMSG-Wire — deshalb kein Bind im Postausgang. Soft-Bind = lokal
+                Fingerprint↔Karte, kein starkes On-Chain-Gate (dafür Zeitkapsel-Modus).
               </span>
               <select
                 className="rounded border border-border bg-background px-2 py-1.5 text-[11px] text-foreground"
-                value={bindOid}
+                value={nftOptions.some((o) => o.objectId === bindOid) ? bindOid : ''}
                 onChange={(e) => pickNft(e.target.value)}
               >
                 <option value="">— keine Bindung —</option>
-                {cards.map((c) => (
-                  <option key={c.objectId} value={c.objectId}>
-                    {(c.label || 'Karte') + ' · ' + c.objectId.slice(0, 12) + '…'}
+                {nftOptions.map((o) => (
+                  <option key={o.objectId} value={o.objectId}>
+                    {o.label}
                   </option>
                 ))}
               </select>

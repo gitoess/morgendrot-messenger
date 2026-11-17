@@ -24,8 +24,6 @@ export function ChatViewSosEmergencyButton(p: ChatViewSosEmergencyButtonProps) {
 
   if (!p.visible) return null
 
-  const hero = p.variant === 'hero'
-
   return (
     <>
       <button
@@ -34,10 +32,8 @@ export function ChatViewSosEmergencyButton(p: ChatViewSosEmergencyButtonProps) {
         title="SOS — Hilferuf (Text), MORG_EMERGENCY_V1. Kein automatischer 112-Ruf."
         onClick={() => setSheetOpen(true)}
         className={cn(
-          'border-2 border-red-600/70 bg-red-600/95 font-bold tracking-tight text-white shadow-sm transition-colors hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50',
-          hero
-            ? 'w-full rounded-xl px-4 py-4 text-base sm:text-lg'
-            : 'rounded-lg px-3 py-2 text-xs',
+          'font-medium text-muted-foreground/70 underline-offset-2 transition-colors hover:text-red-400/80 hover:underline disabled:cursor-not-allowed disabled:opacity-50',
+          'rounded-md px-2 py-0.5 text-[11px]',
           p.className
         )}
       >

@@ -277,51 +277,62 @@ export async function trySubmitPlaintextMailboxViaDirectIota(opts: {
   try {
     const client = ctx.client
     const plaintextUtf8 = new TextEncoder().encode(opts.payloadUtf8)
-    let txb
-    if (useEventPath) {
-      txb = buildSendPlaintextEventTransaction({
-        packageId: ctx.snap.packageId,
-        senderAddress: ctx.snap.senderAddress.trim(),
-        recipientAddress: recipient,
-        plaintextUtf8,
-        nonce: opts.nonce,
-      })
-    } else {
-      const { mailboxObjectId } = resolveDirectMailboxUsePrivateMoveCall({
-        mailboxObjectId: opts.mailboxObjectId,
-        serverMailboxId: ctx.snap.mailboxId,
-      })
-      const mailboxCheck = await validateMessagingMailboxObjectForPackage(
-        client,
-        mailboxObjectId,
-        ctx.snap.packageId,
-        'any'
-      )
-      if (!mailboxCheck.ok) {
-        return { ok: false, error: mailboxCheck.error }
+    const { withStaleObjectVersionRetry } = await import('@/frontend/lib/direct-iota-stale-version-retry')
+    return withStaleObjectVersionRetry(async () => {
+      // Jeder Versuch: TX + Gas neu (sonst bleibt Object-Version stale).
+      let attemptTxb
+      if (useEventPath) {
+        attemptTxb = buildSendPlaintextEventTransaction({
+          packageId: ctx.snap.packageId,
+          senderAddress: ctx.snap.senderAddress.trim(),
+          recipientAddress: recipient,
+          plaintextUtf8,
+          nonce: opts.nonce,
+        })
+      } else {
+        const { mailboxObjectId } = resolveDirectMailboxUsePrivateMoveCall({
+          mailboxObjectId: opts.mailboxObjectId,
+          serverMailboxId: ctx.snap.mailboxId,
+        })
+        const mailboxCheck = await validateMessagingMailboxObjectForPackage(
+          client,
+          mailboxObjectId,
+          ctx.snap.packageId,
+          'any'
+        )
+        if (!mailboxCheck.ok) {
+          return { ok: false as const, error: mailboxCheck.error }
+        }
+        attemptTxb = buildStorePlaintextMailboxTransaction({
+          packageId: ctx.snap.packageId,
+          mailboxObjectId,
+          senderAddress: ctx.snap.senderAddress.trim(),
+          recipientAddress: recipient,
+          plaintextUtf8,
+          nonce: opts.nonce,
+          ttlDays: ctx.snap.ttlDays,
+          privateMailbox: mailboxCheck.kind === 'privatemailbox',
+          stored: ctx.snap.flags.mailboxStorePlaintext === true,
+        })
       }
-      const privateMailbox = mailboxCheck.kind === 'privatemailbox'
-      txb = buildStorePlaintextMailboxTransaction({
-        packageId: ctx.snap.packageId,
-        mailboxObjectId,
-        senderAddress: ctx.snap.senderAddress.trim(),
-        recipientAddress: recipient,
-        plaintextUtf8,
-        nonce: opts.nonce,
-        ttlDays: ctx.snap.ttlDays,
-        privateMailbox,
-        stored: ctx.snap.flags.mailboxStorePlaintext === true,
-      })
-    }
-    await attachGasPaymentForOwner(client, txb, ctx.snap.senderAddress.trim())
-    const out = await signAndExecuteTransactionWithSigner({ client, transaction: txb, signer: ctx.signer })
-    if (isDirectChainExecutionSuccess(out.digest, out.status)) {
-      return { ok: true, digest: out.digest }
-    }
-    return {
-      ok: false,
-      error: `Chain-Status: ${out.status || 'kein Digest'} — im Explorer prüfen, ob die TX trotzdem existiert.`,
-    }
+      try {
+        await attachGasPaymentForOwner(client, attemptTxb, ctx.snap.senderAddress.trim())
+        const out = await signAndExecuteTransactionWithSigner({
+          client,
+          transaction: attemptTxb,
+          signer: ctx.signer,
+        })
+        if (isDirectChainExecutionSuccess(out.digest, out.status)) {
+          return { ok: true as const, digest: out.digest }
+        }
+        return {
+          ok: false as const,
+          error: `Chain-Status: ${out.status || 'kein Digest'} — im Explorer prüfen, ob die TX trotzdem existiert.`,
+        }
+      } catch (e) {
+        return { ok: false as const, error: formatDirectIotaSubmitError(e) }
+      }
+    })
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }
   }

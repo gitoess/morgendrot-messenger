@@ -73,6 +73,7 @@ import {
 } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 import { syncMainnetKeysAfterBackendUnlock, ensureBackendVaultKeysInSession } from '@/frontend/lib/dashboard-vault-key-sync'
 import { vaultSave } from '@/frontend/lib/api/vault-commands'
+import { playUiTone, primeAudioFromUserGesture } from '@/frontend/lib/ui-tap-feedback'
 import {
   getIncludeSdkMnemonicInBackup,
   setIncludeSdkMnemonicInBackup as persistIncludeSdkMnemonicInBackup,
@@ -91,6 +92,7 @@ import { wipeLocalPassphraseStoresOnLock } from '@/frontend/lib/privacy-lock-wip
 import { unlockLocalSecretVaults } from '@/frontend/lib/local-secret-vaults'
 import { setPrivacySoftLocked } from '@/frontend/lib/privacy-soft-lock'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
+import { readContactFavorites } from '@/frontend/lib/contact-phonebook-meta-store'
 import { useChatViewPendingHandshakes, OPEN_MESSENGER_INBOX_EVENT } from '@/frontend/hooks/use-chat-view-pending-handshakes'
 import { useOfflineStatus } from '@/frontend/hooks/use-offline-status'
 import type { ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
@@ -264,21 +266,6 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   const hasValidMyAddressForBalance =
     /^0x[a-fA-F0-9]{64}$/i.test((apiSnapshot?.myAddressFull ?? '').trim()) === true
 
-  const dashboardTransferAddressSuggestions = useMemo(() => {
-    const set = new Set<string>()
-    const add = (v?: string) => {
-      const t = (v || '').trim()
-      if (/^0x[a-fA-F0-9]{64}$/.test(t)) set.add(t)
-    }
-    add(apiSnapshot?.myAddress)
-    add(apiSnapshot?.myAddressFull)
-    const conn = apiSnapshot?.connectedAddresses
-    if (Array.isArray(conn)) {
-      for (const a of conn) add(a)
-    }
-    return Array.from(set)
-  }, [apiSnapshot?.myAddress, apiSnapshot?.myAddressFull, apiSnapshot?.connectedAddresses])
-
   const setShowAllTilesPersist = (value: boolean) => {
     setShowAllTiles(value)
     writeShowAllTilesPref(value)
@@ -431,6 +418,39 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
 
   const { directory: contactDirectory, refresh: refreshContactDirectory } = useContactDirectory()
 
+  const dashboardTransferRecipientOptions = useMemo(() => {
+    const fav = readContactFavorites()
+    const byAddr = new Map<string, { address: string; label: string; favorite: boolean }>()
+    const add = (address?: string, label?: string, favorite?: boolean) => {
+      const a = (address || '').trim()
+      if (!/^0x[a-fA-F0-9]{64}$/i.test(a)) return
+      const key = a.toLowerCase()
+      const prev = byAddr.get(key)
+      const nextLabel = (label || '').trim() || prev?.label || `${a.slice(0, 10)}…`
+      byAddr.set(key, {
+        address: a,
+        label: nextLabel,
+        favorite: Boolean(favorite || prev?.favorite || fav.has(key)),
+      })
+    }
+    for (const [addr, entry] of Object.entries(contactDirectory)) {
+      add(addr, entry?.label, fav.has(addr.trim().toLowerCase()))
+    }
+    const conn = apiSnapshot?.connectedAddresses
+    if (Array.isArray(conn)) {
+      for (const a of conn) add(a)
+    }
+    return Array.from(byAddr.values()).sort((a, b) => {
+      if (a.favorite !== b.favorite) return a.favorite ? -1 : 1
+      return a.label.localeCompare(b.label, 'de')
+    })
+  }, [contactDirectory, apiSnapshot?.connectedAddresses])
+
+  const dashboardTransferAddressSuggestions = useMemo(
+    () => dashboardTransferRecipientOptions.map((o) => o.address),
+    [dashboardTransferRecipientOptions]
+  )
+
   const connectedAddressesForHandshake = useMemo(() => {
     const resolved = resolveConnectedAddresses({
       fromStatus: apiSnapshot?.connectedAddresses,
@@ -497,16 +517,31 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     }
   }, [checkStatus])
 
-  const navigateTo = useCallback((v: DashboardActiveView | null) => {
-    setActiveView(v)
-    persistDashboardActiveView(v)
-    if (isCapacitorNativePlatform() && v?.type === 'chat') {
-      forceReleaseNativeBodyLock()
-      purgeOrphanRadixOverlays()
-      releaseStuckModalPointerEvents({ force: true })
-      scheduleReleaseStuckModalPointerEvents()
-    }
-  }, [])
+  const navigateTo = useCallback(
+    (v: DashboardActiveView | null, opts?: { replace?: boolean; fromPop?: boolean }) => {
+      setActiveView(v)
+      persistDashboardActiveView(v)
+      if (typeof window !== 'undefined' && !opts?.fromPop) {
+        const state = {
+          morgView: v,
+          ...(v?.type === 'chat' ? { channel: 'private' as const } : {}),
+        }
+        try {
+          if (opts?.replace) window.history.replaceState(state, '', window.location.href)
+          else window.history.pushState(state, '', window.location.href)
+        } catch {
+          /* ignore */
+        }
+      }
+      if (isCapacitorNativePlatform() && v?.type === 'chat') {
+        forceReleaseNativeBodyLock()
+        purgeOrphanRadixOverlays()
+        releaseStuckModalPointerEvents({ force: true })
+        scheduleReleaseStuckModalPointerEvents()
+      }
+    },
+    []
+  )
 
   const openSettingsView = useCallback(() => {
     navigateTo({ type: 'settings' })
@@ -543,6 +578,48 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     navigateTo({ type: 'boss', variant: 'boss-signer' })
   }, [navigateTo])
 
+  /** Immer zur Kachel-Startseite — eigener Button, nicht Browser-Zurück. */
+  const goHome = useCallback(() => {
+    navigateTo(null)
+  }, [navigateTo])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    /** Start-Eintrag immer mit morgView markieren — sonst „Zurück“ nur 1× / hängt. */
+    try {
+      const cur = window.history.state as { morgView?: unknown } | null
+      if (!cur || !('morgView' in cur)) {
+        window.history.replaceState({ morgView: null }, '', window.location.href)
+      }
+    } catch {
+      /* ignore */
+    }
+    const onPop = (e: PopStateEvent) => {
+      const st = e.state as {
+        morgView?: DashboardActiveView | null
+        channel?: string
+      } | null
+      if (st && 'morgView' in st) {
+        const v = st.morgView ?? null
+        if (v) {
+          const parsed = parseDashboardActiveView(JSON.stringify(v), options.restoreFeatures)
+          navigateTo(parsed, { fromPop: true })
+        } else {
+          navigateTo(null, { fromPop: true })
+        }
+        if (typeof st.channel === 'string') {
+          window.dispatchEvent(
+            new CustomEvent('morgendrot:messenger-channel', { detail: st.channel })
+          )
+        }
+        return
+      }
+      // Fremder History-Eintrag ohne morg-State → nicht die App leeren
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [navigateTo, options.restoreFeatures])
+
   useEffect(() => {
     if (locked || backendReachable !== true) return
     if (restoredDashboardViewRef.current) return
@@ -553,6 +630,15 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         setActiveView(parsed)
         persistDashboardActiveView(parsed)
         restoredDashboardViewRef.current = true
+        if (typeof window !== 'undefined') {
+          try {
+            /** Home darunter, aktuelle View oben — Vor/Zurück kennt beide. */
+            window.history.replaceState({ morgView: null }, '', window.location.href)
+            window.history.pushState({ morgView: parsed, channel: 'private' }, '', window.location.href)
+          } catch {
+            /* ignore */
+          }
+        }
       }
     } catch {
       /* ignore */
@@ -576,12 +662,14 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   }, [backendReachable, apiSnapshot?.backendRunning])
 
   const handleUnlock = useCallback(async () => {
+    primeAudioFromUserGesture()
     setUnlockError('')
     const signer = apiSnapshot?.signer
     const sdkLike = signer === 'sdk' || (signer == null && unlockMode === 'import')
 
     if (unlockMode === 'create') {
       if (!password.trim() || password !== passwordConfirm) {
+        playUiTone('error')
         setUnlockError('Tresor-/Wallet-Passwort und Wiederholung müssen übereinstimmen.')
         return
       }
@@ -639,6 +727,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     const expectedAddr =
       (apiSnapshot?.myAddressFull || apiSnapshot?.myAddress || myAddress).trim() || undefined
 
+    playUiTone('unlock')
     setUnlocking(true)
     if (isStandaloneMessengerWithoutBasis()) {
       const mnemonic = signerImport.trim()
@@ -737,11 +826,14 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         }
       }
       /**
-       * Seed im lokalen Tresor halten, sonst nach API-Restart (`npm run dm`) wieder Seed nötig.
-       * Nicht nur create/import: auch „Tresor öffnen“ + Mnemonic ergänzen (unlockMode=open + sdkExtra).
+       * Seed im lokalen Tresor halten, sonst nach API-Restart / Speichern ohne Flag wieder Seed nötig.
+       * Auch nach Passwort-only Unlock (Seed aus Datei → Session), wenn „Wallet-Seed merken“ an ist.
        */
       const persistSignerInVault =
-        unlockMode === 'create' || unlockMode === 'import' || Boolean(sdkExtra?.trim())
+        unlockMode === 'create' ||
+        unlockMode === 'import' ||
+        Boolean(sdkExtra?.trim()) ||
+        (includeSdkMnemonicInBackup && signer === 'sdk')
       if (persistSignerInVault) {
         for (let i = 0; i < 12; i++) {
           await new Promise((r) => setTimeout(r, 250))
@@ -807,12 +899,13 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         setConnected(!!s.connected)
       }
     } else if (res.code === SIGNER_IMPORT_REQUIRED_CODE) {
-      setUnlockMode('import')
+      playUiTone('error')
+      setUnlockMode('vault')
       setShowSignerImportOpen(true)
       setUnlockError(
-        `${res.error || 'Signatur-Material fehlt.'}\n\n` +
-          '→ Karte „Seed importieren“ (grün markiert): Vault-Passwort **und** Mnemonic/Secret eintragen, dann **„Profil wiederherstellen“**.\n' +
-          'Alternativ unter „Tresor öffnen“: „Mnemonic ergänzen (erweitert)“ öffnen, beides eintragen, **„Entsperren“**.'
+        `${res.error || 'Wallet-Seed fehlt in der Tresor-Datei.'}\n\n` +
+          'Häufige Ursache (jetzt behoben): „Lokal sichern“ ohne Seed-Flag hat den Seed früher aus der Datei gelöscht — trotz Haken beim Entsperren.\n\n' +
+          '→ Einmal Seed unter „Bestehender Tresor → Seed ergänzen“ + Entsperren. Mit Haken „Wallet-Seed merken“ wird er wieder gespeichert; normales Sichern wischt ihn nicht mehr weg.'
       )
     } else if (VAULT_ALREADY_UNLOCKED_RE.test(res.error || '')) {
       const vaultPw = password
@@ -858,12 +951,14 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         setApiSnapshot((prev) => (prev ? { ...prev, hasKeys: true, locked: false } : prev))
       }
     } else {
+      playUiTone('error')
       setUnlockError(res.error || 'Entsperren fehlgeschlagen')
     }
   }, [
     apiSnapshot?.signer,
     unlockMode,
     password,
+    includeSdkMnemonicInBackup,
     passwordConfirm,
     signerImport,
     signerImportConfirm,
@@ -882,6 +977,10 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   )
 
   const handleBack = useCallback(() => {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      window.history.back()
+      return
+    }
     navigateTo(null)
   }, [navigateTo])
 
@@ -914,16 +1013,20 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       window.dispatchEvent(new Event(DIRECT_IOTA_UI_CHANGED))
       return { ok: true as const }
     }
+    // Browser-Geheimnisse immer leeren — auch wenn Backend/Terminal schon weg ist
+    // (sonst bleibt Badge „Tresor: bereit“ trotz Abmelden).
+    clearDirectIotaSessionSignerOnLock()
+    clearDirectChatEcdhKeyMaterial()
+    await wipeLocalPassphraseStoresOnLock()
+    setPrivacySoftLocked(false)
+    setMainnetSignerHint(null)
+    vaultUnlockRequestedRef.current = true
+    setLocked(true)
+    navigateTo(null)
+    window.dispatchEvent(new Event(DIRECT_IOTA_UI_CHANGED))
     const r = await vaultLockCommand()
     if (r.ok) {
-      clearDirectIotaSessionSignerOnLock()
-      clearDirectChatEcdhKeyMaterial()
-      await wipeLocalPassphraseStoresOnLock()
-      setPrivacySoftLocked(false)
-      setMainnetSignerHint(null)
       await checkStatus()
-      navigateTo(null)
-      window.dispatchEvent(new Event(DIRECT_IOTA_UI_CHANGED))
     }
     return r
   }, [checkStatus, navigateTo])
@@ -1139,6 +1242,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     refreshContactDirectory,
     hasValidMyAddressForBalance,
     dashboardTransferAddressSuggestions,
+    dashboardTransferRecipientOptions,
     meshPathMode,
     isBossRole,
     checkStatus,
@@ -1150,6 +1254,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     openVaultView,
     openBossModeView,
     handleBack,
+    goHome,
     handleSelectFeature,
     openHelp,
     requestStandaloneWalletUnlock,

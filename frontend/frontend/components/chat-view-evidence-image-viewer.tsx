@@ -5,7 +5,7 @@
  * Posteingang-COMPACT_IMG ist ein anderer Kanal — erscheint hier nicht.
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ImageIcon, Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -14,12 +14,12 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { decryptEvidenceImageBytes } from '@/frontend/lib/evidence-image-crypto'
 import { mintEvidenceImageNft } from '@/frontend/lib/evidence-image-mint'
+import { sha256HexOfBytes } from '@/frontend/lib/sha256-bytes'
 import {
   burnEvidenceImageNft,
   transferEvidenceImageNft,
@@ -46,10 +46,22 @@ import {
 } from '@/frontend/lib/iota-tx-explorer-hint'
 import { MessengerNftInfoPanel } from '@/frontend/components/messenger-nft-info-panel'
 import { NftCardToolsSection } from '@/frontend/components/nft-card-tools-section'
+import { NftTimeLeasePanel } from '@/frontend/components/nft-time-lease-panel'
 import { countOpenNftTimeLeases } from '@/frontend/components/nft-time-lease-reclaim-hub'
 import { requestNftVaultBalanceRefresh } from '@/frontend/components/dashboard-nft-secured-balances'
-import { NFT_TIME_LEASE_CHANGED } from '@/frontend/lib/nft-time-lease-local-store'
-import { OPEN_ZEITKAPSEL_LEASE_EVENT } from '@/frontend/lib/passphrase-message-local-store'
+import {
+  findNftTimeLeaseByNft,
+  isNftTimeLeaseEscrowActive,
+  listNftTimeLeasesLocal,
+  NFT_TIME_LEASE_CHANGED,
+} from '@/frontend/lib/nft-time-lease-local-store'
+import {
+  OPEN_ZEITKAPSEL_LEASE_EVENT,
+  writePassphraseNftKeycardBindObjectId,
+  writePassphraseNftStrongGateEnabled,
+  writeZeitkapselLastNftObjectId,
+} from '@/frontend/lib/passphrase-message-local-store'
+import { generatePassphraseMessageSharePassphrase } from '@/frontend/lib/passphrase-message-crypto'
 import {
   EVIDENCE_ATTR_MAX_PAIRS,
   unpackEvidenceDescription,
@@ -127,6 +139,8 @@ type PreviewMeta = {
   attrs?: EvidenceAttrPair[]
   encryptedFlag?: boolean
   objectId?: string
+  /** SHA-256 Hex der Bildbytes (Mint/Vorschau). */
+  hash?: string
   /** embedded = image_data; url = HTTP/IPFS */
   source?: 'embedded' | 'url'
   /** IPFS-CID für Gateway-Fallback / Browser-Link */
@@ -223,6 +237,8 @@ export function ChatViewEvidenceImageViewerButton(p?: {
   const [leasePreferredOid, setLeasePreferredOid] = useState(
     () => (p?.preferredObjectId || '').trim().toLowerCase()
   )
+  /** Galerie: Leihe-Panel unter einer Karte aufklappen. */
+  const [galleryLeaseOid, setGalleryLeaseOid] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [passphrase, setPassphrase] = useState('')
   const [busy, setBusy] = useState(false)
@@ -244,9 +260,13 @@ export function ChatViewEvidenceImageViewerButton(p?: {
   const [mintClassification, setMintClassification] = useState('evidence')
   const [mintContentType, setMintContentType] = useState('image/jpeg')
   const [mintHashPreview, setMintHashPreview] = useState('')
+  const [mintLocalPreviewUrl, setMintLocalPreviewUrl] = useState<string | null>(null)
   const [mintAttrs, setMintAttrs] = useState<EvidenceAttrPair[]>([])
   const [mintEncrypt, setMintEncrypt] = useState(true)
+  /** Gleiche Datei mehrfach minten (1–100). */
+  const [mintCount, setMintCount] = useState(1)
   const [mintFile, setMintFile] = useState<File | null>(null)
+  const closeResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [sharePassphrase, setSharePassphrase] = useState('')
   const [mintDigest, setMintDigest] = useState('')
   /** P2: Mint-Passphrase an Schlüsselkarte/Slot */
@@ -320,6 +340,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
 
   useEffect(() => {
     return () => {
+      if (closeResetTimerRef.current) clearTimeout(closeResetTimerRef.current)
       revokeIfObjectUrl(previewUrl)
       revokeAll(ownerItems.map((x) => x.previewUrl).filter(Boolean) as string[])
     }
@@ -329,17 +350,23 @@ export function ChatViewEvidenceImageViewerButton(p?: {
   useEffect(() => {
     if (!mintFile) {
       setMintHashPreview('')
+      setMintLocalPreviewUrl((prev) => {
+        revokeIfObjectUrl(prev)
+        return null
+      })
       return
     }
     const ct = mintFile.type || 'image/jpeg'
     setMintContentType(ct)
+    const localUrl = URL.createObjectURL(mintFile)
+    setMintLocalPreviewUrl((prev) => {
+      revokeIfObjectUrl(prev)
+      return localUrl
+    })
     let cancelled = false
     void (async () => {
       const buf = new Uint8Array(await mintFile.arrayBuffer())
-      const dig = await crypto.subtle.digest('SHA-256', buf)
-      const hex = Array.from(new Uint8Array(dig))
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join('')
+      const hex = await sha256HexOfBytes(buf)
       if (!cancelled) setMintHashPreview(hex)
     })()
     return () => {
@@ -669,9 +696,10 @@ export function ChatViewEvidenceImageViewerButton(p?: {
       setError('Name ist Pflicht.')
       return
     }
+    const count = Math.max(1, Math.min(100, Math.floor(Number(mintCount) || 1)))
     setBusy(true)
     setError('')
-    setInfo('')
+    setInfo(count > 1 ? `Minte 1/${count}…` : '')
     setSharePassphrase('')
     setMintDigest('')
     try {
@@ -680,29 +708,63 @@ export function ChatViewEvidenceImageViewerButton(p?: {
         oneTimeUse: mintOneTimeUse,
         offlineHandoff: mintOfflineHandoff,
       })
-      const r = await mintEvidenceImageNft({
-        plainBytes: buf,
-        contentType: mintContentType.trim() || mintFile.type || 'image/png',
-        name: mintName,
-        description: mintDesc,
-        classification: mintClassification,
-        attrs: [...mintAttrs, ...modeAttrs],
-        encrypt: mintEncrypt,
-        ...(mintEncrypt && mintKeycardOid
-          ? {
-              keycardHint: {
-                cardObjectId: mintKeycardOid,
-                slotId: normalizeNftKeycardSlotId(mintKeycardSlot || 'img'),
-              },
-            }
-          : {}),
-      })
-      if (!r.ok) {
-        setError(r.error)
+      let r: Awaited<ReturnType<typeof mintEvidenceImageNft>> | null = null
+      let okCount = 0
+      for (let i = 0; i < count; i++) {
+        if (count > 1) setInfo(`Minte ${i + 1}/${count}…`)
+        const name =
+          count > 1 ? `${mintName.trim()} #${i + 1}` : mintName.trim()
+        const one = await mintEvidenceImageNft({
+          plainBytes: buf,
+          contentType: mintContentType.trim() || mintFile.type || 'image/png',
+          name,
+          description: mintDesc,
+          classification: mintClassification,
+          attrs: [...mintAttrs, ...modeAttrs],
+          encrypt: mintEncrypt,
+          ...(mintEncrypt && mintKeycardOid
+            ? {
+                keycardHint: {
+                  cardObjectId: mintKeycardOid,
+                  slotId: normalizeNftKeycardSlotId(mintKeycardSlot || 'img'),
+                },
+              }
+            : {}),
+          // Gleiche Passphrase für die Serie (wenn encrypt) — erstes Ergebnis wiederverwenden
+          ...(mintEncrypt && r && r.ok && r.passphrase ? { passphrase: r.passphrase } : {}),
+        })
+        if (!one.ok) {
+          setError(
+            count > 1
+              ? `Abbruch bei ${i + 1}/${count}: ${one.error} (${okCount} bereits gemintet).`
+              : one.error
+          )
+          if (okCount === 0) return
+          break
+        }
+        okCount += 1
+        r = one
+        if (one.objectId) {
+          setLastMintObjectId(one.objectId)
+          recordNftActivity({
+            kind: 'mint',
+            objectId: one.objectId,
+            digest: one.digest,
+            label: name,
+          })
+          try {
+            writeNftOwnedSnapshot([...readNftOwnedSnapshot(), one.objectId])
+          } catch {
+            /* ignore */
+          }
+        }
+        setMintDigest(one.digest)
+      }
+      if (!r || !r.ok) {
+        if (okCount === 0) return
+        setInfo(`${okCount} von ${count} gemintet — siehe Fehler oben.`)
         return
       }
-      setMintDigest(r.digest)
-      if (r.objectId) setLastMintObjectId(r.objectId)
       if (r.objectId && (mintOneTimeUse || mintOfflineHandoff)) {
         upsertNftSpendPolicy({
           nftObjectId: r.objectId,
@@ -720,17 +782,43 @@ export function ChatViewEvidenceImageViewerButton(p?: {
         })
       }
       let keycardNote = ''
-      if (r.objectId && mintRememberAsKeycard && r.passphrase && r.passphrase.length >= 8) {
+      if (r.objectId && mintRememberAsKeycard) {
+        const passForCard =
+          r.passphrase && r.passphrase.length >= 8
+            ? r.passphrase
+            : generatePassphraseMessageSharePassphrase()
         const upSelf = upsertNftKeycardSlot({
           objectId: r.objectId,
           slotId: 'default',
-          passphrase: r.passphrase,
+          passphrase: passForCard,
           note: mintName.trim() || 'ImageNFT',
         })
         keycardNote = upSelf.ok
-          ? ' Als Schlüsselkarte gemerkt (dieses NFT).'
+          ? mintEncrypt
+            ? ' Als Schlüsselkarte gemerkt (dieses NFT).'
+            : ' Als Schlüsselkarte gemerkt (Object-ID für Zeitkapsel; Mint war ohne Enc).'
           : ` Als Schlüsselkarte: ${upSelf.error}`
         if (upSelf.ok) setKeycardTick((n) => n + 1)
+      }
+      if (r.objectId) {
+        writePassphraseNftKeycardBindObjectId(r.objectId)
+        writePassphraseNftStrongGateEnabled(true)
+        writeZeitkapselLastNftObjectId(r.objectId)
+        const me = getDirectIotaSessionSignerAddress()?.trim()
+        if (me) void onLoadOwnerPage({ append: false, ownerOverride: me })
+      }
+      // Sofort lokale Vorschau — Galerie/Indexer kann nachhängen; Activity zeigt kein Bild.
+      {
+        const mime = mintContentType.trim() || mintFile.type || 'image/png'
+        showDecrypted(buf, mime, {
+          objectId: r.objectId,
+          name: mintName.trim() || undefined,
+          description: mintDesc || undefined,
+          classification: mintClassification || undefined,
+          encryptedFlag: Boolean(r.passphrase),
+          hash: r.contentHashHex,
+          source: 'embedded',
+        })
       }
       if (r.passphrase && mintKeycardOid && r.objectId) {
         const slotId = normalizeNftKeycardSlotId(mintKeycardSlot || 'img')
@@ -754,29 +842,17 @@ export function ChatViewEvidenceImageViewerButton(p?: {
           keycardNote += ` Fremd-Karte: ${up.error}`
         }
       }
-      if (r.objectId) {
-        try {
-          writeNftOwnedSnapshot([...readNftOwnedSnapshot(), r.objectId])
-        } catch {
-          /* ignore */
-        }
-      }
       const resizeNote =
         r.resized && r.originalBytes != null
           ? ` Verkleinert ${r.originalBytes}→${r.onChainBytes} B (wie Nachrichten).`
           : ''
       const oidNote = r.objectId ? ` Object-ID: ${r.objectId.slice(0, 12)}…` : ''
-      if (r.objectId) {
-        recordNftActivity({
-          kind: 'mint',
-          objectId: r.objectId,
-          digest: r.digest,
-          label: mintName.trim() || undefined,
-        })
-      }
+      const batchNote = okCount > 1 ? ` Serie: ${okCount} NFTs.` : ''
       let pairNote = ''
       const pairTo = mintPairTo.trim()
-      if (mintEncrypt && r.passphrase && pairTo && isPlausibleIotaObjectId(pairTo)) {
+      if (count > 1 && pairTo) {
+        pairNote = ' Paar-Mint nur bei Anzahl 1 — übersprungen.'
+      } else if (mintEncrypt && r.passphrase && pairTo && isPlausibleIotaObjectId(pairTo)) {
         const r2 = await mintEvidenceImageNft({
           plainBytes: buf,
           contentType: mintContentType.trim() || mintFile.type || 'image/png',
@@ -814,11 +890,11 @@ export function ChatViewEvidenceImageViewerButton(p?: {
       if (r.passphrase) {
         setSharePassphrase(r.passphrase)
         setInfo(
-          `Mint OK (${r.onChainBytes} B on-chain).${resizeNote}${oidNote}${modeNote}${keycardNote}${pairNote} Passphrase unten kopieren und separat teilen — für dich auf diesem Gerät im Vault gemerkt.`
+          `Mint OK (${r.onChainBytes} B on-chain).${batchNote}${resizeNote}${oidNote}${modeNote}${keycardNote}${pairNote} Passphrase unten kopieren und separat teilen — für dich auf diesem Gerät im Vault gemerkt.`
         )
       } else {
         setInfo(
-          `Mint OK (Klartext on-chain, ${r.onChainBytes} B).${resizeNote}${oidNote}${modeNote} Digest: ${r.digest}`
+          `Mint OK (Klartext on-chain, ${r.onChainBytes} B).${batchNote}${resizeNote}${oidNote}${modeNote} Digest: ${r.digest}`
         )
       }
     } finally {
@@ -827,6 +903,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
   }, [
     mintFile,
     mintName,
+    mintCount,
     mintDesc,
     mintClassification,
     mintContentType,
@@ -834,6 +911,12 @@ export function ChatViewEvidenceImageViewerButton(p?: {
     mintEncrypt,
     mintKeycardOid,
     mintKeycardSlot,
+    mintOneTimeUse,
+    mintOfflineHandoff,
+    mintRememberAsKeycard,
+    mintPairTo,
+    onLoadOwnerPage,
+    showDecrypted,
   ])
 
   const onScanMailboxPlain = useCallback(async () => {
@@ -879,7 +962,17 @@ export function ChatViewEvidenceImageViewerButton(p?: {
   }, [mode, onLoadObject, onLoadOwnerPage, onLoadWire, onScanMailboxPlain, onMint])
 
   useEffect(() => {
-    const syncLeases = () => setLeaseCounts(countOpenNftTimeLeases())
+    const syncLeases = () => {
+      setLeaseCounts(countOpenNftTimeLeases())
+      /** Während Escrow aus Galerie nehmen; nach Reclaim bleibt Eintrag bis Reload — Dropdown aktualisiert sich. */
+      setOwnerItems((prev) =>
+        prev.filter((it) => !isNftTimeLeaseEscrowActive(findNftTimeLeaseByNft(it.objectId)))
+      )
+      setGalleryLeaseOid((cur) => {
+        if (!cur) return cur
+        return isNftTimeLeaseEscrowActive(findNftTimeLeaseByNft(cur)) ? null : cur
+      })
+    }
     syncLeases()
     window.addEventListener(NFT_TIME_LEASE_CHANGED, syncLeases)
     const t = window.setInterval(syncLeases, 5000)
@@ -988,6 +1081,15 @@ export function ChatViewEvidenceImageViewerButton(p?: {
     return () => window.removeEventListener(OPEN_ZEITKAPSEL_LEASE_EVENT, onOpenLease)
   }, [allowed, p])
 
+  /** Zeitkapsel/Guthaben: Galerie still nachladen, damit Dropdown nicht leer bleibt. */
+  useEffect(() => {
+    if (mode !== 'zeitkapsel' && mode !== 'guthaben') return
+    if (ownerItems.length > 0 || busy) return
+    const me = getDirectIotaSessionSignerAddress()?.trim()
+    if (!me || !isPlausibleIotaObjectId(me)) return
+    void onLoadOwnerPage({ append: false, ownerOverride: me })
+  }, [mode, ownerItems.length, busy, onLoadOwnerPage])
+
   return (
     <Dialog
       open={open}
@@ -995,8 +1097,17 @@ export function ChatViewEvidenceImageViewerButton(p?: {
         setOpen(v)
         p?.onOpenChange?.(v)
         if (!v) {
-          resetAll()
+          /** Kein resetAll während Close-Animation (Flackern). Cleanup erst lange nach Exit. */
+          if (closeResetTimerRef.current) clearTimeout(closeResetTimerRef.current)
+          closeResetTimerRef.current = setTimeout(() => {
+            closeResetTimerRef.current = null
+            resetAll()
+          }, 600)
           return
+        }
+        if (closeResetTimerRef.current) {
+          clearTimeout(closeResetTimerRef.current)
+          closeResetTimerRef.current = null
         }
         const want = p?.defaultMode || (nftWalletUi ? 'owner' : 'object')
         const startMode = allowed.some((m) => m.id === want) ? want : allowed[0]?.id || 'object'
@@ -1014,29 +1125,56 @@ export function ChatViewEvidenceImageViewerButton(p?: {
         }
       }}
     >
-      <DialogTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className={
-            p?.triggerClassName ||
-            'w-full justify-start rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent'
-          }
-        >
-          <ImageIcon className="mr-2 h-4 w-4 shrink-0" />
-          {p?.triggerLabel ?? 'On-Chain Bild / NFT'}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{nftWalletUi ? 'NFT & Schlüsselkarte' : 'On-Chain / NFT'}</DialogTitle>
-          <DialogDescription>
-            {nftWalletUi
-              ? `Oben nur ansehen (Galerie / Object-ID) · unten handeln (Minten / Guthaben / Zeitkapsel). Cap ${Math.round(EVIDENCE_IMAGE_MAX_RAW_BYTES / 1024)} KB.`
-              : `Zwei Bereiche: Schauen/suchen (Wire, Klartext, Galerie) vs. Handeln (Minten, Guthaben, Zeitkapsel). Cap ${Math.round(EVIDENCE_IMAGE_MAX_RAW_BYTES / 1024)} KB.`}
-          </DialogDescription>
-        </DialogHeader>
+      {/* Kein DialogTrigger: kontrolliertes open + Trigger toggelt sonst beim X neu auf (Flackern). */}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className={
+          p?.triggerClassName ||
+          'w-full justify-start rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent'
+        }
+        onClick={() => {
+          setOpen(true)
+          p?.onOpenChange?.(true)
+        }}
+      >
+        <ImageIcon className="mr-2 h-4 w-4 shrink-0" />
+        {p?.triggerLabel ?? 'On-Chain Bild / NFT'}
+      </Button>
+      <DialogContent
+        showCloseButton={false}
+        className="flex max-h-[90vh] max-w-lg flex-col overflow-hidden p-0 sm:max-w-lg"
+      >
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border/60 px-6 pb-3 pt-6">
+          <DialogHeader className="flex-1 text-left">
+            <DialogTitle>{nftWalletUi ? 'NFT & Schlüsselkarte' : 'On-Chain / NFT'}</DialogTitle>
+            <DialogDescription>
+              {nftWalletUi
+                ? `Oben nur ansehen (Galerie / Object-ID) · unten handeln (Minten / Guthaben / Zeitkapsel). Cap ${Math.round(EVIDENCE_IMAGE_MAX_RAW_BYTES / 1024)} KB.`
+                : `Zwei Bereiche: Schauen/suchen (Wire, Klartext, Galerie) vs. Handeln (Minten, Guthaben, Zeitkapsel). Cap ${Math.round(EVIDENCE_IMAGE_MAX_RAW_BYTES / 1024)} KB.`}
+            </DialogDescription>
+          </DialogHeader>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="mt-0.5 h-8 shrink-0 px-2"
+            aria-label="Schließen"
+            onClick={() => {
+              setOpen(false)
+              p?.onOpenChange?.(false)
+              if (closeResetTimerRef.current) clearTimeout(closeResetTimerRef.current)
+              closeResetTimerRef.current = setTimeout(() => {
+                closeResetTimerRef.current = null
+                resetAll()
+              }, 600)
+            }}
+          >
+            Schließen
+          </Button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
         <div className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-2 border-b border-border/60 bg-background/95 px-1 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
           <Button
             type="button"
@@ -1269,6 +1407,13 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                   accept="image/png,image/jpeg,image/webp"
                   onChange={(e) => setMintFile(e.target.files?.[0] ?? null)}
                 />
+                {mintLocalPreviewUrl ? (
+                  <img
+                    src={mintLocalPreviewUrl}
+                    alt={mintFile?.name || 'Mint-Vorschau'}
+                    className="mt-1 max-h-40 w-full rounded-md border border-border object-contain bg-muted/20"
+                  />
+                ) : null}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="mint-name">Name (Pflicht)</Label>
@@ -1279,6 +1424,24 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                   placeholder="z. B. Evidenz Foto 1"
                   required
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="mint-count">Anzahl gleicher NFTs (1–100)</Label>
+                <Input
+                  id="mint-count"
+                  type="number"
+                  min={1}
+                  max={100}
+                  step={1}
+                  value={mintCount}
+                  onChange={(e) => {
+                    const n = Math.floor(Number(e.target.value))
+                    setMintCount(Number.isFinite(n) ? Math.max(1, Math.min(100, n)) : 1)
+                  }}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Mehrere On-Chain-Objekte mit demselben Bild (Namen #1…#n). Gas × Anzahl; Serie nacheinander.
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="mint-desc">Beschreibung</Label>
@@ -1378,11 +1541,15 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                 <input
                   type="checkbox"
                   className="mt-0.5"
-                  checked={mintEncrypt && mintRememberAsKeycard}
-                  disabled={!mintEncrypt}
+                  checked={mintRememberAsKeycard}
                   onChange={(e) => setMintRememberAsKeycard(e.target.checked)}
                 />
-                <span>Als Schlüsselkarte merken (braucht On-chain verschlüsseln)</span>
+                <span>
+                  Als Schlüsselkarte merken
+                  {mintEncrypt
+                    ? ' (Enc-Passphrase + Object-ID)'
+                    : ' (Object-ID für Zeitkapsel/Composer — Enc optional)'}
+                </span>
               </label>
               <details className="rounded-md border border-border/60 bg-muted/10 px-2.5 py-2">
                 <summary className="cursor-pointer text-[11px] font-medium text-foreground">
@@ -1467,6 +1634,8 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Minte…
                   </>
+                ) : mintCount > 1 ? (
+                  `${mintCount} ImageNFTs minten`
                 ) : (
                   'ImageNFT minten'
                 )}
@@ -1485,6 +1654,103 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                         showInfoButton
                       />
                       <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            void copyTextSafe(lastMintObjectId)
+                            setInfo(`Object-ID kopiert: ${lastMintObjectId}`)
+                          }}
+                        >
+                          Object-ID kopieren
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            writePassphraseNftKeycardBindObjectId(lastMintObjectId)
+                            writePassphraseNftStrongGateEnabled(true)
+                            writeZeitkapselLastNftObjectId(lastMintObjectId)
+                            setInfo(
+                              'NFT für Zeitkapsel übernommen — Composer: Zeitkapsel an, Object-ID ist gesetzt. Galerie: Tab „Eigene“ + Laden.'
+                            )
+                          }}
+                        >
+                          Für Zeitkapsel übernehmen
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            setMode('object')
+                            setQuery(lastMintObjectId)
+                            setError('')
+                            setInfo('')
+                            void (async () => {
+                              setBusy(true)
+                              try {
+                                const r = await loadEvidenceImageFromObjectId(lastMintObjectId)
+                                if (!r.ok) {
+                                  if (r.needsPassphrase && r.ciphertext) {
+                                    setPendingCipher(r.ciphertext)
+                                    setPendingObjectId(lastMintObjectId)
+                                    setError(
+                                      'Verschlüsselt — Passphrase eingeben und entsperren, dann erscheint das Bild.'
+                                    )
+                                    return
+                                  }
+                                  setError(r.error || 'Bild nicht ladbar.')
+                                  return
+                                }
+                                if (r.source === 'embedded' && r.parsed) {
+                                  showDecrypted(r.parsed.bytes, r.parsed.mime, {
+                                    objectId: lastMintObjectId,
+                                    name: r.name,
+                                    description: r.description,
+                                    classification: r.classification,
+                                    source: 'embedded',
+                                  })
+                                  setInfo('Bild vom Mint-Objekt geladen.')
+                                  return
+                                }
+                                if (r.displayUrl) {
+                                  showExternalUrl(r.displayUrl, {
+                                    objectId: lastMintObjectId,
+                                    name: r.name,
+                                    description: r.description,
+                                    classification: r.classification,
+                                  })
+                                  setInfo('Bild-URL vom Mint-Objekt geladen.')
+                                  return
+                                }
+                                setError('Kein Bild in diesem NFT.')
+                              } catch (e) {
+                                setError(e instanceof Error ? e.message : String(e))
+                              } finally {
+                                setBusy(false)
+                              }
+                            })()
+                          }}
+                        >
+                          Bild dieses NFT laden
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            setMode('owner')
+                            setError('')
+                            setInfo('')
+                            const me = getDirectIotaSessionSignerAddress()?.trim()
+                            if (me) void onLoadOwnerPage({ append: false, ownerOverride: me })
+                          }}
+                        >
+                          In Galerie laden
+                        </Button>
                         <Button
                           type="button"
                           size="sm"
@@ -1871,6 +2137,41 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                         >
                           Object-ID kopieren
                         </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          className="h-7 text-[11px]"
+                          disabled={busy}
+                          onClick={() => {
+                            writeZeitkapselLastNftObjectId(it.objectId)
+                            setLeasePreferredOid(it.objectId)
+                            setGalleryLeaseOid((cur) =>
+                              cur === it.objectId.toLowerCase() ? null : it.objectId.toLowerCase()
+                            )
+                          }}
+                        >
+                          {galleryLeaseOid === it.objectId.toLowerCase()
+                            ? 'Leihe ausblenden'
+                            : 'Verleihen…'}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[11px]"
+                          disabled={busy}
+                          onClick={() => {
+                            writeZeitkapselLastNftObjectId(it.objectId)
+                            setLeasePreferredOid(it.objectId)
+                            setMode('zeitkapsel')
+                            setInfo(
+                              `Zeitkapsel: ${it.name || it.objectId.slice(0, 10) + '…'} gewählt — Empfänger + Dauer.`
+                            )
+                          }}
+                        >
+                          Im Zeitkapsel-Tab
+                        </Button>
                         <a
                           href={explorerObjectUrlFromId(it.objectId)}
                           target="_blank"
@@ -2210,6 +2511,14 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                       {it.error && !it.needsPassphrase ? (
                         <p className="text-xs text-destructive">{it.error}</p>
                       ) : null}
+                      {galleryLeaseOid === it.objectId.toLowerCase() ? (
+                        <div className="rounded-md border border-amber-800/30 bg-amber-950/10 px-2 py-2">
+                          <p className="mb-1.5 text-[11px] font-medium text-foreground">
+                            Verleihen (Zeitkapsel)
+                          </p>
+                          <NftTimeLeasePanel nftObjectId={it.objectId} disabled={busy} />
+                        </div>
+                      ) : null}
                       {it.previewUrl ? (
                         <img
                           src={it.previewUrl}
@@ -2287,6 +2596,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
               ))}
             </ul>
           ) : null}
+        </div>
         </div>
       </DialogContent>
     </Dialog>

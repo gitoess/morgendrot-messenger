@@ -205,8 +205,8 @@ Im Browser am PC: **http://127.0.0.1:3341** — Messenger öffnen, **Tresor ents
 
 #### 3.2 Erste ZIP — Gerät A
 
-1. **Einsatzleitung** (Kachel/Bereich Boss) → Abschnitt **„Export-Assistent“**  
-   (Alternativ: Boss-Ansicht / Dashboard → Verweis Export-Assistent — siehe UI.)
+1. **Einsatzleitung** (Kachel/Bereich Boss) → **Helfer einrichten** (Handoff-ZIP)  
+   (Alternativ: Boss-Ansicht mit Export-Panel — siehe UI.)
 2. **Bezeichnung:** z. B. `Smoke Gerät A`
 3. **Profil:** z. B. **Helfer**
 4. **Schritt 2:** Unter **Partner im Einsatz** die **0x-Adresse von Wallet B** anhaken (die du auf Gerät 2 nutzen wirst). Wenn B noch nicht existiert: Adresse aus zweitem Test-Wallet notieren oder erst ZIP B exportieren und Adresse aus Vorschau kopieren.

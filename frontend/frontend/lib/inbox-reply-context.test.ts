@@ -146,6 +146,36 @@ describe('resolveReplyContextFromInboxMessage (H.32a)', () => {
     expect(r.variant.recipient).toBe('tg:99317902')
   })
 
+  it('Telegram-Journal mit 0x-Telefonbuch-Kontakt → Chat-ID aus telegramMeta', () => {
+    const r = resolveReplyContextFromInboxMessage(
+      msg({
+        id: 'tg-linked',
+        from: PEER,
+        recipient: ME,
+        source: 'telegram',
+        transports: ['telegram'],
+        telegramMeta: {
+          direction: 'in',
+          chatId: '99317902',
+          contactKey: PEER,
+        },
+      }),
+      ctx({
+        contactDirectory: {
+          [PEER.toLowerCase()]: {
+            label: 'Partner',
+            telegramChatId: '99317902',
+          },
+        },
+      })
+    )
+    expect(r?.kind).toBe('single')
+    if (r?.kind !== 'single') return
+    expect(r.variant.composerDelivery).toBe('telegram')
+    expect(r.variant.recipient).toBe('tg:99317902')
+    expect(r.variant.partner).toBe(PEER)
+  })
+
   it('Pinnwand-Post → pinnwand + internet + Brett-Adresse', () => {
     const r = resolveReplyContextFromInboxMessage(
       msg({

@@ -149,3 +149,5 @@ CI-Spiegel: **`.github/workflows/frontend-checks.yml`**.
 **Fortschritt 2026-06-02:** **`filterPinnwandFeedRows`** → **`lib/pinnwand-feed-filter.ts`** (aus **`chat-view-pinnwand-feed-panel.tsx`**); Vitest **`lib/pinnwand-feed-filter.test.ts`**; RTL **`chat-view-setup-panel.test.tsx`**, **`chat-view-pinnwand-feed-panel.test.tsx`**.
 
 **Fortschritt 2026-03-29:** **§ H.1b** — Messenger-/Boss-Kachel-Whitelist (**§ H.17**) aus **`dashboard.tsx`** nach **`lib/dashboard-workspace-tile-visibility.ts`** + **`dashboard-workspace-tile-visibility.test.ts`** (Vitest).
+
+**Fortschritt 2026-11-16:** **§ H.1b Mini** — Telegram-Notify-Plan nach Online-Send: **`lib/telegram-notify-after-send.ts`** (`planTelegramNotifyAfterSend`, `formatTelegramNotifyDeliveredSuffix`) + Vitest; **`use-chat-view-handle-send`** nur noch Orchestrierung; Preview über **`buildTelegramMessagePreview`** (+ `fallbackText`).

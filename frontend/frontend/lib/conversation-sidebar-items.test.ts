@@ -3,6 +3,7 @@ import {
   buildConversationSidebarContacts,
   buildConversationSidebarPinnwand,
   buildConversationSidebarTelegramAlarm,
+  resolveContactSidebarSubtitle,
 } from '@/frontend/lib/conversation-sidebar-items'
 import { ZERO_IOTA_ADDRESS } from '@/frontend/lib/contact-storage-key'
 
@@ -78,6 +79,17 @@ describe('buildConversationSidebarContacts', () => {
   })
 })
 
+describe('resolveContactSidebarSubtitle', () => {
+  it('zeigt IOTA statt Telegram bei Sendepfad Online', () => {
+    const dir = {
+      [alice]: { label: 'Nicole', telegramChatId: '12345' },
+    }
+    expect(resolveContactSidebarSubtitle(dir, alice, dir[alice], 'internet')).toBe('IOTA')
+    expect(resolveContactSidebarSubtitle(dir, alice, dir[alice], 'telegram')).toBe('Telegram')
+    expect(resolveContactSidebarSubtitle(dir, alice, dir[alice])).toBe('IOTA · Telegram')
+  })
+})
+
 describe('buildConversationSidebarPinnwand', () => {
   it('liefert Kanal-Eintrag mit Unread', () => {
     const item = buildConversationSidebarPinnwand({ label: 'Lagebild', unreadCount: 2 })
@@ -97,7 +109,8 @@ describe('buildConversationSidebarTelegramAlarm', () => {
     })
     expect(item?.kind).toBe('telegram-alarm')
     expect(item?.displayName).toBe('Einsatz TG')
-    expect(item?.subtitle).toContain('beigetreten')
+    expect(item?.subtitle).toContain('Alarmgruppe')
+    expect(item?.subtitle).toContain('-100123')
   })
 
   it('liefert null ohne Einladungslink', () => {

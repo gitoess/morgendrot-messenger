@@ -9,6 +9,7 @@
   },
   "nav": {
     "back": "Back",
+    "home": "Main menu",
     "handbook": "Handbook",
     "handbookOpen": "Open handbook",
     "settings": "Settings",
@@ -46,8 +47,9 @@
   },
   "lock": {
     "button": "Sign out",
-    "buttonTitle": "Lock vault — unlock again to continue",
-    "confirm": "Lock vault?\n\n• Keys and wallet password leave server RAM\n• Local plaintext inbox cache is shredded\n• Vault file on disk remains — unlock with vault password\n• With SIGNER=sdk: re-enter seed/mnemonic if not stored in vault file"
+    "buttonTitle": "End session — fully lock vault",
+    "confirmSoft": "Soft-lock vault?\n\n• Signer and passphrases leave this browser RAM only\n• Chat stays open (readable)\n• Inbox cache and vault file unchanged\n• Tap the badge to unlock again",
+    "confirmFull": "End session / fully lock vault?\n\n• Keys + password leave server RAM\n• Decrypted-message speed cache (.inbox.enc) is deleted — privacy if someone reads the disk; chat returns from chain after unlock\n• Vault file (.morgendrot-vault) stays\n• Seed in the file stays (if stored); only RAM seed is cleared"
   },
   "mesh": {
     "internet": "Internet",
@@ -96,7 +98,7 @@
       "subtitle": "Secure keys & access",
       "variants": {
         "local-vault": {
-          "title": "Open vault",
+          "title": "Vault",
           "hint": "Password, seed, export"
         },
         "emergency-purge": {
@@ -183,7 +185,26 @@
   },
   "einsatzHub": {
     "title": "Operations lead",
-    "bossHint": "Set up helper (profile + channel rights) at top. TTL/purge → parameters. Chain/WLAN → Advanced.",
+    "bossHint": "Set up helpers (profile + rights) at top. TTL/purge → Existing devices. Chain/Move → Settings → IOTA. WLAN QR → helper setup.",
     "handbookLink": "Handbook"
+  },
+  "appearance": {
+    "incomingTone": "Incoming tone (new message)",
+    "incomingToneHint": "Bell chime (not click beep). Open tab only — no system push. Default off.",
+    "attachmentPreview": "Composer attachment preview",
+    "attachmentPreviewHint": "Show image / LoRa luma / .txt before send. Default on."
+  },
+  "chatMute": {
+    "on": "Tone",
+    "off": "Mute",
+    "titleMute": "Mute incoming tone for this chat",
+    "titleUnmute": "Unmute incoming tone for this chat",
+    "ariaMute": "Mute chat",
+    "ariaUnmute": "Unmute chat tone"
+  },
+  "telegramNotify": {
+    "title": "After online IOTA: Telegram chime",
+    "aria": "Telegram notify after online IOTA",
+    "hint": "Optional short ping after a successful 1:1 online IOTA send — not the Telegram send path. No E2EE. Does not message the ops alarm group."
   }
 }

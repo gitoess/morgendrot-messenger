@@ -109,9 +109,11 @@ export async function fetchMailboxInboxRpcRows(
     return []
   }
 
-  const maxPages = Math.min(50, Math.max(1, input.maxDynamicFieldPages ?? 20))
+  /** Bis ~50k DOF-Einträge — sonst bricht Posteingang-Pagination bei >500 Nachrichten ab. */
+  const maxPages = Math.min(100, Math.max(1, input.maxDynamicFieldPages ?? 20))
   const offset = Math.max(0, Math.floor(input.offset ?? 0))
-  const limit = Math.min(500, Math.max(1, input.limit ?? 50))
+  /** Früher 500: fetchWindow=skip+count+1 konnte nie >500 liefern → hasMore=false ab Seite 1. */
+  const limit = Math.min(10_000, Math.max(1, input.limit ?? 50))
 
   const allEntries: DynEntry[] = []
   let cursor: string | null | undefined

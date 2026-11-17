@@ -1,7 +1,7 @@
 'use client'
 
-import { useCallback, useState } from 'react'
-import { Check, Palette } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { Check, Palette, Volume2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -17,6 +17,36 @@ import {
   readCustomAppearanceEnabled,
   readMessengerAppearanceId,
 } from '@/frontend/lib/messenger-appearance-theme'
+import {
+  incomingToneChannelLabel,
+  INCOMING_MESSAGE_TONE_PREFS_CHANGED,
+  persistIncomingToneChannelEnabled,
+  persistIncomingToneMasterEnabled,
+  readIncomingToneChannelEnabled,
+  readIncomingToneMasterEnabled,
+  type IncomingToneChannel,
+} from '@/frontend/lib/incoming-message-tone-prefs'
+import { playIncomingMessageTone } from '@/frontend/lib/incoming-message-tone'
+import { playKlack, playTapClick, primeAudioFromUserGesture } from '@/frontend/lib/ui-tap-feedback'
+import {
+  persistKlackFeedbackEnabled,
+  persistMagnetFeedbackEnabled,
+  persistSoundFeedbackEnabled,
+  persistSoundFeedbackVolume,
+  readKlackFeedbackEnabled,
+  readMagnetFeedbackEnabled,
+  readSoundFeedbackEnabled,
+  readSoundFeedbackVolume,
+  UI_FEEDBACK_PREFS_CHANGED,
+} from '@/frontend/lib/ui-feedback-prefs'
+import {
+  ATTACHMENT_PREVIEW_PREFS_CHANGED,
+  persistAttachmentPreviewEnabled,
+  readAttachmentPreviewEnabled,
+} from '@/frontend/lib/attachment-preview-prefs'
+import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
+
+const INCOMING_TONE_CHANNELS: IncomingToneChannel[] = ['dialog', 'group', 'pinnwand']
 
 const COLOR_FIELDS: { key: keyof CustomAppearanceColors; label: string }[] = [
   { key: 'background', label: 'Hintergrund' },
@@ -29,9 +59,47 @@ const COLOR_FIELDS: { key: keyof CustomAppearanceColors; label: string }[] = [
 ]
 
 export function SettingsAppearanceSection() {
+  const { t } = useAppTranslation('dashboard')
   const [active, setActive] = useState<MessengerAppearanceId>(() => readMessengerAppearanceId())
   const [customOn, setCustomOn] = useState(() => readCustomAppearanceEnabled())
   const [custom, setCustom] = useState<CustomAppearanceColors>(() => readCustomAppearanceColors())
+  const [soundOn, setSoundOn] = useState(() => readSoundFeedbackEnabled())
+  const [klackOn, setKlackOn] = useState(() => readKlackFeedbackEnabled())
+  const [soundVolume, setSoundVolume] = useState(() => readSoundFeedbackVolume())
+  const [magnetOn, setMagnetOn] = useState(() => readMagnetFeedbackEnabled())
+  const [incomingMaster, setIncomingMaster] = useState(() => readIncomingToneMasterEnabled())
+  const [attachmentPreview, setAttachmentPreview] = useState(() => readAttachmentPreviewEnabled())
+  const [incomingChannels, setIncomingChannels] = useState<Record<IncomingToneChannel, boolean>>({
+    dialog: readIncomingToneChannelEnabled('dialog'),
+    group: readIncomingToneChannelEnabled('group'),
+    pinnwand: readIncomingToneChannelEnabled('pinnwand'),
+  })
+
+  useEffect(() => {
+    const syncUi = () => {
+      setSoundOn(readSoundFeedbackEnabled())
+      setKlackOn(readKlackFeedbackEnabled())
+      setSoundVolume(readSoundFeedbackVolume())
+      setMagnetOn(readMagnetFeedbackEnabled())
+    }
+    const syncIncoming = () => {
+      setIncomingMaster(readIncomingToneMasterEnabled())
+      setIncomingChannels({
+        dialog: readIncomingToneChannelEnabled('dialog'),
+        group: readIncomingToneChannelEnabled('group'),
+        pinnwand: readIncomingToneChannelEnabled('pinnwand'),
+      })
+    }
+    const syncPreview = () => setAttachmentPreview(readAttachmentPreviewEnabled())
+    window.addEventListener(UI_FEEDBACK_PREFS_CHANGED, syncUi)
+    window.addEventListener(INCOMING_MESSAGE_TONE_PREFS_CHANGED, syncIncoming)
+    window.addEventListener(ATTACHMENT_PREVIEW_PREFS_CHANGED, syncPreview)
+    return () => {
+      window.removeEventListener(UI_FEEDBACK_PREFS_CHANGED, syncUi)
+      window.removeEventListener(INCOMING_MESSAGE_TONE_PREFS_CHANGED, syncIncoming)
+      window.removeEventListener(ATTACHMENT_PREVIEW_PREFS_CHANGED, syncPreview)
+    }
+  }, [])
 
   const selectPreset = useCallback((id: MessengerAppearanceId) => {
     setCustomOn(false)
@@ -159,6 +227,168 @@ export function SettingsAppearanceSection() {
           ) : null}
         </div>
       )}
+
+      <div className="mt-5 space-y-3 border-t border-border pt-4">
+        <div className="flex items-center gap-2">
+          <Volume2 className="h-4 w-4 text-primary" aria-hidden />
+          <h5 className="text-sm font-semibold text-foreground">Klang &amp; Feedback</h5>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Klack = mechanisch beim Antippen. Klick-Ton = kurze Pieptöne (Entsperren/Fehler/Probe). Getrennt
+          schaltbar. Magnet optional.
+        </p>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
+          <Label htmlFor="ui-klack" className="text-sm text-foreground">
+            Klack (Button)
+          </Label>
+          <Switch
+            id="ui-klack"
+            checked={klackOn}
+            onCheckedChange={(on) => {
+              setKlackOn(on)
+              persistKlackFeedbackEnabled(on)
+              if (on) playKlack()
+            }}
+          />
+        </div>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
+          <Label htmlFor="ui-sound" className="text-sm text-foreground">
+            Klick-Ton (Piep)
+          </Label>
+          <Switch
+            id="ui-sound"
+            checked={soundOn}
+            onCheckedChange={(on) => {
+              setSoundOn(on)
+              persistSoundFeedbackEnabled(on)
+              if (on) playTapClick('soft')
+            }}
+          />
+        </div>
+        <div
+          className={`space-y-2 rounded-lg border border-border bg-muted/20 px-3 py-2 ${soundOn || klackOn ? '' : 'opacity-50'}`}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="ui-sound-volume" className="text-sm text-foreground">
+              Lautstärke
+            </Label>
+            <span className="tabular-nums text-xs text-muted-foreground">{soundVolume}%</span>
+          </div>
+          <input
+            id="ui-sound-volume"
+            type="range"
+            min={0}
+            max={100}
+            step={5}
+            value={soundVolume}
+            disabled={!soundOn && !klackOn}
+            data-no-tap-feedback="true"
+            onInput={(e) => {
+              const v = Number((e.target as HTMLInputElement).value)
+              setSoundVolume(v)
+              persistSoundFeedbackVolume(v)
+            }}
+            onChange={(e) => {
+              const v = Number(e.target.value)
+              setSoundVolume(v)
+              persistSoundFeedbackVolume(v)
+            }}
+            onPointerUp={() => {
+              if (readSoundFeedbackVolume() <= 0) return
+              if (klackOn) playKlack()
+              else if (soundOn) playTapClick('soft')
+            }}
+            className="w-full accent-[var(--path-online)]"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={soundVolume}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Nach dem Loslassen Probe-Ton. 0 = stumm, 100 = laut. Gilt auch für Eingangs-Töne. Hard-Refresh falls
+            der Regler noch stumm wirkt.
+          </p>
+        </div>
+        <div className="space-y-2 rounded-lg border border-border bg-muted/20 px-3 py-2">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <Label htmlFor="ui-incoming-tone" className="text-sm text-foreground">
+                {t('appearance.incomingTone')}
+              </Label>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">{t('appearance.incomingToneHint')}</p>
+            </div>
+            <Switch
+              id="ui-incoming-tone"
+              checked={incomingMaster}
+              onCheckedChange={(on) => {
+                setIncomingMaster(on)
+                persistIncomingToneMasterEnabled(on)
+                if (on) {
+                  primeAudioFromUserGesture()
+                  playIncomingMessageTone('dialog', { force: true })
+                }
+              }}
+            />
+          </div>
+          <div className={`space-y-2 pt-1 ${incomingMaster ? '' : 'opacity-50'}`}>
+            {INCOMING_TONE_CHANNELS.map((ch) => (
+              <div key={ch} className="flex items-center justify-between gap-3">
+                <Label htmlFor={`ui-incoming-${ch}`} className="text-xs text-foreground">
+                  {incomingToneChannelLabel(ch)}
+                </Label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="text-[11px] text-primary underline-offset-2 hover:underline"
+                    disabled={!incomingMaster}
+                    onClick={() => playIncomingMessageTone(ch, { force: true })}
+                  >
+                    Probe
+                  </button>
+                  <Switch
+                    id={`ui-incoming-${ch}`}
+                    checked={incomingChannels[ch]}
+                    disabled={!incomingMaster}
+                    onCheckedChange={(on) => {
+                      setIncomingChannels((prev) => ({ ...prev, [ch]: on }))
+                      persistIncomingToneChannelEnabled(ch, on)
+                      if (on && incomingMaster) playIncomingMessageTone(ch, { force: true })
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
+          <div>
+            <Label htmlFor="ui-attachment-preview" className="text-sm text-foreground">
+              {t('appearance.attachmentPreview')}
+            </Label>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">{t('appearance.attachmentPreviewHint')}</p>
+          </div>
+          <Switch
+            id="ui-attachment-preview"
+            checked={attachmentPreview}
+            onCheckedChange={(on) => {
+              setAttachmentPreview(on)
+              persistAttachmentPreviewEnabled(on)
+            }}
+          />
+        </div>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
+          <Label htmlFor="ui-magnet" className="text-sm text-foreground">
+            Magnet beim Darüberfahren (aus, nur Maus)
+          </Label>
+          <Switch
+            id="ui-magnet"
+            checked={magnetOn}
+            onCheckedChange={(on) => {
+              setMagnetOn(on)
+              persistMagnetFeedbackEnabled(on)
+            }}
+          />
+        </div>
+      </div>
     </div>
   )
 }

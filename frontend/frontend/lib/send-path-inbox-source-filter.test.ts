@@ -103,11 +103,11 @@ describe('inboxToolbarToolsForSendPath / conversationMenuChainToolsVisible', () 
     )
   })
 
-  it('Funk/Telegram: nur Entschlüsseln + Verlauf; kein Burn-Menü', () => {
+  it('Funk/Telegram: Pakete+Verlauf, kein Wire/On-Chain/Burn', () => {
     for (const activeSendPath of ['mesh', 'telegram'] as const) {
       const t = inboxToolbarToolsForSendPath({ activeSendPath })
       expect(t.showWirePaste).toBe(false)
-      expect(t.showPakete).toBe(false)
+      expect(t.showPakete).toBe(true)
       expect(t.showOnChainNft).toBe(false)
       expect(t.showKanalFilterToggle).toBe(false)
       expect(t.showDecryptExport).toBe(true)

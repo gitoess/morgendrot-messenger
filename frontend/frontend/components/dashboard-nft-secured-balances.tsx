@@ -320,7 +320,7 @@ export function DashboardNftSecuredBalances({
                       <button
                         type="button"
                         className="min-w-0 flex-1 truncate text-left hover:underline"
-                        title="Klick → Vault-Explorer · Doppelklick → IDs/TX"
+                        title="Klick öffnet den Vault im Explorer. IDs über den Knopf „IDs“."
                         onClick={() => onRowPrimaryClick(r.vaultId)}
                         onDoubleClick={() => onRowDoubleClick(r.vaultId)}
                       >
@@ -334,7 +334,7 @@ export function DashboardNftSecuredBalances({
                         <button
                           type="button"
                           className="text-[10px] text-primary hover:underline"
-                          title="IDs / Create-TX anzeigen und kopieren (auch Doppelklick)"
+                          title="IDs und Create-TX anzeigen und kopieren"
                           onClick={(e) => {
                             e.stopPropagation()
                             setExpandedId((cur) => (cur === r.vaultId ? null : r.vaultId))

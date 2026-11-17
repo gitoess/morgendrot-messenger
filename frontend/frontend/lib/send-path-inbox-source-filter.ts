@@ -68,11 +68,14 @@ export function inboxToolbarToolsForSendPath(p: {
   const onlineAll = p.activeSendPath === 'internet' && !p.iotaPathFocus
   const iotaOnly = p.activeSendPath === 'internet' && Boolean(p.iotaPathFocus)
   const chain = onlineAll || iotaOnly
+  const telegram = p.activeSendPath === 'telegram'
 
   return {
+    /** Wire/PWMSG = Chain; Telegram hat Journal, kein Wire-Paste. */
     showWirePaste: chain,
     showDecryptExport: true,
-    showPakete: chain,
+    /** .morg-pkg Sneakernet — auch Telegram/Funk sinnvoll. */
+    showPakete: chain || telegram || p.activeSendPath === 'mesh',
     showNachrichtenverlauf: true,
     showOnChainNft: chain,
     showIotaExpertInHistory: chain,
@@ -80,7 +83,7 @@ export function inboxToolbarToolsForSendPath(p: {
   }
 }
 
-/** Chat-⋮ (Burn/Ratchet/Schlüssel) — nur Chain/Online sinnvoll. */
+/** Optionen → Chat · Sicherheit (Burn-Modus/Ratchet/Schlüssel) — nur Chain/Online sinnvoll. */
 export function conversationMenuChainToolsVisible(p: {
   activeSendPath: ActiveSendPath
   iotaPathFocus?: boolean

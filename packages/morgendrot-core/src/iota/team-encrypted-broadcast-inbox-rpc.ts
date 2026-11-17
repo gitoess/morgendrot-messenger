@@ -44,7 +44,7 @@ export async function fetchTeamEncBroadcastRpcRows(
 
   const maxPages = Math.min(50, Math.max(1, input.maxDynamicFieldPages ?? 20))
   const offset = Math.max(0, Math.floor(input.offset ?? 0))
-  const limit = Math.min(500, Math.max(1, input.limit ?? 50))
+  const limit = Math.min(10_000, Math.max(1, input.limit ?? 50))
 
   const allEntries: Array<{ objectId?: string; name?: { type?: string; value?: Record<string, unknown> } }> = []
   let cursor: string | null | undefined
@@ -113,7 +113,12 @@ export async function fetchTeamEncBroadcastRpcRows(
           : typeof rawCreated === 'string'
             ? parseInt(rawCreated, 10)
             : Number(rawCreated ?? 0)
-      const tsMs = Number.isFinite(createdNum) && createdNum > 0 ? createdNum : undefined
+      const createdMs = Number.isFinite(createdNum) && createdNum > 0 ? createdNum : undefined
+      const nonceMs = Number(nonce)
+      const tsMs =
+        Number.isFinite(nonceMs) && nonceMs >= 1_000_000_000_000
+          ? nonceMs
+          : createdMs
 
       const ciphertext = coerceMoveU8Vector(f.ciphertext)
       const iv = coerceMoveU8Vector(f.iv)

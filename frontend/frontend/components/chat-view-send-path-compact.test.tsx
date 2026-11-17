@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+﻿import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { ChatViewSendPathCompact } from './chat-view-send-path-compact'
 import { TEST_API_STATUS_SEND_READY } from '@/frontend/lib/test-fixtures/messenger-capabilities'
@@ -18,7 +18,7 @@ describe('ChatViewSendPathCompact', () => {
       />
     )
     expect(screen.getByRole('button', { name: /Funk/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Online/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Alle$/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Ad-hoc/i })).not.toBeInTheDocument()
   })
 
@@ -104,7 +104,7 @@ describe('ChatViewSendPathCompact', () => {
         }}
       />
     )
-    expect(screen.getByRole('button', { name: /online/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /^Alle$/i })).toBeDisabled()
     expect(screen.getByRole('button', { name: /funk/i })).not.toBeDisabled()
     expect(screen.getByRole('button', { name: /telegram/i })).toBeDisabled()
   })
@@ -152,7 +152,7 @@ describe('ChatViewSendPathCompact', () => {
         onComposerDeliveryChange={noop}
       />
     )
-    expect(screen.getByRole('button', { name: /online/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Alle$/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /telegram/i })).toBeInTheDocument()
   })
 
@@ -174,7 +174,7 @@ describe('ChatViewSendPathCompact', () => {
     expect(screen.getByRole('button', { name: /IOTA/i })).not.toBeDisabled()
   })
 
-  it('markiert Online aktiv bei Verschlüsselung (Hinweise in Transport-Card, § H.1a)', () => {
+  it('markiert Alle aktiv bei Verschlüsselung (Hinweise in Transport-Card, § H.1a)', () => {
     render(
       <ChatViewSendPathCompact
         channelMode="private"
@@ -185,10 +185,10 @@ describe('ChatViewSendPathCompact', () => {
       />
     )
     expect(screen.queryByRole('note')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /online/i })).toHaveClass('send-path-active--online')
+    expect(screen.getByRole('button', { name: /^Alle$/i })).toHaveClass('send-path-active--online')
   })
 
-  it('Online-Klick setzt forcedTransport internet (§ H.1a)', () => {
+  it('Alle-Klick setzt forcedTransport internet (§ H.1a)', () => {
     const onTransport = vi.fn()
     render(
       <ChatViewSendPathCompact
@@ -200,7 +200,7 @@ describe('ChatViewSendPathCompact', () => {
         onComposerDeliveryChange={noop}
       />
     )
-    screen.getByRole('button', { name: /online/i }).click()
+    screen.getByRole('button', { name: /^Alle$/i }).click()
     expect(onTransport).toHaveBeenCalledWith('internet')
   })
 
@@ -232,7 +232,7 @@ describe('ChatViewSendPathCompact', () => {
         apiStatus={TEST_API_STATUS_SEND_READY}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /online/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Alle$/i }))
     expect(screen.queryByRole('button', { name: /^Gruppe$/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('group', { name: /Empfänger-Kanal/i })).not.toBeInTheDocument()
   })

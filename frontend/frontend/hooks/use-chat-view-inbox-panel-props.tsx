@@ -1,11 +1,14 @@
 'use client'
 
-import { useCallback, useMemo, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import { ChatViewInboxPackageExpertMenu } from '@/frontend/components/chat-view-inbox-package-expert-menu'
 import type { ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
 import type { ChatViewPanelMessengerPorts } from '@/frontend/features/messenger-ports'
 import { resolveActiveSendPath } from '@/frontend/lib/messenger-channel-send-path'
+import {
+  MESSENGER_INBOX_FORCE_REFRESH_EVENT,
+} from '@/frontend/lib/messenger-inbox-force-refresh'
 import { inboxToolbarToolsForSendPath } from '@/frontend/lib/send-path-inbox-source-filter'
 
 export type ChatViewInboxPanelPropsDeps = {
@@ -36,7 +39,8 @@ export type ChatViewInboxPanelPropsDeps = {
   showInboxPackageExpertMenu: boolean
   inboxSearchQuery?: string
   conversationMenu?: ChatViewInboxPanelProps['conversationMenu']
-  onOpenSettings?: () => void
+  onOpenNotes?: () => void
+  notesActive?: boolean
 }
 
 export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
@@ -79,10 +83,25 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
   )
 
   const onRefresh = useCallback(() => {
-    void inboxActions.loadMessages('reset', undefined, { forceLive: true })
+    toast.message('Aktualisieren…', { description: 'Status, Posteingang und Kontakte werden neu geladen.' })
+    void Promise.resolve(inboxActions.loadMessages('reset', undefined, { forceLive: true })).then(
+      () => {
+        toast.success('Posteingang aktualisiert')
+      },
+      () => {
+        toast.error('Aktualisieren fehlgeschlagen')
+      }
+    )
     inboxActions.refreshContactDirectory()
     void handshakeOffersRead.reload()
   }, [inboxActions.loadMessages, inboxActions.refreshContactDirectory, handshakeOffersRead.reload])
+
+  /** Boss-Header „Aktualisieren“ (suppressAppChrome) erreicht sonst nur Status-Poll. */
+  useEffect(() => {
+    const onForce = () => onRefresh()
+    window.addEventListener(MESSENGER_INBOX_FORCE_REFRESH_EVENT, onForce)
+    return () => window.removeEventListener(MESSENGER_INBOX_FORCE_REFRESH_EVENT, onForce)
+  }, [onRefresh])
 
   const onMailboxPanelStatus = useCallback((msg: string, kind: 'success' | 'error') => {
     if (kind === 'success') toast.success(msg)
@@ -108,7 +127,6 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
           onApplyTemporary={packageExpert.applyTemporaryInboxPackage}
           onClearTemporary={packageExpert.clearTemporaryInboxPackage}
           onApplyPermanent={packageExpert.applyPackageIdBackend}
-          onOpenSettings={deps.onOpenSettings}
         />
       ) : null,
     [
@@ -120,7 +138,6 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
       packageExpert.applyTemporaryInboxPackage,
       packageExpert.clearTemporaryInboxPackage,
       packageExpert.applyPackageIdBackend,
-      deps.onOpenSettings,
     ]
   )
 
@@ -204,6 +221,9 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
     onExportEinsatzprotokoll: inboxExportActions.onExportEinsatzprotokoll,
     onExportEinsatzprotokollPlainZip: inboxExportActions.onExportEinsatzprotokollPlainZip,
     onExportEinsatzprotokollMarked: inboxExportActions.onExportEinsatzprotokollMarked,
+    onExportMorgMediaZip: inboxExportActions.onExportMorgMediaZip,
+    onExportMorgMediaDirect: inboxExportActions.onExportMorgMediaDirect,
+    loadMessagesForMediaExport: inboxExportActions.loadMessagesForMediaExport,
     protokollMarkedCount: inboxViewUi.protokollMarkedIds.size,
     onHideInboxMessageLocal: inboxActions.onHideInboxMessageLocal,
     onPurgeInboxMessageChain: inboxActions.onPurgeInboxMessageChain,
@@ -213,6 +233,11 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
     onClearInboxSelection: inboxViewUi.clearInboxSelection,
     onBulkHideSelected: inboxActions.onBulkHideSelected,
     onBulkPurgeSelected: inboxActions.onBulkPurgeSelected,
+    onBulkMarkProtokollSelected: inboxActions.onBulkMarkProtokollSelected,
+    onBulkCopySelected: inboxActions.onBulkCopySelected,
+    onBulkExportJsonSelected: inboxActions.onBulkExportJsonSelected,
+    onBulkHashSelected: inboxActions.onBulkHashSelected,
+    onBulkForwardSelected: inboxActions.onBulkForwardSelected,
     recipient: composerDraft.recipient,
     setStatus: sendActions.onStatusChange,
     setStatusMsg: sendActions.onStatusMsgChange,
@@ -236,6 +261,8 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
     hidePartnerStrip: deps.hidePartnerStrip ?? false,
     hideOverviewChips: deps.hideOverviewChips ?? false,
     pathTools,
+    onOpenNotes: deps.onOpenNotes,
+    notesActive: deps.notesActive,
   } satisfies ChatViewInboxPanelProps
 
   return inboxPanelProps

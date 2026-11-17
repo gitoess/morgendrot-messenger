@@ -146,11 +146,22 @@ function MessengerDashboardBody({
   const { t: tv } = useAppTranslation('vault')
 
   const onLockSession = async () => {
-    if (!window.confirm(t('lock.confirm'))) return
-    // Im Chat: weiches Privacy-Lock (kein Auto-Login-Fenster). Sonst voller API-Lock + Home.
-    const stayInView = s.activeView?.type === 'chat'
-    await s.lockSession(stayInView ? { stayInView: true } : undefined)
+    // Abmelden = immer volles Sperren (Login-Dialog). Weich nur über das Tresor-Badge im Chat.
+    if (!window.confirm(t('lock.confirmFull'))) return
+    const r = await s.lockSession()
+    if (r.ok === false) {
+      window.alert(r.error || r.message || 'Abmelden fehlgeschlagen.')
+    }
   }
+
+  /** Status + Posteingang (Header „Aktualisieren“; Chat mit suppressAppChrome). */
+  const onRefreshStatusAndInbox = useCallback(async () => {
+    await s.checkStatus()
+    const { requestMessengerInboxForceRefresh } = await import(
+      '@/frontend/lib/messenger-inbox-force-refresh'
+    )
+    requestMessengerInboxForceRefresh()
+  }, [s.checkStatus])
 
   const vaultSessionLocked = !!(s.locked || s.apiSnapshot?.locked)
   const browserSignerReady = isBrowserSessionSignerReady(s.locked)
@@ -363,28 +374,91 @@ function MessengerDashboardBody({
             : 'min-h-screen'
         )}
       >
-        {!(isCapacitorNativePlatform() && s.activeView.type === 'chat') ? (
-        <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
-          <div className="flex h-14 items-center gap-4 px-4">
-            <button
-              onClick={s.handleBack}
-              className="flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <ChevronLeft className="h-5 w-5" />
-              <span className="text-sm font-medium">{t('nav.back')}</span>
-            </button>
-            <div className="h-4 w-px bg-border" />
-            <span className="text-sm font-semibold text-foreground">
-              {s.activeView.type === 'settings'
-                ? t('views.settings')
-                : s.activeView.type === 'config'
-                  ? t('views.config')
+        {isEinsatzLeadHome ? (
+          <DashboardMessengerBossHeader
+            role={s.role}
+            myAddressFull={s.apiSnapshot?.myAddressFull}
+            onOpenSettings={s.openSettingsView}
+            onLockSession={!s.locked ? onLockSession : undefined}
+            vaultBannerActions={showHomeVaultBadge ? homeVaultActions : undefined}
+            sessionLocked={vaultSessionLocked}
+            hasKeys={browserSignerReady}
+            onRefreshStatus={onRefreshStatusAndInbox}
+            subNav={{
+              viewTitle:
+                s.activeView.type === 'settings'
+                  ? t('views.settings')
+                  : s.activeView.type === 'config'
+                    ? t('views.config')
+                    : s.activeView.type === 'einsatzleitung'
+                      ? t('views.einsatzleitung')
+                      : featureTitle(s.activeView.type, messengerFeaturesI18n) ?? t('nav.messages'),
+              onBack: s.handleBack,
+              onGoHome: s.goHome,
+              // Aktueller Ort nicht als Titel — Gegenstück(e); Settings: Titel + beide Sprünge.
+              peerSwitches:
+                s.activeView.type === 'chat'
+                  ? [{ label: t('nav.einsatzleitung'), onClick: s.openEinsatzleitungView }]
                   : s.activeView.type === 'einsatzleitung'
-                    ? t('views.einsatzleitung')
-                    : featureTitle(s.activeView.type, messengerFeaturesI18n)}
-            </span>
-          </div>
-        </header>
+                    ? [{ label: t('nav.messages'), onClick: s.openMessengerChatView }]
+                    : s.activeView.type === 'settings' || s.activeView.type === 'config'
+                      ? [
+                          { label: t('nav.messages'), onClick: s.openMessengerChatView },
+                          { label: t('nav.einsatzleitung'), onClick: s.openEinsatzleitungView },
+                        ]
+                      : [],
+            }}
+          />
+        ) : !(isCapacitorNativePlatform() && s.activeView.type === 'chat') ? (
+          <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
+            <div className="flex h-14 items-center gap-3 px-4">
+              <button
+                type="button"
+                onClick={s.handleBack}
+                className="flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
+                title={t('nav.back')}
+              >
+                <ChevronLeft className="h-5 w-5" />
+                <span className="text-sm font-medium">{t('nav.back')}</span>
+              </button>
+              <button
+                type="button"
+                onClick={s.goHome}
+                className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-semibold text-foreground hover:bg-muted"
+                title={t('nav.home')}
+              >
+                {t('nav.home')}
+              </button>
+              <div className="h-4 w-px bg-border" />
+              <span className="text-sm font-semibold text-foreground">
+                {s.activeView.type === 'settings'
+                  ? t('views.settings')
+                  : s.activeView.type === 'config'
+                    ? t('views.config')
+                    : s.activeView.type === 'einsatzleitung'
+                      ? t('views.einsatzleitung')
+                      : featureTitle(s.activeView.type, messengerFeaturesI18n)}
+              </span>
+              <div className="ml-auto flex shrink-0 items-center gap-2">
+                {showHomeVaultBadge ? (
+                  <TresorSessionBadge
+                    sessionLocked={vaultSessionLocked}
+                    hasKeys={browserSignerReady}
+                    actions={homeVaultActions}
+                  />
+                ) : null}
+                <button
+                  type="button"
+                  onClick={() => void s.checkStatus()}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-foreground/25 bg-foreground px-2.5 py-1.5 text-xs font-bold text-background shadow-sm transition-colors hover:bg-foreground/90"
+                  title="Status neu laden"
+                  aria-label="Aktualisieren"
+                >
+                  Aktualisieren
+                </button>
+              </div>
+            </div>
+          </header>
         ) : null}
 
         {/* View Content */}
@@ -456,7 +530,7 @@ function MessengerDashboardBody({
               myAddress={s.myAddress}
               vaultBannerActions={s.chatVaultBannerActions}
               pendingHandshakes={s.pendingHandshakes}
-              onOpenEinsatzleitung={canAccessEinsatzleitung(s.role) ? s.openEinsatzleitungView : undefined}
+              suppressAppChrome={isEinsatzLeadHome}
               phonebookNavRequest={s.phonebookNavRequest}
               onOpenSettings={s.openSettingsView}
             />
@@ -490,6 +564,7 @@ function MessengerDashboardBody({
           vaultBannerActions={showHomeVaultBadge ? homeVaultActions : undefined}
           sessionLocked={vaultSessionLocked}
           hasKeys={browserSignerReady}
+          onRefreshStatus={onRefreshStatusAndInbox}
         />
       ) : (
       <header className="border-b border-border bg-card/90 backdrop-blur-sm">
@@ -538,6 +613,15 @@ function MessengerDashboardBody({
                 actions={homeVaultActions}
               />
             ) : null}
+            <button
+              type="button"
+              onClick={() => void s.checkStatus()}
+              className="inline-flex items-center gap-1.5 rounded-md border border-foreground/25 bg-foreground px-2.5 py-1.5 text-xs font-bold text-background shadow-sm transition-colors hover:bg-foreground/90"
+              title="Status neu laden"
+              aria-label="Aktualisieren"
+            >
+              Aktualisieren
+            </button>
             <div
               className={cn(
                 'flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium',
@@ -605,7 +689,7 @@ function MessengerDashboardBody({
               </button>
             ) : null}
             <Link
-              href="/handbook"
+              href="/handbook?file=MESSENGER-CHAT-HANDBUCH.md"
               className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               title={t('nav.handbook')}
               aria-label={t('nav.handbook')}
@@ -653,17 +737,13 @@ function MessengerDashboardBody({
           }}
         />
         <StandaloneSoloWizardCard apiSnapshot={s.apiSnapshot} />
-        {!s.locked && !isEinsatzLeadHome && liteMessengerFromApi ? (
-          <div className="mb-6 flex justify-center">
-            <DashboardSosEmergencyButton onOpenMessages={s.openMessengerChatView} />
-          </div>
-        ) : null}
         {!s.locked && isEinsatzLeadHome ? (
           <DashboardMessengerBossHome
             apiSnapshot={s.apiSnapshot}
             hasValidMyAddressForBalance={s.hasValidMyAddressForBalance}
             onRefreshStatus={s.checkStatus}
             addressSuggestions={s.dashboardTransferAddressSuggestions}
+            recipientOptions={s.dashboardTransferRecipientOptions}
             onOpenMessages={s.openMessengerChatView}
             onOpenEinsatzleitung={s.openEinsatzleitungView}
           />
@@ -677,6 +757,11 @@ function MessengerDashboardBody({
               hasValidMyAddressForBalance={s.hasValidMyAddressForBalance}
               onRefreshStatus={s.checkStatus}
               addressSuggestions={s.dashboardTransferAddressSuggestions}
+              recipientOptions={s.dashboardTransferRecipientOptions}
+              mailboxIds={[
+                ...(s.apiSnapshot?.mailboxId ? [s.apiSnapshot.mailboxId] : []),
+                ...(s.apiSnapshot?.inboxUnionMailboxIds ?? []),
+              ]}
             />
             <DashboardIotaActivityCard />
           </div>
@@ -772,6 +857,11 @@ function MessengerDashboardBody({
             <MessengerDashboardOfflineHint />
           </div>
         )}
+        {!s.locked && !isEinsatzLeadHome && liteMessengerFromApi ? (
+          <div className="mt-16 flex justify-center pb-1">
+            <DashboardSosEmergencyButton onOpenMessages={s.openMessengerChatView} />
+          </div>
+        ) : null}
       </main>
     </div>
     </DeploymentProfileBackdrop>

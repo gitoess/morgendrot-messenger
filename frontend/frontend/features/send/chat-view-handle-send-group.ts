@@ -127,10 +127,13 @@ export function resolveSingleWireSuccessMessage(
 }
 
 export const GROUP_INBOX_RELOAD_DELAYS_MS = [1200, 4000, 9000] as const
-export const PRIVATE_INBOX_RELOAD_DELAY_MS = 1200
+/** 1:1: Chain-Index oft >1 s — gestaffelt nachladen (sonst „TX ok, Posteingang leer“). */
+export const PRIVATE_INBOX_RELOAD_DELAYS_MS = [1500, 5000, 12000] as const
+/** @deprecated alias — erstes Delay */
+export const PRIVATE_INBOX_RELOAD_DELAY_MS = PRIVATE_INBOX_RELOAD_DELAYS_MS[0]
 
 export function inboxReloadDelaysMs(isGroupChannel: boolean): readonly number[] {
-  return isGroupChannel ? GROUP_INBOX_RELOAD_DELAYS_MS : [PRIVATE_INBOX_RELOAD_DELAY_MS]
+  return isGroupChannel ? GROUP_INBOX_RELOAD_DELAYS_MS : PRIVATE_INBOX_RELOAD_DELAYS_MS
 }
 
 export function publishGroupStreamsAnchorAfterSend(p: {

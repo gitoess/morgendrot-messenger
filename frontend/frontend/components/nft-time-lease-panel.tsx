@@ -99,8 +99,10 @@ export function NftTimeLeasePanel(p: {
   const [msgPkg, setMsgPkg] = useState(MESSAGING_MODULES_PACKAGE_ID)
   const [editPkg, setEditPkg] = useState(false)
   const [borrower, setBorrower] = useState('')
-  /** Primär Minuten (Tests); intern → durationMs. */
-  const [durationMinutes, setDurationMinutes] = useState('1')
+  /** Relativ: Betrag + Einheit → durationMs; optional absolutes Datum überschreibt. */
+  const [durationAmount, setDurationAmount] = useState('1')
+  const [durationUnit, setDurationUnit] = useState<'min' | 'h' | 'd'>('min')
+  const [unlockAtLocal, setUnlockAtLocal] = useState('')
   const [leaseIdManual, setLeaseIdManual] = useState('')
   const [busy, setBusy] = useState(false)
   const [info, setInfo] = useState('')
@@ -151,8 +153,18 @@ export function NftTimeLeasePanel(p: {
     }
   }
 
-  const minutes = Math.max(0.05, Number(durationMinutes) || 1)
-  const durationMs = Math.floor(minutes * 60_000)
+  const durationMs = useMemo(() => {
+    const abs = unlockAtLocal.trim()
+    if (abs) {
+      const t = new Date(abs).getTime()
+      if (Number.isFinite(t) && t > Date.now() + 3_000) return Math.floor(t - Date.now())
+    }
+    const n = Math.max(0.05, Number(durationAmount) || 1)
+    if (durationUnit === 'h') return Math.floor(n * 3_600_000)
+    if (durationUnit === 'd') return Math.floor(n * 86_400_000)
+    return Math.floor(n * 60_000)
+  }, [durationAmount, durationUnit, unlockAtLocal, nowMs])
+  const unlockPreviewMs = Date.now() + durationMs
   const activeLeaseId = (lease?.leaseObjectId || leaseIdManual).trim()
   const me = (getDirectIotaSessionSignerAddress() || '').trim().toLowerCase()
   const borrowerNorm = borrower.trim().toLowerCase()
@@ -164,24 +176,16 @@ export function NftTimeLeasePanel(p: {
     () => (lease ? nftTimeLeaseBadgeText(lease, nowMs) : ''),
     [lease, nowMs]
   )
+  const absUnlockInvalid =
+    Boolean(unlockAtLocal.trim()) &&
+    !(Number.isFinite(new Date(unlockAtLocal).getTime()) && new Date(unlockAtLocal).getTime() > Date.now() + 3_000)
 
   return (
     <div className="space-y-2 text-[11px] text-muted-foreground">
-      <p>
-        <span className="text-foreground">NFT zeitlich verleihen (Leserecht)</span> — nicht Chat-Textspeicher.
-        Entschlüsseln braucht zusätzlich Ciphertext (Galerie Object-ID / Enc-ImageNFT oder Wire). Das NFT allein
-        enthält keine Chat-Texte.
+      <p className="text-foreground">
+        NFT verleihen → nach Ablauf zurückholen. Während der Leihe liest nur die Empfänger-Wallet
+        die NFT-Gate-Nachricht — du als Verleiher nicht. Adresse + Dauer → Leihe starten.
       </p>
-      <ol className="list-decimal space-y-0.5 pl-4 text-[10px] text-muted-foreground">
-        <li>Enc-Inhalt anlegen oder an NFT binden (Galerie / NFTGATE / Enc-Mint).</li>
-        <li>
-          Hier <span className="text-foreground">Leihe starten</span> an eine andere Wallet (nicht an dich).
-        </li>
-        <li>
-          NFT zurück: Borrower → <span className="text-foreground">Früh zurück</span> (sofort), oder nach Ablauf
-          du als Lender → <span className="text-foreground">Nach Ablauf zurückholen</span>.
-        </li>
-      </ol>
 
       {lease ? (
         <div className="space-y-1.5 rounded border border-amber-800/30 bg-amber-950/15 px-2.5 py-2">
@@ -189,8 +193,8 @@ export function NftTimeLeasePanel(p: {
           {unlockMs > 0 && lease.status === 'active' && !lease.reclaimCancelled ? (
             <p className="text-[10px] text-foreground/90">
               {reclaimReady
-                ? 'Unlock erreicht — „Nach Ablauf zurückholen“ drücken (TX, kein Auto).'
-                : `Noch ${formatRemain(remainMs)} bis Reclaim freigeschaltet (lokale/Chain-Uhr).`}
+                ? 'Bereit — „Zurückholen“ tippen.'
+                : `Noch ${formatRemain(remainMs)}.`}
             </p>
           ) : null}
           <TechnicalIdRow
@@ -209,13 +213,12 @@ export function NftTimeLeasePanel(p: {
         </div>
       ) : (
         <p className="rounded border border-border/50 bg-muted/20 px-2 py-1.5 text-[10px]">
-          Keine aktive Lease lokal. Nach „Leihe starten“ erscheint die ID hier. Fehlt sie: Explorer → TX →
-          created <span className="font-mono">NftTimeLease</span> → unter Erweitert einfügen.
+          Noch keine Leihe — unten starten. ID fehlt danach? Unter Erweitert einfügen.
         </p>
       )}
 
       <label className="flex flex-col gap-0.5">
-        <span>An wen verleihen? (andere Wallet-Adresse)</span>
+        <span>Empfänger-Wallet (nicht du)</span>
         <Input
           className="h-8 font-mono text-[11px]"
           value={borrower}
@@ -232,26 +235,57 @@ export function NftTimeLeasePanel(p: {
           </span>
         ) : null}
       </label>
-      <label className="flex flex-col gap-0.5">
-        <span>Dauer (Minuten)</span>
-        <Input
-          className="h-7 font-mono text-[10px]"
-          value={durationMinutes}
-          disabled={p.disabled || busy}
-          onChange={(e) => setDurationMinutes(e.target.value)}
-          inputMode="decimal"
-        />
-        <span className="text-[10px] text-muted-foreground">
-          Kurztest: 1 = eine Minute. ({Math.round(durationMs / 1000)}s · früher „Stunden“-Feld → jetzt Minuten)
-        </span>
-      </label>
+      <div className="space-y-1.5">
+        <span className="text-[11px] text-foreground">Leihdauer</span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Input
+            className="h-8 w-20 font-mono text-[11px]"
+            value={durationAmount}
+            disabled={p.disabled || busy || Boolean(unlockAtLocal.trim())}
+            onChange={(e) => setDurationAmount(e.target.value)}
+            inputMode="decimal"
+            aria-label="Dauer-Betrag"
+          />
+          <select
+            className="h-8 rounded-md border border-input bg-background px-2 text-[11px] text-foreground"
+            value={durationUnit}
+            disabled={p.disabled || busy || Boolean(unlockAtLocal.trim())}
+            onChange={(e) => setDurationUnit(e.target.value as 'min' | 'h' | 'd')}
+            aria-label="Dauer-Einheit"
+          >
+            <option value="min">Minuten</option>
+            <option value="h">Stunden</option>
+            <option value="d">Tage</option>
+          </select>
+        </div>
+        <label className="flex flex-col gap-0.5">
+          <span className="text-[10px] text-muted-foreground">Oder Zeitpunkt (lokal) — überschreibt Dauer oben</span>
+          <Input
+            type="datetime-local"
+            className="h-8 font-mono text-[11px]"
+            value={unlockAtLocal}
+            disabled={p.disabled || busy}
+            onChange={(e) => setUnlockAtLocal(e.target.value)}
+          />
+        </label>
+        {absUnlockInvalid ? (
+          <p className="text-[10px] text-amber-200/90">Zeitpunkt muss in der Zukunft liegen.</p>
+        ) : (
+          <p className="text-[10px] text-muted-foreground">
+            Unlock/Reclaim ab ca. {new Date(unlockPreviewMs).toLocaleString('de-DE')} (
+            {formatRemain(durationMs)})
+          </p>
+        )}
+      </div>
 
       <div className="flex flex-wrap gap-1.5">
         <Button
           type="button"
           size="sm"
           className="h-8 text-[11px]"
-          disabled={p.disabled || busy || !msgPkg || !borrower || borrowerIsSelf}
+          disabled={
+            p.disabled || busy || !msgPkg || !borrower || borrowerIsSelf || absUnlockInvalid || durationMs < 3_000
+          }
           onClick={() => {
             writeLastBorrower(borrower)
             void run(() =>
@@ -321,19 +355,14 @@ export function NftTimeLeasePanel(p: {
           }}
         >
           {reclaimReady || !unlockMs
-            ? 'Nach Ablauf zurückholen'
+            ? 'Zurückholen'
             : `Zurückholen (${formatRemain(remainMs)})`}
         </Button>
       </div>
-      {!activeLeaseId ? (
-        <p className="text-[10px] text-amber-200/90">
-          Zurückholen/Früh-zurück brauchen eine Lease-Object-ID. Ohne ID wirken die Buttons tot.
-        </p>
-      ) : null}
 
       <details className="rounded border border-border/40 px-2 py-1" open={!lease?.leaseObjectId}>
         <summary className="cursor-pointer text-[10px] text-muted-foreground">
-          Erweitert / Notfall · Package · Lease-ID
+          Erweitert (Lease-ID / Package)
         </summary>
         <div className="mt-2 space-y-2">
           <p className="text-[10px] text-muted-foreground">

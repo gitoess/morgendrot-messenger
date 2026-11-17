@@ -1,0 +1,16 @@
+---
+description: IOTA-Messenger-Edition — kein Auto-Execute / keine Coin-Fernsteuerung als Kern
+alwaysApply: true
+---
+
+# IOTA Messenger: Auto-Execute aus (verbindlich später)
+
+**Entscheidung 2026-11-17 (merken / bei Edition-Arbeit umsetzen):**
+
+- **Chat-Produkt = Nachrichten.** Fernsteuerungs-Coins / Auto-Befehle aus dem Posteingang sind **kein** Kern.
+- Edition **`iota-messenger`:** `ENABLE_AUTO_EXECUTE=false` (**Default aus**, besser als Morgendrot-Lock-Default).
+- **Kein** Auto-Execute empfangener Chat-Befehle („sende X coins“ o. Ä.).
+- **Lock-Fernsteuerung** weglassen oder nur separates Boss/Lock-Produkt — nicht im schlanken IOTA-Messenger.
+- Optional später als explizites Spezialfeature mit Whitelist/Limits — nie stiller Default.
+
+Siehe auch: `docs/IOTA-MESSENGER-EDITION-V1.md` § Sicherheit / Auto-Execute.

@@ -1,6 +1,6 @@
 # Handshake-Anfragen — UX (Ist)
 
-**Stand:** 2026-05-21  
+**Stand:** 2026-11-13 (Badge-Ort an Sidebar-UI)  
 **Code:** `GET /api/pending-handshakes` (+ optional `?mailboxIds=`), `use-chat-view-pending-handshakes.ts` (Dashboard + Chat), `chat-view-inbox-handshake-requests.tsx`, `pending-handshake-mailbox-ids.ts`
 
 ---
@@ -13,7 +13,7 @@
 | **Polling** | Alle **~45 s** auf **Dashboard-Ebene** (Toast/Badge auch ohne geöffneten Chat/Posteingang), sobald `MY_ADDRESS` gesetzt und Tresor **nicht** gesperrt — **unabhängig** von Verschlüsselt/Internet/Kanal. |
 | **Anzeige** | **Eingehend:** grüner Block oben im Posteingang (Annehmen/Ablehnen). **Gesendet:** blauer Block „Ausstehende Anfragen (gesendet)“ — Warte auf Partner. |
 | **Inbox-Zeile** | Zusätzlich im Nachrichtenstrom: kompakte Zeile „Handshake-Anfragen (eingehend)“ mit **Als Partner** / **Annehmen** (max. 3 + Resthinweis); ersetzt den alten doppelten Eingangs-Banner. |
-| **Badge** | Am Posteingang-Titel **und** an der Dashboard-Kachel **„Nachrichten“** (eingehend + gesendet, ohne bereits verbundene). |
+| **Badge** | In der **Posteingang-Toolbar** (neben der kleinen Überschrift) **und** an der Dashboard-Kachel **„Nachrichten“** (eingehend + gesendet, ohne bereits verbundene). Kein Badge mehr am großen Chat-Kopf-Titel (der ist bei Sidebar ausgeblendet). |
 | **Toast** | Bei **neuer** Anfrage ab **erstem** erfolgreichen Poll (pro `sender:nonce` einmal pro Browser-Session). Aktion **Posteingang** öffnet Nachrichten-Ansicht. |
 | **Bottom-Nav** | Consumer-Layout: Badge an **Nachrichten** (nur eingehend). |
 | **Löschen** | **Löschen** im Posteingang: lokal ausblenden; bei **Mailbox**-Eintrag zusätzlich `/purge-handshake` on-chain (ENABLE_PURGE + MAILBOX_ID). Event-only nur lokal. Eingehend + gesendet. |

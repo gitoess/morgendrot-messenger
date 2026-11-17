@@ -15,8 +15,15 @@ describe('shouldShowDashboardPwaInstallCard', () => {
     expect(shouldShowDashboardPwaInstallCard()).toBe(false)
   })
 
-  it('zeigt im normalen Browser', () => {
+  it('blendet localhost aus', () => {
     vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 Chrome/120.0' })
+    vi.stubGlobal('window', { location: { hostname: '127.0.0.1' } })
+    expect(shouldShowDashboardPwaInstallCard()).toBe(false)
+  })
+
+  it('zeigt im normalen Browser auf öffentlichem Host', () => {
+    vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 Chrome/120.0' })
+    vi.stubGlobal('window', { location: { hostname: 'messenger.example.com' } })
     expect(shouldShowDashboardPwaInstallCard()).toBe(true)
   })
 })

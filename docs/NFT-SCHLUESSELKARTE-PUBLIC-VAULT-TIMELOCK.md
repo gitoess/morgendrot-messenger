@@ -77,6 +77,7 @@ Mailbox-Chat an W1: W2 braucht Inbox-Scan der **W1-Mailbox** / geteilte Object-I
 | Hintergrund-Cron ohne TX | Move/IOTA führt **keine** stillen Transfers aus — nur `entry`-Aufrufe |
 | Geheimnis on-chain | DEK/Passphrase nie im NFT-Description-Feld |
 | Garantie gegen Screenshots/Klartext-Kopieren | OPSEC Nutzer |
+| **Stilles Auto-Burn nach Leihe-Ende** (Rebate ohne Klick) | Gleiches Clock-Problem wie Auto-Reclaim: braucht eine `entry`-TX. Sinnvoll als **optionale Policy** später: z. B. `reclaim_then_burn` / Flag „nach Ablauf NFT brennen + Rebate“ — **nicht** still im Hintergrund; Gate-Zerstörung bewusst (kein erneutes Lesen mit diesem NFT). Ist: Burn nur manuell in Galerie / One-Time-Mint. |
 
 ---
 

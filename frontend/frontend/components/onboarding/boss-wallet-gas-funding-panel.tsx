@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Copy, ExternalLink, Loader2 } from 'lucide-react'
+import { Copy, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { ApiStatus } from '@/frontend/lib/api/status'
 import { fetchWalletBalances, mergeWalletBalancesIntoApiStatus } from '@/frontend/lib/api/wallet-balances'
@@ -41,23 +41,17 @@ type Props = {
 const COPY = {
   testnet: {
     title: 'Gas für Testnet',
-    intro:
-      'Bevor du den Contract anlegst, braucht deine Wallet Testnet-Token für Transaktionsgebühren. Der Faucet öffnet sich im Browser — dort Captcha bestätigen.',
+    intro: 'Testnet-Token für Gebühren — öffnet den Faucet im Browser.',
     networkLabel: 'Testnet',
     zeroHint: ' — noch zu wenig für einen Deploy.',
     hasGasHint: ' — Gas vorhanden.',
-    footer:
-      'IOTA verlangt im Browser ein Captcha. Nach dem Token-Eingang Saldo aktualisieren.',
   },
   mainnet: {
     title: 'Gas für Mainnet (IOTA)',
-    intro:
-      'Für Mainnet brauchst du echtes IOTA auf derselben Wallet-Adresse — z. B. von Börse oder anderer Wallet dorthin senden. Kein kostenloser Faucet.',
+    intro: 'Echtes IOTA an die Wallet-Adresse senden (Börse oder andere Wallet).',
     networkLabel: 'Mainnet',
     zeroHint: ' — noch zu wenig für Deploy und Transaktionen.',
     hasGasHint: ' — IOTA vorhanden.',
-    footer:
-      'Sende nur IOTA im Mainnet-Netzwerk an diese Adresse. Nach dem Eingang Saldo aktualisieren.',
   },
 } as const
 
@@ -174,9 +168,7 @@ export function BossWalletGasFundingPanel(p: Props) {
       {displayAddress ? (
         <div className="space-y-1.5">
           <p className="text-xs text-muted-foreground">
-            {p.network === 'mainnet'
-              ? 'IOTA an diese Wallet-Adresse senden (Mainnet):'
-              : 'Deine Wallet-Adresse:'}
+            {p.network === 'mainnet' ? 'Wallet-Adresse:' : 'Deine Wallet-Adresse:'}
           </p>
           <p className="break-all font-mono text-xs text-foreground" title={fullAddress || displayAddress}>
             {fullAddress || displayAddress}
@@ -228,30 +220,17 @@ export function BossWalletGasFundingPanel(p: Props) {
 
       {p.network === 'testnet' ? (
         <div className="space-y-2">
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="default"
-              className={canRequestTestnet ? undefined : 'opacity-50'}
-              disabled={busy || !canRequestTestnet}
-              onClick={() => runTestnetFaucet()}
-            >
-              {busy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
-              Testnet-Token anfordern
-            </Button>
-            <Button type="button" size="sm" variant="outline" asChild>
-              <a href={faucetPageUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
-                Faucet-Seite
-              </a>
-            </Button>
-          </div>
-          {fullAddress && !faucetPrefs.customOpenUrl.trim() ? (
-            <p className="break-all font-mono text-[10px] text-muted-foreground" title={faucetPageUrl}>
-              Automatischer Link: {faucetPageUrl}
-            </p>
-          ) : null}
+          <Button
+            type="button"
+            size="sm"
+            variant="default"
+            className={canRequestTestnet ? undefined : 'opacity-50'}
+            disabled={busy || !canRequestTestnet}
+            onClick={() => runTestnetFaucet()}
+          >
+            {busy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+            Testnet-Token anfordern
+          </Button>
           {recipientOverrideActive ? (
             <p className="text-[10px] text-amber-800 dark:text-amber-200">
               Faucet nutzt eine andere Adresse als die aktuelle Wallet — prüfen oder „Aktuelle Wallet
@@ -334,11 +313,6 @@ export function BossWalletGasFundingPanel(p: Props) {
             </div>
           </details>
         </div>
-      ) : fullAddress ? (
-        <p className="text-xs text-violet-900 dark:text-violet-200">
-          Tipp: In der Börse oder Sender-Wallet <strong className="font-medium">Netzwerk Mainnet</strong> wählen —
-          Testnet-Token haben auf Mainnet keinen Wert.
-        </p>
       ) : null}
 
       {showReload ? (
@@ -354,8 +328,6 @@ export function BossWalletGasFundingPanel(p: Props) {
           Saldo aktualisieren
         </Button>
       ) : null}
-
-      <p className="text-xs text-muted-foreground">{copy.footer}</p>
     </div>
   )
 }

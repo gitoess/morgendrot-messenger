@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { isCapacitorNativePlatform } from '@/frontend/lib/capacitor-platform'
 import { forceReleaseNativeBodyLock } from '@/frontend/components/native-modal-shell'
 import {
@@ -23,11 +23,11 @@ interface ChatViewProps {
   vaultBannerActions?: ChatViewVaultBannerActions
   /** App-weites Polling (Dashboard) — Toast/Badge auch ohne geöffneten Posteingang. */
   pendingHandshakes?: PendingHandshakesPollState
-  /** Boss/Kommandant: zentraler Einsatzleitung-Tab. */
-  onOpenEinsatzleitung?: () => void
   /** Bottom-Nav: Telefonbuch-Sheet öffnen. */
   phonebookNavRequest?: number
   onOpenSettings?: () => void
+  /** Fester App-Header darüber — Chat-Kopf ohne Doppel-Chrome. */
+  suppressAppChrome?: boolean
 }
 
 function ChatViewLoadingShell() {
@@ -52,9 +52,9 @@ export function ChatView({
   myAddress = '',
   vaultBannerActions,
   pendingHandshakes,
-  onOpenEinsatzleitung,
   phonebookNavRequest,
   onOpenSettings,
+  suppressAppChrome = false,
 }: ChatViewProps) {
   const [coreReady, setCoreReady] = useState(() => !isCapacitorNativePlatform())
 
@@ -87,9 +87,9 @@ export function ChatView({
       myAddress={myAddress}
       vaultBannerActions={vaultBannerActions}
       pendingHandshakes={pendingHandshakes}
-      onOpenEinsatzleitung={onOpenEinsatzleitung}
       phonebookNavRequest={phonebookNavRequest}
       onOpenSettings={onOpenSettings}
+      suppressAppChrome={suppressAppChrome}
     />
   )
 }
@@ -100,9 +100,9 @@ function ChatViewLoaded({
   myAddress = '',
   vaultBannerActions,
   pendingHandshakes,
-  onOpenEinsatzleitung,
   phonebookNavRequest,
   onOpenSettings,
+  suppressAppChrome = false,
 }: ChatViewProps) {
   const [channel, setChannel] = useState<MessengerChatChannel>(() =>
     variant === 'pinnwand' ? 'pinnwand' : 'private'
@@ -110,16 +110,48 @@ function ChatViewLoaded({
   useEffect(() => {
     setChannel(variant === 'pinnwand' ? 'pinnwand' : 'private')
   }, [variant])
+
+  const setChannelWithHistory = useCallback(
+    (c: MessengerChatChannel) => {
+      setChannel(c)
+      if (typeof window === 'undefined') return
+      try {
+        window.history.pushState(
+          {
+            morgView: { type: 'chat', variant: variant === 'pinnwand' ? 'pinnwand' : 'private-chat' },
+            channel: c,
+          },
+          '',
+          window.location.href
+        )
+      } catch {
+        /* ignore */
+      }
+    },
+    [variant]
+  )
+
+  useEffect(() => {
+    const onChannelPop = (e: Event) => {
+      const c = (e as CustomEvent<string>).detail
+      if (c === 'private' || c === 'group' || c === 'pinnwand' || c === 'notes') {
+        setChannel(c)
+      }
+    }
+    window.addEventListener('morgendrot:messenger-channel', onChannelPop)
+    return () => window.removeEventListener('morgendrot:messenger-channel', onChannelPop)
+  }, [])
+
   const core = useChatViewCore({ channelMode: channel, role, myAddress })
   return (
     <ChatViewMainContent
       {...core}
       vaultBannerActions={vaultBannerActions}
-      onChannelModeChange={setChannel}
+      onChannelModeChange={setChannelWithHistory}
       pendingHandshakes={pendingHandshakes}
-      onOpenEinsatzleitung={onOpenEinsatzleitung}
       phonebookNavRequest={phonebookNavRequest}
       onOpenSettings={onOpenSettings}
+      suppressAppChrome={suppressAppChrome}
     />
   )
 }

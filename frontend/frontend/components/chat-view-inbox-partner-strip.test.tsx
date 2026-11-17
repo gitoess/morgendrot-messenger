@@ -31,11 +31,10 @@ function makeProps(over: Partial<ChatViewInboxPartnerStripProps> = {}): ChatView
 }
 
 describe('ChatViewInboxPartnerStrip (§ H.1a)', () => {
-  it('schaltet Wire-Filter um', () => {
-    const onWireFilterChange = vi.fn()
-    render(<ChatViewInboxPartnerStrip {...makeProps({ onWireFilterChange })} />)
-    fireEvent.click(screen.getByRole('button', { name: /^Verschlüsselt$/i }))
-    expect(onWireFilterChange).toHaveBeenCalledWith('encrypted')
+  it('zeigt keinen Inhalt-Filter Verschlüsselt/Klartext mehr', () => {
+    render(<ChatViewInboxPartnerStrip {...makeProps({ showWireSection: false })} />)
+    expect(screen.queryByRole('button', { name: /^Verschlüsselte$/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /^Klartext$/i })).toBeNull()
   })
 
   it('schaltet Richtung Eingang/Ausgang', () => {
@@ -76,11 +75,17 @@ describe('ChatViewInboxPartnerStrip (§ H.1a)', () => {
     expect(screen.getByRole('button', { name: /^Telegram$/i })).toBeDisabled()
   })
 
-  it('Partner-Chip wählt Adresse für Senden', () => {
+  it('Partner-Chip filtert die Liste und stellt nicht den Composer um', () => {
+    const onPartnerKeyChange = vi.fn()
     const onPartnerSelectForSend = vi.fn()
-    render(<ChatViewInboxPartnerStrip {...makeProps({ onPartnerSelectForSend })} />)
+    render(
+      <ChatViewInboxPartnerStrip
+        {...makeProps({ onPartnerKeyChange, onPartnerSelectForSend, showWireSection: false, showChannelSection: false })}
+      />
+    )
     fireEvent.click(screen.getByRole('button', { name: /Hans Dampf/i }))
     expect(onPartnerSelectForSend).toHaveBeenCalledWith(PEER_A)
+    expect(onPartnerKeyChange).not.toHaveBeenCalled()
   })
 
   it('Partner Alle setzt Filter zurück', () => {

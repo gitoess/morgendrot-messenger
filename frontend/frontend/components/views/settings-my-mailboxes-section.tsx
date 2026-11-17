@@ -2,7 +2,6 @@
 
 import { useCallback } from 'react'
 import { Mailbox } from 'lucide-react'
-import Link from 'next/link'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { ChatViewMyMailboxesPanel } from '@/frontend/components/chat-view-my-mailboxes-panel'
 import { TeamMailboxSyncStatus } from '@/frontend/components/team-mailbox-sync-status'
@@ -26,7 +25,7 @@ export function SettingsMyMailboxesSection({
   onReload,
   embedded = false,
 }: SettingsMyMailboxesSectionProps) {
-  const { directory, refresh: refreshContactDirectory } = useContactDirectory()
+  const { directory } = useContactDirectory()
   const addr = myAddress.trim()
   const show = /^0x[a-fA-F0-9]{64}$/i.test(addr)
 
@@ -50,9 +49,9 @@ export function SettingsMyMailboxesSection({
         myAddressLine={addr}
         serverMailboxIdHint={apiStatus?.mailboxId}
         contactDirectory={directory}
-        onContactsChanged={() => void refreshContactDirectory()}
         onStatus={onStatus}
         teamMailboxCreateAllowed={canCreateTeamMailbox(apiStatus)}
+        onReload={onReload}
       />
     </>
   )
@@ -65,19 +64,17 @@ export function SettingsMyMailboxesSection({
     <div className="rounded-xl border border-border bg-card">
       <div className="flex flex-wrap items-start justify-between gap-2 border-b border-border p-4">
         <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-violet-300">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
             <Mailbox className="h-5 w-5" aria-hidden />
           </div>
           <div>
             <h4 className="font-semibold text-foreground">Meine Mailboxen</h4>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Postfach = On-Chain-Speicher. Posteingang: Haupt + bekannte Privat/Team. Wohin geschrieben wird,
+              wählst du beim Senden (Composer). Kontakt-Postfach-IDs: Telefonbuch → Erweitert.
+            </p>
           </div>
         </div>
-        <Link
-          href="/handbook?file=MESSENGER-CHAT-HANDBUCH.md#kanäle-speicher-und-mailboxen"
-          className="text-xs text-primary underline hover:no-underline"
-        >
-          Handbuch
-        </Link>
       </div>
       <div className="space-y-4 p-4">
         {panel}

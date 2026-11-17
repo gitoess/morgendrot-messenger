@@ -72,13 +72,16 @@ export { buildStoreEinsatzManifestTransaction } from './einsatz-manifest-txb'
 export type { BuildPurgeTeamPlaintextBroadcastTxInput } from './purge-team-broadcast-txb'
 export {
   fetchMessagingEventInboxRpcRows,
+  fetchMessagingEventInboxViaAddressTxs,
 } from './messaging-events-inbox-rpc'
 export type {
   MessagingEventInboxRpcRow,
   MessagingEventInboxPlainRow,
   MessagingEventInboxEncryptedRow,
   FetchMessagingEventInboxRpcInput,
+  FetchMessagingEventInboxViaAddressTxsInput,
 } from './messaging-events-inbox-rpc'
+export { resolveIotaIndexerRpcUrl } from './resolve-iota-indexer-rpc-url'
 export type { BuildSendPlaintextEventTxInput, BuildStorePlaintextMailboxTxInput } from './mailbox-plain-txb'
 export {
   buildStoreEncryptedMailboxTransaction,

@@ -32,10 +32,13 @@
 |-------|--------|-----------|
 | Direktchat ECDH | Session-Keys | **Keine** — Alltags-Chat |
 | PWMSG | Passphrase | Optional Komfort-Bindung; später Gate |
+| **Zeitkapsel / NFTGATE** | DEK an NFT-Besitz (+ optional Dual-Wallets) | **Gate** — Ciphertext on-chain „ewig“; ohne NFT / nach Burn kein Lesen (ehrliche App / P4) |
 | Enc-ImageNFT | Passphrase in `image_data` | Optional Slot / Paar-Mint |
 | Team-Broadcast | Team-Key | **Keine** |
 | Burn-on-read | Mailbox-Purge | **Keine** (Nachrichten-Objekt, nicht ImageNFT) |
 | Epoch / Schlüssel erneuern | ECDH-Epoch | **Keine** |
+
+**ECDH + Zeitkapsel gleichzeitig?** Nicht als zwei Composer-Schalter. „Ewig verschlüsselt, Lesen nur mit NFT; nach Transfer/Burn wieder unlesbar“ **ist** die Zeitkapsel/NFTGATE — nicht der ECDH-Toggle. ECDH-Keys überleben NFT-Burn. Hybrid (Partner-ECDH **und** NFT-Gate) = eigener Modus, Backlog — nicht „beide Häkchen an“.
 
 ## 4. Paar-Mint (optional, Komfort)
 
@@ -71,13 +74,13 @@ Nutzen: beide haben ein sichtbares Token + denselben Slot-Inhalt — **kein** st
 Marketing „auch unter Zwang unmöglich“ nur mit **remote** Broker (nicht Master auf dem Gerät) und ohne Broker-Admin-Zwang — ehrlich bleiben.  
 **Klartext-OPSEC:** Einmal entschlüsselt → kopierbar/Screenshot — Gate schützt **Zugriff**, nicht Nachnutzung.
 
-### 6a. Dual-Gate: festgelegte Wallet + NFT (Option)
+### 6a. Dual-Gate: festgelegte Wallet(s) + NFT (Option)
 
-**Wunsch:** Enc nur lesbar wenn (1) Signer = festgelegte Adresse **und** (2) NFT-Leserecht (Owner oder Zeitkapsel-Borrower).
+**Wunsch:** Enc nur lesbar wenn (1) Signer ∈ erlaubte Adressen **und** (2) NFT-Leserecht (Owner oder Zeitkapsel-Borrower).
 
 | Variante | Stärke | Ist |
 |----------|--------|-----|
-| **App-Dual (P4a-dual)** | Beide Checks in der App; Capsule-HKDF an nft+wallet gebunden (Meta nicht umetikettierbar) | **Ist** |
+| **App-Dual (P4a-dual)** | Beide Checks in der App; Capsule-HKDF an nft+wallet(s) gebunden (Meta nicht umetikettierbar). **Whitelist mehrerer 0x** im Composer (2026-11-16). | **Ist** |
 | **Pubkey-Dual (P4a2)** | DEK via ECDH an Empfänger-Pubkey (+ nft/wallet-Bindung); Wire allein unzureichend | **Ist** |
 | **Seal (P4b)** | Chain-Policy `seal_approve*` + Key-Broker (PoC, nicht Mysten-DSM) | **Ist** |
 

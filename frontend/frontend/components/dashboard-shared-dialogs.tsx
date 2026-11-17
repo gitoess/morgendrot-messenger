@@ -142,8 +142,8 @@ export function DashboardSharedDialogs(p: {
             <DialogHeader className="space-y-1 border-b border-border/60 px-5 pb-4 pt-5 text-left">
               <DialogTitle>Session-Signer laden</DialogTitle>
               <DialogDescription>
-                Der Tresor ist bereits entsperrt. Mit dem Vault-Passwort wird der Session-Signer für Mainnet-Direkt-Send
-                in diesen Browser geladen.
+                Der Tresor ist schon offen. Noch einmal Vault-Passwort: lädt den Signer in diesen Browser (RAM) für
+                Direct-Send, On-Chain/NFT und Zeitkapsel — Testnet wie Mainnet. Nach Reload oft nötig.
               </DialogDescription>
             </DialogHeader>
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4">

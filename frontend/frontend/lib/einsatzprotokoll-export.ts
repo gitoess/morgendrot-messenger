@@ -8,7 +8,17 @@
 
 import { strToU8, zipSync } from 'fflate'
 import type { Message } from '@/frontend/lib/types'
-import { normalizeMessengerWireContent } from '@/frontend/lib/compact-image-wire'
+import {
+  normalizeMessengerWireContent,
+  parseCompactImageMessage,
+  parseFileTxtMessage,
+  parseMorgAudioV1Message,
+} from '@/frontend/lib/compact-image-wire'
+import {
+  parseCompactImageBlob,
+  reconstructCompactImageToDataUrlWithMeta,
+  tryExtractTruncatedCompactLumaWebp,
+} from '@/frontend/lib/compact-image-canvas'
 import { encryptEinsatzprotokollZipBytes, downloadEinsatzprotokollEncryptedJson } from '@/frontend/lib/einsatzbericht-crypto'
 
 export const EINSATZPROTOKOLL_SCHEMA = 'morgendrot.einsatzprotokoll.v1' as const
@@ -169,7 +179,22 @@ ${rows}
 `
 }
 
-type ExtractedMedia = { path: string; bytes: Uint8Array }
+type ExtractedMedia = { path: string; bytes: Uint8Array; kind: MorgMediaKind }
+
+/** Auswahl für „nur Medien“-Export. */
+export type MorgMediaKind = 'audio' | 'photo' | 'image' | 'file' | 'text' | 'slide'
+
+export type MorgMediaKindFilter = Partial<Record<MorgMediaKind, boolean>>
+
+export function morgMediaKindForTag(tag: string): MorgMediaKind {
+  if (tag === 'MORG_AUDIO_V1') return 'audio'
+  /** Funk-Luma/Chroma und Online-Compact → eine Kategorie „Bilder“. */
+  if (tag === 'MORG_LUMA_V1' || tag === 'MORG_CHROMA_V1' || tag === 'MORG_COMPACT_IMG_V1') return 'image'
+  if (tag === 'MORG_FILE_TXT_V1') return 'file'
+  if (tag === 'MORG_TXT_V1') return 'text'
+  if (tag.startsWith('MORG_SLIDE')) return 'slide'
+  return 'file'
+}
 
 function b64ToBytes(b64: string): Uint8Array {
   const bin = atob(b64.replace(/\s/g, ''))
@@ -178,23 +203,160 @@ function b64ToBytes(b64: string): Uint8Array {
   return out
 }
 
-function extForMorgTag(tag: string): string {
-  if (tag === 'MORG_AUDIO_V1') return 'opus'
-  if (tag === 'MORG_COMPACT_IMG_V1') return 'compact.bin'
-  if (tag === 'MORG_LUMA_V1' || tag === 'MORG_CHROMA_V1') return 'jpg'
-  if (tag === 'MORG_TXT_V1') return 'txt'
-  if (tag === 'MORG_FILE_TXT_V1') return 'file.bin'
-  if (tag.startsWith('MORG_SLIDE')) return 'slide.part'
+/** Magic-Bytes → nutzbare Endung (kein .bin für JPEG/PNG/WebP/Ogg). */
+export function sniffMediaExt(bytes: Uint8Array): string {
+  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'jpg'
+  if (
+    bytes.length >= 8 &&
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  ) {
+    return 'png'
+  }
+  if (
+    bytes.length >= 12 &&
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return 'webp'
+  }
+  if (bytes.length >= 4 && bytes[0] === 0x4f && bytes[1] === 0x67 && bytes[2] === 0x67 && bytes[3] === 0x53) {
+    return 'ogg'
+  }
   return 'bin'
 }
 
-export function extractMorgMediaFromMessages(messages: Message[]): ExtractedMedia[] {
+function safeZipStem(name: string, max = 64): string {
+  const base = String(name || 'datei')
+    .replace(/[/\\?%*:|"<>]+/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/^\.+/, '')
+    .trim()
+  const n = base || 'datei'
+  return n.length > max ? n.slice(0, max) : n
+}
+
+function kindAllowed(kind: MorgMediaKind, filter?: MorgMediaKindFilter | null): boolean {
+  if (!filter) return true
+  if (filter[kind] === true) return true
+  /** Abwärts: altes „photo“-Häkchen gilt für Bilder. */
+  if (kind === 'image' && filter.photo === true) return true
+  return false
+}
+
+async function dataUrlToBytes(dataUrl: string): Promise<Uint8Array> {
+  const res = await fetch(dataUrl)
+  return new Uint8Array(await res.arrayBuffer())
+}
+
+/** Compact-Wire → PNG (Anzeigeformat); Fallback Luma-WebP / Rohbytes. */
+async function compactBlobToExportFile(
+  blobBase64: string
+): Promise<{ bytes: Uint8Array; ext: string }> {
+  try {
+    const recon = await reconstructCompactImageToDataUrlWithMeta(blobBase64)
+    if (recon.dataUrl) {
+      const bytes = await dataUrlToBytes(recon.dataUrl)
+      const sniffed = sniffMediaExt(bytes)
+      return { bytes, ext: sniffed === 'bin' ? 'png' : sniffed }
+    }
+  } catch {
+    /* Fallback unten */
+  }
+  const raw = b64ToBytes(blobBase64)
+  try {
+    const parsed = parseCompactImageBlob(raw)
+    if (parsed.luma.length > 0) {
+      return { bytes: parsed.luma, ext: sniffMediaExt(parsed.luma) === 'bin' ? 'webp' : sniffMediaExt(parsed.luma) }
+    }
+  } catch {
+    /* ignore */
+  }
+  const trunc = tryExtractTruncatedCompactLumaWebp(raw)
+  if (trunc && trunc.length > 0) {
+    return { bytes: trunc, ext: sniffMediaExt(trunc) === 'bin' ? 'webp' : sniffMediaExt(trunc) }
+  }
+  return { bytes: raw, ext: sniffMediaExt(raw) }
+}
+
+/**
+ * Medien aus Wire-Nachrichten — nutzbare Dateien (png/jpg/webp/ogg/txt), keine .bin-Container.
+ */
+export async function extractMorgMediaFromMessages(
+  messages: Message[],
+  opts?: { kinds?: MorgMediaKindFilter | null }
+): Promise<ExtractedMedia[]> {
   const out: ExtractedMedia[] = []
   const chronological = [...messages].sort((a, b) => a.timestamp - b.timestamp)
   let mediaIdx = 0
+  const usedNames = new Set<string>()
+
+  const pushUnique = (path: string, bytes: Uint8Array, kind: MorgMediaKind) => {
+    let p = path
+    if (usedNames.has(p)) {
+      const dot = p.lastIndexOf('.')
+      const stem = dot > 0 ? p.slice(0, dot) : p
+      const ext = dot > 0 ? p.slice(dot) : ''
+      p = `${stem}-${mediaIdx}${ext}`
+    }
+    usedNames.add(p)
+    out.push({ path: p, bytes, kind })
+  }
+
   for (let mi = 0; mi < chronological.length; mi++) {
     const m = chronological[mi]!
     const raw = normalizeMessengerWireContent(m.content ?? '')
+    if (!raw.includes('[[MORG_')) continue
+    const msgNo = mi + 1
+    let handledCompact = false
+    let handledAudio = false
+    let handledFileTxt = false
+
+    if (kindAllowed('image', opts?.kinds)) {
+      const img = parseCompactImageMessage(raw)
+      if (img?.blobBase64) {
+        try {
+          const file = await compactBlobToExportFile(img.blobBase64)
+          pushUnique(`medien/msg-${msgNo}-bild-${mediaIdx++}.${file.ext}`, file.bytes, 'image')
+          handledCompact = true
+        } catch {
+          /* Tag-Scan unten */
+        }
+      }
+    }
+
+    if (kindAllowed('audio', opts?.kinds)) {
+      const audio = parseMorgAudioV1Message(raw)
+      if (audio?.blobBase64) {
+        try {
+          const bytes = b64ToBytes(audio.blobBase64)
+          const ext = sniffMediaExt(bytes) === 'ogg' ? 'ogg' : 'opus'
+          pushUnique(`medien/msg-${msgNo}-audio-${mediaIdx++}.${ext}`, bytes, 'audio')
+          handledAudio = true
+        } catch {
+          /* Tag-Scan */
+        }
+      }
+    }
+
+    if (kindAllowed('file', opts?.kinds)) {
+      const fileTxt = parseFileTxtMessage(raw)
+      if (fileTxt) {
+        const name = safeZipStem(fileTxt.fileName.endsWith('.txt') ? fileTxt.fileName : `${fileTxt.fileName}.txt`)
+        pushUnique(`medien/msg-${msgNo}-${name}`, strToU8(fileTxt.text), 'file')
+        handledFileTxt = true
+        mediaIdx++
+      }
+    }
+
     let i = 0
     while (true) {
       const a = raw.indexOf('[[MORG_', i)
@@ -207,20 +369,56 @@ export function extractMorgMediaFromMessages(messages: Message[]): ExtractedMedi
       const payload = raw.slice(colon + 1, end).replace(/\s/g, '')
       i = end + 2
       if (!payload.length) continue
-      const ext = extForMorgTag(tag)
+      const kind = morgMediaKindForTag(tag)
+      if (!kindAllowed(kind, opts?.kinds)) continue
+      if (tag === 'MORG_COMPACT_IMG_V1' && handledCompact) continue
+      if (tag === 'MORG_AUDIO_V1' && handledAudio) continue
+      if (tag === 'MORG_FILE_TXT_V1' && handledFileTxt) continue
+
       try {
         if (tag === 'MORG_TXT_V1') {
           const txt = new TextDecoder().decode(b64ToBytes(payload))
-          out.push({
-            path: `medien/msg-${mi + 1}-txt-${mediaIdx++}.txt`,
-            bytes: strToU8(txt),
-          })
-        } else {
-          out.push({
-            path: `medien/msg-${mi + 1}-${tag.replace(/^MORG_/, '').toLowerCase()}-${mediaIdx++}.${ext}`,
-            bytes: b64ToBytes(payload),
-          })
+          pushUnique(`medien/msg-${msgNo}-txt-${mediaIdx++}.txt`, strToU8(txt), kind)
+          continue
         }
+        if (tag === 'MORG_FILE_TXT_V1') {
+          continue
+        }
+        if (tag === 'MORG_COMPACT_IMG_V1') {
+          const file = await compactBlobToExportFile(payload)
+          pushUnique(`medien/msg-${msgNo}-bild-${mediaIdx++}.${file.ext}`, file.bytes, kind)
+          continue
+        }
+        if (tag === 'MORG_AUDIO_V1') {
+          const bytes = b64ToBytes(payload)
+          const ext = sniffMediaExt(bytes) === 'ogg' ? 'ogg' : 'opus'
+          pushUnique(`medien/msg-${msgNo}-audio-${mediaIdx++}.${ext}`, bytes, kind)
+          continue
+        }
+        if (tag === 'MORG_LUMA_V1' || tag === 'MORG_CHROMA_V1') {
+          const bytes = b64ToBytes(payload)
+          const ext = sniffMediaExt(bytes) === 'bin' ? 'jpg' : sniffMediaExt(bytes)
+          const layer = tag === 'MORG_LUMA_V1' ? 'luma' : 'chroma'
+          pushUnique(`medien/msg-${msgNo}-${layer}-${mediaIdx++}.${ext}`, bytes, kind)
+          continue
+        }
+        if (tag.startsWith('MORG_SLIDE')) {
+          const bytes = b64ToBytes(payload)
+          const ext = sniffMediaExt(bytes)
+          pushUnique(
+            `medien/msg-${msgNo}-slide-${mediaIdx++}.${ext === 'bin' ? 'part' : ext}`,
+            bytes,
+            kind
+          )
+          continue
+        }
+        const bytes = b64ToBytes(payload)
+        const ext = sniffMediaExt(bytes)
+        pushUnique(
+          `medien/msg-${msgNo}-${tag.replace(/^MORG_/, '').toLowerCase()}-${mediaIdx++}.${ext}`,
+          bytes,
+          kind
+        )
       } catch {
         /* ungültig */
       }
@@ -229,11 +427,165 @@ export function extractMorgMediaFromMessages(messages: Message[]): ExtractedMedi
   return out
 }
 
-export function buildEinsatzprotokollZipBytes(
+function mimeForExt(ext: string): string {
+  switch (ext.toLowerCase()) {
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg'
+    case 'png':
+      return 'image/png'
+    case 'webp':
+      return 'image/webp'
+    case 'ogg':
+    case 'opus':
+      return 'audio/ogg'
+    case 'txt':
+      return 'text/plain;charset=utf-8'
+    default:
+      return 'application/octet-stream'
+  }
+}
+
+function downloadBytesAsFile(bytes: Uint8Array, filename: string, mime: string) {
+  const blob = new Blob([bytes], { type: mime })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+export type MorgMediaListItem = {
+  id: string
+  kind: MorgMediaKind
+  label: string
+  filename: string
+  bytes: Uint8Array
+  sizeLabel: string
+}
+
+/** Medienliste für Auswahl-UI (Bilder / Audio / Dateien / …). */
+export async function listMorgMediaForExport(
+  messages: Message[],
+  opts?: { kinds?: MorgMediaKindFilter | null }
+): Promise<MorgMediaListItem[]> {
+  const media = await extractMorgMediaFromMessages(messages, opts)
+  return media.map((m, i) => {
+    const filename = m.path.replace(/^medien\//, '')
+    const ext = filename.includes('.') ? filename.slice(filename.lastIndexOf('.') + 1) : 'bin'
+    const kindLabel =
+      m.kind === 'image' || m.kind === 'photo'
+        ? 'Bild'
+        : m.kind === 'audio'
+          ? 'Audio'
+          : m.kind === 'file'
+            ? 'Datei'
+            : m.kind === 'text'
+              ? 'Text'
+              : m.kind === 'slide'
+                ? 'Slide'
+                : m.kind
+    return {
+      id: `${m.kind}-${i}-${filename}`,
+      kind: m.kind,
+      label: `${kindLabel}: ${filename}`,
+      filename,
+      bytes: m.bytes,
+      sizeLabel: `${Math.max(1, Math.round(m.bytes.length / 1024))} KB`,
+    }
+  })
+}
+
+/** Bereits gelistete Medien speichern (Auswahl per id). */
+export async function downloadMorgMediaListItems(
+  items: MorgMediaListItem[],
+  ids?: string[] | null
+): Promise<{ count: number }> {
+  let list = items
+  if (ids?.length) {
+    const set = new Set(ids)
+    list = items.filter((x) => set.has(x.id))
+  }
+  if (list.length === 0) return { count: 0 }
+  for (let i = 0; i < list.length; i++) {
+    const it = list[i]!
+    const ext = it.filename.includes('.') ? it.filename.slice(it.filename.lastIndexOf('.') + 1) : 'bin'
+    downloadBytesAsFile(it.bytes, it.filename, mimeForExt(ext))
+    if (i < list.length - 1) {
+      await new Promise((r) => setTimeout(r, 280))
+    }
+  }
+  return { count: list.length }
+}
+
+/** ZIP aus bereits gelisteten Medien (Auswahl per id). */
+export async function downloadMorgMediaZipFromItems(
+  items: MorgMediaListItem[],
+  ids?: string[] | null
+): Promise<{ count: number }> {
+  let list = items
+  if (ids?.length) {
+    const set = new Set(ids)
+    list = items.filter((x) => set.has(x.id))
+  }
+  if (list.length === 0) return { count: 0 }
+  const files: Record<string, Uint8Array> = {}
+  for (const m of list) files[`medien/${m.filename}`] = m.bytes
+  const zipped = zipSync(files, { level: 6 })
+  const blob = new Blob([zipped], { type: 'application/zip' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `morgendrot-medien-${Date.now()}.zip`
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+  return { count: list.length }
+}
+
+/** Einzeldateien nacheinander speichern (kein ZIP). */
+export async function downloadMorgMediaFilesDirect(
+  messages: Message[],
+  opts?: { kinds?: MorgMediaKindFilter | null; ids?: string[] | null }
+): Promise<{ count: number }> {
+  const items = await listMorgMediaForExport(messages, opts)
+  return downloadMorgMediaListItems(items, opts?.ids)
+}
+
+/** Nur Medien-Ordner als ZIP (optionaler Massen-Download). */
+export async function downloadMorgMediaZipOnly(
+  messages: Message[],
+  opts?: { kinds?: MorgMediaKindFilter | null }
+): Promise<{ count: number }> {
+  const media = await extractMorgMediaFromMessages(messages, opts)
+  if (media.length === 0) return { count: 0 }
+  const files: Record<string, Uint8Array> = {}
+  for (const m of media) files[m.path] = m.bytes
+  const zipped = zipSync(files, { level: 6 })
+  const blob = new Blob([zipped], { type: 'application/zip' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `morgendrot-medien-${Date.now()}.zip`
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+  return { count: media.length }
+}
+
+export async function buildEinsatzprotokollZipBytes(
   messages: Message[],
   meta: { exportedByAddress?: string },
-  opts?: { messageIds?: string[] | null }
-): Uint8Array {
+  opts?: { messageIds?: string[] | null; kinds?: MorgMediaKindFilter | null }
+): Promise<Uint8Array> {
   const payload = buildEinsatzprotokollPayload(messages, meta, opts)
   const html = buildEinsatzprotokollHtml(payload)
   const jsonStr = JSON.stringify(payload, null, 2)
@@ -243,19 +595,19 @@ export function buildEinsatzprotokollZipBytes(
   }
   const selected =
     opts?.messageIds?.length ? messages.filter((x) => opts.messageIds!.includes(x.id)) : messages
-  for (const m of extractMorgMediaFromMessages(selected)) {
+  for (const m of await extractMorgMediaFromMessages(selected, { kinds: opts?.kinds ?? null })) {
     files[m.path] = m.bytes
   }
   return zipSync(files, { level: 6 })
 }
 
 /** Direktes ZIP (protokoll.json, protokoll.html, medien/) — nur in vertrauenswürdiger Umgebung. */
-export function downloadEinsatzprotokollZipPlain(
+export async function downloadEinsatzprotokollZipPlain(
   messages: Message[],
   meta: { exportedByAddress?: string },
-  opts?: { messageIds?: string[] | null }
-): void {
-  const zipped = buildEinsatzprotokollZipBytes(messages, meta, opts)
+  opts?: { messageIds?: string[] | null; kinds?: MorgMediaKindFilter | null }
+): Promise<void> {
+  const zipped = await buildEinsatzprotokollZipBytes(messages, meta, opts)
   const blob = new Blob([zipped], { type: 'application/zip' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -273,9 +625,9 @@ export async function downloadEinsatzprotokollZipPasswordProtected(
   messages: Message[],
   meta: { exportedByAddress?: string },
   password: string,
-  opts?: { messageIds?: string[] | null }
+  opts?: { messageIds?: string[] | null; kinds?: MorgMediaKindFilter | null }
 ): Promise<void> {
-  const zipped = buildEinsatzprotokollZipBytes(messages, meta, opts)
+  const zipped = await buildEinsatzprotokollZipBytes(messages, meta, opts)
   const enc = await encryptEinsatzprotokollZipBytes(zipped, password)
   downloadEinsatzprotokollEncryptedJson(enc)
 }

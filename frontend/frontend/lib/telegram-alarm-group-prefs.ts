@@ -183,6 +183,22 @@ export function saveTelegramAlarmGroupMembershipChatId(
   return { ok: true }
 }
 
+/** Chat-ID lokal entfernen (Mitgliedschaft/Invite bleibt). Neue ID = erneut speichern. */
+export function clearTelegramAlarmGroupMembershipChatId(): { ok: true } | { ok: false; error: string } {
+  if (typeof window === 'undefined') return { ok: false, error: 'Nur im Browser.' }
+  const m = readTelegramAlarmGroupMembership()
+  if (!m) return { ok: false, error: 'Keine Alarmgruppen-Mitgliedschaft.' }
+  try {
+    const next = { ...m }
+    delete next.groupChatId
+    window.localStorage.setItem(LS_MEMBERSHIP, JSON.stringify(next))
+  } catch {
+    return { ok: false, error: 'Speichern fehlgeschlagen.' }
+  }
+  notifyTelegramJoinChanged()
+  return { ok: true }
+}
+
 export function confirmTelegramAlarmGroupJoined(extra?: {
   label?: string
   inviteLink?: string

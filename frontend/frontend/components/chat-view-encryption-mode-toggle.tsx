@@ -25,12 +25,10 @@ export function ChatViewEncryptionModeToggle(p: {
   className?: string
 }) {
   const [plainWarnOpen, setPlainWarnOpen] = useState(false)
-  const showToggle = p.forcedTransport === 'internet'
-
-  if (!showToggle) return null
-
   const plainLabel = p.compact ? 'Klartext' : 'Unverschlüsselt'
   const encShort = p.compact ? 'Verschl.' : 'Verschlüsselt'
+
+  if (p.forcedTransport !== 'internet') return null
 
   return (
     <>
@@ -62,7 +60,7 @@ export function ChatViewEncryptionModeToggle(p: {
           p.className
         )}
         role="group"
-        aria-label="Verschlüsselung"
+        aria-label="Verschlüsselung beim Senden"
       >
         <button
           type="button"

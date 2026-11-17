@@ -23,7 +23,6 @@ export async function fetchMailboxInboxPage(opts: {
   const direct = await tryFetchDirectMailboxInboxViaIota({
     limit: opts.limit,
     offset: opts.offset,
-    packageIdOverride: opts.packageId,
   })
   if (direct.ok) return { ok: true, rows: direct.rows, source: 'rpc' }
 

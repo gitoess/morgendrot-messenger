@@ -13,6 +13,7 @@ import { pickInboxHasMore } from '@/frontend/lib/inbox-pick-raw-messages'
 import { shouldSkipMessengerApiRelayFallback } from '@/frontend/lib/messenger-standalone-relay'
 import { mergeAllMessages } from '@/frontend/lib/message-dedup'
 import { readActiveSendMailboxObjectId } from '@/frontend/lib/my-mailbox-active'
+import { readMyPrivateMailboxes } from '@/frontend/lib/my-private-mailbox-store'
 import type { Message } from '@/frontend/lib/types'
 
 export type FetchInboxUnionResult = {
@@ -62,6 +63,8 @@ export async function fetchInboxFromAllOwnedMailboxes(p: {
   }
   if (p.includePrivateMailboxes !== false) {
     pushId(activeSendMailboxIdForInbox())
+    /** Alle lokalen privaten Mailboxen — nicht nur die aktive (sonst fehlen ältere Threads). */
+    for (const m of readMyPrivateMailboxes()) pushId(m.objectId)
   }
   for (const raw of p.alsoMailboxIds ?? []) pushId(raw)
   /** Erster Fetch ohne mailboxObjectId → Backend-Union (alle MsgKeys + Events). */
@@ -116,7 +119,8 @@ export async function fetchInboxFromAllOwnedMailboxes(p: {
         if (stampMb) mapped = stampChainMailboxObjectId(mapped, stampMb)
         if (isServer) {
           serverStride = mapped.length
-          serverHasMore = resHasMore
+          /** API-Flag oder volle Shared-Seite (Hook stoppt per Novel-Count, nicht per Ghost-Klick). */
+          serverHasMore = resHasMore || raw.length >= p.limit
         }
         mappedChunks.push(...mapped)
         return true
@@ -130,10 +134,10 @@ export async function fetchInboxFromAllOwnedMailboxes(p: {
       await fetchApiChunk()
     }
 
+    /** Ohne packageIdOverride — Snapshot-Package; Indexer ergänzt Event-Historie. */
     const direct = await tryFetchDirectMailboxInboxViaIota({
       limit: p.limit,
       offset: isServer ? p.offset : 0,
-      packageIdOverride: p.packageId,
       mailboxObjectId: isServer ? undefined : mailboxObjectId,
     })
     if (direct.ok) {
@@ -142,9 +146,12 @@ export async function fetchInboxFromAllOwnedMailboxes(p: {
       let mapped = mapInboxApiRowsToMessages(direct.rows as InboxApiRow[])
       const stampMb = mailboxObjectId || p.serverMailboxId
       if (stampMb) mapped = stampChainMailboxObjectId(mapped, stampMb)
-      if (isServer && skipApiRelay) {
-        serverStride = mapped.length
-        serverHasMore = mapped.length >= p.limit
+      if (isServer) {
+        /** Direkt oft tiefer als kurzes API-hasMore:false — Stride/hasMore nicht nur an API hängen. */
+        if (skipApiRelay || mapped.length > serverStride) {
+          serverStride = Math.max(serverStride, mapped.length)
+        }
+        if (mapped.length >= p.limit || direct.hasMore === true) serverHasMore = true
       }
       mappedChunks.push(...mapped)
       if (!isServer) continue
@@ -170,13 +177,14 @@ export async function fetchInboxFromAllOwnedMailboxes(p: {
     }
   }
 
-  const messages = mergeAllMessages(mappedChunks)
+  const merged = mergeAllMessages(mappedChunks)
 
   return {
     ok: true,
-    messages,
-    stride: serverStride,
-    hasMore: serverHasMore || messages.length >= p.limit,
+    messages: merged,
+    /** Shared-Stride; hasMore auch wenn gemergte Seite voll (API kurz, Direkt voll). */
+    stride: serverStride > 0 ? serverStride : Math.min(merged.length, p.limit),
+    hasMore: serverHasMore || merged.length >= p.limit,
     loadedViaRpc,
   }
 }

@@ -2,14 +2,12 @@
 
 import { Users } from 'lucide-react'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
-import { HandoffProvisionedHelpersPanel } from '@/frontend/components/handoff-provisioned-helpers-panel'
 import { EinsatzleitungHelferOverviewPanel } from '@/frontend/components/einsatzleitung-helfer-overview-panel'
 import { EinsatzleitungTeamOverviewPanel } from '@/frontend/components/einsatzleitung-team-overview-panel'
 
 /**
- * „Mein Team" — Übersicht direkt in der Einsatzleitung:
- * provisionierte Helfer (Registry), Roster/Kontakte, Team-Postfächer.
- * Erstellung neuer Helfer bleibt separat unter „Helfer einrichten".
+ * „Mein Team“ — Team-Mitglieder + Team-Mailboxen.
+ * Provisionierte-Helfer-Registry entfernt (überflüssig neben „Team einrichten“ / Telefonbuch).
  */
 export function EinsatzleitungMeinTeamPanel(p: {
   apiStatus?: ApiStatus | null
@@ -20,11 +18,9 @@ export function EinsatzleitungMeinTeamPanel(p: {
   return (
     <section id="mein-team" className="scroll-mt-4 space-y-4 rounded-xl border border-border bg-card p-4">
       <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
-        <Users className="h-4 w-4 text-emerald-500" aria-hidden />
+        <Users className="h-4 w-4 text-foreground" aria-hidden />
         Mein Team
       </p>
-
-      <HandoffProvisionedHelpersPanel />
 
       <EinsatzleitungHelferOverviewPanel
         apiStatus={p.apiStatus ?? null}

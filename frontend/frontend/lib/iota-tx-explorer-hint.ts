@@ -5,6 +5,8 @@
  * Override: **`NEXT_PUBLIC_IOTA_TX_EXPLORER_BASE`** (ohne trailing slash), z. B. `https://explorer.iota.org/txblock`.
  */
 
+import { readNetworkProfilesState } from '@/frontend/lib/einsatz-network-profiles'
+
 function explorerNetworkQuery(): string {
   const net = (
     (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_IOTA_EXPLORER_NETWORK) ||
@@ -15,13 +17,20 @@ function explorerNetworkQuery(): string {
   if (net === 'testnet' || net === 'devnet' || net === 'mainnet') {
     return `?network=${net}`
   }
+  try {
+    const active = readNetworkProfilesState().active
+    if (active === 'testnet') return '?network=testnet'
+    if (active === 'mainnet') return '?network=mainnet'
+  } catch {
+    /* ignore */
+  }
   const rpc = (
     (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_IOTA_RPC_URL) ||
     ''
   ).toLowerCase()
   if (rpc.includes('testnet')) return '?network=testnet'
   if (rpc.includes('devnet')) return '?network=devnet'
-  return ''
+  return '?network=mainnet'
 }
 
 export function explorerTxUrlFromDigest(digest: string): string {

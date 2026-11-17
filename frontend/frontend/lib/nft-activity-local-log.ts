@@ -132,6 +132,15 @@ export function noteNftNoLongerOwned(objectId: string): void {
   noteNftNoLongerOwnedCore(objectId)
 }
 
+/** Nach Reclaim/Return: Snapshot setzen, damit Galerie-Sync nicht nochmal „empfangen“ loggt. */
+export function noteNftNowOwned(objectId: string): void {
+  const oid = objectId.trim().toLowerCase()
+  if (!/^0x[a-f0-9]{64}$/.test(oid)) return
+  const prev = readNftOwnedSnapshot()
+  if (prev.includes(oid)) return
+  writeNftOwnedSnapshot([...prev, oid])
+}
+
 /**
  * Nach Galerie-Laden: neue Object-IDs als „empfangen“ loggen (ohne Digest).
  * Erster Snapshot erzeugt keine received-Einträge (Baseline).

@@ -19,6 +19,7 @@ import {
   createMessengerGroupId,
   deleteMessengerGroup,
   getActiveMessengerGroup,
+  analyzeGroupMemberInput,
   parseGroupMemberInput,
   formatGroupMembersDisplay,
   readActiveGroupId,
@@ -53,6 +54,8 @@ export type ChatViewGroupPanelProps = {
   /** Handoff-Runtime: neue Gruppe anlegen / erste Speicherung. */
   groupCreateAllowed?: boolean
   onGroupsChanged?: () => void
+  /** Nach Speichern/Kanal: Gruppe im Chat aktivieren (Kanal + Posteingang-Filter). */
+  onActivateGroup?: (groupId: string) => void
   encrypted?: boolean
   onEncryptedChange?: (encrypted: boolean) => void
   embedded?: boolean
@@ -67,6 +70,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     teamMailboxCreateAllowed = false,
     groupCreateAllowed = true,
     onGroupsChanged,
+    onActivateGroup,
     encrypted = false,
     onEncryptedChange,
     embedded = false,
@@ -120,10 +124,19 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     reload()
   }, [reload])
 
-  const memberAddresses = useMemo(
-    () => parseGroupMemberInput(membersText, contactDirectory),
+  const memberParse = useMemo(
+    () => analyzeGroupMemberInput(membersText, contactDirectory),
     [membersText, contactDirectory]
   )
+  const memberAddresses = memberParse.addresses
+  const unresolvedMembers = memberParse.unresolved
+  const membersMatchSaved = useMemo(() => {
+    if (!activeId) return false
+    const saved = getActiveMessengerGroup()?.memberAddresses ?? []
+    if (saved.length !== memberAddresses.length) return false
+    const set = new Set(saved.map((a) => a.toLowerCase()))
+    return memberAddresses.every((a) => set.has(a.toLowerCase()))
+  }, [activeId, memberAddresses, groups])
 
   const persistGroupDefinition = useCallback(
     (opts?: { teamMbOverride?: string; successMsg?: string }): boolean => {
@@ -156,6 +169,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
       writeActiveGroupId(id)
       reload()
       onGroupsChanged?.()
+      onActivateGroup?.(id)
       if (opts?.successMsg) setMsg(opts.successMsg)
       return true
     },
@@ -164,6 +178,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
       memberAddresses,
       name,
       onGroupsChanged,
+      onActivateGroup,
       reload,
       secondaryChannelIndex,
       secondaryChannelName,
@@ -173,10 +188,18 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
   )
 
   const saveGroup = useCallback(() => {
-    if (!persistGroupDefinition({ successMsg: 'Gruppe gespeichert.' })) {
-      setMsg('Mindestens ein Mitglied aus dem Telefonbuch oder eine 0x-Adresse eintragen.')
+    if (
+      !persistGroupDefinition({
+        successMsg: `Gruppe gespeichert (${memberAddresses.length} Mitglied${memberAddresses.length === 1 ? '' : 'er'}).`,
+      })
+    ) {
+      setMsg(
+        unresolvedMembers.length > 0
+          ? `Nicht erkannt: ${unresolvedMembers.slice(0, 3).join(', ')}${unresolvedMembers.length > 3 ? '…' : ''} — Telefonbuch-Name oder 0x-Adresse nötig.`
+          : 'Mindestens ein Mitglied aus dem Telefonbuch oder eine 0x-Adresse eintragen.'
+      )
     }
-  }, [persistGroupDefinition])
+  }, [persistGroupDefinition, memberAddresses.length, unresolvedMembers])
 
   const selectGroup = useCallback(
     (id: string) => {
@@ -318,6 +341,10 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
   const teamKeyReady = mbOk && hasTeamBroadcastKey(teamMailboxObjectId)
   void teamKeyTick
   const teamKeyEpoch = teamKeyReady ? readTeamBroadcastKeyEpoch(teamMailboxObjectId) : null
+  /** G4: Enc + Team-Postfach = 1× Broadcast mit Team-Schlüssel — kein Handshake je Person. */
+  const teamBroadcastEncPath = mbOk && active?.useTeamBroadcast !== false
+  const showPairwiseHandshake =
+    Boolean(encrypted && handshake && forcedTransport === 'internet' && active?.useTeamBroadcast === false)
 
   const connectedSet = useMemo(
     () => new Set((handshake?.connectedAddresses ?? []).map((a) => a.trim().toLowerCase()).filter(Boolean)),
@@ -369,7 +396,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               encrypted && 'ring-1 ring-emerald-500/30'
             )}
             role="group"
-            aria-label="Verschlüsselung"
+            aria-label="Gruppen-Inhaltsschutz (beides = 1× Team-Postfach-Broadcast)"
           >
             <button
               type="button"
@@ -377,7 +404,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               title={
                 forcedTransport === 'mesh'
                   ? 'Verschlüsselung nur über Sendepfad online. Funk = Klartext.'
-                  : undefined
+                  : '1× Enc-Broadcast an Team-Postfach — braucht Gruppen-Geheimnis (Handoff), kein N× ECDH.'
               }
               onClick={() => onEncryptedChange(true)}
               className={cn(
@@ -387,29 +414,29 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               )}
             >
               <Lock className="h-3 w-3" aria-hidden />
-              Pro Mitglied
+              Enc · Team-Schlüssel
             </button>
             <button
               type="button"
+              title="1× Klartext-Broadcast an Team-Postfach — Inhalt öffentlich on-chain."
               onClick={() => {
                 if (encrypted) setPlainWarnOpen(true)
               }}
               className={cn(
                 'inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-medium',
-                !encrypted ? 'bg-amber-500/20 text-amber-400' : 'text-muted-foreground hover:text-foreground'
+                !encrypted ? 'bg-amber-500/20 text-amber-800 dark:text-amber-200' : 'text-muted-foreground hover:text-foreground'
               )}
             >
               <Unlock className="h-3 w-3" aria-hidden />
-              Team-Broadcast
+              Klartext · Broadcast
             </button>
           </div>
         ) : null}
       </div>
 
       <p className="text-xs leading-relaxed text-muted-foreground">
-        Kurz: Mitglieder wählen → speichern → „Kanal einrichten“. Das <strong className="text-foreground">Gruppen-Geheimnis</strong>{' '}
-        ist kein Chat-Passwort (Passphrase-Nachricht), sondern der gemeinsame Schlüssel fürs Team-Postfach — Weitergabe nur
-        per Handoff-ZIP.
+        Mitglieder → speichern → „Kanal einrichten“. Geheimnis = Schlüssel fürs Team-Postfach (Handoff), kein
+        Nachrichten-Passwort.
       </p>
 
       {groups.length > 0 ? (
@@ -460,6 +487,23 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
           placeholder="Namen oder 0x-Adressen — am einfachsten „Aus Telefonbuch…“"
           className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
         />
+        {membersText.trim() ? (
+          <div className="space-y-1 text-[11px] leading-snug">
+            <p className={memberAddresses.length > 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground'}>
+              {memberAddresses.length > 0
+                ? `${memberAddresses.length} Mitglied${memberAddresses.length === 1 ? '' : 'er'} erkannt${
+                    membersMatchSaved ? ' · in Gruppe gespeichert' : ' · Speichern nicht vergessen'
+                  }`
+                : 'Noch kein gültiges Mitglied erkannt.'}
+            </p>
+            {unresolvedMembers.length > 0 ? (
+              <p className="text-amber-700 dark:text-amber-300">
+                Nicht erkannt: {unresolvedMembers.slice(0, 5).join(', ')}
+                {unresolvedMembers.length > 5 ? '…' : ''} — exakter Telefonbuch-Name oder 0x-Adresse.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         {showMeshtasticSecondary ? (
           <>
             <label className="block text-[10px] font-medium text-muted-foreground">
@@ -497,10 +541,11 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
 
       {/* 2 — Team-Kanal */}
       <div className="space-y-2 rounded-lg border border-border bg-background/50 px-3 py-3">
-        <p className="text-xs font-semibold text-foreground">2 · Team-Kanal (Postfach + Geheimnis)</p>
+        <p className="text-xs font-semibold text-foreground">2 · Team-Kanal</p>
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Postfach = gemeinsamer Briefkasten on-chain. Geheimnis = gemeinsamer Schlüssel dafür (nicht die Passphrase
-          einzelner Nachrichten).
+          Team-Postfach = Shared-Object-ID (alle mit derselben ID können Broadcast lesen/schreiben) —{' '}
+          <strong className="text-foreground">kein</strong> WhatsApp-artiger Chain-Gruppenraum. Ohne Postfach: oft nur
+          lokale Gruppe / 1:1. Geheimnis = optional Enc für den Kanal.
         </p>
         <button
           type="button"
@@ -594,6 +639,11 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               spellCheck={false}
               autoComplete="off"
             />
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
+              Normal reicht „Kanal einrichten“ oben. Dieser Button legt <strong className="text-foreground">nur</strong> die
+              Shared-Object-ID an (ohne Gruppen-Geheimnis) — z. B. wenn Boss die ID teilt und Mitglieder das Geheimnis per
+              Handoff bekommen.
+            </p>
             <button
               type="button"
               disabled={teamMbBusy || !teamMailboxCreateAllowed}
@@ -603,7 +653,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               }}
               className="rounded-md border border-border px-2 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
             >
-              {teamMbBusy ? '…' : 'Nur Postfach erstellen'}
+              {teamMbBusy ? '…' : 'Nur Postfach-ID erstellen (ohne Geheimnis)'}
             </button>
             {!teamMailboxCreateAllowed ? (
               <p className="text-[10px] text-amber-800 dark:text-amber-200">
@@ -614,13 +664,21 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
         ) : null}
       </div>
 
-      {/* 3 — Handshake nur bei Pairwise-Enc */}
-      {encrypted && handshake && forcedTransport === 'internet' ? (
+      {encrypted && forcedTransport === 'internet' && teamBroadcastEncPath ? (
+        <p className="text-[11px] leading-relaxed text-muted-foreground">
+          <strong className="text-foreground">Kein Handshake nötig.</strong> Enc · Team-Schlüssel = 1× Broadcast.
+          Nach „Kanal einrichten“ Geheimnis per Handoff an Mitglieder. Toast „Tresor lokal sichern?“ betrifft nur
+          Vault-Keys — die Gruppe bleibt gespeichert, nicht neu anlegen.
+        </p>
+      ) : null}
+
+      {/* 3 — Handshake nur bei explizitem Pairwise-Enc (useTeamBroadcast === false) */}
+      {showPairwiseHandshake ? (
         <div className="space-y-2 rounded-lg border border-border bg-background/50 px-3 py-3">
-          <p className="text-xs font-semibold text-foreground">3 · Handshake (nur „Pro Mitglied“)</p>
+          <p className="text-xs font-semibold text-foreground">3 · Handshake je Person</p>
           <p className="text-[11px] leading-relaxed text-muted-foreground">
-            Adressen kommen aus der Mitgliederliste — nichts nochmal eintippen. Für Team-Broadcast (gemeinsames
-            Postfach) brauchst du diesen Schritt nicht.
+            Nur Sonderfall Pairwise (kein Team-Broadcast). Normal: „Klartext · Broadcast“ oder „Enc · Team-Schlüssel“
+            + Kanal einrichten — ohne Handshake.
           </p>
           {handshakeMembers.length === 0 ? (
             <p className="text-[11px] text-amber-700 dark:text-amber-300">Noch keine 0x-Mitglieder — Telefonbuch nutzen.</p>
@@ -647,15 +705,17 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
                     >
                       {connected ? 'verbunden' : 'offen'}
                     </span>
-                    <button
-                      type="button"
-                      disabled={handshake.sending}
-                      onClick={() => void handshake.onHandshakeForAddress(addr)}
-                      className="shrink-0 rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
-                    >
-                      Handshake
-                    </button>
-                    {handshake.onConnectAcceptForAddress ? (
+                    {handshake ? (
+                      <button
+                        type="button"
+                        disabled={handshake.sending}
+                        onClick={() => void handshake.onHandshakeForAddress(addr)}
+                        className="shrink-0 rounded-md bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
+                      >
+                        Handshake
+                      </button>
+                    ) : null}
+                    {handshake?.onConnectAcceptForAddress ? (
                       <button
                         type="button"
                         disabled={handshake.sending}
@@ -673,6 +733,11 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
         </div>
       ) : null}
 
+      <p className="text-[11px] leading-relaxed text-muted-foreground">
+        <strong className="text-foreground">Speichern</strong> = nur Name/Mitglieder/Postfach-Verknüpfung lokal.
+        <strong className="text-foreground"> Kanal einrichten</strong> speichert mit und legt Postfach/Geheimnis an — für
+        reines Umbenennen oder Klartext-Mitgliederliste reicht Speichern allein.
+      </p>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"

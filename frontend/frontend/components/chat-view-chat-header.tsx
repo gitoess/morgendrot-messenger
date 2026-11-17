@@ -6,10 +6,10 @@
 
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { BookOpen, Lock, Settings, Unlock } from 'lucide-react'
+import { Bell, BellOff, BookOpen, Inbox, Lock, RefreshCw, Settings, StickyNote, Unlock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
-import { isMessengerSessionKeysReady } from '@/frontend/lib/messenger-session-keys-ready'
+import { isBrowserSessionSignerReady } from '@/frontend/lib/messenger-session-keys-ready'
 import {
   isPrivacySoftLocked,
   PRIVACY_SOFT_LOCK_CHANGED_EVENT,
@@ -28,6 +28,7 @@ import { ActiveProfileBadge } from '@/frontend/components/active-profile-badge'
 import { ChatNetworkBadge } from '@/frontend/components/chat-network-badge'
 import { ChatViewSendPathCompact, type ChatViewSendPathCompactProps } from '@/frontend/components/chat-view-send-path-compact'
 import type { OfflineStatusSnapshot } from '@/frontend/hooks/use-offline-status'
+import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
 /** Optional: Tresor-Badge wird klickbar (Sperren / zur Startseite bei gesperrter Sitzung). */
 export type ChatViewVaultBannerActions = {
@@ -48,17 +49,30 @@ export type ChatViewChatHeaderProps = {
   deviceTimeTrustWarn?: boolean
   sendPath?: ChatViewSendPathCompactProps | null
   onOpenSettings?: () => void
+  /** Tresor-Notizen — rechts neben Einstellungen / Vault. */
+  onOpenNotes?: () => void
   vaultBannerActions?: ChatViewVaultBannerActions
   channelMode?: MessengerChatChannel
   onChannelModeChange?: (c: MessengerChatChannel) => void
   /** Kontext aus Sidebar-Auswahl — ersetzt generischen Modus-Titel. */
   conversationTitle?: string | null
   conversationSubtitle?: string | null
+  conversationIcon?: 'lock' | 'inbox'
   afterPulse?: ReactNode
   offlineStatus?: OfflineStatusSnapshot
   pinnwandTabUnreadCount?: number
   /** APK: schlanke Kopfzeile — Sendepfad und Handbuch ausblenden (liegen unten). */
   compactNative?: boolean
+  /**
+   * Unter festem App-Header (Boss): kein zweites Handbuch/Einstellungen/Vault/Netz-Badge.
+   * Notizen bleibt (Chat-Kontext).
+   */
+  suppressAppChrome?: boolean
+  /** Kein Titel/Icon (Sidebar-Layout: Posteingang bündig mit Chats). */
+  hideTitleRow?: boolean
+  /** T53: Eingangs-Ton für diesen Chat stumm (localStorage). */
+  chatMuted?: boolean
+  onToggleChatMute?: () => void
 }
 
 type TresorSessionUi = 'locked' | 'no-keys' | 'ready'
@@ -107,23 +121,23 @@ export function TresorSessionBadge({
         : 'border-emerald-600/55 bg-emerald-100 text-emerald-950 dark:border-emerald-400/50 dark:bg-emerald-950/90 dark:text-emerald-50'
   )
   const passiveTitle = needsVaultPassword
-    ? 'Vault-Sitzung fehlt — tippen, Vault-Passwort eingeben (Merken / Passphrasen).'
+    ? 'Tresor-Sitzung fehlt — tippen, Tresor-Passwort eingeben (Merken / Passphrasen).'
     : ui === 'locked'
       ? softLocked && !sessionLocked
-        ? 'Privacy gesperrt — Passphrasen/Signer aus RAM; Chat lesbar. Tippen zum Entsperren.'
+        ? 'Tresor weich gesperrt — Passphrasen/Signer aus RAM; Chat lesbar. Tippen zum Entsperren.'
         : 'Tresor gesperrt — Entsperr-Dialog öffnen.'
       : ui === 'no-keys'
-        ? 'API kann entsperrt sein — Browser-Signer fehlt. Tippen → Vault-Passwort (lädt Signer in diese Sitzung).'
+        ? 'Tresor ist offen — Browser-Signer fehlt (Reload/RAM). Tippen → Passwort → Signer laden (On-Chain/Zeitkapsel).'
         : 'Schlüssel geladen — Signieren und Mailbox senden möglich.'
   const activeTitle = needsVaultPassword
-    ? 'Vault-Passwort eingeben (Session-Signer + Passphrasen-Vault).'
+    ? 'Tresor-Passwort eingeben (Session-Signer + Browser-Geheimnisse).'
     : ui === 'locked'
       ? softLocked && !sessionLocked
-        ? 'Privacy entsperren (Passwort → Signer + Vault-Sidecars).'
+        ? 'Tresor entsperren (Passwort → Signer + Browser-Geheimnisse).'
         : 'Dialog „Tresor entsperren“ öffnen.'
       : ui === 'no-keys'
-        ? 'Vault-Passwort eingeben — lädt den Signer in den Browser (auch wenn der API-Tresor schon offen ist).'
-        : 'Privacy sperren — Signer/Passphrasen aus dem RAM; Chat bleibt offen (kein Login-Fenster).'
+        ? 'Signer laden — Tresor-Passwort tippen (Tresor kann schon offen sein; Signer sitzt nur im Browser-RAM).'
+        : 'Tresor weich sperren — Signer/Passphrasen aus dem RAM; Chat bleibt offen (kein Login-Fenster).'
 
   const icon =
     ui === 'ready' && !needsVaultPassword ? (
@@ -134,13 +148,13 @@ export function TresorSessionBadge({
   const label = (
     <span className="truncate font-semibold">
       {needsVaultPassword
-        ? 'Vault: Passwort'
+        ? 'Tresor: Passwort'
         : ui === 'locked'
           ? softLocked && !sessionLocked
-            ? 'Privacy: gesperrt'
+            ? 'Tresor: weich'
             : 'Tresor: gesperrt'
           : ui === 'no-keys'
-            ? 'Signer: PW tippen'
+            ? 'Signer laden'
             : 'Tresor: bereit'}
     </span>
   )
@@ -161,9 +175,15 @@ export function TresorSessionBadge({
       disabled={busy}
       title={activeTitle}
       aria-label={
-        ui === 'locked' || ui === 'no-keys' || needsVaultPassword
-          ? 'Vault-Passwort eingeben'
-          : 'Tresor sperren'
+        needsVaultPassword
+          ? 'Tresor-Passwort eingeben'
+          : ui === 'locked'
+            ? 'Tresor-Passwort eingeben'
+            : ui === 'no-keys'
+              ? 'Session-Signer laden'
+              : softLocked && !sessionLocked
+                ? 'Tresor weich sperren'
+                : 'Tresor sperren'
       }
       onClick={() => {
         if (ui === 'locked' || ui === 'no-keys' || needsVaultPassword) {
@@ -192,21 +212,23 @@ function HeaderToolbarButton(p: {
   href?: string
   label: string
   icon: ReactNode
+  title?: string
 }) {
   const className =
     'inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-2 text-xs font-bold text-foreground shadow-sm transition-colors hover:bg-muted'
+  const tip = p.title || p.label
   if (p.href) {
     return (
-      <a href={p.href} className={className} aria-label={p.label} title={p.label}>
+      <a href={p.href} className={className} aria-label={p.label} title={tip}>
         {p.icon}
         <span className="hidden sm:inline">{p.label}</span>
       </a>
     )
   }
   return (
-    <button type="button" onClick={p.onClick} className={className} aria-label={p.label} title={p.label}>
+    <button type="button" onClick={p.onClick} className={className} aria-label={p.label} title={tip}>
       {p.icon}
-      <span className="hidden sm:inline">{p.label}</span>
+      <span>{p.label}</span>
     </button>
   )
 }
@@ -226,6 +248,7 @@ function MessengerHandbookLink() {
 }
 
 export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
+  const { t } = useAppTranslation('dashboard')
   const {
     isPrivate,
     encrypted,
@@ -235,12 +258,19 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
     channelMode,
     sendPath,
     onOpenSettings,
+    onOpenNotes,
     basisUnreachable = false,
     statusPollAttempted = true,
     offlineStatus,
     conversationTitle,
     conversationSubtitle,
+    conversationIcon = 'lock',
     compactNative = false,
+    suppressAppChrome = false,
+    hideTitleRow = false,
+    onRefreshStatus,
+    chatMuted = false,
+    onToggleChatMute,
   } = p
 
   const channelTitle =
@@ -252,82 +282,189 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
         : 'Chats')
 
   const channelSubtitle = conversationSubtitle?.trim() || null
-  const showHandbook = channelMode !== 'notes' && !compactNative
-  const showTreasuryBadge = isPrivate && Boolean(apiStatus) && channelMode !== 'pinnwand'
+  const showHandbook = channelMode !== 'notes' && !compactNative && !suppressAppChrome
+  /** Bei Einsatz-App-Header: Tresor/Aktualisieren nur dort — hier nicht doppelt. */
+  const showTreasuryBadge =
+    !suppressAppChrome && Boolean(apiStatus) && channelMode !== 'pinnwand'
+  const showProfileBadges = !suppressAppChrome && !compactNative
   const showSendPathInHeader = sendPath?.visible && !compactNative
+  const showSettingsBtn = Boolean(onOpenSettings) && !suppressAppChrome
+  /** App-Header hat Aktualisieren bei suppressAppChrome; sonst hier neben Tresor. */
+  const showHeaderRefresh = Boolean(onRefreshStatus) && !suppressAppChrome
+  const useInboxIcon = conversationIcon === 'inbox' || channelMode === 'pinnwand' || channelMode === 'notes'
+  const showTitleBlock = !hideTitleRow
 
   const queuePending = offlineStatus?.queuePending ?? 0
   const showQueueOnlyBanner =
     isPrivate && statusPollAttempted && basisUnreachable && queuePending > 0
+
+  const showChromeActions =
+    showHeaderRefresh ||
+    showTreasuryBadge ||
+    showHandbook ||
+    (onOpenNotes && channelMode === 'notes') ||
+    showSettingsBtn ||
+    Boolean(onToggleChatMute)
 
   return (
     <>
       <section
         className={cn(
           'rounded-xl border border-border/60 bg-card/30',
-          compactNative ? 'p-2' : 'p-3 sm:p-4'
+          compactNative ? 'p-2' : hideTitleRow && !showChromeActions ? 'p-2 sm:p-3' : 'p-3 sm:p-4'
         )}
         aria-label="Chat-Kopf"
       >
         <div className={cn(compactNative ? 'space-y-2' : 'space-y-3')}>
-          <div
-            className={cn(
-              'sticky top-0 z-30 border-b border-border/50 bg-card/95 backdrop-blur-sm',
-              compactNative ? '-mx-2 px-2 pb-2' : '-mx-3 px-3 pb-3 sm:-mx-4 sm:px-4'
-            )}
-          >
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div className="flex min-w-0 gap-2">
-                {!compactNative ? (
-                  <div
-                    className={cn(
-                      'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl',
-                      encrypted ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
-                    )}
-                    aria-hidden
-                  >
-                    {encrypted ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />}
+          {showTitleBlock || showChromeActions ? (
+            <div
+              className={cn(
+                showTitleBlock &&
+                  'sticky top-0 z-30 border-b border-border/50 bg-card/95 backdrop-blur-sm',
+                showTitleBlock &&
+                  (compactNative ? '-mx-2 px-2 pb-2' : '-mx-3 px-3 pb-3 sm:-mx-4 sm:px-4')
+              )}
+            >
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                {showTitleBlock ? (
+                  <div className="flex min-w-0 gap-2">
+                    {!compactNative ? (
+                      <div
+                        className={cn(
+                          'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl',
+                          useInboxIcon
+                            ? 'bg-muted text-foreground'
+                            : encrypted
+                              ? 'bg-emerald-500/10 text-emerald-400'
+                              : 'bg-amber-500/10 text-amber-400'
+                        )}
+                        aria-hidden
+                      >
+                        {useInboxIcon ? (
+                          <Inbox className="h-5 w-5" />
+                        ) : encrypted ? (
+                          <Lock className="h-5 w-5" />
+                        ) : (
+                          <Unlock className="h-5 w-5" />
+                        )}
+                      </div>
+                    ) : null}
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <h2
+                          className={cn(
+                            'font-bold leading-tight text-foreground',
+                            compactNative ? 'text-base' : 'text-lg sm:text-xl'
+                          )}
+                        >
+                          {channelTitle}
+                        </h2>
+                        {onToggleChatMute ? (
+                          <button
+                            type="button"
+                            onClick={onToggleChatMute}
+                            className={cn(
+                              'inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-semibold transition-colors',
+                              chatMuted
+                                ? 'border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200'
+                                : 'border-border bg-muted/40 text-muted-foreground hover:text-foreground'
+                            )}
+                            title={chatMuted ? t('chatMute.titleUnmute') : t('chatMute.titleMute')}
+                            aria-pressed={chatMuted}
+                            aria-label={chatMuted ? t('chatMute.ariaUnmute') : t('chatMute.ariaMute')}
+                          >
+                            {chatMuted ? (
+                              <BellOff className="h-3 w-3" aria-hidden />
+                            ) : (
+                              <Bell className="h-3 w-3" aria-hidden />
+                            )}
+                            {chatMuted ? t('chatMute.off') : t('chatMute.on')}
+                          </button>
+                        ) : null}
+                        {showProfileBadges ? <ChatNetworkBadge /> : null}
+                        {showProfileBadges ? <ActiveProfileBadge status={apiStatus} compact /> : null}
+                      </div>
+                      {channelSubtitle ? (
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground">{channelSubtitle}</p>
+                      ) : null}
+                    </div>
                   </div>
-                ) : null}
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <h2
-                      className={cn(
-                        'font-bold leading-tight text-foreground',
-                        compactNative ? 'text-base' : 'text-lg sm:text-xl'
-                      )}
-                    >
-                      {channelTitle}
-                    </h2>
-                    <ChatNetworkBadge />
-                    {!compactNative ? <ActiveProfileBadge status={apiStatus} compact /> : null}
-                  </div>
-                  {channelSubtitle ? (
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">{channelSubtitle}</p>
+                ) : (
+                  <div className="min-w-0 flex-1" />
+                )}
+                <div className="flex max-w-full flex-col items-stretch gap-2 sm:max-w-none sm:items-end">
+                  {onToggleChatMute && hideTitleRow ? (
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={onToggleChatMute}
+                        className={cn(
+                          'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors',
+                          chatMuted
+                            ? 'border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200'
+                            : 'border-border bg-card text-muted-foreground hover:text-foreground'
+                        )}
+                        title={chatMuted ? t('chatMute.titleUnmute') : t('chatMute.titleMute')}
+                        aria-pressed={chatMuted}
+                        aria-label={chatMuted ? t('chatMute.ariaUnmute') : t('chatMute.ariaMute')}
+                      >
+                        {chatMuted ? (
+                          <BellOff className="h-3.5 w-3.5" aria-hidden />
+                        ) : (
+                          <Bell className="h-3.5 w-3.5" aria-hidden />
+                        )}
+                        {chatMuted ? t('chatMute.off') : t('chatMute.on')}
+                      </button>
+                    </div>
+                  ) : null}
+                  {showHeaderRefresh || showTreasuryBadge ? (
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                      {showTreasuryBadge && apiStatus ? (
+                        <TresorSessionBadge
+                          sessionLocked={!!apiStatus.locked}
+                          /** Grün nur mit Browser-Signer — Server-hasKeys allein war nach Login falsch grün. */
+                          hasKeys={isBrowserSessionSignerReady(!!apiStatus.locked)}
+                          actions={vaultBannerActions}
+                        />
+                      ) : null}
+                      {showHeaderRefresh ? (
+                        <button
+                          type="button"
+                          onClick={() => void onRefreshStatus?.()}
+                          className="inline-flex items-center gap-1.5 rounded-md border border-foreground/25 bg-foreground px-3 py-2 text-xs font-bold text-background shadow-sm transition-colors hover:bg-foreground/90"
+                          title="Status, Posteingang und Kontakte neu laden"
+                          aria-label="Aktualisieren"
+                        >
+                          <RefreshCw className="h-4 w-4 shrink-0" aria-hidden />
+                          Aktualisieren
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {showHandbook || onOpenNotes || showSettingsBtn ? (
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      {showHandbook ? <MessengerHandbookLink /> : null}
+                      {onOpenNotes && channelMode === 'notes' ? (
+                        <HeaderToolbarButton
+                          label="Zu Chats"
+                          icon={<StickyNote className="h-4 w-4 shrink-0" aria-hidden />}
+                          onClick={onOpenNotes}
+                          title="Zurück zum Posteingang"
+                        />
+                      ) : null}
+                      {showSettingsBtn ? (
+                        <HeaderToolbarButton
+                          label="Einstellungen"
+                          icon={<Settings className="h-4 w-4 shrink-0" aria-hidden />}
+                          onClick={onOpenSettings}
+                        />
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
               </div>
-              {(showHandbook || onOpenSettings) ? (
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  {showHandbook ? <MessengerHandbookLink /> : null}
-                  {onOpenSettings ? (
-                    <HeaderToolbarButton
-                      label="Einstellungen"
-                      icon={<Settings className="h-4 w-4 shrink-0" aria-hidden />}
-                      onClick={onOpenSettings}
-                    />
-                  ) : null}
-                  {showTreasuryBadge && apiStatus ? (
-                    <TresorSessionBadge
-                      sessionLocked={!!apiStatus.locked}
-                      hasKeys={isMessengerSessionKeysReady(apiStatus)}
-                      actions={vaultBannerActions}
-                    />
-                  ) : null}
-                </div>
-              ) : null}
             </div>
-          </div>
+          ) : null}
 
           {showSendPathInHeader ? <ChatViewSendPathCompact {...sendPath} className="w-full" /> : null}
 

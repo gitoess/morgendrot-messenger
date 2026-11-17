@@ -26,6 +26,8 @@ function makeProps(overrides: Partial<ChatViewInboxToolbarProps> = {}): ChatView
     onExportEinsatzprotokoll: vi.fn(),
     onExportEinsatzprotokollPlainZip: vi.fn(),
     onExportEinsatzprotokollMarked: vi.fn(),
+    onExportMorgMediaZip: vi.fn(),
+    onExportMorgMediaDirect: vi.fn(),
     protokollMarkedCount: 0,
     recipient: '',
     setStatus: vi.fn(),
@@ -39,10 +41,17 @@ function makeProps(overrides: Partial<ChatViewInboxToolbarProps> = {}): ChatView
     onToggleChannelControls: vi.fn(),
     showPartnerControls: false,
     onTogglePartnerControls: vi.fn(),
+    directionFilter: 'all',
+    onDirectionFilterChange: vi.fn(),
     onSelectAllVisible: vi.fn(),
     onClearInboxSelection: vi.fn(),
     onBulkHideSelected: vi.fn(),
     onBulkPurgeSelected: vi.fn(),
+    onBulkMarkProtokollSelected: vi.fn(),
+    onBulkCopySelected: vi.fn(),
+    onBulkExportJsonSelected: vi.fn(),
+    onBulkHashSelected: vi.fn(),
+    onBulkForwardSelected: vi.fn(),
     hasHiddenMessages: false,
     onToggleHideAllVisibleLocal: vi.fn(),
     messages: [],
@@ -101,18 +110,6 @@ describe('ChatViewInboxToolbar actions (§ H.1a)', () => {
     expect(screen.getByTitle(/3 ausstehende Handshake-Anfrage/i)).toHaveTextContent('3')
   })
 
-  it('ruft onRefresh bei Aktualisieren auf', () => {
-    const onRefresh = vi.fn()
-    render(<ChatViewInboxToolbar {...makeProps({ onRefresh })} />)
-    fireEvent.click(screen.getByRole('button', { name: /Aktualisieren/i }))
-    expect(onRefresh).toHaveBeenCalledTimes(1)
-  })
-
-  it('deaktiviert Aktualisieren während loading', () => {
-    render(<ChatViewInboxToolbar {...makeProps({ loading: true })} />)
-    expect(screen.getByRole('button', { name: /Aktualisieren/i })).toBeDisabled()
-  })
-
   it('schaltet Auswahl-Modus um', () => {
     const setInboxSelectMode = vi.fn()
     render(<ChatViewInboxToolbar {...makeProps({ setInboxSelectMode, inboxSelectMode: false })} />)
@@ -123,12 +120,43 @@ describe('ChatViewInboxToolbar actions (§ H.1a)', () => {
     expect(updater(false)).toBe(true)
   })
 
-  it('strafft zweite Zeile: Filter statt Inhalt/Kanal/Partner-Buttons', () => {
-    render(<ChatViewInboxToolbar {...makeProps()} />)
-    expect(screen.getByRole('button', { name: /^Filter$/i })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Posteingang \(Inhalt\)/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^Kanal$/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^Partner$/i })).not.toBeInTheDocument()
+  it('zeigt Liste-Filter: Richtung und Inhalt direkt', () => {
+    render(
+      <ChatViewInboxToolbar
+        {...makeProps({
+          onDirectionFilterChange: vi.fn(),
+          onWireFilterChange: vi.fn(),
+        })}
+      />
+    )
+    expect(screen.getByText(/^Liste$/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Beides$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Eingang$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Ausgang$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Alles$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Verschl\.$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Klartext$/i })).toBeInTheDocument()
+  })
+
+  it('Richtung- und Inhalt-Klick filtern die Liste', () => {
+    const onDirectionFilterChange = vi.fn()
+    const onWireFilterChange = vi.fn()
+    render(
+      <ChatViewInboxToolbar
+        {...makeProps({
+          onDirectionFilterChange,
+          onWireFilterChange,
+          directionFilter: 'in',
+          wireFilter: 'encrypted',
+        })}
+      />
+    )
+    expect(screen.getByRole('button', { name: /^Eingang$/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /^Verschl\.$/i })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(screen.getByRole('button', { name: /^Eingang$/i }))
+    expect(onDirectionFilterChange).toHaveBeenCalledWith('in')
+    fireEvent.click(screen.getByRole('button', { name: /^Verschl\.$/i }))
+    expect(onWireFilterChange).toHaveBeenCalledWith('encrypted')
   })
 
   it('blendet On-Chain bei Funk-pathTools aus; Optionen bleibt', () => {
@@ -150,18 +178,27 @@ describe('ChatViewInboxToolbar actions (§ H.1a)', () => {
         {...makeProps({ showPhonebookButton: true, onOpenPhonebook })}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Kontakte verwalten/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Telefonbuch/i }))
     expect(onOpenPhonebook).toHaveBeenCalledTimes(1)
   })
 
-  it('bündelt Werkzeuge unter Optionen; On-Chain und Aktualisieren bleiben oben', () => {
+  it('bündelt Werkzeuge unter Optionen; On-Chain oben; Aktualisieren nicht in der Leiste', () => {
     render(<ChatViewInboxToolbar {...makeProps({ messageCount: 2 })} />)
     expect(screen.getByRole('button', { name: /Optionen/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /On-Chain \/ NFT/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Aktualisieren/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Aktualisieren/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Pakete$/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Nachrichtenverlauf$/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Wire einfügen$/i })).not.toBeInTheDocument()
+  })
+
+  it('zeigt T36 Export und T38 Hash unter Optionen', async () => {
+    render(<ChatViewInboxToolbar {...makeProps({ messageCount: 3 })} />)
+    const btn = screen.getByRole('button', { name: /Optionen/i })
+    fireEvent.pointerDown(btn, { button: 0, ctrlKey: false, pointerType: 'mouse' })
+    fireEvent.click(btn)
+    expect(await screen.findByRole('menuitem', { name: /Hash & Prüfen/i })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /Export Nachrichtenverlauf/i })).toBeInTheDocument()
   })
 
   it('lässt Optionen offen wenn Export gesperrt (Wire/Pakete bleiben nutzbar)', () => {

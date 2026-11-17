@@ -37,7 +37,7 @@ export function DashboardAdvancedToolsPanel(p: {
       <CollapsibleContent className="mt-3 space-y-3">
         <p className="px-1 text-xs text-muted-foreground">
           {isMessenger
-            ? 'Technische Hinweise — Helfer-ZIP nur über Einsatzleitung → Export-Assistent (nicht npm-Bundle).'
+            ? 'Technische Hinweise — Helfer-ZIP nur über Einsatzleitung → Helfer einrichten (nicht npm-Bundle).'
             : 'Morgendrot Projekt, Messenger-Vorschau, Export und Einstellungen.'}
         </p>
         {!isMessenger && p.onOpenSettings ? (
@@ -52,7 +52,7 @@ export function DashboardAdvancedToolsPanel(p: {
         {isMessenger ? (
           <p className="rounded-lg border border-border bg-card px-4 py-3 text-xs text-muted-foreground">
             <strong className="text-foreground">Helfer einrichten:</strong> Einsatzleitung →{' '}
-            <strong className="text-foreground">Export-Assistent — Untergebenen einrichten</strong> (Handoff-ZIP).
+            <strong className="text-foreground">Helfer-Geräte einrichten</strong> (Handoff-ZIP).
             <br />
             <strong className="mt-2 inline-block text-foreground">Entwickler-Bundle:</strong>{' '}
             <code className="rounded bg-muted px-1 font-mono text-[10px]">npm run bundle:messenger</code> — nur für

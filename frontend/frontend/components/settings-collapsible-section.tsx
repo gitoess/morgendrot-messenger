@@ -1,6 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { SettingsCategoryId } from '@/frontend/lib/settings-navigation'
@@ -15,7 +16,11 @@ type SettingsCategoryNavProps = {
 
 export function SettingsCategoryNav(p: SettingsCategoryNavProps) {
   return (
-    <div className="flex flex-wrap gap-2" role="tablist" aria-label="Einstellungsbereiche">
+    <div
+      className="flex flex-wrap gap-2 lg:sticky lg:top-4 lg:flex-col lg:flex-nowrap"
+      role="tablist"
+      aria-label="Einstellungsbereiche"
+    >
       {p.categories.map((cat) => {
         const selected = p.active === cat.id
         return (
@@ -26,7 +31,7 @@ export function SettingsCategoryNav(p: SettingsCategoryNavProps) {
             aria-selected={selected}
             onClick={() => p.onSelect(cat.id)}
             className={cn(
-              'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors',
+              'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors lg:w-full',
               selected
                 ? 'border-[var(--path-online)] bg-[color-mix(in_oklab,var(--path-online)_12%,var(--card))] text-foreground'
                 : 'border-border bg-card text-muted-foreground hover:bg-muted/50 hover:text-foreground'
@@ -34,7 +39,7 @@ export function SettingsCategoryNav(p: SettingsCategoryNavProps) {
           >
             {cat.icon}
             {cat.label}
-            <ChevronDown className={cn('h-4 w-4 transition-transform', selected ? 'rotate-180' : '')} aria-hidden />
+            <ChevronDown className={cn('h-4 w-4 transition-transform lg:hidden', selected ? 'rotate-180' : '')} aria-hidden />
           </button>
         )
       })}
@@ -47,10 +52,12 @@ type SettingsCollapsiblePanelProps = {
   title: string
   icon?: ReactNode
   handbookAnchor?: string
+  onRefresh?: () => void | Promise<void>
   children: ReactNode
 }
 
 export function SettingsCollapsiblePanel(p: SettingsCollapsiblePanelProps) {
+  const [refreshing, setRefreshing] = useState(false)
   if (!p.open) return null
   return (
     <section className="space-y-4 rounded-xl border border-border bg-card/40 p-4">
@@ -61,6 +68,19 @@ export function SettingsCollapsiblePanel(p: SettingsCollapsiblePanelProps) {
           </div>
         ) : null}
         <h3 className="text-base font-semibold text-foreground">{p.title}</h3>
+        {p.onRefresh ? (
+          <button
+            type="button"
+            className="ml-auto text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+            disabled={refreshing}
+            onClick={() => {
+              setRefreshing(true)
+              Promise.resolve(p.onRefresh?.()).finally(() => setRefreshing(false))
+            }}
+          >
+            {refreshing ? '…' : 'Aktualisieren'}
+          </button>
+        ) : null}
       </div>
       <div className="space-y-4">{p.children}</div>
     </section>

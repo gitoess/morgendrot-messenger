@@ -19,7 +19,6 @@ import {
 } from '@/frontend/components/contact-phonebook-contact-dialog'
 import { ContactPhonebookQrDialog } from '@/frontend/components/contact-phonebook-qr-dialog'
 import { TelegramAlarmGroupPhonebookBanner } from '@/frontend/components/telegram-alarm-group-phonebook-banner'
-import { EinsatzleitungTeamRosterPanel } from '@/frontend/components/einsatzleitung-team-roster-panel'
 import {
   formatContactRoleTagsCsv,
   maskWalletAddress,
@@ -33,9 +32,11 @@ import {
   hideContactFromPhonebook,
   readContactFavorites,
   readContactLastContacted,
+  readContactNotes,
   readHiddenContacts,
   recordContactLastContacted,
   toggleContactFavorite,
+  writeContactNote,
 } from '@/frontend/lib/contact-phonebook-meta-store'
 import {
   canManageTeamRoster,
@@ -189,6 +190,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
             await saveContactEntry({ address: previousKey, clearMesh: true, label: 'Partner' })
           }
           recordContactLastContacted(storageKey)
+          writeContactNote(storageKey, values.note)
           bumpMeta()
           refreshContactDirectory()
           const okMsg = r.message || 'Kontakt gespeichert.'
@@ -274,6 +276,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
         hasPrivateMailbox={hasMb}
         loraOnly={hasLora && !isOnline}
         lastSeen={lastContact[address]}
+        note={readContactNotes()[address]}
         expanded={Boolean(expanded[address])}
         onToggleExpand={() => setExpanded((e) => ({ ...e, [address]: !e[address] }))}
         onToggleFavorite={() => {
@@ -287,6 +290,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
             initial: {
               ...entry,
               label: entry.label ?? '',
+              note: readContactNotes()[address] ?? '',
               meshNodeId: entry.meshNodeId ?? '',
               telegramChatId: entry.telegramChatId ?? (address.startsWith('tg:') ? address.slice(3) : ''),
               roleTagsCsv: formatContactRoleTagsCsv(entry.roleTags),
@@ -341,17 +345,21 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
         </div>
       </div>
 
-      <TelegramAlarmGroupPhonebookBanner />
-
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Name, Adresse oder Meshtastic suchen…"
-          className="min-h-12 w-full rounded-xl border border-border bg-input py-3 pl-11 pr-4 text-base text-foreground placeholder:text-muted-foreground"
-        />
+      <div className="space-y-1.5">
+        <label htmlFor="phonebook-search" className="text-sm font-semibold text-foreground">
+          Kontakte suchen
+        </label>
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-foreground/70" />
+          <input
+            id="phonebook-search"
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Name, 0x-Adresse, Telegram-ID oder Funk-Node…"
+            className="min-h-14 w-full rounded-xl border-2 border-foreground/25 bg-background py-3.5 pl-12 pr-4 text-base font-medium text-foreground shadow-sm placeholder:text-muted-foreground focus-visible:border-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/20"
+          />
+        </div>
       </div>
 
       <div
@@ -417,32 +425,63 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
       )}
 
       {showMailboxes && p.onOpenSettings ? (
-        <div className="rounded-xl border border-violet-500/25 bg-violet-500/5 p-3">
-          <p className="text-sm font-semibold text-foreground mb-1">Meine Mailboxen</p>
+        <div className="rounded-xl border border-border bg-card p-3">
+          <p className="mb-1 text-sm font-semibold text-foreground">Meine Mailboxen</p>
           <button
             type="button"
             onClick={p.onOpenSettings}
-            className="text-xs font-medium text-primary underline hover:no-underline"
+            className="text-xs font-medium text-foreground underline underline-offset-2 hover:no-underline"
           >
-            Einstellungen {'\u2192'} Meine Mailboxen
+            Einstellungen → IOTA → Meine Mailboxen
           </button>
         </div>
       ) : null}
 
+      {/* Team-Mitglieder-Liste gehört in Einsatzleitung — hier nicht nochmal. */}
       {p.allowInitialProfileImport ? (
-        <>
-          <EinsatzleitungTeamRosterPanel
-            apiStatus={p.apiStatus ?? null}
-            contactDirectory={directory}
-          />
-          <PhonebookContactDistributePanel
-            directory={directory}
-            onContactsChanged={refreshContactDirectory}
-          />
-        </>
+        <PhonebookContactDistributePanel
+          directory={directory}
+          onContactsChanged={refreshContactDirectory}
+        />
       ) : null}
 
       <PhonebookMeshBackupPanel directory={directory} onContactsChanged={refreshContactDirectory} />
+
+      <details className="rounded-xl border border-border/80 bg-muted/10 px-3 py-2">
+        <summary className="cursor-pointer text-xs font-medium text-foreground">
+          Telegram-Chat-IDs sichern (nicht Funk)
+        </summary>
+        <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+          Nur Name und Telegram-Chat-ID. Meshtastic-Node-IDs stehen im Funk-Backup darüber, nicht hier.
+        </p>
+        <button
+          type="button"
+          className="mt-2 rounded-lg border border-border px-2.5 py-1.5 text-[11px] font-medium hover:bg-muted/50"
+          onClick={() => {
+            const rows = Object.entries(directory)
+              .map(([address, entry]) => ({
+                address,
+                label: entry.label ?? '',
+                telegramChatId: entry.telegramChatId?.trim() ?? '',
+              }))
+              .filter((r) => r.telegramChatId)
+            const json = JSON.stringify(rows, null, 2)
+            void navigator.clipboard.writeText(json).then(
+              () => toast.success(`${rows.length} Telegram-ID(s) kopiert.`),
+              () => toast.message('Kopieren nicht möglich.')
+            )
+          }}
+        >
+          Telegram-IDs kopieren
+        </button>
+      </details>
+
+      <details className="rounded-xl border border-border/80 bg-muted/10 px-3 py-2">
+        <summary className="cursor-pointer text-xs font-medium text-foreground">Einsatz-Alarmgruppe</summary>
+        <div className="mt-2">
+          <TelegramAlarmGroupPhonebookBanner />
+        </div>
+      </details>
 
       <ContactPhonebookContactDialog
         open={dialog != null}

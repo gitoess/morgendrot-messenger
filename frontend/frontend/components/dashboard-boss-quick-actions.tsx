@@ -58,7 +58,7 @@ export function DashboardBossQuickActions(p: {
           </span>
         </button>
       </div>
-      <div className="mt-4 flex justify-center">
+      <div className="mt-10 flex justify-end">
         <DashboardSosEmergencyButton onOpenMessages={p.onOpenMessages} />
       </div>
     </section>

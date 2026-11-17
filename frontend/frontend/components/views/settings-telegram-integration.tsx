@@ -1,8 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Check, Copy, MessageCircle } from 'lucide-react'
-import Link from 'next/link'
+import { Check, Copy, MessageCircle, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Switch } from '@/components/ui/switch'
 import { Input } from '@/components/ui/input'
@@ -170,12 +169,16 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
         <div className="min-w-0 flex-1 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h4 className="font-semibold text-foreground">Integrationen · Telegram</h4>
-            <Link
-              href="/handbook?file=TELEGRAM-INTEGRATION-EINRICHTUNG.md"
-              className="text-xs text-primary underline hover:no-underline"
+            <button
+              type="button"
+              disabled={!backendOnline || busy === 'load'}
+              onClick={() => void load()}
+              className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50"
+              aria-label="Telegram-Einstellungen aktualisieren"
             >
-              Handbuch
-            </Link>
+              <RefreshCw className={cn('h-3.5 w-3.5', busy === 'load' && 'animate-spin')} />
+              Aktualisieren
+            </button>
           </div>
 
           {!backendOnline ? (
@@ -379,14 +382,6 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
               className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
             >
               {busy === 'test' ? 'Sende…' : 'Test an mich'}
-            </button>
-            <button
-              type="button"
-              disabled={!backendOnline || busy === 'load'}
-              onClick={() => void load()}
-              className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
-            >
-              Neu laden
             </button>
           </div>
 

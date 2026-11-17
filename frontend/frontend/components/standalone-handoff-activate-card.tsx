@@ -62,12 +62,12 @@ export function StandaloneHandoffActivateCard(p: {
     return (
       <div
         className={cn(
-          'mb-5 rounded-xl border border-purple-500/35 bg-purple-500/10 px-4 py-4',
+          'mb-5 rounded-xl border border-border bg-muted/30 px-4 py-4',
           p.className
         )}
       >
         <div className="flex items-start gap-3">
-          <Package className="mt-0.5 h-5 w-5 shrink-0 text-purple-300" aria-hidden />
+          <Package className="mt-0.5 h-5 w-5 shrink-0 text-foreground" aria-hidden />
           <div className="min-w-0 flex-1 space-y-3">
             <div>
               <h2 className="text-base font-semibold text-foreground">{t('handoff.step1Title')}</h2>

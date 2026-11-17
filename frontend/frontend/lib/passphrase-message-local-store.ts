@@ -76,8 +76,11 @@ export const PASSPHRASE_ZEITKAPSEL_LAST_NFT_LS_KEY = 'morgendrot.composer.zeitka
 export const OPEN_ZEITKAPSEL_LEASE_EVENT = 'morgendrot:open-zeitkapsel-lease'
 
 /** FNV-1a über normalisierten Wire — Send und Inbox treffen denselben Fingerprint. */
+/** Fingerprint nur über den PWMSG-Körper — Prefix/Marker vor `MORG_PWMSG_V1:` ignorieren. */
 export function fingerprintPassphraseMessageWire(wire: string): string {
-  const t = normalizeMessengerWireContent(wire)
+  const raw = normalizeMessengerWireContent(wire)
+  const idx = raw.indexOf('MORG_PWMSG_V1:')
+  const t = idx >= 0 ? raw.slice(idx) : raw
   let h = 2166136261
   for (let i = 0; i < t.length; i++) {
     h ^= t.charCodeAt(i)
@@ -572,29 +575,72 @@ export function writePassphraseNftDualWalletGateEnabled(on: boolean): void {
   }
 }
 
-export function readPassphraseNftRequiredWallet(): string | null {
-  if (typeof window === 'undefined') return null
+const PASSPHRASE_NFT_REQUIRED_WALLETS_LS_KEY = 'morgendrot.composer.nftRequiredWallets.v1'
+
+function parseRequiredWalletsBlob(raw: string): string[] {
+  const t = raw.trim()
+  if (!t) return []
+  if (t.startsWith('[')) {
+    try {
+      const j = JSON.parse(t) as unknown
+      if (Array.isArray(j)) {
+        return j
+          .map((x) => String(x).trim().toLowerCase())
+          .filter((x) => /^0x[a-f0-9]{64}$/.test(x))
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+  return t
+    .split(/[\s,;]+/)
+    .map((x) => x.trim().toLowerCase())
+    .filter((x) => /^0x[a-f0-9]{64}$/.test(x))
+}
+
+/** Dual-Whitelist (Composer). Leer = aus. */
+export function readPassphraseNftRequiredWallets(): string[] {
+  if (typeof window === 'undefined') return []
   try {
-    const v = window.localStorage.getItem(PASSPHRASE_NFT_REQUIRED_WALLET_LS_KEY)?.trim().toLowerCase()
-    return v && /^0x[a-f0-9]{64}$/.test(v) ? v : null
+    const multi = window.localStorage.getItem(PASSPHRASE_NFT_REQUIRED_WALLETS_LS_KEY)?.trim()
+    if (multi) {
+      const list = parseRequiredWalletsBlob(multi)
+      if (list.length) return [...new Set(list)]
+    }
+    const one = window.localStorage.getItem(PASSPHRASE_NFT_REQUIRED_WALLET_LS_KEY)?.trim().toLowerCase()
+    return one && /^0x[a-f0-9]{64}$/.test(one) ? [one] : []
   } catch {
-    return null
+    return []
+  }
+}
+
+/** Erste Adresse — Backcompat für ältere Aufrufer. */
+export function readPassphraseNftRequiredWallet(): string | null {
+  return readPassphraseNftRequiredWallets()[0] ?? null
+}
+
+export function writePassphraseNftRequiredWallets(addresses: string[] | null): void {
+  if (typeof window === 'undefined') return
+  try {
+    const list = [...new Set((addresses || []).map((a) => a.trim().toLowerCase()).filter((a) => /^0x[a-f0-9]{64}$/.test(a)))]
+    if (!list.length) {
+      window.localStorage.removeItem(PASSPHRASE_NFT_REQUIRED_WALLETS_LS_KEY)
+      window.localStorage.removeItem(PASSPHRASE_NFT_REQUIRED_WALLET_LS_KEY)
+      return
+    }
+    window.localStorage.setItem(PASSPHRASE_NFT_REQUIRED_WALLETS_LS_KEY, JSON.stringify(list))
+    window.localStorage.setItem(PASSPHRASE_NFT_REQUIRED_WALLET_LS_KEY, list[0]!)
+  } catch {
+    /* ignore */
   }
 }
 
 export function writePassphraseNftRequiredWallet(address: string | null): void {
-  if (typeof window === 'undefined') return
-  try {
-    if (!address?.trim()) {
-      window.localStorage.removeItem(PASSPHRASE_NFT_REQUIRED_WALLET_LS_KEY)
-      return
-    }
-    const v = address.trim().toLowerCase()
-    if (!/^0x[a-f0-9]{64}$/.test(v)) return
-    window.localStorage.setItem(PASSPHRASE_NFT_REQUIRED_WALLET_LS_KEY, v)
-  } catch {
-    /* ignore */
+  if (!address?.trim()) {
+    writePassphraseNftRequiredWallets(null)
+    return
   }
+  writePassphraseNftRequiredWallets([address])
 }
 
 export function readPassphraseNftPubkeyWrapP4a2Enabled(): boolean {
@@ -702,32 +748,24 @@ export function requestOpenZeitkapselLease(objectId: string): void {
 
 /**
  * Passphrase für den nächsten Send.
- * Feld / Default gilt immer (auch ohne „Wiederverwenden“ — sonst wären Neu würfeln /
- * Kopieren wirkungslos). „Wiederverwenden“ entscheidet nur, ob der Default nach dem
- * Send stehen bleibt (reuse) oder für den nächsten Send neu gewürfelt wird.
+ * Feld / Default gilt immer (auch ohne Vault-Unlock — RAM + Tab-Backup).
+ * „Wiederverwenden“: Default bleibt nach dem Send; sonst neu würfeln für den nächsten.
  */
 export function resolvePassphraseForProtectSend(generateFresh: () => string): {
   passphrase: string
   reused: boolean
 } {
   const reuse = readPassphraseReuseEnabled()
-  const existing = getDefaultPassphraseMessagePassphrase()
-  if (existing) return { passphrase: existing, reused: reuse }
-  if (!isPassphraseMessageVaultSessionOpen()) {
-    return { passphrase: '', reused: reuse }
-  }
+  const existing = getDefaultPassphraseMessagePassphrase()?.trim() || ''
+  if (existing.length >= 8) return { passphrase: existing, reused: reuse }
   const fresh = generateFresh().trim()
   if (fresh.length >= 8) setDefaultPassphraseMessagePassphrase(fresh)
-  return { passphrase: fresh, reused: reuse }
+  return { passphrase: fresh.length >= 8 ? fresh : '', reused: reuse }
 }
 
-/** Nach Send ohne Wiederverwenden: neue Vorschau-Passphrase fürs nächste Mal. */
+/** Nach Send ohne Wiederverwenden: neue Vorschau-Passphrase fürs nächste Mal (auch ohne Vault). */
 export function rollPassphraseAfterOneShotSend(generateFresh: () => string): string | null {
   if (readPassphraseReuseEnabled()) return getDefaultPassphraseMessagePassphrase()
-  if (!isPassphraseMessageVaultSessionOpen()) {
-    clearDefaultPassphraseMessagePassphrase()
-    return null
-  }
   const fresh = generateFresh().trim()
   if (fresh.length >= 8) setDefaultPassphraseMessagePassphrase(fresh)
   else clearDefaultPassphraseMessagePassphrase()

@@ -55,7 +55,7 @@
     "test": "tsx scripts/run-tests.ts",
     "test:smoke": "npm run validate:ui && npm run test",
     "test:frontend-unit": "npm run test:unit --prefix frontend",
-    "check:frontend": "npm run test:core && npm run lint --prefix frontend && npm run check:circular --prefix frontend && npm run exec --prefix frontend -- npx tsc --noEmit && npm run test:frontend-unit",
+    "check:frontend": "npm run test:core && npm run lint --prefix frontend && npm run check:circular --prefix frontend && npm run typecheck --prefix frontend && npm run test:frontend-unit",
     "test:h15-direct-submit": "npm run test:h15-direct-submit --prefix frontend",
     "smoke:standalone-desk": "node scripts/standalone-smoke-desk.mjs",
     "test:core": "npm run test:unit --prefix packages/morgendrot-core",
@@ -194,6 +194,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@morgendrot/shared": "file:./src/shared",
     "@morgendrot/core": "file:packages/morgendrot-core",
     "@iota/iota-sdk": "^1.11.0",
     "archiver": "^7.0.1",

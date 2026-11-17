@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { ChatViewContactDetailDialog } from '@/frontend/components/chat-view-contact-detail-dialog'
 
 vi.mock('@/frontend/components/contact-phonebook-card', () => ({
@@ -30,8 +30,9 @@ describe('ChatViewContactDetailDialog Technische IDs', () => {
         onRemove={() => undefined}
       />
     )
-    expect(screen.getByText('Mailboxen')).toBeInTheDocument()
-    expect(screen.getByText('Privat')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Mehr — Identität/i }))
+    expect(screen.getByText('Mailboxen (Ziele)')).toBeInTheDocument()
+    expect(screen.getByText(/Private Mailbox/i)).toBeInTheDocument()
     expect(screen.getByText(MB)).toBeInTheDocument()
   })
 })

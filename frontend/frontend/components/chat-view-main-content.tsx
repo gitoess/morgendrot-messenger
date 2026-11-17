@@ -43,9 +43,16 @@ import { ChatViewNotesTabPanel } from '@/frontend/components/chat-view-notes-tab
 import { ChatViewContactSidebar } from '@/frontend/components/chat-view-contact-sidebar'
 import { ChatViewContactDetailDialog } from '@/frontend/components/chat-view-contact-detail-dialog'
 import { MessengerEntityInfoDialog } from '@/frontend/components/messenger-entity-info-dialog'
+import { ChatViewMediaGallery } from '@/frontend/components/chat-view-media-gallery'
 import { ChatViewMessengerSearch } from '@/frontend/components/chat-view-messenger-search'
 import { resolveContactSidebarDisplayName } from '@/frontend/lib/conversation-sidebar-items'
 import { readMessengerGroups } from '@/frontend/lib/messenger-group-store'
+import { muteKeyForConversation } from '@/frontend/lib/inbox-chat-mute-key'
+import {
+  INBOX_CHAT_MUTE_PREFS_CHANGED,
+  isChatMuted,
+  toggleChatMuted,
+} from '@/frontend/lib/inbox-chat-mute-prefs'
 import {
   buildGroupInfoSections,
   buildTelegramAlarmInfoSections,
@@ -114,7 +121,10 @@ import { buildComposeReplyTargets } from '@/frontend/hooks/build-compose-reply-t
 import { useChatViewComposerBindings } from '@/frontend/hooks/use-chat-view-composer-bindings'
 import { useChatViewPanelMessengerPorts } from '@/frontend/hooks/use-chat-view-panel-messenger-ports'
 import { useChatViewShellProps } from '@/frontend/hooks/use-chat-view-shell-props'
-import { resolveChatHeaderContext } from '@/frontend/lib/resolve-chat-header-context'
+import {
+  posteingangTitleForSendPath,
+  resolveChatHeaderContext,
+} from '@/frontend/lib/resolve-chat-header-context'
 import { pinnwandSidebarLabel } from '@/frontend/lib/pinnwand-display'
 import {
   Dialog,
@@ -129,9 +139,9 @@ export type ChatViewMainContentProps = ChatViewCoreState & {
   vaultBannerActions?: ChatViewVaultBannerActions
   onChannelModeChange?: (c: MessengerChatChannel) => void
   pendingHandshakes?: PendingHandshakesPollState
-  onOpenEinsatzleitung?: () => void
   phonebookNavRequest?: number
   onOpenSettings?: () => void
+  suppressAppChrome?: boolean
 }
 
 export function ChatViewMainContent(c: ChatViewMainContentProps) {
@@ -140,7 +150,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     vaultBannerActions,
     onChannelModeChange,
     pendingHandshakes,
-    onOpenEinsatzleitung,
     phonebookNavRequest,
     onOpenSettings,
   } = c
@@ -383,14 +392,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     backendReachable: basisUnreachable ? false : true,
   })
 
-  /** Inbox-Cache ≠ offline: Composer-Status nicht mit Posteingang-Fallback verwechseln. */
+  /** Nur Offline-Inbox-Fallback löschen — echte Sendefehler nicht sofort killen (war: alle errors weg). */
   useEffect(() => {
     if (basisUnreachable === true) return
-    if (status === 'error') {
+    if (
+      status === 'error' &&
+      /Offline — (letzte Nachrichten|Basis nicht erreichbar)/.test(statusMsg)
+    ) {
       setStatus('idle')
-      if (/Offline — (letzte Nachrichten|Basis nicht erreichbar)/.test(statusMsg)) {
-        setStatusMsg('')
-      }
+      setStatusMsg('')
     }
   }, [basisUnreachable, inboxActions.inboxFromCache, status, statusMsg, setStatus, setStatusMsg])
 
@@ -476,6 +486,13 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setRecipient,
   ])
 
+  const handleSelectSidebarNotes = useCallback(() => {
+    setTelegramAlarmSelected(false)
+    if (!onChannelModeChange) return
+    // Toggle: Notizen ↔ Posteingang
+    onChannelModeChange(channelMode === 'notes' ? 'private' : 'notes')
+  }, [onChannelModeChange, channelMode])
+
   const inboxPanelProps = useChatViewInboxPanelProps({
     messengerPorts: panelMessengerPorts,
     showPinnwandPinActions: pinnwandCaps.configured && pinnwandCaps.canPost,
@@ -484,13 +501,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     showIotaExpertInboxActions: uiCaps.expertTools,
     pinnwandOverviewConfigured: pinnwandCaps.configured,
     showInboxPackageExpertMenu: showInboxPackageExpert,
-    onOpenSettings,
     hidePartnerStrip: showConversationSidebar,
     hideOverviewChips:
       showConversationSidebar &&
       isPrivate &&
       inboxPartnerFiltersArmed &&
       Boolean(inboxPartnerKey?.trim()),
+    onOpenNotes: onChannelModeChange ? handleSelectSidebarNotes : undefined,
+    notesActive: onNotesTab,
   })
 
   const clearActiveDirectConversation = useCallback(() => {
@@ -499,28 +517,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setPartner('')
     setRecipient('')
   }, [selectInboxConversationAll, setPartner, setRecipient])
-
-  const { sendPanelProps } = useChatViewSendPanelProps({
-    messengerPorts: panelMessengerPorts,
-    activeGroup,
-    expertTools: uiCaps.expertTools,
-    pinnwandBroadcastAddress: pinnwandCaps.broadcastAddress,
-    canPostToPinnwand: pinnwandCaps.canPost,
-    vaultBannerActions,
-    onOpenPhonebook:
-      (isPrivate || isGroup) && !showConversationSidebar ? () => setPhonebookOpen(true) : undefined,
-    onOpenGroupSettings: () => setGroupSettingsOpen(true),
-    activeConversation:
-      showConversationSidebar && (isPrivate || isGroup)
-        ? {
-            inboxPartnerKey: isPrivate ? inboxPartnerKey : null,
-            inboxConversationGroupId: isGroup ? inboxConversationGroupId : null,
-            inboxPartnerFiltersArmed,
-            directory,
-          }
-        : undefined,
-    onClearActiveDirectConversation: isPrivate ? clearActiveDirectConversation : undefined,
-  })
 
   const { encryptedPartnerPanelProps } = useChatViewEncryptedPartnerPanelProps({
     messengerPorts: panelMessengerPorts,
@@ -554,7 +550,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const handleSelectSidebarContact = useCallback(
     (address: string) => {
       setTelegramAlarmSelected(false)
-      if ((channelMode === 'group' || channelMode === 'pinnwand') && onChannelModeChange) {
+      if (
+        (channelMode === 'group' || channelMode === 'pinnwand' || channelMode === 'notes') &&
+        onChannelModeChange
+      ) {
         onChannelModeChange('private')
       }
       const entry = lookupContactEntry(directory, address) ?? { label: address }
@@ -647,7 +646,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       toast.message('Keine eigene Wallet-Adresse — zuerst Tresor/Identität prüfen.')
       return
     }
-    if (channelMode === 'group' || channelMode === 'pinnwand') {
+    if (channelMode === 'group' || channelMode === 'pinnwand' || channelMode === 'notes') {
       if (onChannelModeChange) onChannelModeChange('private')
     }
     selectInboxConversationPartner(a)
@@ -671,7 +670,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const handleSelectSidebarAll = useCallback(() => {
     setTelegramAlarmSelected(false)
-    if (channelMode === 'pinnwand' && onChannelModeChange) onChannelModeChange('private')
+    /** Auch aus Gruppe → sonst bleibt Composer auf Team-Kanal, Posteingang wirkt wie „nur Gruppe“. */
+    if (
+      (channelMode === 'pinnwand' ||
+        channelMode === 'notes' ||
+        channelMode === 'group') &&
+      onChannelModeChange
+    ) {
+      onChannelModeChange('private')
+    }
     selectInboxConversationAll()
     const contacts = collectContactsForSendPath({
       directory,
@@ -728,6 +735,54 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       setTelegramIntegrationInfo(r)
     })
   }, [])
+
+  const onViewConversationInfo = useCallback(() => {
+    if (isGroup && inboxConversationGroupId) {
+      handleOpenGroupInfo()
+      return
+    }
+    if (telegramAlarmSelected) {
+      handleOpenTelegramAlarmInfo()
+      return
+    }
+    const peer =
+      (inboxPartnerKey?.trim() || '') ||
+      [recipient, partner].map((s) => (s || '').trim()).find(isValidRecipient0x) ||
+      ''
+    if (peer) handleOpenContactDetail(peer)
+  }, [
+    isGroup,
+    inboxConversationGroupId,
+    telegramAlarmSelected,
+    inboxPartnerKey,
+    recipient,
+    partner,
+    handleOpenGroupInfo,
+    handleOpenTelegramAlarmInfo,
+    handleOpenContactDetail,
+  ])
+
+  const { sendPanelProps } = useChatViewSendPanelProps({
+    messengerPorts: panelMessengerPorts,
+    activeGroup,
+    expertTools: uiCaps.expertTools,
+    pinnwandBroadcastAddress: pinnwandCaps.broadcastAddress,
+    canPostToPinnwand: pinnwandCaps.canPost,
+    vaultBannerActions,
+    onOpenPhonebook:
+      (isPrivate || isGroup) && !showConversationSidebar ? () => setPhonebookOpen(true) : undefined,
+    onOpenGroupSettings: () => setGroupSettingsOpen(true),
+    activeConversation:
+      showConversationSidebar && (isPrivate || isGroup)
+        ? {
+            inboxPartnerKey: isPrivate ? inboxPartnerKey : null,
+            inboxConversationGroupId: isGroup ? inboxConversationGroupId : null,
+            inboxPartnerFiltersArmed,
+            directory,
+          }
+        : undefined,
+    onClearActiveDirectConversation: isPrivate ? clearActiveDirectConversation : undefined,
+  })
 
   const activeGroupForInfo = useMemo(() => {
     if (!inboxConversationGroupId) return null
@@ -894,6 +949,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         activeConversationSubtitle,
         showAllConversationsActive,
         inboxConversationGroupId,
+        activeSendPath,
+        iotaPathFocus,
       }),
     [
       channelMode,
@@ -903,16 +960,86 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       activeConversationSubtitle,
       showAllConversationsActive,
       inboxConversationGroupId,
+      activeSendPath,
+      iotaPathFocus,
     ]
   )
+
+  const inboxHeading = useMemo(
+    () =>
+      posteingangTitleForSendPath({
+        activeSendPath,
+        iotaPathFocus,
+      }),
+    [activeSendPath, iotaPathFocus]
+  )
+
+  const conversationMuteKey = useMemo(() => {
+    if (telegramAlarmSelected) return null
+    const group = inboxConversationGroupId
+      ? readMessengerGroups().find((g) => g.id === inboxConversationGroupId)
+      : activeGroup
+    return muteKeyForConversation({
+      inboxPartnerKey,
+      inboxConversationGroupId,
+      teamMailboxObjectId: group?.teamMailboxObjectId,
+      isPinnwand: onPinnwandTab || isPinnwandChannel(channelMode ?? 'private'),
+    })
+  }, [
+    telegramAlarmSelected,
+    inboxPartnerKey,
+    inboxConversationGroupId,
+    activeGroup,
+    onPinnwandTab,
+    channelMode,
+  ])
+
+  const [chatMuted, setChatMutedUi] = useState(false)
+  useEffect(() => {
+    const sync = () => {
+      setChatMutedUi(conversationMuteKey ? isChatMuted(conversationMuteKey) : false)
+    }
+    sync()
+    window.addEventListener(INBOX_CHAT_MUTE_PREFS_CHANGED, sync)
+    return () => window.removeEventListener(INBOX_CHAT_MUTE_PREFS_CHANGED, sync)
+  }, [conversationMuteKey])
+
+  const handleToggleChatMute = useCallback(() => {
+    if (!conversationMuteKey) return
+    const next = toggleChatMuted(conversationMuteKey)
+    setChatMutedUi(next)
+    toast.success(next ? 'Eingangs-Ton für diesen Chat stumm.' : 'Eingangs-Ton für diesen Chat wieder an.')
+  }, [conversationMuteKey])
 
   const mergedChatHeaderProps = useMemo(
     () => ({
       ...chatHeaderProps,
       conversationTitle: chatHeaderContext.title,
       conversationSubtitle: chatHeaderContext.subtitle,
+      conversationIcon: chatHeaderContext.icon,
+      /** Mit Sidebar: kein zweiter „Posteingang …“-Titel — Sendepfad bleibt. */
+      hideTitleRow: showConversationSidebar,
+      onOpenNotes: onChannelModeChange ? handleSelectSidebarNotes : undefined,
+      suppressAppChrome: c.suppressAppChrome === true,
+      chatMuted,
+      onToggleChatMute: conversationMuteKey ? handleToggleChatMute : undefined,
+      onRefreshStatus: async () => {
+        await chatHeaderProps.onRefreshStatus?.()
+        inboxPanelProps.onRefresh?.()
+      },
     }),
-    [chatHeaderProps, chatHeaderContext]
+    [
+      chatHeaderProps,
+      chatHeaderContext,
+      showConversationSidebar,
+      onChannelModeChange,
+      handleSelectSidebarNotes,
+      c.suppressAppChrome,
+      inboxPanelProps.onRefresh,
+      chatMuted,
+      conversationMuteKey,
+      handleToggleChatMute,
+    ]
   )
 
   const pinnwandSidebarProps = useMemo(
@@ -963,6 +1090,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       teamMailboxCreateAllowed: canCreateTeamMailbox(connectionStatusRead.apiStatus),
       groupCreateAllowed: canCreateGroupCapability(connectionStatusRead.apiStatus),
       onGroupsChanged: refreshMessengerGroups,
+      onActivateGroup: handleSelectSidebarGroup,
       encrypted,
       onEncryptedChange: setEncrypted,
       handshake: groupHandshakeActions,
@@ -972,6 +1100,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       forcedTransport,
       connectionStatusRead.apiStatus,
       refreshMessengerGroups,
+      handleSelectSidebarGroup,
       encrypted,
       setEncrypted,
       groupHandshakeActions,
@@ -981,7 +1110,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const conversationMenuProps = useMemo((): ChatViewInboxPanelProps['conversationMenu'] => {
     if (!showConversationSidebar) return undefined
 
-    const exportHistory = () => panelMessengerPorts.inboxExportActions.onExportEinsatzberichtTxt()
     const clearHistory = () => panelMessengerPorts.inboxActions.onHideAllVisibleLocal()
     const chainSecurity = conversationMenuChainToolsVisible({
       activeSendPath,
@@ -993,19 +1121,21 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           onEnabledChange: setBurnOnReadEnabled,
         }
       : undefined
-    const encToggle = {
-      encrypted,
-      onEncryptedChange: setEncrypted,
-      forcedTransport,
-    }
+
+    /** Info auch für Telegram-/Funk-Kontakte ohne 0x-Adresse. */
+    const canOpenInfo = Boolean(
+      (isGroup && inboxConversationGroupId) ||
+        telegramAlarmSelected ||
+        (inboxPartnerKey && inboxPartnerKey.trim().length > 0) ||
+        [recipient, partner].map((s) => (s || '').trim()).some(isValidRecipient0x)
+    )
 
     if (onPinnwandTab) {
       return {
         title: pinnwandSidebarLabel(role, apiStatus),
         subtitle: pinnwandCaps.canPost ? 'Team-Brett · posten erlaubt' : 'Team-Brett · nur Lesen',
         canClearHistory: false,
-        canExport: true,
-        onExportHistory: exportHistory,
+        canExport: false,
         onClearHistory: clearHistory,
         onCreateGroup: openGroupSettings,
         burnOnRead: burnToggle,
@@ -1019,12 +1149,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         title: hasActive ? (activeConversationTitle as string) : 'Gruppenchat',
         subtitle: hasActive ? activeConversationSubtitle : 'Gruppe wählen oder anlegen',
         canClearHistory: hasActive,
-        canExport: true,
-        onViewInfo: hasActive ? handleOpenGroupInfo : undefined,
+        canExport: false,
+        onViewInfo: canOpenInfo ? onViewConversationInfo : undefined,
         onManageGroup: openGroupSettings,
         onCreateGroup: openGroupSettings,
-        encryptionToggle: encToggle,
-        onExportHistory: exportHistory,
         onClearHistory: clearHistory,
         burnOnRead: burnToggle,
         showChainSecurityTools: chainSecurity,
@@ -1036,9 +1164,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         title: activeConversationTitle ?? 'Einsatz-Alarmgruppe',
         subtitle: activeConversationSubtitle,
         canClearHistory: false,
-        canExport: true,
-        onViewInfo: handleOpenTelegramAlarmInfo,
-        onExportHistory: exportHistory,
+        canExport: false,
+        onViewInfo: onViewConversationInfo,
         onClearHistory: clearHistory,
         onCreateGroup: openGroupSettings,
         burnOnRead: burnToggle,
@@ -1063,31 +1190,26 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         ? activeConversationSubtitle
         : canRenew
           ? 'Partner gesetzt'
-          : 'Kontakt wählen oder Kontakte verwalten'
+          : undefined
 
-    if (isPrivate && (composerDelivery === 'chain' || inboxPartnerFiltersArmed)) {
-      return {
-        title: partnerTitle,
-        subtitle: partnerSubtitle,
-        canClearHistory: true,
-        canExport: true,
-        onViewInfo: renewPeer ? () => handleOpenContactDetail(renewPeer) : undefined,
-        onExportHistory: exportHistory,
-        onClearHistory: clearHistory,
-        onCreateGroup: openGroupSettings,
-        onRenewEncryptionKeys:
-          chainSecurity && canRenew ? () => void handleRenewPeerEncryption(renewPeer) : undefined,
-        renewEncryptionLabel:
-          chainSecurity && canRenew ? `Schlüssel erneuern (Epoch ${epoch || 1})` : undefined,
-        renewEncryptionHint:
-          'Session-Epoch erhöhen — Forward Secrecy ab Rotation (nicht pro Nachricht). Alte Nachrichten bleiben lesbar.',
-        burnOnRead: burnToggle,
-        encryptionToggle: encToggle,
-        showChainSecurityTools: chainSecurity,
-      }
+    /** Immer Chat·Sicherheit mit Info, sobald Sidebar da — nicht nur bei chain/Filter. */
+    return {
+      title: partnerTitle,
+      subtitle: partnerSubtitle,
+      canClearHistory: true,
+      canExport: false,
+      onViewInfo: canOpenInfo ? onViewConversationInfo : undefined,
+      onClearHistory: clearHistory,
+      onCreateGroup: openGroupSettings,
+      onRenewEncryptionKeys:
+        chainSecurity && canRenew ? () => void handleRenewPeerEncryption(renewPeer) : undefined,
+      renewEncryptionLabel:
+        chainSecurity && canRenew ? `Schlüssel erneuern (Epoch ${epoch || 1})` : undefined,
+      renewEncryptionHint:
+        'Session-Epoch erhöhen — Forward Secrecy ab Rotation (nicht pro Nachricht). Alte Nachrichten bleiben lesbar.',
+      burnOnRead: burnToggle,
+      showChainSecurityTools: chainSecurity,
     }
-
-    return undefined
   }, [
     showConversationSidebar,
     onPinnwandTab,
@@ -1100,24 +1222,16 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     activeConversationTitle,
     activeConversationSubtitle,
     openGroupSettings,
-    handleOpenGroupInfo,
-    handleOpenTelegramAlarmInfo,
-    encrypted,
-    setEncrypted,
-    forcedTransport,
+    onViewConversationInfo,
     activeSendPath,
     iotaPathFocus,
     inboxPartnerFiltersArmed,
     inboxPartnerKey,
-    handleOpenContactDetail,
     handleRenewPeerEncryption,
     burnOnReadEnabled,
     setBurnOnReadEnabled,
     recipient,
     partner,
-    selectInboxPartnerForSend,
-    composerDelivery,
-    panelMessengerPorts.inboxExportActions,
     panelMessengerPorts.inboxActions,
   ])
 
@@ -1197,6 +1311,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       onOpenGroupSettings={openGroupSettings}
       onOpenContactDetail={handleOpenContactDetail}
       onOpenPhonebook={() => setPhonebookOpen(true)}
+      myAddress={myAddress}
       selfProfile={{
         ...myDataPanelProps,
         packageId: apiStatus?.packageId,
@@ -1216,6 +1331,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           teamMailboxCreateAllowed={canCreateTeamMailbox(connectionStatusRead.apiStatus)}
           groupCreateAllowed={canCreateGroupCapability(connectionStatusRead.apiStatus)}
           onGroupsChanged={refreshMessengerGroups}
+          onActivateGroup={handleSelectSidebarGroup}
           encrypted={encrypted}
           onEncryptedChange={setEncrypted}
           handshake={groupHandshakeActions}
@@ -1270,6 +1386,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           onOpenGroupSettings={openGroupSettings}
           onOpenContactDetail={handleOpenContactDetail}
           onOpenPhonebook={() => setPhonebookOpen(true)}
+          myAddress={myAddress}
           selfProfile={{
         ...myDataPanelProps,
         packageId: apiStatus?.packageId,
@@ -1313,9 +1430,24 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             hidePartnerStrip={showConversationSidebar}
             inboxSearchQuery={messengerSearchQuery}
             conversationMenu={conversationMenuProps}
+            inboxHeading={inboxHeading}
+            className={
+              showConversationSidebar
+                ? 'flex min-h-0 flex-1 flex-col overflow-hidden'
+                : undefined
+            }
+            /** Sidebar: Liste füllt die feste Spaltenhöhe; Composer darunter (kein Overlap). */
+            messageListMaxClassName={
+              showConversationSidebar ? 'min-h-0 flex-1 overflow-y-auto' : undefined
+            }
           />
 
-          {composerBlock}
+          {/* Ohne Sidebar: Composer unter dem Posteingang. Mit Sidebar: volle Breite unter beiden Spalten. */}
+          {!showConversationSidebar ? (
+            <div className="relative z-10 mt-3 shrink-0 border-t border-border bg-background pt-3">
+              {composerBlock}
+            </div>
+          ) : null}
         </>
       )}
 
@@ -1376,7 +1508,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                   query={messengerSearchQuery}
                   onQueryChange={setMessengerSearchQuery}
                   activeSendPath={activeSendPath}
-      iotaPathFocus={iotaPathFocus}
                   onSelectContact={handleMobileSelectContact}
                   onSelectGroup={handleMobileSelectGroup}
                   onSelectTelegramAlarmGroup={() => {
@@ -1403,12 +1534,35 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                   hidePartnerStrip
                   inboxSearchQuery={messengerSearchQuery}
                   conversationMenu={conversationMenuProps}
+                  inboxHeading={inboxHeading}
                 />
               </>
             ) : null}
 
             {mobileTab === 'inbox' ? (
               <>
+                <ChatViewMessengerSearch
+                  className="mb-2"
+                  directory={directory}
+                  partnerOptions={inboxPartnerOptions}
+                  messages={inboxMessages}
+                  myAddress={myAddress}
+                  query={messengerSearchQuery}
+                  onQueryChange={setMessengerSearchQuery}
+                  activeSendPath={activeSendPath}
+                  placeholder="Posteingang durchsuchen…"
+                  onSelectContact={handleMobileSelectContact}
+                  onSelectGroup={handleMobileSelectGroup}
+                  onSelectTelegramAlarmGroup={() => {
+                    void handleSelectSidebarTelegramAlarm()
+                    setMobileTab('chats')
+                  }}
+                  onSelectMessageHit={(hit) => {
+                    handleSelectMessageHit(hit)
+                    setMobileTab('chats')
+                  }}
+                  {...sidebarHandshakeProps}
+                />
                 {inboxOverviewChipsVisible && (inboxPanelRead.inboxUnreadThreadOptions?.length ?? 0) > 0 ? (
                   <ChatViewInboxUnreadThreadsStrip
                     threads={[...(inboxPanelRead.inboxUnreadThreadOptions ?? [])]}
@@ -1425,7 +1579,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                   {...inboxPanelProps}
                   hidePartnerStrip={false}
                   inboxSearchQuery={messengerSearchQuery}
-                  conversationMenu={undefined}
+                  conversationMenu={conversationMenuProps}
+                  inboxHeading={inboxHeading}
                 />
               </>
             ) : null}
@@ -1441,7 +1596,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                     onClick={() => setPhonebookOpen(true)}
                     title="Telefonbuch — anlegen, bearbeiten, importieren"
                   >
-                    Kontakte verwalten
+                    Telefonbuch
                   </Button>
                 </div>
                 {sharedContactSidebar}
@@ -1459,7 +1614,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           />
         </div>
       ) : (
-      <div className={isNativeMobile ? 'space-y-3' : 'space-y-6'}>
+      <div className={isNativeMobile ? 'space-y-3' : showConversationSidebar ? 'space-y-3' : 'space-y-6'}>
         <ChatViewChatHeader
           {...(isNativeMobile ? nativeHeaderProps : mergedChatHeaderProps)}
         />
@@ -1469,7 +1624,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         ) : null}
 
         {showConversationSidebar ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             <ChatViewMessengerSearch
               directory={directory}
               partnerOptions={inboxPartnerOptions}
@@ -1478,44 +1633,51 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               query={messengerSearchQuery}
               onQueryChange={setMessengerSearchQuery}
               activeSendPath={activeSendPath}
-      iotaPathFocus={iotaPathFocus}
               onSelectContact={handleSelectSidebarContact}
               onSelectGroup={handleSelectSidebarGroup}
               onSelectTelegramAlarmGroup={handleSelectSidebarTelegramAlarm}
               onSelectMessageHit={handleSelectMessageHit}
               {...sidebarHandshakeProps}
             />
-            <div className="grid gap-4 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-start">
-            <ChatViewContactSidebar
-              className="hidden lg:flex"
-              directory={directory}
-              partnerOptions={inboxPartnerOptions}
-              activePartnerKey={inboxPartnerKey}
-              activeGroupId={inboxConversationGroupId}
-              activeTelegramAlarmSelected={activeTelegramAlarmSelected}
-              showAllActive={showAllConversationsActive}
-              searchQuery={messengerSearchQuery}
-              activeSendPath={activeSendPath}
-      iotaPathFocus={iotaPathFocus}
-              onSelectAll={handleSelectSidebarAll}
-              onSelectSelf={handleSelectSidebarSelf}
-              activeSelfSelected={activeSelfSelected}
-              onSelectContact={handleSelectSidebarContact}
-              onSelectGroup={handleSelectSidebarGroup}
-              onSelectTelegramAlarmGroup={handleSelectSidebarTelegramAlarm}
-              onOpenGroupSettings={openGroupSettings}
-              onOpenContactDetail={handleOpenContactDetail}
-              onOpenPhonebook={() => setPhonebookOpen(true)}
-              selfProfile={{
-        ...myDataPanelProps,
-        packageId: apiStatus?.packageId,
-        onOpenIotaSettings: onOpenSettings,
-      }}
-              {...pinnwandSidebarProps}
-              {...sidebarHandshakeProps}
-            />
-            <div className={isNativeMobile ? 'min-w-0 space-y-3' : 'min-w-0 space-y-8'}>{conversationBody}</div>
+            <div className="grid gap-3 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-stretch">
+              <ChatViewContactSidebar
+                className="hidden h-[min(70vh,44rem)] overflow-hidden lg:flex"
+                directory={directory}
+                partnerOptions={inboxPartnerOptions}
+                activePartnerKey={inboxPartnerKey}
+                activeGroupId={inboxConversationGroupId}
+                activeTelegramAlarmSelected={activeTelegramAlarmSelected}
+                showAllActive={showAllConversationsActive}
+                searchQuery={messengerSearchQuery}
+                activeSendPath={activeSendPath}
+                iotaPathFocus={iotaPathFocus}
+                onSelectAll={handleSelectSidebarAll}
+                onSelectSelf={handleSelectSidebarSelf}
+                activeSelfSelected={activeSelfSelected}
+                onSelectContact={handleSelectSidebarContact}
+                onSelectGroup={handleSelectSidebarGroup}
+                onSelectTelegramAlarmGroup={handleSelectSidebarTelegramAlarm}
+                onOpenGroupSettings={openGroupSettings}
+                onOpenContactDetail={handleOpenContactDetail}
+                onOpenPhonebook={() => setPhonebookOpen(true)}
+                myAddress={myAddress}
+                selfProfile={{
+                  ...myDataPanelProps,
+                  packageId: apiStatus?.packageId,
+                  onOpenIotaSettings: onOpenSettings,
+                }}
+                {...pinnwandSidebarProps}
+                {...sidebarHandshakeProps}
+              />
+              <div className="flex h-[min(70vh,44rem)] min-w-0 flex-col overflow-hidden">
+                {conversationBody}
+              </div>
             </div>
+            {!onNotesTab && !onPinnwandTab ? (
+              <div className="relative z-10 mt-3 shrink-0 border-t border-border bg-background pt-3">
+                {composerBlock}
+              </div>
+            ) : null}
           </div>
         ) : (
           <div className={isNativeMobile ? 'space-y-3' : 'space-y-8'}>{conversationBody}</div>
@@ -1549,6 +1711,13 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           handleSelectSidebarContact(contactDetailAddress)
           setContactDetailOpen(false)
         }}
+        onFocusMessage={(messageId) => {
+          if (contactDetailAddress) handleSelectSidebarContact(contactDetailAddress)
+          setContactDetailOpen(false)
+          requestAnimationFrame(() => {
+            document.getElementById(`inbox-msg-${messageId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          })
+        }}
       />
       ) : null}
 
@@ -1557,7 +1726,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           open={groupInfoOpen}
           onOpenChange={setGroupInfoOpen}
           title={activeGroupForInfo?.name ? `Info · ${activeGroupForInfo.name}` : 'Gruppen-Info'}
-          description="Technische IDs und Schlüssel-Status — ohne Secrets. Bearbeiten unter „Gruppe verwalten“."
+          description="Mitglieder + Team-Postfach-ID hier (Chat) — ohne Settings→IOTA. Secrets nur Status; Bearbeiten: „Gruppe verwalten“."
           sections={groupInfoSections}
           primaryAction={{
             label: 'Gruppe verwalten…',
@@ -1566,7 +1735,18 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               openGroupSettings()
             },
           }}
-        />
+        >
+          <ChatViewMediaGallery
+            messages={messengerPorts.inboxFeedRead.messages}
+            loadMessages={messengerPorts.inboxExportActions.loadMessagesForMediaExport}
+            compact
+            onStatus={(msg) => {
+              setStatus('success')
+              setStatusMsg(msg)
+              setTimeout(() => setStatus('idle'), 7000)
+            }}
+          />
+        </MessengerEntityInfoDialog>
       ) : null}
 
       {telegramAlarmInfoOpen ? (
@@ -1587,7 +1767,18 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                 }
               : undefined
           }
-        />
+        >
+          <ChatViewMediaGallery
+            messages={messengerPorts.inboxFeedRead.messages}
+            loadMessages={messengerPorts.inboxExportActions.loadMessagesForMediaExport}
+            compact
+            onStatus={(msg) => {
+              setStatus('success')
+              setStatusMsg(msg)
+              setTimeout(() => setStatus('idle'), 7000)
+            }}
+          />
+        </MessengerEntityInfoDialog>
       ) : null}
 
       {(isPrivate || isGroup || onPinnwandTab) && phonebookOpen ? (

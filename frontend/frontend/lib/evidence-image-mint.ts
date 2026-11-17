@@ -20,6 +20,7 @@ import {
   getDirectIotaSessionSignerAddress,
 } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { formatDirectIotaSubmitError } from '@/frontend/lib/direct-iota-error-messages'
+import { sha256HexOfBytes } from '@/frontend/lib/sha256-bytes'
 import {
   EVIDENCE_IMAGE_MAX_RAW_BYTES,
   KNOWN_IMAGE_NFT_PACKAGE_IDS,
@@ -74,10 +75,7 @@ export type MintEvidenceImageResult =
   | { ok: false; error: string }
 
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
-  const dig = await crypto.subtle.digest('SHA-256', bytes)
-  return Array.from(new Uint8Array(dig))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('')
+  return sha256HexOfBytes(bytes)
 }
 
 export async function mintEvidenceImageNft(input: MintEvidenceImageInput): Promise<MintEvidenceImageResult> {

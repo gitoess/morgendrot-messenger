@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useRef } from 'react'
+import { toast } from 'sonner'
 import {
   isOfflineMailboxQueueEnabled,
   nextChainMessageNonceU64,
@@ -23,6 +24,7 @@ import {
   readPassphraseNftKeycardBindSlotId,
   readPassphraseNftPubkeyWrapP4a2Enabled,
   readPassphraseNftRequiredWallet,
+  readPassphraseNftRequiredWallets,
   readPassphraseNftSealP4bEnabled,
   readPassphraseNftStrongGateEnabled,
   readPassphraseProtectEnabled,
@@ -96,6 +98,7 @@ import {
   resolveGroupTargetsForInternetSend,
   resolveSingleWireSuccessMessage,
 } from '@/frontend/features/send/chat-view-handle-send-group'
+import { buildPrivateDmOptimisticInboxRow } from '@/frontend/lib/group-inbox-optimistic'
 import { createChatViewSendOnePart } from '@/frontend/features/send/chat-view-handle-send-one-part'
 import {
   emergencyFanOutAnyOk,
@@ -129,9 +132,15 @@ import { notifyTelegramContact } from '@/frontend/lib/api/telegram-notify'
 import { postTelegramGroupAlarm } from '@/frontend/lib/api/telegram-integrations'
 import { resolveChatSendEncryption } from '@/frontend/lib/resolve-chat-send-encryption'
 import {
+  formatTelegramNotifyDeliveredSuffix,
+  planTelegramNotifyAfterSend,
+} from '@/frontend/lib/telegram-notify-after-send'
+import {
   buildTelegramMessagePreview,
+  readTelegramNotifyAudience,
+  readTelegramNotifyExtraChatIds,
   readTelegramNotifyOnSend,
-  resolveTelegramNotifyRecipientAddress,
+  telegramNotifyAudienceLabel,
 } from '@/frontend/lib/telegram-notify-pref'
 import { resolveOutboundMailboxObjectId } from '@/frontend/lib/outbound-mailbox-routing'
 import {
@@ -163,7 +172,8 @@ function applyValidationError(
 ): void {
   setStatus('error')
   setStatusMsg(v.message)
-  setTimeout(() => setStatus('idle'), v.idleMs ?? 6000)
+  toast.error(v.message, { duration: Math.max(v.idleMs ?? 20_000, 12_000) })
+  setTimeout(() => setStatus('idle'), v.idleMs ?? 20_000)
 }
 
 
@@ -290,7 +300,16 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       return
     }
 
-    if (sendEncrypted && isPrivate && !ADDR_64_LOWER.test(encryptedMailboxRecipient)) {
+    /**
+     * `isPrivate` = Dialog-Kanal (1:1 **oder** Gruppe). Enc-Partner-Adresse nur bei 1:1 —
+     * Gruppe nutzt Team-Postfach / Team-Schlüssel (kein Handshake-Empfängerfeld).
+     */
+    if (
+      sendEncrypted &&
+      isPrivate &&
+      !isGroupChannel &&
+      !ADDR_64_LOWER.test(encryptedMailboxRecipient)
+    ) {
       setStatus('error')
       setStatusMsg(
         'Verschlüsselt: gültige 0x-Empfängeradresse im Composer oder Partner (Handshake) eintragen.'
@@ -417,11 +436,14 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       return false
     }
 
-    /** Nach Mailbox-Send: gestaffelte Reloads (Chain-Index braucht oft >1 s). */
+    /** Nach Mailbox-Send: gestaffelte Reloads (Chain-Index braucht oft >1 s). Erster Reset, dann Poll (nur neue mergen). */
     const scheduleInboxReloadAfterSend = () => {
-      for (const ms of inboxReloadDelaysMs(isGroupChannel)) {
-        setTimeout(() => void loadMessages('reset', undefined, { silent: true }), ms)
-      }
+      const delays = inboxReloadDelaysMs(isGroupChannel)
+      delays.forEach((ms, i) => {
+        setTimeout(() => {
+          void loadMessages(i === 0 ? 'reset' : 'poll', undefined, { silent: true })
+        }, ms)
+      })
     }
 
     const mailboxOptsFor = (to: string) => {
@@ -726,15 +748,14 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       try {
         const wrapped: string[] = []
         const cardOid = readPassphraseNftKeycardBindObjectId()
-        if (zeitkapselMode && (!cardOid || !getNftKeycard(cardOid))) {
+        if (zeitkapselMode && !cardOid) {
           throw new Error(
-            'Zeitkapsel-Nachricht: zuerst ein NFT/Schlüsselkarte wählen (Composer).'
+            'Zeitkapsel-Nachricht: NFT-Object-ID wählen oder einfügen (Composer). Schlüsselkarte merken ist optional.'
           )
         }
+        /** Zeitkapsel = NFTGATE nur mit Object-ID; lokale Schlüsselkarte ist Komfort, kein Muss. */
         const strongGate = Boolean(
-          (zeitkapselMode || readPassphraseNftStrongGateEnabled()) &&
-            cardOid &&
-            getNftKeycard(cardOid)
+          (zeitkapselMode || readPassphraseNftStrongGateEnabled()) && cardOid
         )
 
         if (strongGate) {
@@ -742,12 +763,19 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           const dual = readPassphraseNftDualWalletGateEnabled()
           const p4b = readPassphraseNftSealP4bEnabled()
           const p4a2 = !p4b && dual && readPassphraseNftPubkeyWrapP4a2Enabled()
-          const requiredWallet = dual || (p4b && readPassphraseNftRequiredWallet())
-            ? readPassphraseNftRequiredWallet()
-            : null
-          if (dual && !requiredWallet) {
+          const requiredWallets =
+            dual || (p4b && readPassphraseNftRequiredWallets().length)
+              ? readPassphraseNftRequiredWallets()
+              : []
+          const requiredWallet = requiredWallets[0] ?? null
+          if (dual && requiredWallets.length === 0) {
             throw new Error(
-              'Dual-Gate: erlaubte Wallet-Adresse setzen (0x…), oder „Wallet + NFT“ aus.'
+              'Dual-Gate: mind. eine erlaubte Wallet-Adresse (0x…), oder „Wallet + NFT“ aus.'
+            )
+          }
+          if (p4a2 && requiredWallets.length !== 1) {
+            throw new Error(
+              'P4a2 (Pubkey-Wrap): genau eine Wallet — bei mehreren Adressen Pubkey-Wrap aus oder auf eine kürzen.'
             )
           }
           let recipientEcdhPubRaw: Uint8Array | null = null
@@ -782,19 +810,22 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
               plainUtf8: snap,
               nftObjectId: cardOid!,
               requiredWallet: dual || p4b ? requiredWallet : null,
+              requiredWallets: dual || p4b ? requiredWallets : null,
               recipientEcdhPubRaw,
               sealWrapKeyRaw,
             })
-            bindWireToNftKeycard({
-              objectId: nftObjectId,
-              wireFingerprint: fingerprintPassphraseMessageWire(wire),
-              slotId: readPassphraseNftKeycardBindSlotId(),
-            })
+            if (getNftKeycard(nftObjectId)) {
+              bindWireToNftKeycard({
+                objectId: nftObjectId,
+                wireFingerprint: fingerprintPassphraseMessageWire(wire),
+                slotId: readPassphraseNftKeycardBindSlotId(),
+              })
+            }
             wrapped.push(wire)
             void gate
           }
           textSnaps = wrapped
-          await flushNftKeycardVaultPersist()
+          if (getNftKeycard(cardOid!)) await flushNftKeycardVaultPersist()
           if (cardOid) writeZeitkapselLastNftObjectId(cardOid)
           sharedPassphraseNote = zeitkapselMode
             ? ' Zeitkapsel-Nachricht (NFTGATE) gesendet — Ciphertext im Wire; Leserecht = NFT. Unten „Dieses NFT verleihen…“ oder On-Chain → Zeitkapsel.'
@@ -803,7 +834,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
               : p4a2
                 ? ` Starkes P4a2 (Wallet+NFT+Pubkey): nur ${requiredWallet!.slice(0, 10)}… mit NFT + ECDH-Privatkey. Klartext danach kopierbar.`
                 : dual
-                  ? ` Starkes Dual-Gate (Wallet+NFT): nur Adresse ${requiredWallet!.slice(0, 10)}… mit NFT-Leserecht. Klartext danach kopierbar. Kein Blank-DEK im Vault.`
+                  ? requiredWallets.length > 1
+                    ? ` Starkes Dual-Gate (Wallet+NFT): ${requiredWallets.length} erlaubte Wallets + NFT-Leserecht. Klartext danach kopierbar.`
+                    : ` Starkes Dual-Gate (Wallet+NFT): nur Adresse ${requiredWallet!.slice(0, 10)}… mit NFT-Leserecht. Klartext danach kopierbar. Kein Blank-DEK im Vault.`
                   : ' Starkes NFT-Gate (P4a): Lesen nur mit Besitz/Leihe der Schlüsselkarte — kein Passphrase-Teilen, kein Blank-DEK im Vault. Klartext danach kopierbar.'
         } else {
           const { passphrase: batchPass, reused } = resolvePassphraseForProtectSend(
@@ -816,6 +849,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
                 : 'Passphrase mindestens 8 Zeichen (Wiederverwenden: Feld prüfen).'
             )
           }
+          let rememberedAny = false
+          let rememberOnlyTab = false
           for (const snap of textSnaps) {
             if (!snap.trim()) {
               wrapped.push(snap)
@@ -824,38 +859,40 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             const { wire, passphrase } = await encryptPassphraseMessage(snap, batchPass)
             const rememberOnDevice = readPassphraseRememberOnDeviceEnabled()
             if (rememberOnDevice) {
-              if (!isPassphraseMessageVaultSessionOpen()) {
-                throw new Error(
-                  '„Auf diesem Gerät merken“ braucht eine offene Vault-Sitzung. Privacy-Badge tippen, Vault-Passwort eingeben, dann erneut senden.'
-                )
-              }
+              // Immer merken (RAM + Tab-Backup). Enc-Sidecar nur mit Vault-Sitzung — nicht blockieren.
               rememberPassphraseMessagePassphrase(wire, passphrase)
+              rememberedAny = true
+              if (!isPassphraseMessageVaultSessionOpen()) rememberOnlyTab = true
             }
-            if (cardOid && getNftKeycard(cardOid)) {
-              bindWireToNftKeycard({
-                objectId: cardOid,
-                wireFingerprint: fingerprintPassphraseMessageWire(wire),
-                slotId: readPassphraseNftKeycardBindSlotId(),
-              })
-            }
+            // Kein Auto-Bind an Schlüsselkarte bei normalem PWMSG (Rest-OID von Zeitkapsel
+            // erzeugte sonst falschen „gebunden“-Hinweis). Binden: nach Unlock in der Zeile.
             wrapped.push(wire)
           }
           textSnaps = wrapped
           if (!reused) {
             rollPassphraseAfterOneShotSend(generatePassphraseMessageSharePassphrase)
           }
-          if (readPassphraseRememberOnDeviceEnabled() || reused || !readPassphraseReuseEnabled()) {
+          if (rememberedAny || reused || !readPassphraseReuseEnabled()) {
             await flushPassphraseMessageVaultPersist()
           }
           if (batchPass) {
-            const remembered = readPassphraseRememberOnDeviceEnabled()
-            sharedPassphraseNote = reused
-              ? remembered
-                ? ` Passphrase (wiederverwendet, für dich auf diesem Gerät gemerkt): ${batchPass}`
-                : ` Passphrase (wiederverwendet, nicht im Vault gemerkt): ${batchPass}`
-              : remembered
-                ? ` Passphrase zum Teilen (für dich auf diesem Gerät gemerkt): ${batchPass}`
-                : ` Passphrase zum Teilen (nicht im Vault gemerkt — nur jetzt kopieren): ${batchPass}`
+            sharedPassphraseNote = rememberedAny
+              ? reused
+                ? ` Passphrase (wiederverwendet, gemerkt): ${batchPass}`
+                : ` Passphrase zum Teilen (gemerkt): ${batchPass}`
+              : reused
+                ? ` Passphrase (wiederverwendet): ${batchPass}`
+                : ` Passphrase zum Teilen (kopieren!): ${batchPass}`
+            if (rememberOnlyTab) {
+              sharedPassphraseNote +=
+                ' Merken aktiv (Tab/RAM). Dauerhaft erst nach Vault-Unlock — das ist das Tresor-Passwort, nicht die Nachrichten-Passphrase.'
+            }
+            if (!reused) {
+              sharedPassphraseNote +=
+                ' „Wiederverwenden“ war aus → Passphrase für den nächsten Send neu gewürfelt. Anlassen, wenn sie gleich bleiben soll.'
+            }
+            sharedPassphraseNote +=
+              ' Posteingang: Ansicht → Alles — Zeile sollte ohne erneutes Tippen aufgehen.'
           }
         }
       } catch (e) {
@@ -1260,35 +1297,56 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
 
       if (readTelegramNotifyOnSend() && forcedTransport === 'internet' && isPrivate) {
+        const audience = readTelegramNotifyAudience()
         const notifyAddr = recipient.trim().toLowerCase()
-        if (ADDR_64_LOWER.test(notifyAddr)) {
-          const contactEntry = contactDirectory[notifyAddr]
-          if (contactEntry?.telegramChatId?.trim()) {
-            const preview =
-              message.trim() ||
-              (attachedTxtFile
-                ? attachedTxtFile.text.slice(0, 200) || `[${attachedTxtFile.name}]`
-                : attachedBlobBase64
-                  ? '[Bild-Anhang]'
-                  : attachedAudioBase64
-                    ? '[Audio-Anhang]'
-                    : textSnaps[0]?.slice(0, 200) || 'Neue Morgendrot-Nachricht')
-            const myLabel =
-              contactDirectory[myAddress.trim().toLowerCase()]?.label ||
-              `${myAddress.trim().slice(0, 10)}…`
-            void notifyTelegramContact({
-              recipientAddress: notifyAddr,
-              messagePreview: preview,
-              senderLabel: myLabel,
-              skipJournal: true,
-            }).then((r) => {
-              if (r.delivered) {
-                setStatusMsg(`${statusLine} · Telegram-Hinweis an Kontakt gesendet.`)
-              } else if (r.error) {
-                setStatusMsg(`${statusLine} · Telegram: ${r.error}`)
-              }
-            })
-          }
+        const preview = buildTelegramMessagePreview({
+          message,
+          attachedTxtFile,
+          attachedBlobBase64,
+          attachedAudioBase64,
+          fallbackText: textSnaps[0],
+        })
+        const myLabel =
+          contactDirectory[myAddress.trim().toLowerCase()]?.label ||
+          `${myAddress.trim().slice(0, 10)}…`
+        const plan = planTelegramNotifyAfterSend({
+          audience,
+          recipientAddress: notifyAddr,
+          contactTelegramChatId: contactDirectory[notifyAddr]?.telegramChatId,
+          extraChatIds: readTelegramNotifyExtraChatIds(),
+        })
+
+        if (plan.kind === 'skip') {
+          setStatusMsg(
+            `${statusLine} · Telegram-Hinweis übersprungen (${plan.reason}; Ziel: ${telegramNotifyAudienceLabel(audience)}).`
+          )
+        } else {
+          void notifyTelegramContact({
+            recipientAddress: plan.recipientAddress,
+            messagePreview: preview,
+            senderLabel: myLabel,
+            skipJournal: true,
+            /** Bei nur-CC: audience contact ohne Adresse → Server skippt Kontakt, sendet extras. */
+            audience: plan.apiAudience,
+            extraChatIds: plan.extraChatIds,
+          }).then((r) => {
+            if (r.delivered) {
+              setStatusMsg(
+                `${statusLine} · ${formatTelegramNotifyDeliveredSuffix({
+                  audience: plan.audience,
+                  wantContact: plan.wantContact,
+                  contactOk: plan.contactOk,
+                  deliveredContact: r.deliveredContact,
+                  deliveredAdmin: r.deliveredAdmin,
+                  deliveredExtra: r.deliveredExtra,
+                })}`
+              )
+            } else if (r.skipped) {
+              setStatusMsg(`${statusLine} · Telegram-Hinweis: ${r.skipped}`)
+            } else if (r.error) {
+              setStatusMsg(`${statusLine} · Telegram: ${r.error}`)
+            }
+          })
         }
       }
 
@@ -1344,6 +1402,30 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         })
         if (optimistic.length > 0) {
           setMessages((prev) => applyGroupOptimisticInboxMerge(prev, optimistic))
+        }
+      } else if (
+        isPrivate &&
+        !isGroupChannel &&
+        forcedTransport === 'internet' &&
+        isSendPartSuccess(lastOk)
+      ) {
+        const preview =
+          textSnaps[textSnaps.length - 1]?.trim() ||
+          message.trim() ||
+          (!encrypted ? lastOk.mailboxCapture?.payloadUtf8?.trim() : '') ||
+          ''
+        const to =
+          (recipient || plainMailboxRecipient || encryptedMailboxRecipient || myAddress).trim()
+        const dmOpt = buildPrivateDmOptimisticInboxRow({
+          myAddress,
+          recipient: to,
+          text: preview,
+          encrypted: lastOk.mailboxCapture?.encrypted ?? encrypted,
+          messageNonceU64: lastOk.mailboxCapture?.messageNonceU64,
+          mailboxPersisted: messagingPersistenceMode === 'mailbox',
+        })
+        if (dmOpt) {
+          setMessages((prev) => applyGroupOptimisticInboxMerge(prev, [dmOpt]))
         }
       }
 

@@ -281,6 +281,11 @@ export type ChatViewInboxActionsSlice = {
   onHideAllVisibleLocal: () => void
   onBulkHideSelected: () => void
   onBulkPurgeSelected: () => void
+  onBulkMarkProtokollSelected: () => void
+  onBulkCopySelected: () => void
+  onBulkExportJsonSelected: () => void
+  onBulkHashSelected: () => void
+  onBulkForwardSelected: (includeSender: boolean) => void
   localPurgeBusy: boolean
   morgPkgFileRef: RefObject<HTMLInputElement | null>
   morgPkgDeviceFilesRef: RefObject<HTMLInputElement | null>
@@ -299,13 +304,16 @@ export type ChatViewInboxActionsSlice = {
 
 export type ChatViewInboxExportActionsSlice = {
   exportEcdhMorgPkgForMessage: (msg: Message) => void | Promise<void>
-  onExportEinsatzberichtJson: () => void
-  onExportEinsatzberichtTxt: () => void
-  onExportEinsatzberichtTxtFull: () => void
+  onExportEinsatzberichtJson: InboxExportActionsPort['onExportEinsatzberichtJson']
+  onExportEinsatzberichtTxt: InboxExportActionsPort['onExportEinsatzberichtTxt']
+  onExportEinsatzberichtTxtFull: InboxExportActionsPort['onExportEinsatzberichtTxtFull']
   onExportEinsatzberichtEncrypted: () => void | Promise<void>
-  onExportEinsatzprotokoll: () => void | Promise<void>
-  onExportEinsatzprotokollPlainZip: () => void | Promise<void>
+  onExportEinsatzprotokoll: InboxExportActionsPort['onExportEinsatzprotokoll']
+  onExportEinsatzprotokollPlainZip: InboxExportActionsPort['onExportEinsatzprotokollPlainZip']
   onExportEinsatzprotokollMarked: () => void | Promise<void>
+  onExportMorgMediaZip: InboxExportActionsPort['onExportMorgMediaZip']
+  onExportMorgMediaDirect: InboxExportActionsPort['onExportMorgMediaDirect']
+  loadMessagesForMediaExport?: () => Promise<Message[]>
 }
 
 export type ChatViewPackageExpertSlice = {
@@ -582,6 +590,11 @@ export function assembleInboxActionsPort(slice: ChatViewInboxActionsSlice): Inbo
     onHideAllVisibleLocal: slice.onHideAllVisibleLocal,
     onBulkHideSelected: slice.onBulkHideSelected,
     onBulkPurgeSelected: slice.onBulkPurgeSelected,
+    onBulkMarkProtokollSelected: slice.onBulkMarkProtokollSelected,
+    onBulkCopySelected: slice.onBulkCopySelected,
+    onBulkExportJsonSelected: slice.onBulkExportJsonSelected,
+    onBulkHashSelected: slice.onBulkHashSelected,
+    onBulkForwardSelected: slice.onBulkForwardSelected,
     localPurgeBusy: slice.localPurgeBusy,
     morgPkgFileRef: slice.morgPkgFileRef,
     morgPkgDeviceFilesRef: slice.morgPkgDeviceFilesRef,

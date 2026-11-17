@@ -18,7 +18,7 @@ npm run dev
 ```
 
 1. Tresor entsperren, `GET /api/status` → `role=boss`, `simpleMode=false`, `iotaTransportUiEnabled=true`.
-2. **Einsatzleitung** → **Export-Assistent** (alternativ: **Einstellungen**, Rolle Boss — gleicher Assistent).
+2. **Einsatzleitung** → **Helfer einrichten** (Handoff-ZIP).
 3. Preset **Helfer** oder **Arbeiter**; PSK-Hinweis oben lesen.
 4. Optional: **IOTA-Archiv im README** (nur bei Funk-Presets) — ergänzt `README-HANDOFF.txt`.
 5. **ZIP-Paket herunterladen** (oder Schnell-Handoff).

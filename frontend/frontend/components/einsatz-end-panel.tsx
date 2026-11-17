@@ -125,7 +125,7 @@ export function EinsatzEndPanel(p: EinsatzEndPanelProps) {
           disabled={busy}
         />
         <Label htmlFor="einsatz-end-clear-queues" className="text-sm font-normal cursor-pointer">
-          Offline-Warteschlangen leeren
+          Ausstehende Offline-Sends leeren (lokale Queues — nicht der Postausgang-Chat)
         </Label>
       </div>
 

@@ -27,6 +27,11 @@ export type InboxActionsPort = {
   readonly onHideAllVisibleLocal: () => void
   readonly onBulkHideSelected: () => void
   readonly onBulkPurgeSelected: () => void
+  readonly onBulkMarkProtokollSelected: () => void
+  readonly onBulkCopySelected: () => void
+  readonly onBulkExportJsonSelected: () => void
+  readonly onBulkHashSelected: () => void
+  readonly onBulkForwardSelected: (includeSender: boolean) => void
   readonly localPurgeBusy: boolean
   readonly morgPkgFileRef: RefObject<HTMLInputElement | null>
   readonly morgPkgDeviceFilesRef: RefObject<HTMLInputElement | null>

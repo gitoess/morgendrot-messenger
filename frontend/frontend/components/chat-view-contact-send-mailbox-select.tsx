@@ -124,8 +124,8 @@ export function ChatViewContactSendMailboxSelect(p: ChatViewContactSendMailboxSe
         </p>
       ) : (
         <p className="mt-1 text-[10px] text-amber-700 dark:text-amber-300">
-          Gewähltes Postfach noch leer — bitte unter Meine Mailboxen aktiv setzen oder Kontakt-Slot
-          im Telefonbuch pflegen.
+          Gewähltes Postfach noch leer — ID im Telefonbuch (Kontakt → Erweitert · Postfach) eintragen oder
+          Team/Privat unter Meine Mailboxen anlegen.
         </p>
       )}
     </div>

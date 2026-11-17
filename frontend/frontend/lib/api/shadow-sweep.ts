@@ -8,7 +8,8 @@ export type ShadowSweepApiResult = {
   digest?: string
   shadowAddress: string
   mainAddress: string
-  mainSecretKey: string
+  createdNewMain: boolean
+  mainSecretKey?: string
   transferredObjectCount: number
   sentMistApprox: string
   note?: string
@@ -16,13 +17,17 @@ export type ShadowSweepApiResult = {
 }
 
 export async function postShadowSweep(
-  shadowMnemonic: string
+  shadowMnemonic: string,
+  destinationAddress?: string
 ): Promise<ShadowSweepApiResult | { ok: false; error: string }> {
   try {
     const fr = await fetchApiText(API_BASE, '/api/shadow-sweep', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ shadowMnemonic: shadowMnemonic.trim() }),
+      body: JSON.stringify({
+        shadowMnemonic: shadowMnemonic.trim(),
+        ...(destinationAddress?.trim() ? { destinationAddress: destinationAddress.trim() } : {}),
+      }),
     })
     if (!fr.ok) return { ok: false, error: fr.error }
     const { response, text } = fr
@@ -47,7 +52,6 @@ export async function postShadowSweep(
     if (
       data.ok === true &&
       typeof data.mainAddress === 'string' &&
-      typeof data.mainSecretKey === 'string' &&
       typeof data.shadowAddress === 'string'
     ) {
       return {
@@ -55,7 +59,8 @@ export async function postShadowSweep(
         digest: typeof data.digest === 'string' ? data.digest : undefined,
         shadowAddress: data.shadowAddress,
         mainAddress: data.mainAddress,
-        mainSecretKey: data.mainSecretKey,
+        createdNewMain: data.createdNewMain !== false,
+        mainSecretKey: typeof data.mainSecretKey === 'string' ? data.mainSecretKey : undefined,
         transferredObjectCount:
           typeof data.transferredObjectCount === 'number' ? data.transferredObjectCount : 0,
         sentMistApprox: typeof data.sentMistApprox === 'string' ? data.sentMistApprox : '0',

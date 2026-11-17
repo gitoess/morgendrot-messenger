@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
-import { AlertCircle, BookUser, Check, ListOrdered, RefreshCw, Send } from 'lucide-react'
+import { AlertCircle, BookUser, Check, KeyRound, ListOrdered, Lock, Mic, RefreshCw, Send } from 'lucide-react'
 import { ChatComposerEmojiPicker } from '@/frontend/components/chat-composer-emoji-picker'
 import { ChatViewComposerPlusMenu } from '@/frontend/components/chat-view-composer-plus-menu'
 import { cn } from '@/lib/utils'
@@ -47,7 +47,18 @@ import {
   type ChatViewActiveConversationBarProps,
 } from '@/frontend/components/chat-view-active-conversation-bar'
 import { ChatViewEncryptionModeToggle } from '@/frontend/components/chat-view-encryption-mode-toggle'
+import { ChatViewEncryptionContextHint } from '@/frontend/components/chat-view-encryption-context-hint'
 import { PassphraseProtectComposerToggle } from '@/frontend/components/chat-view-passphrase-protect-toggle'
+import {
+  readPassphraseProtectEnabled,
+  readPassphraseZeitkapselModeEnabled,
+  readZeitkapselLastNftObjectId,
+  requestOpenZeitkapselLease,
+  writePassphraseProtectEnabled,
+  writePassphraseZeitkapselModeEnabled,
+  writeZeitkapselLastNftObjectId,
+  PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT,
+} from '@/frontend/lib/passphrase-message-local-store'
 import { hasTeamBroadcastKey } from '@/frontend/lib/team-broadcast-key-store'
 import { GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG } from '@/frontend/lib/group-team-broadcast'
 import {
@@ -462,8 +473,30 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     deliveryChannel: composerDelivery,
     isPrivate,
   })
+  const [manualAddressMode, setManualAddressMode] = useState(false)
+  const [privacyToolsOpen, setPrivacyToolsOpen] = useState(
+    () => readPassphraseProtectEnabled() || readPassphraseZeitkapselModeEnabled()
+  )
+  const [lastZeitkapselNft, setLastZeitkapselNft] = useState<string | null>(() =>
+    typeof window !== 'undefined' ? readZeitkapselLastNftObjectId() : null
+  )
+  useEffect(() => {
+    setManualAddressMode(false)
+  }, [partner, activeConversationBar?.displayName, activeConversationBar?.addressLine])
+
+  useEffect(() => {
+    const syncPrivacy = () => {
+      if (readPassphraseProtectEnabled() || readPassphraseZeitkapselModeEnabled()) {
+        setPrivacyToolsOpen(true)
+      }
+      setLastZeitkapselNft(readZeitkapselLastNftObjectId())
+    }
+    window.addEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, syncPrivacy)
+    return () => window.removeEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, syncPrivacy)
+  }, [])
+
   const showIotaField =
-    !hideComposerIotaRecipient &&
+    (!hideComposerIotaRecipient || manualAddressMode) &&
     !(isGroupChannel && groupMailboxSendAll) &&
     needsComposerIotaAddress({
       deliveryChannel: composerDelivery,
@@ -471,6 +504,12 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
       forcedTransport,
       meshPlaintextToNodeEnabled,
     })
+
+  const showVoiceMemoControls =
+    isPrivate && forcedTransport === 'internet' && !isTelegramDelivery
+  const voiceMemoActive =
+    showVoiceMemoControls &&
+    (voiceRecording || voiceBusy || (voiceActiveKind === 'normal' && voicePhase !== 'idle'))
   const showMailboxUi =
     !isPinnwandChannel &&
     needsComposerMailboxUi({
@@ -658,20 +697,62 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             <ChatViewEncryptionModeToggle {...encryptionModeToggle} />
           </div>
         ) : null}
-        {forcedTransport === 'internet' ? (
-          <PassphraseProtectComposerToggle
-            encrypted={encrypted}
-            onEncryptedChange={onEncryptedChange ?? encryptionModeToggle?.onEncryptedChange}
-            onRequestVaultSession={onNavigateHomeWhenLocked}
-          />
+        {forcedTransport === 'internet' && privacyToolsOpen ? (
+          <div className="space-y-2 rounded-xl border border-border/70 bg-muted/15 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-semibold text-foreground">Passphrase &amp; Zeitkapsel</p>
+              <button
+                type="button"
+                className="text-[11px] text-muted-foreground underline hover:no-underline"
+                onClick={() => setPrivacyToolsOpen(false)}
+              >
+                Zuklappen
+              </button>
+            </div>
+            <PassphraseProtectComposerToggle
+              encrypted={encrypted}
+              onEncryptedChange={onEncryptedChange ?? encryptionModeToggle?.onEncryptedChange}
+              onRequestVaultSession={onNavigateHomeWhenLocked}
+            />
+          </div>
+        ) : null}
+        {forcedTransport === 'internet' &&
+        lastZeitkapselNft &&
+        !privacyToolsOpen ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/70 bg-muted/15 px-2.5 py-2">
+            <span className="text-[11px] text-foreground">
+              Zeitkapsel-NFT {lastZeitkapselNft.slice(0, 10)}…
+            </span>
+            <button
+              type="button"
+              className="rounded border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
+              onClick={() => requestOpenZeitkapselLease(lastZeitkapselNft)}
+            >
+              Dieses NFT verleihen…
+            </button>
+            <button
+              type="button"
+              className="text-[11px] text-muted-foreground underline hover:no-underline"
+              onClick={() => {
+                writeZeitkapselLastNftObjectId(null)
+                setLastZeitkapselNft(null)
+              }}
+            >
+              Weg
+            </button>
+          </div>
         ) : null}
         {showRecipientRow ? (
           <div className="min-h-[4.5rem]">
             {showTelegramField ? (
               <>
                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                  Empfänger · Telegram (Chat-ID, mehrere mit Komma)
+                  Empfänger · Telegram-Sendepfad (Chat-ID, mehrere mit Komma)
                 </label>
+                <p className="mb-1.5 text-[11px] leading-snug text-muted-foreground">
+                  Hier geht die Nachricht <strong className="font-medium text-foreground">direkt über den Bot</strong>{' '}
+                  (ohne IOTA). Der optionale Klingel-Hinweis nach IOTA-Send steht unter Einstellungen → Telegram.
+                </p>
                 <input
                   type="text"
                   list="chat-telegram-recipients"
@@ -831,6 +912,15 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             dropHover && !dropDisabled && 'border-primary/50 bg-primary/5 ring-2 ring-primary/25'
           )}
         >
+          {isGroupChannel ? (
+            <ChatViewEncryptionContextHint
+              className="mb-2"
+              forcedTransport={forcedTransport}
+              encrypted={encrypted}
+              isGroupChannel
+              groupTeamBroadcastReady={groupTeamBroadcastReady}
+            />
+          ) : null}
           {!encrypted && forcedTransport === 'mesh' && (
             <div className="mb-2 rounded-md border border-orange-600/45 bg-orange-950/35 px-3 py-2 text-xs tabular-nums text-orange-50">
               <span className="font-semibold">Klartext-Funk</span> · {[...message].length}/{MESH_PLAINTEXT_MAX_CHARS}{' '}
@@ -875,6 +965,78 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                         </span>
                         Telefonbuch
                       </button>
+                    ) : null}
+                    {hideComposerIotaRecipient && !manualAddressMode && !showTelegramField ? (
+                      <button
+                        type="button"
+                        disabled={sending || voiceLocksComposer}
+                        onClick={() => setManualAddressMode(true)}
+                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
+                      >
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/70 text-muted-foreground">
+                          <Send className="h-4 w-4" aria-hidden />
+                        </span>
+                        An Adresse senden…
+                      </button>
+                    ) : null}
+                    {showVoiceMemoControls && !voiceMemoActive ? (
+                      <button
+                        type="button"
+                        disabled={sending || voiceNormalBlockedStart}
+                        onClick={onVoiceToggle}
+                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
+                      >
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/70 text-muted-foreground">
+                          <Mic className="h-4 w-4" aria-hidden />
+                        </span>
+                        Sprachnachricht
+                      </button>
+                    ) : null}
+                    {forcedTransport === 'internet' && !isTelegramDelivery ? (
+                      <>
+                        <button
+                          type="button"
+                          disabled={sending || voiceLocksComposer || encrypted}
+                          title={
+                            encrypted
+                              ? 'Zuerst Verschlüsselung aus — Passphrase ersetzt ECDH für diese Nachricht.'
+                              : undefined
+                          }
+                          onClick={() => {
+                            writePassphraseZeitkapselModeEnabled(false)
+                            writePassphraseProtectEnabled(true)
+                            if (encrypted) onEncryptedChange?.(false)
+                            setPrivacyToolsOpen(true)
+                          }}
+                          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
+                        >
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/70 text-muted-foreground">
+                            <Lock className="h-4 w-4" aria-hidden />
+                          </span>
+                          Passphrase-Schutz…
+                        </button>
+                        <button
+                          type="button"
+                          disabled={sending || voiceLocksComposer || encrypted}
+                          title={
+                            encrypted
+                              ? 'Zuerst Verschlüsselung aus — Zeitkapsel nutzt NFT-Gate, nicht ECDH.'
+                              : undefined
+                          }
+                          onClick={() => {
+                            writePassphraseProtectEnabled(false)
+                            writePassphraseZeitkapselModeEnabled(true)
+                            if (encrypted) onEncryptedChange?.(false)
+                            setPrivacyToolsOpen(true)
+                          }}
+                          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
+                        >
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/70 text-muted-foreground">
+                            <KeyRound className="h-4 w-4" aria-hidden />
+                          </span>
+                          Zeitkapsel-Nachricht…
+                        </button>
+                      </>
                     ) : null}
                     {showPath4Checkbox && forcedTransport === 'mesh' && !isTelegramDelivery ? (
                       <div className="space-y-1 border-t border-border/60 px-1 py-2">
@@ -928,7 +1090,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               )}
             />
 
-            {isPrivate && forcedTransport === 'internet' && !isTelegramDelivery ? (
+            {voiceMemoActive ? (
               <ChatViewVoiceRecord
                 slot="normal"
                 density="compact"
@@ -961,7 +1123,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 )}
                 title={
                   isTelegramDelivery
-                    ? 'Telegram-Hinweis senden'
+                    ? 'Direkt per Telegram-Bot senden (kein IOTA)'
                     : primarySendDisabled && sendDisableReason
                       ? sendDisableReason
                       : encryptedOnlineSendBlocked

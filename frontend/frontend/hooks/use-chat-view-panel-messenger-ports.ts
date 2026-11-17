@@ -222,7 +222,7 @@ export function useChatViewPanelMessengerPorts(deps: UseChatViewPanelMessengerPo
       const t = sender.trim()
       composeReply.setPartner(t)
       composeReply.setRecipient(t)
-      toast.info('Partner-Adresse übernommen.')
+      toast.info('Adresse im Chat geladen — Handshake noch nicht verbunden (Partner muss annehmen/Connect).')
     },
     [composeReply.setPartner, composeReply.setRecipient]
   )

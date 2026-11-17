@@ -44,6 +44,8 @@
 ### 2.5 Sneakernet / Pakete
 
 - **`.morg-pkg`**: Import, Export pro Nachricht (ECDH-Bundle), **Gerät → .morg-pkg** (mehrere Dateien), JSON-Snapshot-Export; **Weiterleiten → Online-Composer** (nicht direkt auf Funk — Archivdaten zu groß für § H.25a-Limits).
+- **Größe:** Klartext vor Verschlüsselung Default **512 KiB** (`MORG_PKG_MAX_PLAINTEXT_UTF8_BYTES`, Max per Env **~4 MiB**). Ciphertext-JSON größer (Base64). Online-Weiterleitung bleibt ~**16 KiB**-Wire.
+- **Hash/Anker:** kein eigener `.morg-pkg`-Anker-Pfad (**T57** verworfen). Bei Bedarf Datei lokal über Optionen → Hash prüfen.
 
 ### 2.6 Rollen & Modi
 

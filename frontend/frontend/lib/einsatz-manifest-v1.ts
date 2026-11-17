@@ -10,6 +10,7 @@ import {
 } from '@morgendrot/shared/einsatz-chain-mode'
 import { sha256HexUtf8 } from '@/frontend/lib/einsatzprotokoll-anchor'
 import { buildEinsatzManifestCanonicalMsgRef } from '@/frontend/lib/einsatz-manifest-canonical-ref'
+import { sha256Bytes as sha256BytesSecure } from '@/frontend/lib/sha256-bytes'
 
 export const MORG_EINSATZ_MANIFEST_VERSION = 1 as const
 
@@ -83,8 +84,7 @@ function bytesToHex(bytes: Uint8Array): string {
 }
 
 async function sha256Bytes(data: Uint8Array): Promise<Uint8Array> {
-    const digest = await crypto.subtle.digest('SHA-256', data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer)
-    return new Uint8Array(digest)
+    return sha256BytesSecure(data)
 }
 
 async function sha256HexBytes(data: Uint8Array): Promise<string> {

@@ -25,6 +25,7 @@
     "lint": "eslint frontend",
     "lint:feature-boundaries": "eslint frontend/features/send frontend/features/inbox frontend/features/attachments",
     "check:circular": "madge --circular --exclude lib --ts-config ./tsconfig.json --extensions ts,tsx ./frontend/components ./frontend/hooks ./frontend/features",
+    "typecheck": "tsc --noEmit",
     "cap:doctor": "cap doctor",
     "cap:add:android": "cap add android",
     "cap:sync:android": "cap sync android"
@@ -42,6 +43,7 @@
     "@meshtastic/transport-web-serial": "^0.2.5",
     "@morgendrot/core": "file:../packages/morgendrot-core",
     "@morgendrot/shared": "file:../src/shared",
+    "@noble/hashes": "^1.8.0",
     "@radix-ui/react-accordion": "1.2.12",
     "@radix-ui/react-alert-dialog": "1.1.15",
     "@radix-ui/react-aspect-ratio": "1.1.8",

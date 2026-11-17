@@ -105,18 +105,27 @@ export function buildContactInfoSections(p: {
   push(chain, field('last-mb', 'Letzte Mailbox (Verlauf)', meta.lastMailbox))
 
   const sections: MessengerInfoSection[] = []
-  if (identity.length) sections.push({ id: 'identity', title: 'Identität', fields: identity })
+  if (identity.length) {
+    sections.push({
+      id: 'identity',
+      title: 'Identität (IDs)',
+      fields: identity,
+      note: 'Wallet / Funk / Telegram — zum Kopieren, nicht der Anzeigename.',
+    })
+  }
   if (mailbox.length) {
     sections.push({
       id: 'mailboxes',
-      title: 'Mailboxen',
+      title: 'Mailboxen (Ziele)',
       fields: mailbox,
-      note: mailbox.length ? undefined : 'Keine Mailbox-Slots hinterlegt — unter Bearbeiten zuweisen.',
+      note: mailbox.length
+        ? 'Postfach-Object-IDs für diesen Kontakt — wohin Nachrichten landen können.'
+        : 'Keine Mailbox-Slots hinterlegt — unter Bearbeiten zuweisen.',
     })
   } else {
     sections.push({
       id: 'mailboxes',
-      title: 'Mailboxen',
+      title: 'Mailboxen (Ziele)',
       fields: [],
       note: 'Keine Mailbox-Slots hinterlegt — unter Bearbeiten / Mailbox zuweisen.',
     })
@@ -124,9 +133,9 @@ export function buildContactInfoSections(p: {
   if (chain.length) {
     sections.push({
       id: 'chain',
-      title: 'On-Chain',
+      title: 'Zuletzt in der Chain (Verlauf)',
       fields: chain,
-      note: 'TX/Mailbox aus dem lokalen Verlauf — nicht live vom Explorer.',
+      note: 'Aus dem lokalen Verlauf — nicht live vom Explorer. Package = aktives Move-Paket.',
     })
   }
   return sections
@@ -147,6 +156,23 @@ export function buildGroupInfoSections(p: {
   push(
     overview,
     field('members', 'Mitglieder', String(g.memberAddresses.length), { copyable: false })
+  )
+  /** G3: Team-ID oben sichtbar — kein Settings→Mailboxen-Umweg. */
+  push(
+    overview,
+    field(
+      'team-mb-overview',
+      'Team-Postfach-ID',
+      g.teamMailboxObjectId?.trim()
+        ? g.teamMailboxObjectId.trim()
+        : 'fehlt — „Gruppe verwalten“ (Chat), nicht Settings→IOTA',
+      {
+        copyable: Boolean(g.teamMailboxObjectId?.trim()),
+        hint: g.teamMailboxObjectId?.trim()
+          ? 'Shared Object-ID — kopieren/teilen. Bearbeiten nur unter Gruppe verwalten.'
+          : undefined,
+      }
+    )
   )
 
   const members: MessengerInfoField[] = []
@@ -178,7 +204,9 @@ export function buildGroupInfoSections(p: {
       field(
         'broadcast',
         'Broadcast-Modus',
-        g.useTeamBroadcast === false ? 'Pro Mitglied (pairwise)' : 'Team-Broadcast',
+        g.useTeamBroadcast === false
+          ? 'Pairwise je Mitglied (Sonderfall)'
+          : '1× Team-Postfach-Broadcast',
         { copyable: false }
       )
     )

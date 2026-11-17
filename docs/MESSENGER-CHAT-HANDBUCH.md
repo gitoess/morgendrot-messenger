@@ -2,7 +2,7 @@
 
 **Zweck:** Ausführliche Hinweise, die früher direkt in der Chat-UI standen — hier gebündelt für Nachlesen (PWA-Handbuch, offline nach erstem Abruf möglich).
 
-**Stand:** 2026-07-03 — Telegram-ähnliche Chat-Oberfläche (Seitenleiste, Inbox vor Composer), Sendepfad + **SOS im Kopf**, Gruppe verwalten als Sheet, Peering-QR unter **Ich**; § *IOTA vs. Server* (Threat Model).
+**Stand:** 2026-11-17 — Settings-Kurzblatt: `EINSTELLUNGEN-NUTZER-HANDBUCH.md` (Ton/Stumm/TG-Klingel). Chat-UI: Sidebar | Posteingang (kurz), Composer volle Breite darunter; Sendepfad Alle/IOTA/Funk/Telegram; Aktualisieren im App-Header neben Tresor.
 
 **Verwandt:** `docs/PWA-HANDBUCH-OFFLINE.md`, `docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`, `docs/MESSENGER-CAPABILITIES-OVERVIEW.md`, `docs/GRUPPENCHAT-ZIELBILD.md`, `docs/EXPORT-ASSISTENT-REFERENZ.md`.  
 **Privacy / Vault / NFT-Schlüsselkarte (alle Ist-Funktionen + 1-Gerät-Test):** → **`docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`**.  
@@ -14,13 +14,55 @@
 
 | Bereich | Inhalt |
 |---------|--------|
-| **Chat-Kopf** | Sendepfad (Online / Funk / …), **SOS — Hilferuf** (1:1, nicht Telegram), Kanal-Titel, Tresor, **Handbuch**, **Einstellungen** |
-| **Seitenleiste** (1:1 / Gruppe) | **Ich**, Alle, Kontakte, Gruppen; Suche oben; Doppelklick **Ich** → Profil + Peering-QR; Doppelklick **Gruppe** → Gruppe verwalten |
-| **Mitte** | **Posteingang** (Nachrichten) **über** dem Composer |
-| **Composer** | `[+]` (Anhang, Telefonbuch, Emoji, …), Text, Sprache, Senden |
-| **Konversation ⋮** | Profil, Export, Verlauf leeren, **Verschlüsselt/Klartext**, **Gruppe verwalten** |
+| **App-Header** (Boss/Messenger) | **Tresor**, **Aktualisieren** (Status + Posteingang + Kontakte), Handbuch, Einstellungen — **nicht** in der Posteingang-Leiste. In **Nachrichten** / **Einsatzleitung**: nur das **Gegenstück** als Schalter. In **Einstellungen**: Titel + Sprünge zu Nachrichten und Einsatzleitung |
+| **Chat-Kopf** | Sendepfad (**Alle** / Funk / **IOTA** / Telegram), **Ton/Stumm** (nur In-App-Eingangs-Chime für diesen Chat), **SOS — Hilferuf** (1:1, nicht Telegram). Mit Sidebar: **kein** großer Kanal-/Posteingang-Titel |
+| **Seitenleiste** (Desktop) | **Chats** gleiche Höhe wie Posteingang (`min(70vh,44rem)`), scrollt |
+| **Posteingang** (rechts) | Nachrichten + Toolbar; **Auswahl** ≈ Nachrichten-⋯ (Kopieren, Protokoll, Weiterleiten, JSON, Ausblenden, Burn) |
+| **Composer** | **Volle Breite unter beiden Spalten** (eigene Leiste, kein Overlap): `[+]` = Datei, Kamera, STT, Telefonbuch, **An Adresse senden**, **Sprachnachricht**, **Passphrase-Schutz**, **Zeitkapsel-Nachricht**; Text; Senden. Empfänger-Wallet bei aktivem Chat ausgeblendet |
+| **Liste (Filter)** | **Beides / Eingang / Ausgang** und **Alles / Verschl. / Klartext** — nur Anzeige, nicht Sendemodus |
+| **Optionen** | **Posteingang · Tools** (Wire, Hash, Export, Pakete) + **Chat · Sicherheit** (Info, Schlüssel, Nach-Lesen-**Modus**) — kein separates Chat-⋮ mehr |
+| **Nachrichten-⋯** (pro Zeile) | Kopieren, Telefonbuch, lokal ausblenden, **Von Chain löschen (Burn)** |
+| **Auswahl** | Wie ⋯ gebündelt: Kopieren, Protokoll, Weiterleiten, JSON, Ausblenden, **Burn**. Nicht: Antworten, Telefonbuch, Handoff, Mesh-Paket, ECDH-pkg |
+| **Browser** | Zurück/Vor navigiert Dashboard-Ansichten (`morgView`) |
 
 **Dashboard:** Kachel **Nachrichten** öffnet den Chat. **Telefonbuch** zusätzlich über `[+]` im Composer, Sidebar oder Kontakt-Detail.
+
+### Ton, Stumm, Telegram-Klingel — nicht verwechseln
+
+| Was | Wo | Was es ist | Was es nicht ist |
+|-----|-----|------------|------------------|
+| **Eingangs-Ton** | Einstellungen → Erscheinungsbild | Glocken-Chime bei neuer Nachricht im **offenen Tab** (Master + 1:1/Gruppe/Pinnwand). Default **aus**. | Kein OS-Push, kein Telegram |
+| **Stumm (pro Chat)** | Chat-Kopf **Ton/Stumm** | Schaltet nur den In-App-Chime für **diesen** Chat stumm | Blockiert weder On-Chain noch Telegram |
+| **IOTA→Telegram-Klingel** | Einstellungen → Telegram → Hinweis nach Online-Send | Aufmerksamkeits-Ping auf dem Handy nach erfolgreichem Online-IOTA-Send (App muss nicht offen sein) | Kein zweiter Messenger; kein Ersatz für Posteingang; ≠ Composer-Sendepfad „Telegram“ |
+
+Details + Tabelle: **`EINSTELLUNGEN-NUTZER-HANDBUCH.md`**.
+
+### Drei Menüs — nicht verwechseln
+
+| Wo | Was es ist | Was es nicht ist |
+|----|------------|------------------|
+| **Optionen → Chat · Sicherheit** | Info, Schlüssel erneuern, **Nach-Lesen-Modus**, Verlauf leeren | Kein sofortiges Chain-Löschen |
+| **Nachrichten-⋯** | Diese eine Zeile (Burn, Kopieren, ausblenden, …) | Kein Sendemodus |
+| **Auswahl** | Dieselben Zeilen-Aktionen für viele Nachrichten | Kein Antworten / Handoff / Mesh-Paket |
+
+**Echter Burn** = Zeilen-⋯ oder Auswahl → „Von Chain löschen“. **Nach Lesen löschen** in Optionen ist nur der Modus (Vorschlag nach Lesen).
+
+Badge **Eingang/Ausgang**, **Verschlüsselt**, **PWMSG** oder **NFT-Gate** anklicken → Liste filtern (wie die Chips). Senden bleibt im Composer.
+
+### Drei „Entschlüsseln“ — Lernpfad
+
+| Ort | Wofür |
+|-----|--------|
+| **Nachrichtenzeile** | **PWMSG** = Passphrase in der Bubble. **NFT-Gate** = Besitz oder Leihe-Empfänger (Verleiher während Leihe **nicht**). ECDH-Schloss = Composer „Verschlüsselt“, anderer Kanal. |
+| **Optionen → Wire einfügen** | Paste `MORG_PWMSG_V1` + Passphrase (**nur** PWMSG). ECDH braucht Handshake; NFT-Gate **nicht** hier. |
+| **Optionen → Export / Decrypt-JSON** | Passwort-geschützte Einsatzbericht-JSON wieder öffnen (eigene HTML-Seite) — nicht Posteingang-Decrypt. |
+
+**Zeitkapsel — zwei Jobs (nicht verwechseln):**
+
+| Job | Wo | Was |
+|-----|-----|-----|
+| **Senden** | Composer **+** → Zeitkapsel-Nachricht | Ciphertext mit Badge **NFT-Gate**; NFT bleibt bei dir → du liest weiter |
+| **Verleihen** | Galerie **Verleihen…** / Tab Zeitkapsel / CTA **Dieses NFT verleihen…** | NFT an **fremde** Wallet; nur Empfänger liest; **Zurückholen** = offene Leihen; nach Reclaim wieder Galerie / „Neue Leihe“ |
 
 ---
 
@@ -32,7 +74,7 @@
 
 **Unverschlüsselt · funk:** Meshtastic-**Klartext** (LongFast). Für **Ende-zu-Ende** den Transport **online** wählen (oder Verschlüsselung aktivieren — wechselt bei Bedarf automatisch zu online).
 
-**Schloss / Verschlüsselung:** Gilt für **Sendepfad online** (Morgendrot-E2E). Umschalten im **Konversations-Menü** (⋮, Verschl./Klar) oder im erweiterten Setup (**Verschlüsselt**-Karte, wenn sichtbar). Bei **funk** steuert die Meshtastic-Kanalwahl (Primary/Secondary + PSK) die Funkverschlüsselung auf dem Radio — nicht der App-Schalter.
+**Schloss / Verschlüsselung:** Gilt für **Sendepfad online** (Morgendrot-E2E). Umschalten im **Composer** (Verschlüsselt / Klartext). Die Listen-Chips **Verschl. / Klartext** filtern nur die Anzeige. Bei **funk** steuert die Meshtastic-Kanalwahl (Primary/Secondary + PSK) die Funkverschlüsselung auf dem Radio — nicht der Composer-Schalter.
 
 ---
 
@@ -56,15 +98,15 @@ Ausführlich: **`docs/ROADMAP-FAHRPLAN.md`** § **I.0b** · Krypto: **`docs/MESS
 
 ---
 
-## Sendepfad: Online (IOTA/Mailbox) vs. Funk (LoRa/Meshtastic)
+## Sendepfad: Alle / IOTA / Funk / Telegram
 
-| Kanal | Online (IOTA) | Funk (Meshtastic) | Ad-hoc | Telegram |
-|-------|---------------|-------------------|--------|----------|
-| **1:1** | ✓ | ✓ (DM an Node oder Klartext) | ✓ (Platzhalter) | ✓ (mehrere Chat-IDs) |
-| **Gruppe** | ✓ (Team-Broadcast, siehe unten) | ✓ (Secondary Channel, PSK) | — | — (Boss-Alarm: Roadmap § B4) |
-| **Pinnwand** | ✓ | — | — | — |
+| Kanal | **Alle** (gesamter Posteingang; Senden online) | **IOTA** (nur Chain/Mailbox) | Funk (Meshtastic) | Telegram |
+|-------|-----------------------------------------------|------------------------------|-------------------|----------|
+| **1:1** | ✓ | ✓ | ✓ (DM an Node oder Klartext) | ✓ (mehrere Chat-IDs) |
+| **Gruppe** | ✓ (Team-Broadcast, siehe unten) | ✓ | ✓ (Secondary Channel, PSK) | — (Boss-Alarm: Roadmap § B4) |
+| **Pinnwand** | ✓ | ✓ | — | — |
 
-In der App sind nur sinnvolle Kombinationen wählbar (z. B. kein Ad-hoc + Pinnwand).
+**Ad-hoc** ist im Produkt-Sendepfad **aus** (kein eigener Knopf). Sinnvolle Kombinationen bleiben UI-gefiltert.
 
 ### Meshtastic vs. Morgendrot-Kanäle (Funk)
 
@@ -99,7 +141,7 @@ Laut [Meshtastic Channel Configuration](https://meshtastic.org/docs/configuratio
 
 Der frühere **Mesh-v2-/PRIVATE_APP-Versand** ist im **Produkt abgeschaltet** (nur noch **Empfang** älterer Nachrichten).
 
-**Visuell getrennt:** Oben **Online** = Wallet, Chain, ggf. **Tor** (siehe unten). Unten **Funk / Ad-hoc** = **Heltec** über **Web Bluetooth** im Browser — kein „WLAN-Funk“, sondern BLE zum Gerät.
+**Visuell getrennt:** **Alle** / **IOTA** = Wallet, Chain, ggf. **Tor** (siehe unten). **Funk** = **Heltec** über **Web Bluetooth** im Browser — kein „WLAN-Funk“, sondern BLE zum Gerät.
 
 ---
 
@@ -143,38 +185,16 @@ Spezifikation: **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** (**§9** Zivil-SOS).
 
 ## Vertraulichkeit: Klartext-Konfiguration
 
-Wenn das Backend **`ENABLE_PLAINTEXT_CHANNEL`** und/oder **`MAILBOX_STORE_PLAINTEXT`** aktiv hat, können Nachrichteninhalte **zusätzlich oder ausschließlich als Klartext** in der Mailbox bzw. auf der Chain landen. Für maximale Inhaltsvertraulichkeit beide Optionen in der Server-**`.env`** aus und nur den **verschlüsselten** Pfad nutzen. Prüfen in **Einstellungen → System & Identität** / Konfiguration.
+Wenn das Backend **`ENABLE_PLAINTEXT_CHANNEL`** und/oder **`MAILBOX_STORE_PLAINTEXT`** aktiv hat, können Nachrichteninhalte **zusätzlich oder ausschließlich als Klartext** in der Mailbox bzw. auf der Chain landen. Für maximale Inhaltsvertraulichkeit beide Optionen in der Server-**`.env`** aus und nur den **verschlüsselten** Pfad nutzen. Prüfen unter **Einstellungen → .env (unten)** / Konfiguration.
 
 ---
 
-## Einstellungen: System & Identität
+## Einstellungen (Ist)
 
-- **IOTA-RPC (Node):** kleiner Status in der Kopfzeile von „System & Identität“ (Erreichbar / nicht erreichbar) — Check beim Öffnen und über **Aktualisieren**.
-- **Backend & Offline:** Verbindung zur **Basis** siehst du auf der **Startseite** (Karte „Verbindung zur Basis“) — nicht als eigene Liste in den Einstellungen.
-- **Meine Adresse:** vollständige `0x`-Wallet oben in „System & Identität“ (kopierbar) — nicht noch einmal maskiert im Puls-Panel.
-- **Package-ID / RPC_URL:** je ein Bearbeitungsfeld oben; in **Erweiterte Konfiguration (.env)** nicht doppelt.
-- **`.env` vs. Move-Deploy:** Die meisten Keys betreffen nur die laufende Node (Runtime sofort, sonst Neustart). **Neues Move-Deploy** nur bei geändertem Smart-Contract — dann neue **PACKAGE_ID** und ggf. **MAILBOX_ID** nach `create_globals`.
-- **Erweiterte Konfiguration (.env):** Im **Messenger** nur Chat-/Mailbox-/Einsatz-relevante Keys (kein Shop/Tickets, Lock, Monitor, Stripe). Im **Morgendrot Projekt** alle Keys.
-- **PARTNER_ADDRESS** in `.env`: Legacy für Lite-UI **`/connect`** — im Messenger **Telefonbuch + Handshake**, nicht mehr als fester Partner-Button in der Chat-UI.
-- **Streams-Anchor:** nur **Puls/Monitor** (Gerät lebt), nicht der Chat-Posteingang (Mailbox).
+**Kurzhandbuch (Tabs IOTA / Telegram / Sicherheit / Speicherorte):**  
+**`docs/EINSTELLUNGEN-NUTZER-HANDBUCH.md`** (PWA: gleiches File im Handbuch).
 
-### Mailbox · Direkt-RPC · Streams-Puls
-
-**IDs und Status:** Beim Öffnen des Panels liest die App **`/api/status`** und zusätzlich **`/api/current-ids`** (Package, Mailbox, eigene Adresse, Streams-Anchor), sofern die Morgendrot-Basis erreichbar ist. Zum Kopieren stehen die Zeilen im Panel bereit (im Chat auch Package-ID; in den Einstellungen steht Package-ID bereits oben).
-
-**Direkt-IOTA ohne dauernd erreichbare Basis:** Package-ID, Mailbox-ID und Absender-Adresse manuell eintragen und im Browser **`localStorage`** speichern (**Ketten-IDs speichern**). Optional **Optimistische Flags**, wenn `/api/status` zuletzt nicht verfügbar war. Siehe Architektur **§ H.15**.
-
-**Session-Signer (Mainnet-Direkt-Send):** Für Direkt-RPC braucht der Browser einen **Session-Signer** (Mnemonic nur im RAM). Normalerweise wird er beim **Tresor entsperren** geladen. Ist der Tresor auf dem Server schon offen, fehlt aber der Signer im Browser, erscheint ein Banner **„Signer laden“** — Vault-Passwort eingeben (Dialog ist schließbar). Details: Puls-Panel unter **Mailbox · Direkt-RPC · Streams-Puls** (Expert).
-
-**Checkliste Direkt-Pfad** (Einstellungen → System & Identität → „Mailbox · Direkt-RPC · Streams-Puls“):
-
-1. **Fullnode-URL** eintragen und speichern  
-2. **„Direkt-Mailbox-Drain“** einschalten  
-3. **Session-Signer (Mnemonic)** anwenden (nur RAM) — oder **Signer laden** nach Entsperren  
-4. **Package, Mailbox, Absender** speichern (von Basis übernehmen oder manuell)  
-5. Ggf. Basis einmal verbinden für `/api/status`-Flags — oder **Optimistische Flags**
-
-**Partner-Adresse austauschen (QR):** Tauscht Partner-**Wallet** (`0x`) und optional **ECDH-Pub** für **verschlüsselten Online-Chat** — nicht für LoRa/Mesh. Anschließend **Handshake** im Posteingang oder Telefonbuch. Siehe **Peering-QR** unten.
+Boss: Netz unter **IOTA → Wo senden?** — nicht mehr „System & Identität“. Helfer ohne Netz-Schalter behalten vorerst die schlanke System-Karte. Peering-QR: Sidebar **Ich** / Handshake — siehe unten.
 
 ---
 
@@ -186,8 +206,7 @@ Wenn das Backend **`ENABLE_PLAINTEXT_CHANNEL`** und/oder **`MAILBOX_STORE_PLAINT
 
 - Sidebar **Ich** → **Doppelklick** → Dialog **Meine Kontakt-ID** (Peering-QR scannen / anzeigen)
 - **Handshake-Leiste** am Composer, wenn verschlüsseltes Senden noch blockiert ist
-- **Einstellungen → System & Identität** (Expert, Puls-Panel)
-- Legacy: aufklappbar unter **Verschlüsselt** in der Setup-Karte (wenn Expert-UI sichtbar)
+- Legacy/Expert: Puls-Panel unter **Einstellungen → Funk** bzw. IOTA (je nach Rolle)
 
 **Wichtig:** Der QR **ersetzt kein Internet** für IOTA. Handshake, Connect und verschlüsseltes Senden brauchen weiterhin **RPC/Fullnode**. Der QR ist **Setup vor Ort** (zwei Handys, face-to-face), **kein** Offline-Transport.
 
@@ -247,7 +266,7 @@ Weiter: **`docs/HANDSHAKE-PERSISTENZ-UND-H23.md`**, Abschnitt **Handshake Vertra
 
 **Posteingang:** Server-Shared (`.env`) + optional die **aktive** Team- oder Private-Mailbox + Team-Broadcast-Postfächer verknüpfter Gruppen. Gruppen-Filter zeigt Nachrichten **aller Mitglieder** (Union).
 
-**Speicher auf der Chain (online):** **Flüchtig (Event)** = kein Mailbox-Eintrag. **Persistent (Mailbox)** = Ziel unter **Einstellungen → Meine Mailboxen** (Server immer mitgelesen; Team oder Privat **aktiv** setzen), dann Posteingang **Aktualisieren**. Klartext vs. verschlüsselt steuert das Schloss oben.
+**Speicher auf der Chain (online):** **Flüchtig (Event)** = kein Mailbox-Eintrag. **Persistent (Mailbox)** = Ziel unter **Einstellungen → Meine Mailboxen** (Server immer mitgelesen; Team oder Privat **aktiv** setzen), dann **Aktualisieren** im **App-Header neben Tresor**. Klartext vs. verschlüsselt steuert das Schloss im Composer.
 
 | Kanal / Ziel | Persistenz | Wer sieht was? |
 |--------------|------------|----------------|
@@ -276,17 +295,18 @@ Ganzes Private-Mailbox-Object: **Einstellungen → Meine Mailboxen** → Aufräu
 
 ## Posteingang
 
-**Navigation:** Dashboard-Kachel **Nachrichten** → Chat. Im **1:1-/Gruppenmodus** links die **Seitenleiste** (Kontakte/Gruppen); Mitte der **Posteingang**, darunter der **Composer**. **Telefonbuch** über `[+]` im Composer, Sidebar oder Kontakt-Detail — nicht mehr als fester unterer Tab im Chat.
+**Navigation:** Dashboard-Kachel **Nachrichten** → Chat. Desktop (Telegram-Muster): links **Chats**, rechts **Posteingang** + darunter **Composer** nur in der rechten Spalte. **Telefonbuch** über `[+]` im Composer, Sidebar oder Kontakt-Detail.
 
 | Funktion | Beschreibung |
 |----------|--------------|
+| **Aktualisieren** | Nur **App-Header rechts neben Tresor** (nicht in der Posteingang-Leiste). Lädt Status **und** Posteingang neu; Toast „Aktualisieren…“ / „Posteingang aktualisiert“. Test: eine neue Chain-/TG-Nachricht senden → tippen → Zeile erscheint (auch wenn die Liste vorher schon voll wirkte). |
 | **Kategorien / Filter** | z. B. Direkt, Klartext (Pinnwand), Gruppe — je nach Kanal und Rolle. |
 | **Antworten** | Menü an der Zeile — übernimmt **Kanal** und **Sendepfad** in den Composer (1:1, Gruppe, Funk, Pinnwand, Telegram). |
 | **Anheften** | Pinnwand-Posts lokal oben halten (`sessionStorage`). |
-| **Handshake-Anfragen** | Grüner Streifen oben: **Annehmen**, **Als Partner**, **Löschen**. |
+| **Handshake-Anfragen** | Grüner Streifen oben: **Annehmen**, **Als Partner**, **Löschen**. Badge in der Posteingang-Toolbar und an der Dashboard-Kachel. |
 | **Badges** | **Mailbox**, **Team-Broadcast** — unterscheidet Speicherart on-chain. |
-| **Pakete** (Dropdown) | ECDH-**.morg-pkg** Import/Export und **Paket-Archiv** — Inhalt landet **nicht** im normalen Posteingang, sondern im Archiv-Sheet. |
-| **Export** | Nachrichten-Forensik (JSON/TXT/ZIP) über Posteingang-Menü. |
+| **Optionen** | Wire einfügen · Hash & Prüfen · Export Nachrichtenverlauf (Journal + Medien-ZIP) · Datei-Paket (.morg-pkg) — Inhalt von Paketen landet im Archiv-Sheet, nicht in der normalen Liste. **Hinweis:** JSON/TXT-Vollhistorie lädt zuerst den gesamten Verlauf von der Chain/Indexer nach — bei vielen Nachrichten kann das **länger dauern** (Status „Lade Posteingang…“); nicht abbrechen, bis der Speichern-Dialog kommt. |
+| **On-Chain / NFT** | Eigener Button in der Posteingang-Leiste (nicht unter Optionen). |
 
 **Offline-Warteschlange:** Bei fehlender Basis werden Sends lokal gequeued; Status-Streifen im Chat.
 
@@ -316,7 +336,7 @@ Ganzes Private-Mailbox-Object: **Einstellungen → Meine Mailboxen** → Aufräu
 | **Exportieren** | `initialProfile` v1 | Gleiches Schema wie Import |
 | **Funk · Node-IDs sichern** | Passwort-JSON (Export/Import) | Am **Ende** des Telefonbuchs eingeklappt — verschlüsselte 0x↔Meshtastic-Zuordnung für Gerätewechsel; **nicht** dasselbe wie `initialProfile` |
 
-Details zu JSON-Formaten und Helfer-ZIP: siehe unten und **Einsatzleitung → Export-Assistent** (`docs/EXPORT-ASSISTENT-REFERENZ.md`).
+Details zu JSON-Formaten und Helfer-ZIP: siehe unten und **Einsatzleitung → Helfer einrichten** (`docs/EXPORT-ASSISTENT-REFERENZ.md`).
 
 ### Akzeptierte Import-JSON-Formen
 
@@ -356,10 +376,10 @@ Wo welche Funktion liegt (Messenger, Boss):
 | **Neues Helfer-Handy** (Seed + Handoff-ZIP + QR) | **Helfer einrichten** → **Neues Gerät** → Seed + QR |
 | **TTL / Purge** für bestehende Geräte | **Helfer einrichten** → **Bestehende Geräte** |
 | **PWA im WLAN** (nur App installieren) | **Helfer einrichten** → **WLAN-QR** (neben ZIP/IOTA) |
-| **Move-Upgrade / Chain-Status** | **Einsatzleitung → Erweitert** |
+| **Move-Upgrade / Chain-Status** | **Einstellungen → IOTA → Package & Move-Upgrade** (nicht mehr unter Einsatzleitung → Erweitert) |
 | **Kontakte** anlegen, Import/Export JSON, verschl. Backup | **Telefonbuch** (`[+]` im Composer, Sidebar, Kontakt-Detail) |
 | **Team-/Private-Mailboxen** aktiv setzen | **Einstellungen → Meine Mailboxen** |
-| **Nachrichten-Forensik** (Verlauf JSON/TXT, ZIP) | **Posteingang** → Export-Menü |
+| **Nachrichten-Forensik** (Verlauf JSON/TXT, Medien-ZIP) | **Posteingang → Optionen → Export Nachrichtenverlauf…** — Vollhistorie kann **länger laden** (Chain/Indexer), bevor die Datei speicherbar ist |
 | **Handoff importieren** (Helfer-Gerät) | **Einstellungen → Handoff importieren** (oder Posteingang bei IOTA-Zustellung) |
 
 **Nicht verwechseln:** `npm run bundle:messenger` = Entwickler-Standalone auf dem Server — **kein** Ersatz für die Helfer-Handoff-ZIP.
@@ -375,7 +395,7 @@ Wo welche Funktion liegt (Messenger, Boss):
 | **`.env` im Handoff-ZIP** | Geräte-Konfiguration: `ROLE`, `ROLE_ID`, Partner-Adressen, Mailbox-Object-IDs, RPC, `PACKAGE_ID`-Verweis, PSK-Hinweise | **Ja** — jeder Export erzeugt eine **eigene** `.env` (oder verschlüsselte `handoff.morg.enc`) für **dieses** Zielprofil |
 | **Move-Package (`PACKAGE_ID`)** | On-Chain-Vertrag / Einsatz-Instanz auf IOTA — gemeinsame „Move-Umgebung“ | **Nein** — normalerweise **dieselbe** `PACKAGE_ID` wie beim Boss (alle Helfer im **gleichen** Einsatz) |
 | **Mailboxen auf der Chain** | Objekte (Server-, Team-, Private-IDs), die Nachrichten speichern | **Nein** — vom Boss (oder Betrieb) **angelegt**; der Helfer bekommt nur die **IDs und Rechte** in seiner `.env` |
-| **Export-Assistent** | UI zum Bündeln: Profil + Partner + Team-Postfächer → ZIP | Erzeugt **kein** neues Move-Deploy, nur Konfiguration + README |
+| **Helfer einrichten** (Handoff-ZIP) | UI zum Bündeln: Profil + Partner + Team-Postfächer → ZIP | Erzeugt **kein** neues Move-Deploy, nur Konfiguration + README |
 
 ### Muss jeder Helfer eine eigene `.env` bekommen?
 
@@ -395,7 +415,7 @@ Wo welche Funktion liegt (Messenger, Boss):
 
 Weiter: `docs/HANDOFF-IMPORT-UX.md`, `docs/HANDOFF-ZIP-ENCRYPTION.md`, `docs/API-EINSATZ-ROLE-TEMPLATES.md`.
 
-**Export-Assistent (Handoff-ZIP):** `docs/EXPORT-ASSISTENT-REFERENZ.md` · **Move on-chain (nur Messenger):** `docs/MOVE-MESSENGER-KONFIGURATION.md` · **Alle `.env`-Keys in den Einstellungen:** `docs/ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md` · Laientext gesamt: `docs/ENV-ERKLAERUNG.md`
+**Helfer einrichten / Handoff-ZIP:** `docs/EXPORT-ASSISTENT-REFERENZ.md` · **Move on-chain (nur Messenger):** `docs/MOVE-MESSENGER-KONFIGURATION.md` · **Alle `.env`-Keys in den Einstellungen:** `docs/ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md` · Laientext gesamt: `docs/ENV-ERKLAERUNG.md`
 
 ---
 
@@ -421,7 +441,7 @@ In der Chat-**Sidebar** Abschnitt **Gruppen**:
 
 - Button **Verwalten** (auch ohne bestehende Gruppe) → Sheet „Gruppe verwalten“
 - Zahnrad an der Gruppenzeile (Handy-tauglich; Doppelklick weiterhin)
-- Im Gruppenkanal zusätzlich Chat-⋮ → **Gruppe verwalten…**
+- Im Gruppenkanal: Sidebar **Verwalten** / Zahnrad (nicht Optionen — dort absichtlich kein Doppel-Eintrag)
 
 Dort: Name, Mitglieder, **Team-Postfach**, **Team-Key** erzeugen/rotieren (Enc-Broadcast).
 
@@ -548,4 +568,4 @@ Voraussetzung Import: **Handshake** zum Absender der Datei (Peer in `peerMap`).
 
 ---
 
-*Stand: 2026-06-16 — Sidebar-Chat, SOS/Sendepfad im Kopf, Gruppe-verwalten-Sheet, Peering-QR unter Ich, Inbox vor Composer.*
+*Stand: 2026-11-16 — Export-Vollhistorie kann länger laden; Chats|Posteingang Telegram-Muster; Sendepfad Alle/IOTA/Funk/Telegram; Aktualisieren neben Tresor; Optionen Wire/Hash/Export.*

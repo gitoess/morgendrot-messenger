@@ -6,6 +6,7 @@
  */
 
 import { useEffect, type ComponentProps } from 'react'
+import { cn } from '@/lib/utils'
 import { ChatViewInboxList } from '@/frontend/components/chat-view-inbox-list'
 import {
   ChatViewInboxPartnerStrip,
@@ -26,7 +27,7 @@ import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { HandshakeOfferSource } from '@/frontend/lib/handshake-offer-delete'
 import { messageMatchesInboxSearch } from '@/frontend/lib/inbox-unified-search'
 import type { ChatInboxRow } from '@/frontend/features/inbox/chat-view-inbox-rows'
-import { ChatViewConversationMenu, type ChatViewConversationMenuProps } from '@/frontend/components/chat-view-conversation-menu'
+import type { ChatViewConversationMenuProps } from '@/frontend/components/chat-view-conversation-menu'
 import { InboxTeamSyncSystemCards } from '@/frontend/components/inbox-team-sync-system-cards'
 import { InboxTelegramAlarmGroupJoinStrip } from '@/frontend/components/inbox-telegram-alarm-group-join-strip'
 import { syncJoinRequestsFromInboxMessages } from '@/frontend/lib/team-join-request-store'
@@ -119,6 +120,9 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
     pinnwandOverviewConfigured?: boolean
     isInboxMessageUnread?: (msg: Message) => boolean
     isPinnwandInboxMessage?: (msg: Message) => boolean
+    className?: string
+    /** Überschreibt die max-Höhe der Nachrichtenliste (Sidebar-Layout). */
+    messageListMaxClassName?: string
 }
 
 export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
@@ -144,6 +148,11 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     toggleInboxSelection,
     onBulkHideSelected,
     onBulkPurgeSelected,
+    onBulkMarkProtokollSelected,
+    onBulkCopySelected,
+    onBulkExportJsonSelected,
+    onBulkHashSelected,
+    onBulkForwardSelected,
     toggleProtokollMark,
     protokollMarkedIds,
     pinnedPinnwandIds,
@@ -205,6 +214,8 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     pinnwandOverviewConfigured = false,
     isInboxMessageUnread,
     isPinnwandInboxMessage,
+    className,
+    messageListMaxClassName,
     ...toolbarProps
   } = props
 
@@ -233,8 +244,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
   }, [messages, myAddress, apiStatus?.role, apiStatus?.myAddress, apiStatus?.myAddressFull])
 
   return (
-    <div className="rounded-xl border border-border bg-card">
-      {conversationMenu ? <ChatViewConversationMenu {...conversationMenu} /> : null}
+    <div className={cn('flex flex-col rounded-xl border border-border bg-card', className)}>
       <ChatViewInboxToolbar
         {...toolbarProps}
         messages={messages}
@@ -248,8 +258,22 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         onToggleChannelControls={() => setInboxChannelFiltersArmed(!inboxChannelFiltersArmed)}
         showPartnerControls={inboxPartnerFiltersArmed}
         onTogglePartnerControls={() => setInboxPartnerFiltersArmed(!inboxPartnerFiltersArmed)}
+        conversationMenu={conversationMenu}
+        directionFilter={inboxDirectionFilter}
+        onDirectionFilterChange={setInboxDirectionFilter}
+        wireFilter={inboxWireFilter}
+        onWireFilterChange={(f) => {
+          setInboxWireFilter(f)
+          if (f !== 'all') setInboxWireFiltersArmed(true)
+        }}
+        showPartnerFilterMenu={!hidePartnerStrip}
         onBulkHideSelected={onBulkHideSelected}
         onBulkPurgeSelected={() => void onBulkPurgeSelected()}
+        onBulkMarkProtokollSelected={onBulkMarkProtokollSelected}
+        onBulkCopySelected={onBulkCopySelected}
+        onBulkExportJsonSelected={onBulkExportJsonSelected}
+        onBulkHashSelected={onBulkHashSelected}
+        onBulkForwardSelected={onBulkForwardSelected}
         hasHiddenMessages={hiddenInboxCount > 0}
         onToggleHideAllVisibleLocal={onToggleHideAllVisibleLocal}
         apiStatus={apiStatus}
@@ -269,8 +293,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           showLagebild={pinnwandOverviewConfigured}
         />
       ) : null}
-      {!hidePartnerStrip &&
-      (inboxWireFiltersArmed || inboxChannelFiltersArmed || inboxPartnerFiltersArmed) ? (
+      {!hidePartnerStrip && inboxPartnerFiltersArmed ? (
         <ChatViewInboxPartnerStrip
           partnerOptions={inboxPartnerOptions}
           myAddressKnown={myAddress.trim().length > 0}
@@ -284,9 +307,9 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           wireFilter={inboxWireFilter}
           onWireFilterChange={setInboxWireFilter}
           onPartnerSelectForSend={selectInboxPartnerForSend}
-          showWireSection={inboxWireFiltersArmed}
-          showChannelSection={inboxChannelFiltersArmed}
-          showPartnerSection={inboxPartnerFiltersArmed}
+          showWireSection={false}
+          showChannelSection={false}
+          showPartnerSection
           onRemoveInboxPartnerFromQuickList={(address, opts) => {
             removeInboxPartnerFromQuickList(address, {
               hideMatchingMessages: opts.hideMatchingMessages,
@@ -296,8 +319,34 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           apiStatus={apiStatus}
         />
       ) : null}
+      {inboxWireFilter !== 'all' || inboxDirectionFilter !== 'all' ? (
+        <p className="border-b border-border/60 px-3 py-1.5 text-[11px] text-muted-foreground" role="status">
+          {filteredInboxRows.length === 0
+            ? 'Keine Zeile passt — Beides und Alles zeigen wieder die ganze Liste.'
+            : [
+                inboxDirectionFilter === 'in'
+                  ? 'nur Eingang'
+                  : inboxDirectionFilter === 'out'
+                    ? 'nur Ausgang'
+                    : null,
+                inboxWireFilter === 'encrypted'
+                  ? 'nur verschlüsselt'
+                  : inboxWireFilter === 'plaintext'
+                    ? 'nur Klartext'
+                    : null,
+                `${filteredInboxRows.length} sichtbar`,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+        </p>
+      ) : null}
       <InboxTelegramAlarmGroupJoinStrip />
-      <div className="max-h-[min(70vh,42rem)] overflow-y-auto">
+      <div
+        className={cn(
+          'overflow-y-auto',
+          messageListMaxClassName ?? 'max-h-[min(70vh,42rem)]'
+        )}
+      >
         {onAcceptPendingHandshake ? (
           <ChatViewInboxHandshakeRequests
             offers={pendingHandshakeOffers}
@@ -359,6 +408,11 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           inboxVisibilityHint={inboxVisibilityHint}
           onReplyToMessage={onReplyToMessage}
           sending={sending}
+          onApplyDirectionFilter={setInboxDirectionFilter}
+          onApplyWireFilter={(f) => {
+            setInboxWireFilter(f)
+            if (f !== 'all') setInboxWireFiltersArmed(true)
+          }}
         />
       </div>
     </div>

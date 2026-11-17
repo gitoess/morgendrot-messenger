@@ -5,18 +5,20 @@ import type http from 'node:http';
 import {
     getTelegramIntegrationPublic,
     getTelegramIntegrationPublicAsync,
+    readTelegramIntegrationConfig,
     saveTelegramIntegration,
     sendTelegramContactNotify,
     sendTelegramEinsatzGroupHint,
     sendTelegramTestAlarm,
     sendTelegramTestNotify,
+    wipeTelegramIntegrationConfig,
     type SaveTelegramIntegrationInput,
     type TelegramEinsatzGroupEventType,
 } from '../../integrations/telegram-integration.js';
 import { resolveContactStorageKey } from '../../contact-labels.js';
 import { ingestTelegramInboundUpdate, normalizeTelegramInboundMode } from '../../integrations/telegram-inbound.js';
 import { restartTelegramInbound } from '../../integrations/telegram-inbound-poll.js';
-import { listTelegramJournalEntries } from '../../integrations/telegram-journal.js';
+import { clearTelegramJournalFile, listTelegramJournalEntries } from '../../integrations/telegram-journal.js';
 import type { SendJsonFn } from './api-route-types.js';
 import { denyTransportRead, denyTransportWrite } from '../../messenger-capability-gates.js';
 
@@ -79,6 +81,32 @@ export async function handleTelegramIntegrationRoutes(
         return true;
     }
 
+    if (url === '/api/integrations/telegram/wipe' && req.method === 'POST') {
+        const result = wipeTelegramIntegrationConfig();
+        if (!result.ok) {
+            sendJson(res, 400, { ok: false, error: result.error }, cors);
+            return true;
+        }
+        const journal = clearTelegramJournalFile();
+        restartTelegramInbound();
+        const pub = getTelegramIntegrationPublic();
+        sendJson(
+            res,
+            200,
+            {
+                ...pub,
+                ok: true,
+                wiped: true,
+                journalCleared: journal.removed,
+                message:
+                    'Telegram-Runtime (Bot-Token, Chat-IDs, Gruppe) geleert' +
+                    (journal.removed ? '; lokales Journal entfernt.' : '; kein Journal-File vorhanden.'),
+            },
+            cors
+        );
+        return true;
+    }
+
     if (url === '/api/integrations/telegram/test-alarm' && req.method === 'POST') {
         const result = await sendTelegramTestAlarm();
         sendJson(res, result.ok ? 200 : 400, result, cors);
@@ -94,11 +122,64 @@ export async function handleTelegramIntegrationRoutes(
         const data = await readJsonBody(req);
         const recipientRaw = String(data.recipientAddress ?? data.recipient ?? '').trim();
         const telegramRaw =
-            typeof data.telegramChatId === 'string' ? data.telegramChatId : undefined;
+            typeof data.telegramChatId === 'string'
+                ? data.telegramChatId
+                : typeof data.targetChatId === 'string'
+                  ? data.targetChatId
+                  : typeof data.target_chat_id === 'string'
+                    ? data.target_chat_id
+                    : undefined;
         const recipientAddress = resolveContactStorageKey(recipientRaw, telegramRaw);
         const messagePreview = String(data.messagePreview ?? data.message ?? '').trim();
         const senderLabel = typeof data.senderLabel === 'string' ? data.senderLabel : undefined;
-        if (!recipientAddress) {
+        const skipJournal = data.skipJournal === true;
+        const audienceRaw = String(data.audience ?? 'contact').trim().toLowerCase();
+        const audience =
+            audienceRaw === 'self' || audienceRaw === 'both' || audienceRaw === 'contact'
+                ? audienceRaw
+                : 'contact';
+        const wantContact = audience === 'contact' || audience === 'both';
+        const wantAdmin = audience === 'self' || audience === 'both' || data.notifyAdmin === true;
+        const targetChatId =
+            typeof telegramRaw === 'string' && telegramRaw.trim() ? telegramRaw.trim() : undefined;
+
+        /** Optionale CC-Liste (max 5) — weitere Chat-IDs, nicht die Einsatz-Alarmgruppe. */
+        const EXTRA_CAP = 5;
+        const extraRaw = data.extraChatIds ?? data.extra_chat_ids;
+        const extraList: string[] = [];
+        if (Array.isArray(extraRaw)) {
+            for (const x of extraRaw) {
+                const id = String(x ?? '').trim().replace(/^tg:/i, '');
+                if (/^-?\d{1,20}$/.test(id) && !extraList.includes(id)) extraList.push(id);
+                if (extraList.length >= EXTRA_CAP) break;
+            }
+        } else if (typeof extraRaw === 'string' && extraRaw.trim()) {
+            for (const part of extraRaw.split(/[,;\n]+/)) {
+                const id = part.trim().replace(/^tg:/i, '');
+                if (/^-?\d{1,20}$/.test(id) && !extraList.includes(id)) extraList.push(id);
+                if (extraList.length >= EXTRA_CAP) break;
+            }
+        }
+
+        const hasNotifyTarget =
+            Boolean(recipientAddress) ||
+            Boolean(targetChatId) ||
+            wantAdmin ||
+            extraList.length > 0;
+        if (!hasNotifyTarget) {
+            sendJson(
+                res,
+                400,
+                {
+                    ok: false,
+                    error:
+                        'Notify-Ziel fehlt: recipientAddress / telegramChatId, audience self/both (Admin-Chat-ID) oder extraChatIds.',
+                },
+                cors
+            );
+            return true;
+        }
+        if (wantContact && !recipientAddress && !targetChatId && !wantAdmin && extraList.length === 0) {
             sendJson(
                 res,
                 400,
@@ -110,21 +191,73 @@ export async function handleTelegramIntegrationRoutes(
             );
             return true;
         }
-        const skipJournal = data.skipJournal === true;
-        const result = await sendTelegramContactNotify({
-            recipientAddress,
-            messagePreview,
-            senderLabel,
-            skipJournal,
-        });
+
+        let deliveredContact = false;
+        let deliveredAdmin = false;
+        const skips: string[] = [];
+        let lastError: string | undefined;
+
+        if (wantContact && (recipientAddress || targetChatId)) {
+            const result = await sendTelegramContactNotify({
+                recipientAddress: recipientAddress || `tg:${targetChatId}`,
+                messagePreview,
+                senderLabel,
+                skipJournal,
+                targetChatId,
+            });
+            if (result.delivered) deliveredContact = true;
+            else if (result.skipped) skips.push(result.skipped);
+            else if (result.error) lastError = result.error;
+        } else if (wantContact && !recipientAddress && !targetChatId) {
+            skips.push('Kontakt-Hinweis: keine 0x / Chat-ID.');
+        }
+
+        if (wantAdmin) {
+            const cfg = readTelegramIntegrationConfig();
+            const adminId = cfg?.adminChatId?.trim() || '';
+            if (!adminId) {
+                skips.push('Admin-Chat-ID fehlt (Einstellungen → Telegram).');
+            } else {
+                const result = await sendTelegramContactNotify({
+                    recipientAddress: recipientAddress || `tg:${adminId}`,
+                    messagePreview,
+                    senderLabel: senderLabel || 'Morgendrot',
+                    skipJournal: true,
+                    targetChatId: adminId,
+                });
+                if (result.delivered) deliveredAdmin = true;
+                else if (result.skipped) skips.push(result.skipped);
+                else if (result.error) lastError = result.error;
+            }
+        }
+
+        let deliveredExtra = 0;
+        for (const id of extraList) {
+            if (targetChatId && id === targetChatId) continue;
+            const result = await sendTelegramContactNotify({
+                recipientAddress: `tg:${id}`,
+                messagePreview,
+                senderLabel: senderLabel || 'Morgendrot',
+                skipJournal: true,
+                targetChatId: id,
+            });
+            if (result.delivered) deliveredExtra += 1;
+            else if (result.skipped) skips.push(`CC ${id}: ${result.skipped}`);
+            else if (result.error) lastError = result.error;
+        }
+
+        const delivered = deliveredContact || deliveredAdmin || deliveredExtra > 0;
         sendJson(
             res,
-            200,
+            delivered || !lastError ? 200 : 400,
             {
-                ok: true,
-                delivered: result.delivered === true,
-                skipped: result.skipped,
-                error: result.error,
+                ok: delivered || !lastError,
+                delivered,
+                deliveredContact,
+                deliveredAdmin,
+                deliveredExtra,
+                skipped: skips.length ? skips.join(' · ') : undefined,
+                error: lastError,
             },
             cors
         );

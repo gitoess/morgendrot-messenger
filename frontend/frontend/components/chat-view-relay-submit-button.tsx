@@ -26,6 +26,7 @@ import {
 import { addTangleInventoryItem } from '@/frontend/lib/tangle-inventory'
 import { maybeAutoSaveDigestToVault } from '@/frontend/lib/tangle-inventory-vault'
 import { registerR1CourierDialogOpener, takeR1CourierPrefillPayload } from '@/frontend/lib/messenger-imperative-dialogs'
+import { sha256HexOfBytes } from '@/frontend/lib/sha256-bytes'
 
 export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
   const hideMenuTrigger = p?.hideMenuTrigger === true
@@ -68,10 +69,7 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
   }
 
   const sha256HexUtf8 = async (input: string): Promise<string> => {
-    const data = new TextEncoder().encode(input)
-    const digest = await crypto.subtle.digest('SHA-256', data)
-    const arr = Array.from(new Uint8Array(digest))
-    return arr.map((b) => b.toString(16).padStart(2, '0')).join('')
+    return sha256HexOfBytes(new TextEncoder().encode(input))
   }
 
   const buildEnvelope = async () => {

@@ -89,6 +89,7 @@ export function buildGroupMailboxOptimisticInboxRows(p: {
         id: `optimistic:team:${teamMb}:${nonce}`,
         recipient: teamMb,
         dedupKey: `team:${teamMb}:${me.toLowerCase()}:${nonce}`,
+        chainPurgeKind: 'team-broadcast' as const,
       },
     ]
   }
@@ -106,4 +107,36 @@ export function buildGroupMailboxOptimisticInboxRows(p: {
 export function mergeOptimisticGroupInboxRows(prev: Message[], rows: Message[]): Message[] {
   if (rows.length === 0) return prev
   return mergeAllMessages([...rows, ...prev]).sort((a, b) => b.timestamp - a.timestamp)
+}
+
+/** 1:1 / Selbst: sofort sichtbare Zeile bis Chain-Reload nachzieht. */
+export function buildPrivateDmOptimisticInboxRow(p: {
+  myAddress: string
+  recipient: string
+  text: string
+  encrypted: boolean
+  messageNonceU64?: bigint
+  /** false = flüchtiges Event (kein Mailbox-DF). */
+  mailboxPersisted?: boolean
+}): Message | null {
+  const me = p.myAddress.trim()
+  const to = p.recipient.trim().toLowerCase()
+  const content = p.text.trim()
+  if (!me.startsWith('0x') || !/^0x[a-f0-9]{64}$/.test(to) || !content) return null
+  const ts = Date.now()
+  const nonce = p.messageNonceU64 != null ? p.messageNonceU64.toString() : `t${ts}`
+  const mailbox = p.mailboxPersisted !== false
+  return {
+    id: `optimistic:dm:${to}:${nonce}`,
+    from: me,
+    recipient: to,
+    content,
+    timestamp: ts,
+    encrypted: p.encrypted,
+    source: mailbox ? 'mailbox' : undefined,
+    transports: ['internet'],
+    chainNonce: nonce,
+    chainPurgeable: mailbox,
+    dedupKey: `dm|${me.toLowerCase()}|${to}|${nonce}`,
+  }
 }

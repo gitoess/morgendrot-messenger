@@ -108,6 +108,11 @@ describe('filterInboxMessagesByPartnerAndDirection', () => {
     expect(r.map((m) => m.id).sort()).toEqual(['o', 's'])
   })
 
+  it('Beides zeigt Selbst-an-dich nur einmal', () => {
+    const r = filterInboxMessagesByPartnerAndDirection(list, ME, null, 'all')
+    expect(r.filter((m) => m.id === 's')).toHaveLength(1)
+  })
+
   it('partner filter PEER: Thread ohne Selbst-an-selbst', () => {
     const r = filterInboxMessagesByPartnerAndDirection(list, ME, PEER, 'all')
     expect(r.map((m) => m.id).sort()).toEqual(['i', 'o'])

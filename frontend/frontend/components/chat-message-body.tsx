@@ -36,8 +36,8 @@ import {
   peekNftGateObjectId,
 } from '@/frontend/lib/nft-gate-dek-capsule'
 import {
+  evaluateNftGateAppAccess,
   findNftTimeLeaseByNft,
-  isNftTimeLeaseBorrowerActive,
   NFT_TIME_LEASE_CHANGED,
   nftTimeLeaseBadgeText,
 } from '@/frontend/lib/nft-time-lease-local-store'
@@ -60,6 +60,7 @@ import {
 } from '@/frontend/lib/nft-keycard-local-store'
 import { checkNftKeycardOwnedBySigner } from '@/frontend/lib/nft-keycard-ownership'
 import { getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
+import { MESSENGER_INBOX_FORCE_REFRESH_EVENT } from '@/frontend/lib/messenger-inbox-force-refresh'
 import { cn } from '@/lib/utils'
 
 const TXT_PREVIEW_CHARS = 480
@@ -92,11 +93,28 @@ function NftGateMessageBody(p: {
       const lease = findNftTimeLeaseByNft(nftOid)
       setLeaseBadge(lease ? nftTimeLeaseBadgeText(lease) : '')
       const meta = peekNftGateMeta(p.content)
-      const borrowerOk = isNftTimeLeaseBorrowerActive(lease, me)
       const own = await checkNftKeycardOwnedBySigner(nftOid, me)
       const addressOwned = own.ok && own.owned
-      const nftAccessOk = Boolean(addressOwned || borrowerOk)
+      const access = evaluateNftGateAppAccess({
+        signerAddress: me,
+        addressOwned,
+        lease,
+      })
+      const nftAccessOk = access.ok
       setOwned(nftAccessOk ? true : own.ok ? false : null)
+      if (!nftAccessOk && meta?.gate !== 'nft_seal_p4b') {
+        const leaseHint =
+          lease?.status === 'reclaimed' || lease?.status === 'returned'
+            ? ' Lease zurück/geclaimt — NFT muss wieder AddressOwner deiner Wallet sein (Galerie: „Eigene NFT“).'
+            : access.lenderBlocked
+              ? ' NFT ist verliehen — als Verleiher kein Leserecht (nur Empfänger-Wallet). Nach Zurückholen/Reclaim wieder lesen. Header-Aktualisieren prüft neu.'
+              : lease?.status === 'active'
+                ? ' NFT in aktiver Leihe — nur die Empfänger-Wallet (Borrower) liest.'
+                : ' Galerie listet nur ImageNFTs mit AddressOwner=deine Wallet. Lokal gemerkte Karte allein reicht nicht.'
+        throw new Error(
+          `Kein NFT-Leserecht für ${nftOid.slice(0, 14)}…${leaseHint}`
+        )
+      }
       const { getDirectChatEcdhPrivateKey } = await import(
         '@/frontend/lib/direct-chat-ecdh-session'
       )
@@ -145,13 +163,19 @@ function NftGateMessageBody(p: {
     void tryUnlock()
     const sync = () => void tryUnlock()
     window.addEventListener(NFT_TIME_LEASE_CHANGED, sync)
-    return () => window.removeEventListener(NFT_TIME_LEASE_CHANGED, sync)
+    /** Header-„Aktualisieren“: Besitz/Leihe neu prüfen — sonst bleibt alter Klartext im State. */
+    window.addEventListener(MESSENGER_INBOX_FORCE_REFRESH_EVENT, sync)
+    return () => {
+      window.removeEventListener(NFT_TIME_LEASE_CHANGED, sync)
+      window.removeEventListener(MESSENGER_INBOX_FORCE_REFRESH_EVENT, sync)
+    }
   }, [p.content])
 
   return (
     <div className="space-y-2 text-xs">
       <p className="rounded border border-amber-700/40 bg-amber-950/20 px-2 py-1.5 text-[11px] text-amber-100/90">
-        NFT-Gate (App-Check). Kein Blank-DEK. Einmal Klartext = kopierbar. Ohne Seal: nur ehrliche App.
+        NFT-Gate = Zeitkapsel-Nachricht. Lesen = NFT-Besitz, oder während Leihe nur Empfänger — Verleiher nicht.
+        Klartext lokal bis Ausblenden / Besitz weg / Aktualisieren.
         Karte: {nftOid ? `${nftOid.slice(0, 14)}…` : '—'}
         {owned === true ? ' · Leserecht ok' : owned === false ? ' · kein Leserecht' : ''}
       </p>
@@ -214,11 +238,23 @@ async function resolveAutoPassphraseForWire(wire: string): Promise<{
   }
   const me = getDirectIotaSessionSignerAddress()
   if (!me) {
-    return { pass: '', gatedByKeycard: true, owned: false, cardObjectId: binding.cardObjectId }
+    // Merker bleibt nutzbar; Kartenslot ohne Signer nicht.
+    return {
+      pass: remembered,
+      gatedByKeycard: true,
+      owned: false,
+      cardObjectId: binding.cardObjectId,
+    }
   }
   const own = await checkNftKeycardOwnedBySigner(binding.cardObjectId, me)
   if (!own.ok || !own.owned) {
-    return { pass: '', gatedByKeycard: true, owned: false, cardObjectId: binding.cardObjectId }
+    // Ohne Besitz: kein Auto aus Kartenslot — aber lokal gemerkte Passphrase weiter nutzen.
+    return {
+      pass: remembered,
+      gatedByKeycard: true,
+      owned: false,
+      cardObjectId: binding.cardObjectId,
+    }
   }
   return {
     pass: candidate,
@@ -316,10 +352,16 @@ function PassphraseMessageBody(p: {
         if (!alive) return
         if (r.gatedByKeycard && r.owned === false) {
           setKeycardGateHint(
-            'An NFT-Schlüsselkarte gebunden — Auto-Lesen nur mit aktuellem Besitz. Passphrase manuell bleibt möglich (Komfort-Modus, kein starkes Crypto-Gate).'
+            'Lokal an eine Schlüsselkarte gekoppelt (oft Rest von Zeitkapsel/Composer) — NFT-Besitz fehlt, Kartenslot-Auto aus. Gemerkte Passphrase gilt weiter. Unten „Bindung lösen“, wenn unerwünscht.'
           )
-          setKnown('')
-          setPlain(null)
+          setBoundCardOid(r.cardObjectId ?? null)
+          if (r.cardObjectId) setBindPickOid(r.cardObjectId)
+          setKnown((prev) => (prev === r.pass ? prev : r.pass))
+          setPass((prev) => (prev.trim().length >= 8 ? prev : r.pass))
+          if (!r.pass) {
+            setPlain(null)
+            setHidden(false)
+          }
           return
         }
         setKeycardGateHint(
@@ -537,10 +579,22 @@ function PassphraseMessageBody(p: {
       ) : (
         <>
           <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
-            Passphrase nötig — ohne Key nur Ciphertext (gilt für Absender und Empfänger).
+            Passphrase nötig — ohne Key nur Ciphertext. Nach dem Entschlüsseln: kopieren, verbergen, Vault,
+            optional NFT-Schlüsselkarte.
           </p>
           {keycardGateHint ? (
-            <p className="text-[11px] text-amber-800/90 dark:text-amber-100/90">{keycardGateHint}</p>
+            <div className="space-y-1">
+              <p className="text-[11px] text-amber-800/90 dark:text-amber-100/90">{keycardGateHint}</p>
+              {boundCardOid ? (
+                <button
+                  type="button"
+                  className="text-[11px] font-medium text-primary underline hover:no-underline"
+                  onClick={unbindFromKeycard}
+                >
+                  Lokale Schlüsselkarten-Bindung lösen
+                </button>
+              ) : null}
+            </div>
           ) : null}
           <input
             type="password"

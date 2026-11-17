@@ -88,7 +88,29 @@ export function hideContactFromPhonebook(address: string): void {
   notifyContactPhonebookMetaChanged()
 }
 
-/** Ausgeblendeten Kontakt wieder in der Telefonbuch-Liste anzeigen. */
+const NOTES_KEY = 'morgendrot.contactPhonebook.notes'
+
+export function readContactNotes(): Record<string, string> {
+  const raw = readJson<Record<string, string>>(NOTES_KEY, {})
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(raw)) {
+    const a = norm(k)
+    const note = String(v ?? '').trim()
+    if (a && note) out[a] = note.slice(0, 500)
+  }
+  return out
+}
+
+export function writeContactNote(address: string, note: string): void {
+  const a = norm(address)
+  if (!a) return
+  const all = readContactNotes()
+  const next = note.trim().slice(0, 500)
+  if (!next) delete all[a]
+  else all[a] = next
+  writeJson(NOTES_KEY, all)
+  notifyContactPhonebookMetaChanged()
+}
 export function showContactInPhonebook(address: string): void {
   const a = norm(address)
   const set = readHiddenContacts()

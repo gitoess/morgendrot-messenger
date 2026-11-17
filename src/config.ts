@@ -160,11 +160,10 @@ export function readTeamMailboxIds(): string[] {
     return out;
 }
 
-export function ensureMailboxIdInHistory(id: string): void {
+/** Frühere / andere Shared-Mailbox-IDs in Verlauf (Inbox-Union). Auch aktuelle ID, wenn wir sie gerade ersetzen. */
+export function pushMailboxIdToHistory(id: string): void {
     const t = (id || '').trim();
     if (!MAILBOX_ID_REGEX.test(t)) return;
-    const current = (CFG.MAILBOX_ID || process.env.MAILBOX_ID || '').trim();
-    if (current && t.toLowerCase() === current.toLowerCase()) return;
     try {
         const p = path.resolve(process.cwd(), MAILBOX_ID_HISTORY_FILE);
         const existing = readMailboxIdHistory();
@@ -173,6 +172,15 @@ export function ensureMailboxIdInHistory(id: string): void {
         const lines = [...existing, t].slice(-MAX_MAILBOX_ID_HISTORY);
         fs.writeFileSync(p, lines.join('\n') + '\n', 'utf-8');
     } catch {}
+}
+
+/** Andere Mailbox-IDs (nicht die aktive MAILBOX_ID) in Verlauf — z. B. aus Fetch/Union. */
+export function ensureMailboxIdInHistory(id: string): void {
+    const t = (id || '').trim();
+    if (!MAILBOX_ID_REGEX.test(t)) return;
+    const current = (CFG.MAILBOX_ID || process.env.MAILBOX_ID || '').trim();
+    if (current && t.toLowerCase() === current.toLowerCase()) return;
+    pushMailboxIdToHistory(t);
 }
 
 const PACKAGE_ID_HISTORY_BLOCKLIST = new Set(

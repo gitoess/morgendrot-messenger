@@ -21,6 +21,7 @@ import {
     readRuntimeConfigRaw,
     readPackageIdHistory,
     readPackageIdHints,
+    readMailboxIdHistory,
     setEnvKey,
     type HierarchyPermissions,
 } from '../../config.js';
@@ -171,8 +172,14 @@ export async function handleStatusRoutes(
         if (packageTrim && /^0x[a-fA-F0-9]{64}$/i.test(packageTrim)) {
             try {
                 moveFeatures = await getMessagingMoveFeatures(packageTrim);
-            } catch {
-                moveFeatures = undefined;
+            } catch (e: unknown) {
+                moveFeatures = {
+                    teamBroadcastStore: false,
+                    teamBroadcastPurge: false,
+                    privateMailboxPurge: false,
+                    probed: false,
+                    error: e instanceof Error ? e.message : String(e),
+                };
             }
         }
         const upgradeCapFromEnv = (CFG.UPGRADE_CAP_ID || '').trim();
@@ -461,6 +468,28 @@ export async function handleStatusRoutes(
                     history,
                     discovered,
                     hints,
+                },
+                cors
+            );
+        } catch (e: unknown) {
+            sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+        }
+        return true;
+    }
+
+    if (url.startsWith('/api/mailbox-id-history') && req.method === 'GET') {
+        try {
+            const current = (CFG.MAILBOX_ID || '').trim();
+            const history = [...readMailboxIdHistory()];
+            sendJson(
+                res,
+                200,
+                {
+                    ok: true,
+                    current,
+                    history,
+                    note:
+                        'Aktive MAILBOX_ID + frühere Shared-Postfächer (.morgendrot-mailbox-id-history). In-Place-Move-Upgrade ändert diese IDs nicht.',
                 },
                 cors
             );

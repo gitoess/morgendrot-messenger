@@ -69,7 +69,7 @@ describe('useChatViewSendPanelProps', () => {
     expect(result.current.sendPanelProps.activeConversationBar?.displayName).toBe('Alice')
   })
 
-  it('zeigt Composer-0x bei Verschlüsselung immer (auch mit Partner)', () => {
+  it('blendet Composer-0x bei aktivem Chat auch verschlüsselt aus (An Adresse senden im +)', () => {
     const addr = '0x' + 'e'.repeat(64)
     const { result } = renderHook(() =>
       useChatViewSendPanelProps(
@@ -91,7 +91,7 @@ describe('useChatViewSendPanelProps', () => {
         })
       )
     )
-    expect(result.current.sendPanelProps.hideComposerIotaRecipient).toBe(false)
+    expect(result.current.sendPanelProps.hideComposerIotaRecipient).toBe(true)
   })
 
   it('syncPartnerAndRecipient setzt Partner und bei Privat auch Recipient', () => {

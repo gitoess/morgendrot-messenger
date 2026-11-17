@@ -57,7 +57,7 @@ export function ChatViewWirePasteImportDialog(p: ChatViewWirePasteImportDialogPr
       const kind = classifyPastedWire(wire)
       if (kind !== 'passphrase-msg') {
         setError(
-          'Unbekanntes Wire. Unterstützt: MORG_PWMSG_V1 / MORG_NFTGATE_V1. ECDH-Ciphertexte brauchen Handshake/Connect — nicht diesen Dialog.'
+          'Unbekanntes Wire. Hier nur MORG_PWMSG_V1 (Passphrase). NFT-Gate in der Nachrichten-Zeile entsperren; ECDH braucht Handshake/Connect.'
         )
         return
       }
@@ -90,8 +90,8 @@ export function ChatViewWirePasteImportDialog(p: ChatViewWirePasteImportDialogPr
         <DialogHeader>
           <DialogTitle>Wire einfügen</DialogTitle>
           <DialogDescription>
-            Roh-Wire aus „Wire kopieren“ hier einfügen. Passphrase-Nachrichten werden lokal
-            entschlüsselt — nicht dasselbe wie „Entschlüsseln“ (Einsatzbericht-.json).
+            Roh-Wire aus „Wire kopieren“ (Passphrase-Nachricht). Lokal entschlüsseln — nicht
+            Einsatzbericht-JSON und nicht NFT-Gate (das bleibt in der Zeile).
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">

@@ -55,7 +55,7 @@ export function offerLocalVaultSave(reason: LocalVaultSaveOfferReason): void {
     lastByReason.set(reason, lastAny)
 
     toast.message('Tresor lokal sichern?', {
-      description: `Änderungen ${REASON_HINT[reason]} liegen nur im Arbeitsspeicher. Jetzt in die Vault-Datei schreiben?`,
+      description: `Handshake/Connect-Keys ${REASON_HINT[reason]} liegen nur im Tresor-RAM. Optional in die Vault-Datei schreiben — deine Gruppe/Kanal (lokal) bleibt erhalten und muss nicht neu angelegt werden.`,
       duration: 22_000,
       action: {
         label: 'Lokal sichern',

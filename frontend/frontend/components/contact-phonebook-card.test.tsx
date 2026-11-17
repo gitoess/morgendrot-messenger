@@ -22,6 +22,12 @@ const baseProps = {
   onRecordContact: vi.fn(),
 }
 
+function openContactMenu() {
+  const btn = screen.getByRole('button', { name: 'Kontakt-Menü' })
+  fireEvent.pointerDown(btn, { button: 0, ctrlKey: false, pointerType: 'mouse' })
+  fireEvent.click(btn)
+}
+
 describe('ContactPhonebookCard', () => {
   it('zeigt Rollen-Tags und Team-Badge', () => {
     render(
@@ -35,16 +41,18 @@ describe('ContactPhonebookCard', () => {
     expect(screen.getByText('Team')).toBeInTheDocument()
   })
 
-  it('zeigt sichtbaren Aus-Team-entfernen-Button', () => {
+  it('legt Team-Entfernen ins Menü, nicht auf die Karte', () => {
     const onRemove = vi.fn()
     render(<ContactPhonebookCard {...baseProps} onRemoveFromTeam={onRemove} />)
-    const btn = screen.getByRole('button', { name: /Aus Team entfernen/i })
-    fireEvent.click(btn)
+    expect(screen.queryByRole('button', { name: /Aus Einsatz-Team nehmen/i })).toBeNull()
+    openContactMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: /Aus Einsatz-Team nehmen/i }))
     expect(onRemove).toHaveBeenCalled()
   })
 
-  it('zeigt Entfernt-Hinweis nach teamRemoveSent', () => {
+  it('zeigt Entfernt-Hinweis im Menü nach teamRemoveSent', () => {
     render(<ContactPhonebookCard {...baseProps} teamRemoveSent />)
+    openContactMenu()
     expect(screen.getByText(/Aus Team entfernt/i)).toBeInTheDocument()
   })
 })

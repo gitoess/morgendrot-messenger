@@ -37,14 +37,14 @@ describe('DashboardIotaActivityCard', () => {
     vi.clearAllMocks()
   })
 
-  it('zeigt TX und Objekt-Links; Doppelklick öffnet kopierbare IDs', () => {
+  it('zeigt TX und Objekt-Links; ein Klick öffnet kopierbare IDs', () => {
     render(<DashboardIotaActivityCard />)
     const tx = screen.getByRole('link', { name: /^TX$/i })
     expect(tx).toHaveAttribute('href', `https://explorer.test/tx/${digest}`)
     expect(screen.getAllByRole('link', { name: /^Objekt$/i }).length).toBeGreaterThanOrEqual(1)
 
     expect(screen.queryByText('TX Digest')).not.toBeInTheDocument()
-    fireEvent.doubleClick(screen.getByText(/Mint test/i).closest('[role="button"]')!)
+    fireEvent.click(screen.getByText(/Mint test/i).closest('[role="button"]')!)
     expect(screen.getByText('TX Digest')).toBeInTheDocument()
     expect(screen.getByText('Object-ID')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Alle IDs kopieren/i })).toBeInTheDocument()

@@ -12,6 +12,7 @@ import { MessengerNftInfoPanel } from '@/frontend/components/messenger-nft-info-
 import { NftTimeLeasePanel } from '@/frontend/components/nft-time-lease-panel'
 import { NftTimeLeaseReclaimHub } from '@/frontend/components/nft-time-lease-reclaim-hub'
 import { NftTokenSpendPanel } from '@/frontend/components/nft-token-spend-panel'
+import { NFT_ACTIVITY_CHANGED_EVENT } from '@/frontend/lib/nft-activity-local-log'
 import { NFT_BEARER_TREASURY_CHANGED } from '@/frontend/lib/nft-bearer-treasury-local-store'
 import { NFT_GUARDED_PURSE_CHANGED } from '@/frontend/lib/nft-guarded-purse-local-store'
 import {
@@ -19,6 +20,7 @@ import {
   NFT_KEYCARD_VAULT_CHANGED_EVENT,
 } from '@/frontend/lib/nft-keycard-local-store'
 import { buildSecuredSpendOptions } from '@/frontend/lib/nft-secured-spend-options'
+import { NFT_TIME_LEASE_CHANGED } from '@/frontend/lib/nft-time-lease-local-store'
 import { NFT_VAULT_PARKED_CHANGED } from '@/frontend/lib/nft-vault-parked-store'
 
 export type NftCardToolKind = 'guthaben' | 'zeitkapsel'
@@ -53,12 +55,16 @@ export function NftCardToolsSection(p: {
     window.addEventListener(NFT_BEARER_TREASURY_CHANGED, onStorage)
     window.addEventListener(NFT_KEYCARD_VAULT_CHANGED_EVENT, onStorage)
     window.addEventListener(NFT_VAULT_PARKED_CHANGED, onStorage)
+    window.addEventListener(NFT_ACTIVITY_CHANGED_EVENT, onStorage)
+    window.addEventListener(NFT_TIME_LEASE_CHANGED, onStorage)
     return () => {
       window.removeEventListener('storage', onStorage)
       window.removeEventListener(NFT_GUARDED_PURSE_CHANGED, onStorage)
       window.removeEventListener(NFT_BEARER_TREASURY_CHANGED, onStorage)
       window.removeEventListener(NFT_KEYCARD_VAULT_CHANGED_EVENT, onStorage)
       window.removeEventListener(NFT_VAULT_PARKED_CHANGED, onStorage)
+      window.removeEventListener(NFT_ACTIVITY_CHANGED_EVENT, onStorage)
+      window.removeEventListener(NFT_TIME_LEASE_CHANGED, onStorage)
     }
   }, [])
 
@@ -109,14 +115,18 @@ export function NftCardToolsSection(p: {
 
       {p.tool === 'zeitkapsel' ? (
         <div className="space-y-2 rounded-md border border-amber-800/25 bg-amber-950/10 px-3 py-2.5">
-          <p className="text-[11px] font-medium text-foreground">1. Reclaim (alle offenen)</p>
+          <p className="text-[11px] font-medium text-foreground">Offene Leihen — Zurückholen</p>
+          <p className="text-[10px] text-muted-foreground">
+            Nur aktive Escrow-Leihen. Nach Reclaim steht das NFT wieder unter „Neue Leihe“ / in der Galerie —
+            nicht hier.
+          </p>
           <NftTimeLeaseReclaimHub disabled={p.disabled} />
         </div>
       ) : null}
 
       <div className="space-y-2 rounded-md border border-border/70 px-3 py-2.5">
         <p className="text-[11px] font-medium text-foreground">
-          {p.tool === 'zeitkapsel' ? '2. Schlüsselkarte für neue Leihe' : '1. Schlüsselkarte wählen'}
+          {p.tool === 'zeitkapsel' ? 'Neue Leihe — NFT wählen' : 'Schlüsselkarte'}
         </p>
         {options.length > 0 ? (
           <select
@@ -133,12 +143,12 @@ export function NftCardToolsSection(p: {
           </select>
         ) : (
           <p className="text-[11px] text-muted-foreground">
-            Keine NFT/Vaults im Index — Galerie laden („Eigene NFT anzeigen“), Tresor entsperren, oder Object-ID
-            unten eintragen.
+            Kein NFT in der Liste — Tab „Eigene“ laden, oder unten Object-ID. Nach Reclaim erscheint das
+            NFT wieder hier (nicht unter „Zurückholen“ — das sind nur offene Leihen).
           </p>
         )}
         <label className="flex flex-col gap-0.5">
-          <span className="text-[10px] text-muted-foreground">Oder Object-ID (überschreibt die Auswahl)</span>
+          <span className="text-[10px] text-muted-foreground">Oder Object-ID</span>
           <Input
             className="h-8 font-mono text-[11px]"
             value={manual}

@@ -85,6 +85,11 @@ export type InboxPartnerFilterOpts = {
   groupMemberAddresses?: string[]
   /** M2c: Team-Broadcast-Zeilen (recipient = Team-Mailbox-Object-ID). */
   teamMailboxObjectId?: string
+  /**
+   * Wenn Team-Postfach gesetzt: nur Team-Broadcasts dieser ID (kein 1:1-Rauschen der Mitglieder).
+   * Default true sobald teamMailboxObjectId gesetzt ist.
+   */
+  teamBroadcastOnly?: boolean
 }
 
 /** Team-Broadcast-Zeile: Empfänger ist die Team-Mailbox-Object-ID (nicht pairwise 0x-Mitglied). */
@@ -97,6 +102,13 @@ export function isTeamBroadcastInboxRow(msg: Message, teamMailboxObjectId: strin
   if (dk.startsWith('team:')) return true
   /** Fallback: recipient = Team-Object-ID reicht (pairwise nutzt Mitglieder-Adressen). */
   return true
+}
+
+/** Beliebige Team-Broadcast-Zeile (dedup / purge-kind) — auch ohne aktive teamMailboxObjectId. */
+export function isAnyTeamBroadcastInboxRow(msg: Message): boolean {
+  if (msg.chainPurgeKind === 'team-broadcast') return true
+  const dk = msg.dedupKey?.trim() ?? ''
+  return dk.startsWith('team:')
 }
 
 export function filterInboxMessagesByPartnerAndDirection(
@@ -137,6 +149,7 @@ export function filterInboxMessagesByPartnerAndDirection(
       return norm(cpTg) === norm(partnerAddress)
     }
     if (incomingMeshRadio) {
+      if (direction === 'out' && !selfToSelf) return false
       if (groupNorms) {
         const cpMesh = messageCounterpartyAddress(m, myAddress)
         if (cpMesh && groupNorms.has(norm(cpMesh))) return true
@@ -151,6 +164,7 @@ export function filterInboxMessagesByPartnerAndDirection(
     if (direction === 'out' && !isMessageOutgoing(m, myAddress) && !selfToSelf) return false
     if (groupNorms) {
       const teamMb = opts?.teamMailboxObjectId ? norm(opts.teamMailboxObjectId) : ''
+      const teamOnly = Boolean(teamMb) && opts?.teamBroadcastOnly !== false
       if (teamMb) {
         if (isTeamBroadcastInboxRow(m, teamMb)) {
           const senderNorm = norm(m.from ?? '')
@@ -158,11 +172,18 @@ export function filterInboxMessagesByPartnerAndDirection(
           if (senderNorm && groupNorms.has(senderNorm)) return true
           return false
         }
-        const recip = norm(m.recipient ?? '')
-        const dk = m.dedupKey?.trim() ?? ''
-        if (recip.startsWith('0x') && recip !== teamMb && dk.startsWith('team:')) {
-          return false
-        }
+        if (isAnyTeamBroadcastInboxRow(m)) return false
+        /** Team-Postfach-Gruppe: keine 1:1-Zeilen der Mitglieder im Gruppen-Thread. */
+        if (teamOnly) return false
+      } else if (isAnyTeamBroadcastInboxRow(m)) {
+        /**
+         * Gruppe ohne verknüpfte Team-MB-ID im Filter: Empfänger=Team-Object-ID ist kein Mitglied —
+         * sonst verschwindet die eigene Broadcast-Zeile nach Chain-Reload.
+         */
+        const senderNorm = norm(m.from ?? '')
+        if (addressMatchesIdentity(m.from, myAddress)) return true
+        if (senderNorm && groupNorms.has(senderNorm)) return true
+        return false
       }
       const cp = messageCounterpartyAddress(m, myAddress)
       if (!cp) {
@@ -170,6 +191,8 @@ export function filterInboxMessagesByPartnerAndDirection(
         if (isMessageOutgoing(m, myAddress)) return true
         return false
       }
+      /** Empfänger = Team-Object-ID darf nicht als „fremdes Mitglied“ verworfen werden. */
+      if (isAnyTeamBroadcastInboxRow(m) && isMessageOutgoing(m, myAddress)) return true
       return groupNorms.has(norm(cp))
     }
     if (!partnerAddress) return true

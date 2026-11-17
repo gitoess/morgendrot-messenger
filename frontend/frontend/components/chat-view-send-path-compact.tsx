@@ -6,7 +6,6 @@
 
 import { type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { isCapacitorNativePlatform } from '@/frontend/lib/capacitor-platform'
 import { SEND_PATH_ACTIVE_CLASS } from '@/frontend/lib/messenger-appearance-theme'
 import type { ComposerDeliveryChannel } from '@/frontend/lib/composer-delivery-channel'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
@@ -20,6 +19,7 @@ import {
   composerSendPathWriteDeniedReason,
   type ComposerSendPathKey,
 } from '@/frontend/lib/messenger-capability-gates'
+import { messengerTransportMeta } from '@/frontend/lib/messenger-send-path-icons'
 
 export type ChatViewSendPathCompactProps = {
   visible: boolean
@@ -53,34 +53,36 @@ function sendPathCapabilityReason(
 
 const ONLINE = {
   id: 'internet' as const,
-  icon: '🌍',
-  short: 'Online',
-  title: 'Online — alle Nachrichten, Kontakte und Optionen; Senden über Internet',
+  short: messengerTransportMeta('internet').label,
+  title: 'Alle — gesamter Posteingang; Senden über Internet (ohne IOTA-Fokus)',
 }
 
 const FUNK = {
   id: 'mesh' as const,
-  icon: '📡',
-  short: 'Funk',
+  short: messengerTransportMeta('mesh').label,
   title: 'Funk (Meshtastic)',
 }
 
 const ADHOC = {
   id: 'adhoc' as const,
-  icon: '📱',
-  short: 'Ad-hoc',
+  short: messengerTransportMeta('adhoc').label,
   title: 'Ad-hoc (BLE — Platzhalter)',
 }
 
 const IOTA = {
-  icon: '⛓',
-  short: 'IOTA',
+  short: messengerTransportMeta('iota').label,
   title: 'IOTA — nur Chain/Mailbox (Nachrichten, Kontakte, Filter)',
 }
 
 const TELEGRAM = {
-  short: 'Telegram',
-  title: 'Telegram (1:1 oder Alarmgruppe)',
+  short: messengerTransportMeta('telegram').label,
+  title:
+    'Telegram-Sendepfad: Nachricht nur über Bot (Chat-ID) — nicht IOTA. Anders als „Hinweis nach IOTA“ in Einstellungen.',
+}
+
+function PathIcon({ k }: { k: 'internet' | 'mesh' | 'adhoc' | 'telegram' | 'iota' }) {
+  const { Icon } = messengerTransportMeta(k)
+  return <Icon className="h-4 w-4 shrink-0" aria-hidden />
 }
 
 function selectCleartextTransport(
@@ -172,7 +174,8 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
 
   if (!visible) return null
 
-  const gridLayout = layout === 'grid' || (layout == null && isCapacitorNativePlatform())
+  /** Immer Grid außer layout=scroll — kein horizontaler Schiebebalken. */
+  const gridLayout = layout !== 'scroll'
 
   const showTelegramPath = Boolean(onComposerDeliveryChange)
   const chainActive = composerDelivery === 'chain'
@@ -193,14 +196,18 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
   return (
     <div
       className={cn(
-        'flex w-full flex-col rounded-xl border border-border/60 bg-muted/25 px-3 py-3',
+        'flex w-full flex-col overflow-hidden rounded-xl border border-border/60 bg-muted/25 px-3 py-3',
         className
       )}
     >
       <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Sendepfad</p>
       <div
         className={cn(
-          gridLayout ? 'grid grid-cols-2 gap-2' : 'flex flex-nowrap gap-2 overflow-x-auto pb-0.5'
+          gridLayout
+            ? showAdhocTransport
+              ? 'grid grid-cols-2 gap-2 sm:grid-cols-3'
+              : 'grid grid-cols-2 gap-2 sm:grid-cols-4'
+            : 'flex flex-wrap gap-2'
         )}
         role="group"
         aria-label="Sendepfad"
@@ -218,7 +225,7 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
             onForcedTransportChange(ONLINE.id)
           }}
         >
-          <span aria-hidden>{ONLINE.icon}</span>
+          <PathIcon k="internet" />
           {ONLINE.short}
         </PathButton>
         <PathButton
@@ -239,7 +246,7 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
             )
           }}
         >
-          <span aria-hidden>{FUNK.icon}</span>
+          <PathIcon k="mesh" />
           {FUNK.short}
         </PathButton>
         <PathButton
@@ -258,7 +265,7 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
             }
           }}
         >
-          <span aria-hidden>{IOTA.icon}</span>
+          <PathIcon k="iota" />
           {IOTA.short}
         </PathButton>
         {showAdhocTransport ? (
@@ -280,7 +287,7 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
               )
             }}
           >
-            <span aria-hidden>{ADHOC.icon}</span>
+            <PathIcon k="adhoc" />
             {ADHOC.short}
           </PathButton>
         ) : null}
@@ -298,7 +305,7 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
               onComposerDeliveryChange?.('telegram')
             }}
           >
-            <span aria-hidden>✈️</span>
+            <PathIcon k="telegram" />
             {TELEGRAM.short}
           </PathButton>
         ) : null}

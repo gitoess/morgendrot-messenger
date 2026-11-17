@@ -2,9 +2,10 @@
 
 import type { ReactNode } from 'react'
 import { useState, useEffect } from 'react'
-import { KeyRound, Copy, Check, PlusCircle, Sprout, Eye, EyeOff } from 'lucide-react'
+import { KeyRound, Copy, Check, PlusCircle, Sprout } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { VaultUnlockShell } from '@/frontend/components/vault-unlock-shell'
+import { UiPasswordInput } from '@/frontend/components/ui-password-input'
 import { DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -58,41 +59,6 @@ export type VaultUnlockDialogProps = {
   contextHint?: string
   /** Tresor über Einrichtungs-Wizard — vermeidet verschachtelte Modal-Fallen (APK-Freeze). */
   stackedOverModal?: boolean
-}
-
-function PasswordInput(p: {
-  id: string
-  value: string
-  onChange: (v: string) => void
-  placeholder: string
-  autoComplete?: string
-  onEnter?: () => void
-  className?: string
-}) {
-  const [visible, setVisible] = useState(false)
-  return (
-    <div className="relative">
-      <Input
-        id={p.id}
-        type={visible ? 'text' : 'password'}
-        placeholder={p.placeholder}
-        value={p.value}
-        onChange={(e) => p.onChange(e.target.value)}
-        onKeyDown={p.onEnter ? (e) => e.key === 'Enter' && p.onEnter?.() : undefined}
-        autoComplete={p.autoComplete}
-        className={cn('h-11 pr-10', p.className)}
-      />
-      <button
-        type="button"
-        className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground"
-        onClick={() => setVisible((v) => !v)}
-        aria-label={visible ? 'Passwort verbergen' : 'Passwort anzeigen'}
-        tabIndex={-1}
-      >
-        {visible ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
-      </button>
-    </div>
-  )
 }
 
 function PasswordRepeatFeedback(p: { password: string; confirm: string; minLength?: number }) {
@@ -185,6 +151,23 @@ function OptionCard({
   subtitle: string
   children?: ReactNode
 }) {
+  const headerInner = (
+    <>
+      <div
+        className={cn(
+          'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+          active && accent ? 'bg-emerald-500/15 text-emerald-400' : 'bg-muted text-muted-foreground'
+        )}
+      >
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-base font-semibold text-foreground">{title}</p>
+        <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>
+      </div>
+    </>
+  )
+
   return (
     <div
       className={cn(
@@ -196,24 +179,15 @@ function OptionCard({
           : 'border-border/60 hover:border-border hover:bg-card'
       )}
     >
-      <button
-        type="button"
-        onClick={onSelect}
-        className="flex w-full items-start gap-3 p-4 text-left"
-      >
-        <div
-          className={cn(
-            'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
-            active && accent ? 'bg-emerald-500/15 text-emerald-400' : 'bg-muted text-muted-foreground'
-          )}
-        >
-          {icon}
+      {active ? (
+        <div className="flex w-full items-start gap-3 p-4 text-left" aria-current="true">
+          {headerInner}
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-base font-semibold text-foreground">{title}</p>
-          <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>
-        </div>
-      </button>
+      ) : (
+        <button type="button" onClick={onSelect} className="flex w-full items-start gap-3 p-4 text-left">
+          {headerInner}
+        </button>
+      )}
       {active && children ? (
         <div className="min-w-0 space-y-4 overflow-hidden border-t border-border/60 px-4 pb-4 pt-1">
           {children}
@@ -387,10 +361,12 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
           ) : null}
           {!standaloneApk && p.apiSnapshot?.error && p.apiSnapshot.backendRunning !== true ? (
             <p className="rounded-md border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-950 dark:text-amber-100">
-              <strong>Backend nicht erreichbar.</strong> Tresor-Entsperren braucht die API auf Port{' '}
-              <span className="font-mono">3342</span>. Im Repo-Root starten:{' '}
-              <span className="font-mono">npm run dev:messenger</span> (nicht nur{' '}
-              <span className="font-mono">cd frontend && npm run dev:messenger</span>).
+              <strong>Backend nicht erreichbar.</strong> Tresor-Entsperren braucht die API (Next leitet{' '}
+              <span className="font-mono">/api</span> weiter). Im <em>gleichen</em> Ordner wie die UI im Repo-Root
+              starten: <span className="font-mono">npm run dm</span> bzw.{' '}
+              <span className="font-mono">npm run dev:messenger</span> — nicht nur{' '}
+              <span className="font-mono">cd frontend && npm run dev:messenger</span>. Surface-Instanz:{' '}
+              <span className="font-mono">morgendrot-surface</span> → Ports <span className="font-mono">3351/3352</span>.
             </p>
           ) : null}
           {streamlined ? (
@@ -406,19 +382,19 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
                 spellCheck={false}
               />
               <p className="text-xs text-muted-foreground">{t('streamlined.hint')}</p>
-              <Input
-                type="password"
+              <UiPasswordInput
                 placeholder={t('streamlined.appPasswordOptional')}
                 value={p.password}
-                onChange={(e) => p.onPasswordChange(e.target.value)}
+                onChange={p.onPasswordChange}
                 autoComplete="new-password"
-                className="h-11"
+                inputClassName="h-11"
               />
               {p.unlockError ? (
                 <p className="text-sm text-destructive whitespace-pre-wrap">{p.unlockError}</p>
               ) : null}
               <Button
                 type="button"
+                data-no-tap-feedback="true"
                 className="h-12 w-full text-base"
                 disabled={p.unlockButtonDisabled || p.unlocking}
                 onClick={p.onUnlock}
@@ -452,19 +428,23 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
             ) : !hasLocal ? (
               <p className="text-xs text-muted-foreground">{t('vault.noLocalFileChain')}</p>
             ) : null}
+            {p.signerKind === 'sdk' && hasLocal ? (
+              <p className="text-xs text-muted-foreground">{t('vault.sdkSeedHint')}</p>
+            ) : null}
             <div className="space-y-2">
               <Label htmlFor="wallet-password" className="sr-only">
                 {t('vault.passwordLabel')}
               </Label>
-              <Input
+              <UiPasswordInput
                 id="wallet-password"
-                type="password"
                 placeholder={t('vault.passwordPlaceholder')}
                 value={p.password}
-                onChange={(e) => p.onPasswordChange(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && !p.unlockButtonDisabled && p.onUnlock()}
+                onChange={p.onPasswordChange}
+                onEnter={() => {
+                  if (!p.unlockButtonDisabled) void p.onUnlock()
+                }}
                 autoComplete="current-password"
-                className="h-12 text-base"
+                inputClassName="h-12 text-base"
               />
             </div>
             {p.signerKind === 'sdk' && hasLocal ? (
@@ -503,6 +483,7 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
               )
             ) : null}
             <Button
+              data-no-tap-feedback="true"
               onClick={() => void p.onUnlock()}
               disabled={p.unlockButtonDisabled}
               className="h-12 w-full bg-emerald-600 text-base font-medium hover:bg-emerald-600/90"
@@ -533,7 +514,7 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
                 <p className="text-xs text-amber-700 dark:text-amber-300">{t('import.importRecoverHint')}</p>
               ) : null}
               <div className="space-y-2">
-                <PasswordInput
+                <UiPasswordInput
                   id="wallet-password-import"
                   placeholder={
                     hasLocal ? t('import.newPasswordPlaceholder') : t('import.vaultPasswordPlaceholder')
@@ -541,13 +522,15 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
                   value={p.password}
                   onChange={p.onPasswordChange}
                   autoComplete="new-password"
+                  inputClassName="h-11"
                 />
-                <PasswordInput
+                <UiPasswordInput
                   id="wallet-password-import-2"
                   placeholder={t('import.confirmPasswordPlaceholder')}
                   value={p.passwordConfirm}
                   onChange={p.onPasswordConfirmChange}
                   autoComplete="new-password"
+                  inputClassName="h-11"
                 />
                 <PasswordRepeatFeedback
                   password={p.password}
@@ -569,6 +552,7 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
                 />
               </div>
               <Button
+                data-no-tap-feedback="true"
                 onClick={() => void p.onUnlock()}
                 disabled={p.unlockButtonDisabled}
                 variant="secondary"
@@ -644,19 +628,21 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
               </>
             ) : null}
             <div className="space-y-2">
-              <PasswordInput
+              <UiPasswordInput
                 id="wallet-password-create"
                 placeholder={t('create.newPasswordPlaceholder')}
                 value={p.password}
                 onChange={p.onPasswordChange}
                 autoComplete="new-password"
+                inputClassName="h-11"
               />
-              <PasswordInput
+              <UiPasswordInput
                 id="wallet-password-create-2"
                 placeholder={t('create.confirmPasswordPlaceholder')}
                 value={p.passwordConfirm}
                 onChange={p.onPasswordConfirmChange}
                 autoComplete="new-password"
+                inputClassName="h-11"
                 onEnter={() => {
                   if (!p.unlockButtonDisabled) void p.onUnlock()
                 }}
@@ -671,6 +657,7 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
               <p className="text-xs text-muted-foreground">{t('create.blockedHint')}</p>
             ) : null}
             <Button
+              data-no-tap-feedback="true"
               onClick={() => void p.onUnlock()}
               disabled={p.unlockButtonDisabled}
               variant={createProfileReady ? 'default' : 'secondary'}

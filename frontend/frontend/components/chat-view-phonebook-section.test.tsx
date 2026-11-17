@@ -50,7 +50,7 @@ describe('ChatViewPhonebookSection (§ H.1a)', () => {
       [WALLET_B]: { label: 'Bravo' },
     }
     render(<ChatViewPhonebookSection {...baseProps({ directory })} />)
-    fireEvent.change(screen.getByPlaceholderText(/Name, Adresse oder Meshtastic/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Name, 0x-Adresse, Telegram-ID oder Funk-Node/i), {
       target: { value: 'Alpha' },
     })
     expect(screen.getByText('Alpha')).toBeInTheDocument()

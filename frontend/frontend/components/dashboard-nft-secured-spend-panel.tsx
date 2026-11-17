@@ -316,7 +316,7 @@ export function DashboardNftSecuredSpendPanel(p: {
     <div className={cn('space-y-3 rounded-md border border-border/70 bg-muted/15 px-3 py-2.5', p.className)}>
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-[11px] font-medium text-foreground">Aus Guthaben senden</p>
+          <p className="text-[11px] font-medium text-foreground">Gesichert (NFT) senden</p>
           <p className="text-[10px] text-muted-foreground">
             Empfänger + Betrag. Auszahlen braucht Signer; Index speichern braucht entsperrten Tresor.
           </p>

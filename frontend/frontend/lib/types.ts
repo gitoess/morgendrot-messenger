@@ -44,6 +44,13 @@ export interface Message {
   pinnwandPost?: boolean
   /** Ausgehende Telegram-Broadcasts: alle tg:-Empfänger einer zusammengeführten Zeile. */
   telegramRecipients?: string[]
+  /** Rohfelder aus lokalem Telegram-Journal (Export/Beweis) — kein Telegram-API-Vollsatz. */
+  telegramMeta?: {
+    direction: 'in' | 'out'
+    chatId: string
+    contactKey: string
+    senderLabel?: string
+  }
 }
 
 export interface KeyData {

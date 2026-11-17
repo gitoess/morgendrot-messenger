@@ -7,6 +7,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react'
 import { fetchAllInboxMessagesForExport, type ContactMeshEntryClient, readBootstrapCachedApiStatus } from '@/frontend/lib/api'
+import { fetchTelegramJournal } from '@/frontend/lib/api/telegram-journal'
+import { mapTelegramJournalToMessages } from '@/frontend/features/inbox/map-telegram-journal-messages'
 import { extractCompletedSlideSequences } from '@/frontend/features/inbox/inbox-slideshow'
 import { buildChatInboxRows, type ChatInboxRow } from '@/frontend/features/inbox/chat-view-inbox-rows'
 import { useChatViewInbox } from '@/frontend/hooks/use-chat-view-inbox'
@@ -20,6 +22,16 @@ import {
 } from '@/frontend/hooks/use-chat-view-package-id'
 import { mergeAllMessages } from '@/frontend/lib/message-dedup'
 import type { Message } from '@/frontend/lib/types'
+import {
+  filterInboxMessagesForContactConversation,
+  resolveContactConversationMatch,
+} from '@/frontend/lib/contact-conversation-filter'
+import {
+  filterInboxMessagesByPartnerAndDirection,
+  messageTouchesTelegramTransport,
+} from '@/frontend/features/inbox/inbox-partner-filter'
+import { readMessengerGroups } from '@/frontend/lib/messenger-group-store'
+import { TELEGRAM_ALARM_INBOX_PARTNER_KEY } from '@/frontend/lib/telegram-alarm-group-prefs'
 import {
   readComposerMailboxObjectId,
   writeComposerMailboxObjectId,
@@ -172,17 +184,6 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     [appendMeshMessage]
   )
 
-  const messagesForExport = useCallback(async () => {
-    const fromApi = await fetchAllInboxMessagesForExport({
-      packageId: inboxPackageFilter.trim() || undefined,
-      bossView: false,
-      role,
-    })
-    const meshOnly = messages.filter((m) => m.transports?.includes('mesh'))
-    if (meshOnly.length === 0) return fromApi
-    return mergeAllMessages([...fromApi, ...meshOnly])
-  }, [messages, inboxPackageFilter, role])
-
   const {
     mirrorQueuePending,
     offlineMailboxQueuePending,
@@ -318,6 +319,11 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     hiddenInboxCount,
     onBulkHideSelected,
     onBulkPurgeSelected,
+    onBulkMarkProtokollSelected,
+    onBulkCopySelected,
+    onBulkExportJsonSelected,
+    onBulkHashSelected,
+    selectedVisibleMessages,
     removeInboxPartnerFromQuickList,
     resetInboxViewFilters,
     inboxVisibilityHint,
@@ -404,6 +410,79 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     }
   }, [apiStatus?.transportProfile, meshFirstTransportDefaultApplied, onMeshFirstTransportDefault])
 
+  /**
+   * Export = API (alle Mailboxen, paginiert) + UI + Telegram-Journal.
+   * Standard: gesamter Posteingang (kein Partner-Filter, kein Package-Filter) — sonst wirkt „vollständig“ lückenhaft.
+   * `scope: 'visibleChat'` = nur aktueller Chat wie in der Liste (inkl. optionalem Package-Filter).
+   */
+  const messagesForExport = useCallback(
+    async (opts?: { scope?: 'all' | 'visibleChat' }) => {
+      const scope = opts?.scope ?? 'all'
+      const fromApi = await fetchAllInboxMessagesForExport({
+        /** Vollständig: kein Package-Filter — sonst fehlen Mailboxen anderer Package-IDs. */
+        packageId: scope === 'visibleChat' ? inboxPackageFilter.trim() || undefined : undefined,
+        bossView: false,
+        role,
+        /** Ein großer First-Shot; Pagination nur API, Direct nur Seite 0. */
+        pageSize: 2000,
+      })
+      let tgJournal: Message[] = []
+      if (myAddress.trim()) {
+        const j = await fetchTelegramJournal({ limit: 5000 })
+        if (j.ok && j.entries?.length) {
+          tgJournal = mapTelegramJournalToMessages(j.entries, myAddress)
+        }
+      }
+      let merged = mergeAllMessages([...fromApi, ...messages, ...tgJournal, ...filteredDisplayMessages])
+      if (scope === 'visibleChat' && inboxPartnerFiltersArmed) {
+        if (inboxConversationGroupId) {
+          const group = readMessengerGroups().find((g) => g.id === inboxConversationGroupId)
+          if (group) {
+            merged = filterInboxMessagesByPartnerAndDirection(merged, myAddress, null, 'all', {
+              groupMemberAddresses: group.memberAddresses,
+              teamMailboxObjectId: group.teamMailboxObjectId,
+            })
+          }
+        } else if (inboxPartnerKey?.trim().toLowerCase() === TELEGRAM_ALARM_INBOX_PARTNER_KEY) {
+          merged = merged.filter((m) => messageTouchesTelegramTransport(m))
+        } else if (inboxPartnerKey?.trim()) {
+          const key = inboxPartnerKey.trim().toLowerCase()
+          const meNorm = myAddress.trim().toLowerCase()
+          if (meNorm && key === meNorm) {
+            merged = filterInboxMessagesByPartnerAndDirection(merged, myAddress, meNorm, 'all')
+          } else {
+            const contactMatch = resolveContactConversationMatch(key, directory)
+            merged = filterInboxMessagesForContactConversation(merged, myAddress, key, 'all', {
+              contactMatch,
+            })
+          }
+        }
+        if (inboxDirectionFilter !== 'all') {
+          merged = filterInboxMessagesByPartnerAndDirection(merged, myAddress, null, inboxDirectionFilter)
+        }
+      }
+      return merged
+    },
+    [
+      messages,
+      filteredDisplayMessages,
+      inboxPackageFilter,
+      role,
+      myAddress,
+      inboxPartnerFiltersArmed,
+      inboxConversationGroupId,
+      inboxPartnerKey,
+      inboxDirectionFilter,
+      directory,
+    ]
+  )
+
+  /** Stabil — sonst Media-Galerie → useEffect-Schleife (Sidebar „spinnt“). */
+  const loadMessagesForMediaExport = useCallback(
+    () => messagesForExport({ scope: 'all' }),
+    [messagesForExport]
+  )
+
   const {
     onExportEinsatzberichtJson,
     onExportEinsatzberichtTxt,
@@ -412,8 +491,10 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     onExportEinsatzprotokollPlainZip,
     onExportEinsatzprotokollMarked,
     onExportEinsatzberichtEncrypted,
+    onExportMorgMediaZip,
+    onExportMorgMediaDirect,
   } = useChatViewEinsatzExports({
-    messagesLength: messages.length,
+    messagesLength: Math.max(messages.length, filteredDisplayMessages.length),
     messagesForExport,
     myAddress,
     protokollMarkedIds,
@@ -424,15 +505,22 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
   })
 
   const selectInboxConversationAll = useCallback(() => {
+    writeActiveGroupId(null)
     setInboxPartnerKey(null)
     setInboxConversationGroupId(null)
     setInboxPartnerFiltersArmed(false)
+    setInboxChannelFiltersArmed(false)
+    setInboxSourceFilter('all')
     setInboxOverviewCategory('alle')
+    setInboxDirectionFilter('all')
   }, [
     setInboxPartnerKey,
     setInboxConversationGroupId,
     setInboxPartnerFiltersArmed,
+    setInboxChannelFiltersArmed,
+    setInboxSourceFilter,
     setInboxOverviewCategory,
+    setInboxDirectionFilter,
   ])
 
   const selectInboxConversationPartner = useCallback(
@@ -462,9 +550,25 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
       setInboxPartnerKey(null)
       setInboxConversationGroupId(id)
       setInboxPartnerFiltersArmed(true)
-      setInboxOverviewCategory('direkt')
+      /**
+       * Nicht „direkt“ → der Overview-Chip armiert Quelle „mailbox“ und blendet
+       * Team-Broadcasts aus (isGroupBroadcastInboxRow → false). Wie bei 1:1-Partner:
+       * Kanal-Filter aus, nur Gruppen-Partner-Filter.
+       */
+      setInboxChannelFiltersArmed(false)
+      setInboxSourceFilter('all')
+      setInboxOverviewCategory('alle')
+      setInboxDirectionFilter('all')
     },
-    [setInboxPartnerKey, setInboxConversationGroupId, setInboxPartnerFiltersArmed, setInboxOverviewCategory]
+    [
+      setInboxPartnerKey,
+      setInboxConversationGroupId,
+      setInboxPartnerFiltersArmed,
+      setInboxChannelFiltersArmed,
+      setInboxSourceFilter,
+      setInboxOverviewCategory,
+      setInboxDirectionFilter,
+    ]
   )
 
   const selectInboxPartnerForSend = useCallback(
@@ -606,6 +710,11 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     hiddenInboxCount,
     onBulkHideSelected,
     onBulkPurgeSelected,
+    onBulkMarkProtokollSelected,
+    onBulkCopySelected,
+    onBulkExportJsonSelected,
+    onBulkHashSelected,
+    selectedVisibleMessages,
     removeInboxPartnerFromQuickList,
     resetInboxViewFilters,
     inboxVisibilityHint,
@@ -626,6 +735,10 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     onExportEinsatzprotokollPlainZip,
     onExportEinsatzprotokollMarked,
     onExportEinsatzberichtEncrypted,
+    onExportMorgMediaZip,
+    onExportMorgMediaDirect,
+    messagesForExport,
+    loadMessagesForMediaExport,
   }
 }
 

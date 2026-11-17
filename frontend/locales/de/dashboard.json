@@ -9,6 +9,7 @@
   },
   "nav": {
     "back": "Zurück",
+    "home": "Hauptmenü",
     "handbook": "Handbuch",
     "handbookOpen": "Handbuch öffnen",
     "settings": "Einstellungen",
@@ -46,8 +47,9 @@
   },
   "lock": {
     "button": "Abmelden",
-    "buttonTitle": "Tresor sperren — zum Weitermachen erneut entsperren",
-    "confirm": "Tresor sperren?\n\n• Keys und Wallet-Passwort verlassen den Server-RAM\n• Lokaler Inbox-Klartext-Cache wird geschreddert\n• Vault-Datei bleibt — Entsperren mit Vault-Passwort\n• Bei SIGNER=sdk: Seed/Mnemonic ggf. erneut eingeben"
+    "buttonTitle": "Sitzung beenden — Tresor voll sperren",
+    "confirmSoft": "Tresor weich sperren?\n\n• Signer und Passphrasen nur aus diesem Browser-RAM\n• Chat bleibt offen (lesbar)\n• Kein Inbox-Cache-Löschen, Tresor-Datei unverändert\n• Tippen aufs Badge = wieder entsperren",
+    "confirmFull": "Sitzung beenden / Tresor voll sperren?\n\n• Keys + Passwort verlassen den Server-RAM\n• Schnell-Cache entschlüsselter Nachrichten (.inbox.enc) wird gelöscht — Privacy, falls jemand die Festplatte liest; Chat kommt von der Chain nach Entsperren zurück\n• Tresor-Datei (.morgendrot-vault) bleibt\n• Seed in der Datei bleibt (wenn gespeichert); nur RAM-Seed ist weg"
   },
   "mesh": {
     "internet": "Internet",
@@ -96,7 +98,7 @@
       "subtitle": "Keys & Zugänge sichern",
       "variants": {
         "local-vault": {
-          "title": "Tresor öffnen",
+          "title": "Tresor",
           "hint": "Passwort, Seed, Export"
         },
         "emergency-purge": {
@@ -183,7 +185,26 @@
   },
   "einsatzHub": {
     "title": "Einsatzleitung",
-    "bossHint": "Helfer einrichten (Profil + Kanal-Rechte) → oben. TTL/Purge → Parameter. Chain/WLAN → Erweitert.",
+    "bossHint": "Helfer einrichten (Profil + Rechte) oben. TTL/Purge → Bestehende Geräte. Chain/Move → Einstellungen → IOTA. WLAN-QR → Helfer einrichten.",
     "handbookLink": "Handbuch"
+  },
+  "appearance": {
+    "incomingTone": "Eingangs-Ton (neue Nachricht)",
+    "incomingToneHint": "Glocken-Chime (nicht Klick-Piep). Nur offener Tab — kein System-Push. Default aus.",
+    "attachmentPreview": "Anhang-Vorschau im Composer",
+    "attachmentPreviewHint": "Bild / LoRa-Luma / .txt vor dem Senden anzeigen. Default an."
+  },
+  "chatMute": {
+    "on": "Ton",
+    "off": "Stumm",
+    "titleMute": "Eingangs-Ton für diesen Chat stumm",
+    "titleUnmute": "Eingangs-Ton für diesen Chat wieder an",
+    "ariaMute": "Chat stumm",
+    "ariaUnmute": "Chat-Ton an"
+  },
+  "telegramNotify": {
+    "title": "Nach Online-IOTA: Telegram-Hinweis (Klingel)",
+    "aria": "Nach Online-IOTA Telegram-Hinweis",
+    "hint": "Optionaler Kurz-Ping nach erfolgreichem 1:1-IOTA-Send über Online — nicht der Sendepfad „Telegram“. Kein E2EE. Die Einsatz-Alarmgruppe wird hier nicht angeschrieben."
   }
 }

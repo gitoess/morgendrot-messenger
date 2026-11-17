@@ -4,6 +4,8 @@
 
 import { contentDedupKey } from '@/frontend/lib/message-dedup'
 import { resolveInboxRowDedupKey } from '@morgendrot/core/iota'
+import { isNftGateMessageWire } from '@/frontend/lib/nft-gate-dek-capsule'
+import { isPassphraseMessageWire } from '@/frontend/lib/passphrase-message-crypto'
 
 function isEncryptedPlaceholderContent(s: string): boolean {
   return s.trimStart().startsWith('[Verschlüsselt]')
@@ -91,7 +93,9 @@ export function mapInboxApiRowsToMessages(raw: InboxApiRow[]): Message[] {
       timestamp,
       encrypted:
         m.isPlain === false ||
-        (m.isPlain !== true && isEncryptedPlaceholderContent(content)),
+        (m.isPlain !== true && isEncryptedPlaceholderContent(content)) ||
+        isPassphraseMessageWire(content) ||
+        isNftGateMessageWire(content),
       recipient: m.recipient,
       source: 'mailbox' as const,
       transports: ['internet'] as ('internet' | 'mesh' | 'adhoc')[],

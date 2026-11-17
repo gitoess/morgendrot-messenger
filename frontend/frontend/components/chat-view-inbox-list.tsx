@@ -16,8 +16,10 @@
  */
 
 import {
+  Copy,
   Download,
   Forward,
+  Hash,
   Inbox,
   Link2,
   Lock,
@@ -31,8 +33,15 @@ import {
   Trash2,
   UserPlus,
 } from 'lucide-react'
+import {
+  inboxTransportIconKey,
+  messengerTransportMeta,
+} from '@/frontend/lib/messenger-send-path-icons'
 import { cn } from '@/lib/utils'
+import { toast } from 'sonner'
 import { ChatMessageBody } from '@/frontend/components/chat-message-body'
+import { isNftGateMessageWire } from '@/frontend/lib/nft-gate-dek-capsule'
+import { isPassphraseMessageWire } from '@/frontend/lib/passphrase-message-crypto'
 import { parseHandoffZipWire } from '@/frontend/lib/handoff-iota-wire'
 import { queueHandoffZipFromInbox } from '@/frontend/lib/handoff-pending-inbox'
 import {
@@ -44,6 +53,7 @@ import {
 import { SlideShowCrossfade } from '@/frontend/components/slide-show-crossfade'
 import type { ChatInboxRow } from '@/frontend/features/inbox/chat-view-inbox-rows'
 import { downloadSneakernetPackage } from '@/frontend/lib/sneakernet-export'
+import { downloadMorgMediaFilesDirect } from '@/frontend/lib/einsatzprotokoll-export'
 import type { Message } from '@/frontend/lib/types'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
@@ -132,6 +142,9 @@ export type ChatViewInboxListProps = InboxFeedReadPort & {
   einsatzRpcHint?: string
   /** Composer/Connect läuft — Antworten-Button sperren. */
   sending?: boolean
+  /** Badge-Klick → Listenfilter (nicht Sendemodus). */
+  onApplyDirectionFilter?: (d: 'all' | 'in' | 'out') => void
+  onApplyWireFilter?: (f: 'all' | 'encrypted' | 'plaintext') => void
 }
 
 export function ChatViewInboxList(p: ChatViewInboxListProps) {
@@ -171,6 +184,8 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
     isPinnwandInboxMessage,
     einsatzRpcHint = '',
     sending = false,
+    onApplyDirectionFilter,
+    onApplyWireFilter,
   } = p
 
   const { getBadgesForMessage, getTxDigestForMessage, chainMode: einsatzChainMode } =
@@ -264,7 +279,9 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
       <div className="p-8 text-center">
         <MessageCircle className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
         <p className="text-muted-foreground">Noch keine Nachrichten</p>
-        <p className="mt-1 text-xs text-muted-foreground">Mailbox/On-Chain – bei Tests: „Aktualisieren“ klicken.</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Lokal leer (z. B. nach „Einsatz beenden“) — die Chain bleibt. „Aktualisieren“ lädt Mailbox/On-Chain erneut.
+        </p>
       </div>
     )
   }
@@ -373,45 +390,132 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
               )}
               <div className="min-w-0 flex-1 space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex gap-0.5 rounded-md bg-muted/80 px-1.5 py-0.5" title="Transport">
+                  <span className="inline-flex items-center gap-0.5 rounded-md bg-muted/80 px-1.5 py-0.5" title="Kanal">
                     {(row.msg.transports?.length
                       ? row.msg.transports
                       : row.msg.source === 'mesh'
                         ? (['mesh'] as const)
-                        : (['internet'] as const)
-                    ).map((t) => (
-                      <span key={t} className="select-none text-sm" aria-hidden>
-                        {t === 'internet'
-                          ? '🌍'
-                          : t === 'mesh'
-                            ? '📡'
-                            : t === 'telegram'
-                              ? '✈️'
-                              : '📱'}
-                      </span>
-                    ))}
-                  </span>
-                  <span className="font-mono text-xs font-medium text-foreground">
-                    {row.msg.from.startsWith('0x')
-                      ? `${row.msg.from.slice(0, 8)}…${row.msg.from.slice(-4)}`
-                      : row.msg.from}
+                        : row.msg.source === 'telegram'
+                          ? (['telegram'] as const)
+                          : row.msg.source === 'mailbox'
+                            ? (['internet'] as const)
+                            : ([] as const)
+                    ).flatMap((t) => {
+                      const key = inboxTransportIconKey(String(t), row.msg.source)
+                      if (!key) return []
+                      const meta = messengerTransportMeta(key)
+                      const Icon = meta.Icon
+                      const label = meta.label
+                      return [
+                        <span
+                          key={`${t}-${label}`}
+                          className="inline-flex items-center text-muted-foreground"
+                          title={label}
+                          aria-label={label}
+                        >
+                          <Icon className="h-3.5 w-3.5" aria-hidden />
+                        </span>,
+                      ]
+                    })}
                   </span>
                   {fromLabel ? (
                     <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
                       {fromLabel}
                     </span>
-                  ) : null}
+                  ) : (
+                    <span className="text-xs font-medium text-foreground">
+                      {row.msg.from.startsWith('0x')
+                        ? `${row.msg.from.slice(0, 8)}…${row.msg.from.slice(-4)}`
+                        : row.msg.from}
+                    </span>
+                  )}
                   {isMeshVerifiedForAddress(row.msg.from) && (
-                    <span className="inline-flex items-center text-emerald-500" title="Mesh im Kontaktverzeichnis">
+                    <span
+                      className="inline-flex items-center text-emerald-500"
+                      title="Funk-Kontakt im Telefonbuch (kein Verschlüsselungs-Badge)"
+                    >
                       <ShieldCheck className="h-3.5 w-3.5" />
                     </span>
                   )}
-                  {row.msg.encrypted && (
-                    <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
-                      <Lock className="h-3 w-3" aria-hidden />
-                      Verschlüsselt
-                    </span>
-                  )}
+                  {(() => {
+                    const content = `${row.msg.content ?? ''}`
+                    if (isNftGateMessageWire(content)) {
+                      const gateClass =
+                        'inline-flex items-center gap-0.5 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-800 dark:text-violet-300'
+                      const gateTitle =
+                        'NFT-Gate-Wire (Schlüsselkarte). Klick: Liste nur Verschlüsselte. Senden stellst du im Composer (+ Zeitkapsel) ein.'
+                      if (onApplyWireFilter) {
+                        return (
+                          <button
+                            type="button"
+                            className={cn(gateClass, 'hover:bg-violet-500/25')}
+                            title={gateTitle}
+                            onClick={() => onApplyWireFilter('encrypted')}
+                          >
+                            <Lock className="h-3 w-3" aria-hidden />
+                            NFT-Gate
+                          </button>
+                        )
+                      }
+                      return (
+                        <span className={gateClass} title={gateTitle}>
+                          <Lock className="h-3 w-3" aria-hidden />
+                          NFT-Gate
+                        </span>
+                      )
+                    }
+                    if (isPassphraseMessageWire(content)) {
+                      const pwClass =
+                        'inline-flex items-center gap-0.5 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-900 dark:text-amber-200'
+                      const pwTitle =
+                        'Passphrase-Nachricht (PWMSG). Klick: Liste nur Verschlüsselte. Senden stellst du im Composer (+ Passphrase) ein.'
+                      if (onApplyWireFilter) {
+                        return (
+                          <button
+                            type="button"
+                            className={cn(pwClass, 'hover:bg-amber-500/25')}
+                            title={pwTitle}
+                            onClick={() => onApplyWireFilter('encrypted')}
+                          >
+                            <Lock className="h-3 w-3" aria-hidden />
+                            PWMSG
+                          </button>
+                        )
+                      }
+                      return (
+                        <span className={pwClass} title={pwTitle}>
+                          <Lock className="h-3 w-3" aria-hidden />
+                          PWMSG
+                        </span>
+                      )
+                    }
+                    if (row.msg.encrypted) {
+                      const encClass =
+                        'inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400'
+                      const encTitle =
+                        'Verschlüsselt empfangen/gesendet. Klick: Liste nur Verschlüsselte. Senden stellst du im Composer ein.'
+                      if (onApplyWireFilter) {
+                        return (
+                          <button
+                            type="button"
+                            className={cn(encClass, 'hover:bg-emerald-500/25')}
+                            title={encTitle}
+                            onClick={() => onApplyWireFilter('encrypted')}
+                          >
+                            <Lock className="h-3 w-3" aria-hidden />
+                            Verschlüsselt
+                          </button>
+                        )
+                      }
+                      return (
+                        <span className={encClass} title={encTitle}>
+                          <Lock className="h-3 w-3" aria-hidden />
+                          Verschlüsselt
+                        </span>
+                      )
+                    }
+                    return null
+                  })()}
                   {row.msg.chainPurgeable && (
                     <span className="inline-flex items-center gap-0.5 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-800 dark:text-violet-300">
                       {isTeamBroadcastInboxMessage(row.msg) ? 'Team-Broadcast' : 'Mailbox'}
@@ -420,7 +524,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   {burnOnReadEnabled && row.msg.chainPurgeable ? (
                     <span
                       className="inline-flex items-center gap-0.5 rounded-full bg-orange-500/20 px-2 py-0.5 text-[10px] font-semibold text-orange-900 dark:text-orange-100"
-                      title="Mailbox-Objekt — ⋮ → Burn: von Chain löschen. Nicht dasselbe wie lokal ausblenden."
+                      title="Mailbox-Objekt — Nachrichten-⋯ → Von Chain löschen (Burn). Nicht lokal ausblenden."
                     >
                       Burnbar
                     </span>
@@ -459,16 +563,36 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     {new Date(row.msg.timestamp).toLocaleString('de-DE')}
                   </time>
                   {myAddress.trim() ? (
-                    <span
-                      className={cn(
-                        'rounded-md px-2 py-0.5 font-medium',
-                        isMessageOutgoing(row.msg, myAddress)
-                          ? 'bg-sky-500/15 text-sky-800 dark:text-sky-200'
-                          : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
-                      )}
-                    >
-                      {isMessageOutgoing(row.msg, myAddress) ? 'Ausgang' : 'Eingang'}
-                    </span>
+                    onApplyDirectionFilter ? (
+                      <button
+                        type="button"
+                        className={cn(
+                          'rounded-md px-2 py-0.5 font-medium hover:opacity-90',
+                          isMessageOutgoing(row.msg, myAddress)
+                            ? 'bg-sky-500/15 text-sky-800 dark:text-sky-200'
+                            : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
+                        )}
+                        title="Liste filtern: nur diese Richtung"
+                        onClick={() =>
+                          onApplyDirectionFilter(
+                            isMessageOutgoing(row.msg, myAddress) ? 'out' : 'in'
+                          )
+                        }
+                      >
+                        {isMessageOutgoing(row.msg, myAddress) ? 'Ausgang' : 'Eingang'}
+                      </button>
+                    ) : (
+                      <span
+                        className={cn(
+                          'rounded-md px-2 py-0.5 font-medium',
+                          isMessageOutgoing(row.msg, myAddress)
+                            ? 'bg-sky-500/15 text-sky-800 dark:text-sky-200'
+                            : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
+                        )}
+                      >
+                        {isMessageOutgoing(row.msg, myAddress) ? 'Ausgang' : 'Eingang'}
+                      </span>
+                    )
                   ) : null}
                   {row.msg.recipient ? (
                     <span className="rounded-md bg-muted px-2 py-0.5 font-medium text-foreground/80">
@@ -506,6 +630,57 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem
+                    onClick={() => {
+                      const raw = `${row.msg.content ?? ''}`
+                      void navigator.clipboard.writeText(raw).then(
+                        () => {
+                          if (isPassphraseMessageWire(raw)) {
+                            toast.message('PWMSG-Wire kopiert — Optionen → Wire einfügen kann das lesen.')
+                          } else if (isNftGateMessageWire(raw)) {
+                            toast.message(
+                              'NFT-Gate-Wire kopiert — Entschlüsseln in der Nachrichten-Zeile (nicht Wire einfügen).'
+                            )
+                          } else if (row.msg.encrypted) {
+                            toast.message(
+                              'Inhalt kopiert. ECDH/Envelope: Lesen braucht Handshake — Wire einfügen nur für PWMSG.'
+                            )
+                          } else {
+                            toast.message('Inhalt kopiert.')
+                          }
+                        },
+                        () => toast.error('Kopieren fehlgeschlagen')
+                      )
+                    }}
+                    title="Rohinhalt der Zeile kopieren (bei PWMSG = Wire für „Wire einfügen“)"
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    {isPassphraseMessageWire(`${row.msg.content ?? ''}`)
+                      ? 'PWMSG-Wire kopieren'
+                      : isNftGateMessageWire(`${row.msg.content ?? ''}`)
+                        ? 'NFT-Gate-Wire kopieren'
+                        : 'Inhalt kopieren'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      void (async () => {
+                        try {
+                          const { hashInboxMessageCanonical } = await import(
+                            '@/frontend/lib/message-canonical-hash'
+                          )
+                          const h = await hashInboxMessageCanonical(row.msg)
+                          await navigator.clipboard.writeText(h.clipboardText)
+                          toast.success(`Hash kopiert: ${h.entryHash.slice(0, 16)}…`)
+                        } catch (e) {
+                          toast.error(e instanceof Error ? e.message : 'Hash fehlgeschlagen')
+                        }
+                      })()
+                    }}
+                    title="Kanonischer entry_hash (Inhalt+Absender+Zeit+Ref) — prüfbar unter Optionen → Hash & Prüfen"
+                  >
+                    <Hash className="mr-2 h-4 w-4" />
+                    Hash kopieren
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     disabled={!canAddContact}
                     title={
@@ -601,7 +776,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     }}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Burn: von Chain löschen
+                    Von Chain löschen (Burn)
                   </DropdownMenuItem>
                   {parseHandoffZipWire(row.msg.content ?? '') ? (
                     <DropdownMenuItem
@@ -616,13 +791,29 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                       Handoff importieren
                     </DropdownMenuItem>
                   ) : null}
+                  {(row.msg.content ?? '').includes('[[MORG_') ? (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        void downloadMorgMediaFilesDirect([row.msg]).then((r) => {
+                          if (r.count === 0) {
+                            toast.message('Keine dekodierbaren Medien in dieser Nachricht.')
+                            return
+                          }
+                          toast.success(`${r.count} Datei(en) gespeichert.`)
+                        })
+                      }}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Medien speichern
+                    </DropdownMenuItem>
+                  ) : null}
                   <DropdownMenuItem onClick={() => void exportEcdhMorgPkgForMessage(row.msg)}>
                     <Lock className="mr-2 h-4 w-4" />
-                    ECDH .morg-pkg speichern
+                    Für Partner verschlüsseln (.morg-pkg)
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => downloadSneakernetPackage(row.msg)}>
                     <Download className="mr-2 h-4 w-4" />
-                    JSON (Klartext-Snapshot)
+                    Klartext-JSON (ohne ECDH)
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -663,15 +854,24 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
         )
       )}
     </ul>
-      {loadMoreInbox && (inboxHasMore || messages.length >= 50) ? (
+      {loadMoreInbox && (inboxHasMore || messages.length > 0) ? (
         <div className="border-t border-border/70 p-3 flex justify-center">
           <button
             type="button"
-            disabled={loadingMore}
+            disabled={loadingMore || !inboxHasMore}
             onClick={loadMoreInbox}
+            title={
+              inboxHasMore
+                ? undefined
+                : 'Keine weiteren Chain-Seiten mehr (letzter Versuch war leer). Aktualisieren zum Zurücksetzen.'
+            }
             className="rounded-lg border border-border bg-muted/40 px-4 py-2 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-60"
           >
-            {loadingMore ? 'Lade ältere Nachrichten…' : 'Weitere Nachrichten laden'}
+            {loadingMore
+              ? 'Lade ältere Nachrichten…'
+              : inboxHasMore
+                ? 'Weitere Nachrichten laden'
+                : 'Keine älteren Chain-Nachrichten'}
           </button>
         </div>
       ) : null}

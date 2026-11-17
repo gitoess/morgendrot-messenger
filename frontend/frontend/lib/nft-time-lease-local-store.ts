@@ -81,12 +81,32 @@ export function listNftTimeLeasesLocal(): NftTimeLeaseLocalEntry[] {
   return Object.values(readStore().leases).sort((a, b) => b.updatedAtMs - a.updatedAtMs)
 }
 
+export function isPendingNftTimeLeaseId(leaseObjectId: string): boolean {
+  return norm(leaseObjectId).startsWith('pending:')
+}
+
 export function findNftTimeLeaseByNft(nftObjectId: string): NftTimeLeaseLocalEntry | null {
   const n = norm(nftObjectId)
   const hits = listNftTimeLeasesLocal().filter(
     (e) => e.nftObjectId === n && (e.status === 'active' || e.status === 'cancelled')
   )
-  return hits[0] ?? null
+  // Echte Lease-ID vor pending:… bevorzugen
+  const real = hits.find((e) => !isPendingNftTimeLeaseId(e.leaseObjectId))
+  return real ?? hits[0] ?? null
+}
+
+/** Pending-Einträge (ohne geparste Lease-ID) für dasselbe NFT entfernen. */
+export function dropPendingNftTimeLeasesForNft(nftObjectId: string): void {
+  const n = norm(nftObjectId)
+  const s = readStore()
+  let changed = false
+  for (const [id, e] of Object.entries(s.leases)) {
+    if (e.nftObjectId === n && isPendingNftTimeLeaseId(id)) {
+      delete s.leases[id]
+      changed = true
+    }
+  }
+  if (changed) writeStore(s)
 }
 
 /** Badge-Text laut Spec §7. */
@@ -100,11 +120,18 @@ export function nftTimeLeaseBadgeText(
   if (entry.reclaimCancelled || entry.status === 'cancelled') {
     return 'Timelock widerrufen — bleibt privat bei aktuellem NFT-Besitzer'
   }
-  const when = new Date(entry.unlockMs).toLocaleString()
+  const when = new Date(entry.unlockMs).toLocaleString('de-DE')
   if (nowMs < entry.unlockMs) {
-    return `Nur mit NFT in dieser Wallet lesbar · Geplante Veröffentlichung: ${when} (Reclaim), sofern nicht widerrufen`
+    return `Leihe aktiv bis ${when}: nur Empfänger-Wallet (Borrower) liest NFT-Gate — Verleiher nicht. Danach Reclaim.`
   }
   return `Reclaim möglich seit ${when} — TX nötig (kein Auto-Cron)`
+}
+
+/** Aktive Escrow-Leihe (Timelock noch nicht widerrufen). */
+export function isNftTimeLeaseEscrowActive(
+  entry: NftTimeLeaseLocalEntry | null | undefined
+): boolean {
+  return Boolean(entry && entry.status === 'active' && !entry.reclaimCancelled)
 }
 
 /** Borrower während aktiver Leihe (Escrow) darf App-Gate lesen. */
@@ -115,4 +142,26 @@ export function isNftTimeLeaseBorrowerActive(
   if (!entry) return false
   if (entry.status !== 'active' && entry.status !== 'cancelled') return false
   return norm(entry.borrower) === norm(signerAddress)
+}
+
+/**
+ * NFT-Gate App-Leserecht (Zeitkapsel):
+ * - Aktive Leihe: **nur** Borrower (Verleiher verliert Leserecht, auch wenn RPC noch Owner zeigt).
+ * - Sonst: AddressOwner oder (cancelled) Borrower.
+ */
+export function evaluateNftGateAppAccess(opts: {
+  signerAddress: string
+  addressOwned: boolean
+  lease: NftTimeLeaseLocalEntry | null | undefined
+}): { ok: boolean; via: 'none' | 'owner' | 'borrower'; lenderBlocked: boolean } {
+  const me = norm(opts.signerAddress)
+  const borrowerOk = isNftTimeLeaseBorrowerActive(opts.lease, me)
+  if (isNftTimeLeaseEscrowActive(opts.lease)) {
+    if (borrowerOk) return { ok: true, via: 'borrower', lenderBlocked: false }
+    const lenderBlocked = Boolean(opts.lease && norm(opts.lease.lender) === me)
+    return { ok: false, via: 'none', lenderBlocked }
+  }
+  if (opts.addressOwned) return { ok: true, via: 'owner', lenderBlocked: false }
+  if (borrowerOk) return { ok: true, via: 'borrower', lenderBlocked: false }
+  return { ok: false, via: 'none', lenderBlocked: false }
 }

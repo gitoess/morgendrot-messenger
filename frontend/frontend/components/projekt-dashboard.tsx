@@ -86,15 +86,31 @@ export function ProjektDashboard() {
               <span className="text-sm font-medium">Zurück</span>
             </button>
             <div className="h-4 w-px bg-border" />
-            <span className="text-sm font-semibold text-foreground">
-              {s.activeView.type === 'settings'
-                ? 'Einstellungen'
-                : s.activeView.type === 'config'
-                  ? '.env anpassen'
-                  : s.activeView.type === 'einsatzleitung'
-                    ? 'Einsatzleitung'
+            {s.activeView.type === 'chat' && canAccessEinsatzleitung(s.role) ? (
+              <button
+                type="button"
+                onClick={s.openEinsatzleitungView}
+                className="rounded-lg border border-primary/35 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-primary/15"
+              >
+                Einsatzleitung
+              </button>
+            ) : s.activeView.type === 'einsatzleitung' ? (
+              <button
+                type="button"
+                onClick={s.openMessengerChatView}
+                className="rounded-lg border border-primary/35 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-primary/15"
+              >
+                Nachrichten
+              </button>
+            ) : (
+              <span className="text-sm font-semibold text-foreground">
+                {s.activeView.type === 'settings'
+                  ? 'Einstellungen'
+                  : s.activeView.type === 'config'
+                    ? '.env anpassen'
                     : featureTitle(s.activeView.type, projektFeatures)}
-            </span>
+              </span>
+            )}
           </div>
         </header>
 
@@ -134,7 +150,6 @@ export function ProjektDashboard() {
               myAddress={s.myAddress}
               vaultBannerActions={s.chatVaultBannerActions}
               pendingHandshakes={s.pendingHandshakes}
-              onOpenEinsatzleitung={canAccessEinsatzleitung(s.role) ? s.openEinsatzleitungView : undefined}
               phonebookNavRequest={s.phonebookNavRequest}
             />
           )}
@@ -272,7 +287,7 @@ export function ProjektDashboard() {
             </button>
             {/* Handbuch (PWA, /handbook) */}
             <Link
-              href="/handbook"
+              href="/handbook?file=MESSENGER-CHAT-HANDBUCH.md"
               className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               title="Handbuch — nach erstem Laden oft offline"
             >
@@ -320,11 +335,17 @@ export function ProjektDashboard() {
         {!s.locked ? (
           <div className="mb-6 grid gap-4 grid-cols-1">
             <DashboardIotaTransferCard
+              myAddressFull={s.apiSnapshot?.myAddressFull}
               walletNativeIotaBalance={s.apiSnapshot?.walletNativeIotaBalance ?? undefined}
               walletNativeIotaBalanceFetchFailed={s.apiSnapshot?.walletNativeIotaBalanceFetchFailed}
               hasValidMyAddressForBalance={s.hasValidMyAddressForBalance}
               onRefreshStatus={s.checkStatus}
               addressSuggestions={s.dashboardTransferAddressSuggestions}
+              recipientOptions={s.dashboardTransferRecipientOptions}
+              mailboxIds={[
+                ...(s.apiSnapshot?.mailboxId ? [s.apiSnapshot.mailboxId] : []),
+                ...(s.apiSnapshot?.inboxUnionMailboxIds ?? []),
+              ]}
             />
           </div>
         ) : null}
