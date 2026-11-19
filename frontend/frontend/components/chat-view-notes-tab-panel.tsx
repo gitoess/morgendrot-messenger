@@ -105,8 +105,8 @@ export function ChatViewNotesTabPanel() {
         <div>
           <h2 className="text-sm font-semibold text-foreground">Tresor-Safe</h2>
           <p className="text-[11px] text-muted-foreground">
-            Zwei Bereiche reichen: Freitext-Notizen und Login/Passwort-Einträge. Beides im Vault — dauerhaft mit
-            „In Vault-Datei schreiben“.
+            Notizen und Passwort-Einträge im <strong className="text-foreground">selben</strong> Tresor wie Seed/Keys —
+            ein Passwort. Dauerhaft mit „In Vault-Datei schreiben“ (oder Einstellungen → Tresor → Lokal sichern).
           </p>
         </div>
         <button

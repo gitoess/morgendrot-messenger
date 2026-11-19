@@ -132,6 +132,27 @@ ENABLE_REPLAY_PROTECTION=true
 **UI sichtbar:** Chats · Posteingang · Kontakte · Gruppen · **IOTA senden** · Status (Wallet, RPC, Queue).  
 **UI versteckt:** Handoff-Import, Boss-Bootstrap, LoRa, Telegram, SOS (v1), Expert-Config, Lock, Shop, Einsatzleitung.
 
+### Nicht brauchen (Checkliste Edition / Solo-Test)
+
+| Weglassen | Warum |
+|-----------|--------|
+| Erststart-Karte **Einsatzleitung / Boss** | Boss-Werkstatt, nicht Messenger-Kern |
+| Erststart-Karte **Einsatz / Helfer** | Boss-Handoff-ZIP |
+| Handoff-Import / „Lokal vormerken“ als Pflicht | Provisionierung Einsatz; Solo = Seed + Chain-IDs |
+| Einsatzleitung-Kachel, Remote-Signer, API_AUTH-Provisioning | Boss-LAN |
+| LoRa / Meshtastic als Pflicht für v1-Chat | Optional später; Kern = IOTA (+ optional Telegram-Hinweis) |
+| Tresor-Badge nur bei `backendReachable` | Solo braucht Badge auch ohne Node |
+| Saldo nur `/api/wallet-balances` | Solo: Direkt-RPC-Saldo |
+| Faucet nur `window.open` | APK oft tot → externes Öffnen / URL kopieren |
+| OFFLINE-Badge = Basis tot | Verwechslungsgefahr mit „kein Internet“; Autark/Direkt-RPC parallel zeigen |
+| SOS / Einsatzleitung / Handoff-UI | Morgendrot-Reste; Edition blendet aus |
+
+**Feldnotiz 2026-11-17 (Morgendrot-APK):** Drei-Karten-Erststart (`StandaloneFirstStartCard`) wirkte **ausgegraut / unbenutzbar**; **Neues Profil anlegen** im Tresor-Dialog (inkl. Solo) ging. → Nach 4b: Erststart UX härten oder für `iota-messenger` ganz weglassen (nur Solo-Create).
+
+**Feldnotiz 2026-11-17:** Einstellungen → IOTA: „Wo senden?“ / „Gas für Testnet“ waren an **Boss/Kommandant** gekoppelt — Solo (`role=messenger`) sah sie nicht. Fix: auch Solo/Standalone ohne Basis.
+
+**Feldnotiz 2026-11-17 (Gerät):** Chain-Saldo für Solo-Adresse bereits **10 IOTA** (Testnet); UI zeigte „Saldo wird geladen…“ weil nur API-Saldo. Faucet-Captcha muss im System-Browser laufen.
+
 ---
 
 ## 6. Was schon im Code ist (Ist)

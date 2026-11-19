@@ -47,6 +47,8 @@ Exporte (Einsatzbericht, ZIP) nutzen die geladenen Messages — das ist **kein**
 
 - **Tresor öffnen & sichern** = Messaging-Keys laden/speichern, Chain-Backup, Vault-Datei — **Identität für Chat/Signatur**.
 - **Passwortmanager** = Einträge bearbeiten und in **dieselbe** Vault-Datei mitschreiben — **kein** eigener „Mini-Vault“.
+- **Einstellungen → Tresor** (Soll 2026-11-17) = Hub: Modell „ein Passwort“, Inhalt (Notizen/Safe), Seed anzeigen, Verweis Netz-IDs → IOTA, Backup darunter. **Header-Badge** = Sitzung scharf/weich, kein zweiter Tresor.
+- **Package / Mailbox / RPC** bleiben Netzprofil/`.env` (Betrieb auch bei gesperrtem Tresor).
 
 ---
 

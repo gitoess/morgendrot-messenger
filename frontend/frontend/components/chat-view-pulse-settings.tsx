@@ -701,7 +701,7 @@ export function ChatViewPulseSettings({
         <div className="space-y-3 border-t border-border/50 pt-3">
           <div className="rounded-md border border-emerald-500/35 bg-emerald-500/10 px-3 py-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[11px] font-semibold text-foreground">Autarkie-Modus (APK/EXE ohne Basis-Pflicht)</p>
+              <p className="text-[11px] font-semibold text-foreground">Autarkie-Modus (Direkt-RPC-Defaults; ohne-Basis nur auf APK)</p>
               <Switch
                 checked={autarkyMode}
                 disabled={busy !== null}
@@ -710,8 +710,8 @@ export function ChatViewPulseSettings({
               />
             </div>
             <p className="mt-1 text-[10px] leading-snug text-muted-foreground">
-              Setzt Direkt-Pfad, Direkt-Drain und Optimistische Flags als Autarkie-Defaults. RPC, IDs und Signer bleiben
-              bewusst unter deiner Kontrolle.
+              Setzt Direkt-Pfad, Direkt-Drain und Optimistische Flags. Auf dem Desktop bleibt der Tresor am Node
+              (`/api/unlock`); echtes „ohne Morgendrot-Basis“ gilt nur in der Capacitor-APK (Variante B / Matrix D).
             </p>
             <ul className="mt-2 list-inside list-disc space-y-0.5 text-[10px]">
               {autarkyChecklist.map((item) => (

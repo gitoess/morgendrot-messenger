@@ -45,6 +45,8 @@ export type ContactPhonebookFormValues = {
   roleTagsCsv: string
   /** Nur auf diesem Gerät, nicht in der Chain. */
   note: string
+  /** Nur auf diesem Gerät — für Empfangen/Teilen-QR. */
+  phone: string
 }
 
 export type ContactPhonebookContactDialogProps = {
@@ -69,6 +71,7 @@ const empty: ContactPhonebookFormValues = {
   telegramChatId: '',
   roleTagsCsv: '',
   note: '',
+  phone: '',
 }
 
 function hasExtraMailboxSlots(form: ContactPhonebookFormValues): boolean {
@@ -109,6 +112,7 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
             : undefined
         ),
       note: initial?.note ?? '',
+      phone: initial?.phone ?? '',
     }
     openSnapshotRef.current = snapshot
     setForm(snapshot)
@@ -215,6 +219,20 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
                 onChange={(e) => setForm((f) => ({ ...f, roleTagsCsv: e.target.value }))}
                 placeholder="z. B. Medic, THW, Gruppenführer"
                 className="w-full rounded-lg border border-border bg-input px-3 py-2.5 text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">
+                Telefon (nur dieses Gerät)
+              </label>
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                placeholder="z. B. +49 …"
+                maxLength={40}
+                className="w-full rounded-lg border border-border bg-input px-3 py-2.5 text-sm"
+                autoComplete="tel"
               />
             </div>
             <div className="space-y-1.5">

@@ -224,7 +224,10 @@ export function buildSendMailboxTargetOptions(
 ): { value: ContactSendMailboxTarget; label: string; objectId?: string }[] {
   const slots = resolveContactMailboxSlots(wallet, entry)
   const opts: { value: ContactSendMailboxTarget; label: string; objectId?: string }[] = [
-    { value: 'event', label: 'Nur Wallet-Adresse (Event auf Chain)' },
+    {
+      value: 'event',
+      label: 'Nur Wallet-Adresse (Event — oft unsichtbar im Postfach)',
+    },
   ]
   for (const id of CONTACT_MAILBOX_SLOT_IDS) {
     const oid = slots[id]

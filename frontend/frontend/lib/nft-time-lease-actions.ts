@@ -195,11 +195,11 @@ function mapLeaseAbortError(op: string, detail: string | undefined): string {
   if (d.includes('e_too_early') || abortCodeInDetail(d, 3)) {
     return (
       `${op}: noch zu früh (Abort 3) — Chain-Uhr: Unlock abwarten. ` +
-      'Feld „Dauer“ ist in Stunden (0,01 Std ≈ 36 s). Borrower kann vorher „Früh zurück“ (nur Borrower-Signer).'
+      'Feld „Dauer“ ist in Stunden (0,01 Std ≈ 36 s). Entleiher kann vorher „Vorzeitig zurückgeben“ (nur Borrower-Signer).'
     )
   }
   if (d.includes('e_reclaim_cancelled') || abortCodeInDetail(d, 4)) {
-    return `${op}: Timelock widerrufen (Abort 4) — kein permissionless Reclaim mehr; NFT bleibt beim Borrower bis „Früh zurück“.`
+    return `${op}: Timelock widerrufen (Abort 4) — kein permissionless Reclaim mehr; NFT bleibt beim Entleiher bis „Vorzeitig zurückgeben“.`
   }
   return detail ? `${op} fehlgeschlagen — ${detail}.` : `${op} fehlgeschlagen.`
 }
@@ -420,6 +420,7 @@ export async function importNftTimeLeaseFromChain(leaseObjectIdRaw: string): Pro
       return { ok: false, error: 'Lease-Felder unvollständig (nft_id/lender/borrower).' }
     }
     dropPendingNftTimeLeasesForNft(nftObjectId)
+    const pkgFromType = typeStr.split('::')[0]?.toLowerCase() || ''
     upsertNftTimeLeaseLocal({
       leaseObjectId,
       nftObjectId,
@@ -428,6 +429,7 @@ export async function importNftTimeLeaseFromChain(leaseObjectIdRaw: string): Pro
       unlockMs: Number.isFinite(unlockMs) ? unlockMs : 0,
       reclaimCancelled,
       status: 'active',
+      ...(HEX64.test(pkgFromType) ? { messagingPackageId: pkgFromType } : {}),
     })
     return { ok: true, leaseObjectId, nftObjectId, unlockMs: Number.isFinite(unlockMs) ? unlockMs : 0 }
   } catch (e) {
@@ -444,7 +446,7 @@ export async function reclaimNftTimeLease(input: {
     return {
       ok: false,
       error:
-        'Lease-Object-ID fehlt noch lokal — unter „Lease-ID von Chain laden“ die echte 0x… eintragen, dann Reclaim.',
+        'Lease-Object-ID fehlt noch lokal — unter Notfall die echte 0x… eintragen, dann zurückholen.',
     }
   }
   const prep = await prepare()

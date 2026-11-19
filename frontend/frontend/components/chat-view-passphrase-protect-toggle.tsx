@@ -55,7 +55,7 @@ function shortOid(id: string): string {
   return `${t.slice(0, 10)}…${t.slice(-4)}`
 }
 
-/** Composer: Passphrase-Nachricht + Zeitkapsel-Nachricht (NFTGATE). */
+/** Composer: Passphrase-Nachricht + NFT-Leserecht (NFTGATE). */
 export function PassphraseProtectComposerToggle(p: {
   encrypted: boolean
   onEncryptedChange?: (encrypted: boolean) => void
@@ -364,11 +364,11 @@ export function PassphraseProtectComposerToggle(p: {
           }}
         />
         <span>
-          <span className="font-medium text-foreground">Zeitkapsel-Nachricht</span>
+          <span className="font-medium text-foreground">NFT-Leserecht</span>
           {' — '}
-          nur mit NFT-Besitz/Leihe lesbar (Ciphertext on-chain). Verleihen ist ein{' '}
-          <em>eigener</em> Schritt (CTA unten oder On-Chain → Tab Zeitkapsel) — nicht dasselbe wie
-          Senden. Geht nicht zusammen mit Composer-„Verschlüsselt“ (ECDH).
+          Nachricht nur lesbar mit NFT-Besitz (oder aktiver Leihe). Verleihen ist ein{' '}
+          <em>eigener</em> Schritt (CTA unten oder On-Chain → Verleihen) — nicht dasselbe wie Senden.
+          Geht nicht zusammen mit Composer-„Verschlüsselt“ (ECDH).
         </span>
       </label>
 
@@ -608,7 +608,7 @@ export function PassphraseProtectComposerToggle(p: {
                     <span>
                       <span className="font-medium text-foreground">Starkes NFT-Besitz-Gate (P4a)</span>
                       {' — '}
-                      wie Zeitkapsel-Nachricht; bevorzugter Einstieg ist der Modus oben.
+                      wie NFT-Leserecht; bevorzugter Einstieg ist der Modus oben.
                     </span>
                   </label>
                   {strongGate ? advancedGate : null}

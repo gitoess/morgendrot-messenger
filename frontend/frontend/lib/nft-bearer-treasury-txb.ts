@@ -158,6 +158,41 @@ export function buildAdminReclaimBearerTreasuryTransaction(input: {
   return txb
 }
 
+/**
+ * Anfordern: Freeze → Reclaim → Thaw in **einer** PTB (kein Stale-Version zwischen 3 TXs).
+ * `admin_reclaim` verlangt frozen; danach wieder auftauen für erneutes Deposit.
+ */
+export function buildAdminReclaimToSelfBearerTreasuryTransaction(input: {
+  messagingPackageId: string
+  senderAddress: string
+  treasuryObjectId: string
+  coinType?: string
+}): Transaction {
+  const pkg = assertHex64(input.messagingPackageId, 'Messaging-PACKAGE_ID')
+  const sender = assertHex64(input.senderAddress, 'Absender')
+  const treasury = assertHex64(input.treasuryObjectId, 'Treasury Object-ID')
+  const coinType = (input.coinType || IOTA_COIN_TYPE).trim()
+  const txb = new Transaction()
+  txb.setSender(sender)
+  const treasuryArg = txb.object(treasury)
+  txb.moveCall({
+    target: `${pkg}::nft_bearer_treasury::admin_set_frozen`,
+    typeArguments: [coinType],
+    arguments: [treasuryArg, txb.pure.bool(true)],
+  })
+  txb.moveCall({
+    target: `${pkg}::nft_bearer_treasury::admin_reclaim`,
+    typeArguments: [coinType],
+    arguments: [treasuryArg],
+  })
+  txb.moveCall({
+    target: `${pkg}::nft_bearer_treasury::admin_set_frozen`,
+    typeArguments: [coinType],
+    arguments: [treasuryArg, txb.pure.bool(false)],
+  })
+  return txb
+}
+
 /** Admin: leere Treasury zerstören. */
 export function buildDestroyEmptyBearerTreasuryTransaction(input: {
   messagingPackageId: string

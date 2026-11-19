@@ -273,10 +273,10 @@ export async function persistDirectIotaSessionSignerEncrypted(opts: {
   }
 }
 
-export async function restoreDirectIotaSessionSignerFromEncryptedStorage(opts: {
+/** Entschlüsselt gespeicherten Seed/Signer nur zur Anzeige — wendet ihn nicht an. */
+export async function revealDirectIotaSessionSignerFromEncryptedStorage(opts: {
   password: string
-  derivationPath?: string
-}): Promise<{ ok: true; address: string } | { ok: false; error: string }> {
+}): Promise<{ ok: true; signerImportRaw: string } | { ok: false; error: string }> {
   if (typeof window === 'undefined') return { ok: false, error: 'Kein Browser.' }
   try {
     const raw = window.localStorage.getItem(LS_DIRECT_IOTA_SIGNER_ENC)?.trim() ?? ''
@@ -285,15 +285,28 @@ export async function restoreDirectIotaSessionSignerFromEncryptedStorage(opts: {
     if (payload.schema !== 'morgendrot.direct-iota-signer.enc.v1' || !payload.crypto || !payload.ciphertextB64) {
       return { ok: false, error: 'Gespeicherter Signer hat ein unbekanntes Format.' }
     }
-    const dec = await decryptHandoffEnvUtf8(payload.crypto, b64ToBytes(payload.ciphertextB64), String(opts.password || ''))
+    const dec = await decryptHandoffEnvUtf8(
+      payload.crypto,
+      b64ToBytes(payload.ciphertextB64),
+      String(opts.password || '')
+    )
     if (!dec.ok) return { ok: false, error: dec.error }
     const j = JSON.parse(dec.envText) as { signerImportRaw?: unknown }
     const signerImportRaw = typeof j.signerImportRaw === 'string' ? j.signerImportRaw : ''
     if (!signerImportRaw.trim()) return { ok: false, error: 'Gespeicherter Signer ist leer oder beschädigt.' }
-    return applyDirectIotaMnemonicSession(signerImportRaw, opts.derivationPath)
+    return { ok: true, signerImportRaw: signerImportRaw.trim() }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
+}
+
+export async function restoreDirectIotaSessionSignerFromEncryptedStorage(opts: {
+  password: string
+  derivationPath?: string
+}): Promise<{ ok: true; address: string } | { ok: false; error: string }> {
+  const revealed = await revealDirectIotaSessionSignerFromEncryptedStorage({ password: opts.password })
+  if (!revealed.ok) return revealed
+  return applyDirectIotaMnemonicSession(revealed.signerImportRaw, opts.derivationPath)
 }
 
 export function applyDirectIotaMnemonicSession(

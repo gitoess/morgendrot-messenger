@@ -8,7 +8,10 @@ import type { StatusPollClockHint } from '@/frontend/lib/device-time-trust'
 import { getApiBase } from '@/frontend/lib/api/api-base'
 import type { ApiStatus } from '@/frontend/lib/api/api-status-types'
 import { isCapacitorNativePlatform } from '@/frontend/lib/capacitor-platform'
-import { getDirectChainIdsReadiness } from '@/frontend/lib/direct-iota-chain-context'
+import {
+  getDirectChainFieldIdsFromLs,
+  getDirectChainIdsReadiness,
+} from '@/frontend/lib/direct-iota-chain-context'
 import { syncLocalHandoffSnapshotToChainContext } from '@/frontend/lib/handoff-device-bootstrap'
 import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import { broadcastPinnwandStatusFromHandoff } from '@/frontend/lib/broadcast-pinnwand-handoff-status'
@@ -36,6 +39,7 @@ import { ensureI18nInitialized, i18n } from '@/frontend/lib/i18n/client'
 import { standaloneT } from '@/frontend/lib/i18n/standalone-tt'
 import {
   MESSAGING_PERSISTENCE_MODE_LS_KEY,
+  writeMessagingPersistenceModeToStorage,
   type MessagingPersistenceMode,
 } from '@/frontend/lib/messaging-persistence-mode'
 
@@ -84,6 +88,9 @@ export function bootstrapCapacitorStandaloneSession(): void {
   void restoreDirectChatEcdhPrivateFromLocalStorage()
 
   try {
+    // Standalone-APK: immer Mailbox — Event ist flüchtig und erscheint nicht in Boss-/PC-Inbox.
+    // (Solo-Pfad ODER leerer Key reichte nicht: UI/Defaults können wieder auf „event“ stehen.)
+    writeMessagingPersistenceModeToStorage('mailbox')
     if (window.localStorage.getItem(LS_CAP_BOOT) === '1') return
     window.localStorage.setItem('morgendrot.autarkyMode', '1')
     setIotaSubmitMode('client')
@@ -151,7 +158,12 @@ export function readStandaloneDeviceStatusFallback():
   const standaloneLocked = resolveStandaloneDeviceLocked()
   const sessionSignerActive = Boolean(getDirectIotaSessionSigner())
   const identity = readStandaloneLocalIdentitySnapshot()
-  const addrFull = getDirectIotaSessionSignerAddress() || identity.myAddress || ''
+  const chainFields = getDirectChainFieldIdsFromLs()
+  const addrFull =
+    getDirectIotaSessionSignerAddress() ||
+    identity.myAddress ||
+    chainFields.senderAddress ||
+    ''
   ensureI18nInitialized()
   const tt = standaloneT
 

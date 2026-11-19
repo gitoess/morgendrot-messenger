@@ -79,6 +79,7 @@ import { resolveEncryptedRecipientHandshakeStatusSync } from '@/frontend/lib/enc
 import { prependPinnwandPostMarker } from '@/frontend/lib/pinnwand-post-marker'
 import {
   parseComposerIotaRecipientAddresses,
+  describeMissingComposerIotaRecipient,
   resolveComposerKlartextIotaAddress,
   resolveEncryptedMailboxRecipient,
 } from '@/frontend/lib/composer-recipient-fields'
@@ -312,7 +313,13 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     ) {
       setStatus('error')
       setStatusMsg(
-        'Verschlüsselt: gültige 0x-Empfängeradresse im Composer oder Partner (Handshake) eintragen.'
+        describeMissingComposerIotaRecipient({
+          recipient: sendRecipient,
+          partner: sendPartner,
+          encrypted: true,
+          isPrivate,
+        }) ||
+          'Verschlüsselt: volle 0x-Empfängeradresse im Partner-Feld (Handshake) oder Empfängerfeld — Telefonbuch optional.'
       )
       return
     }
@@ -736,7 +743,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           {
             ok: false,
             message: zeitkapselMode
-              ? 'Zeitkapsel-Nachricht braucht Klartext-Transport (Ciphertext on-chain). Oben „Unverschlüsselt“ wählen oder Modus aus.'
+              ? 'NFT-Leserecht braucht Klartext-Transport (Ciphertext on-chain). Oben „Unverschlüsselt“ wählen oder Modus aus.'
               : 'Passphrase-Schutz braucht Klartext-Transport (Ciphertext on-chain). Oben „Unverschlüsselt“ wählen oder Passphrase-Schutz aus.',
             idleMs: 9000,
           },
@@ -750,7 +757,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         const cardOid = readPassphraseNftKeycardBindObjectId()
         if (zeitkapselMode && !cardOid) {
           throw new Error(
-            'Zeitkapsel-Nachricht: NFT-Object-ID wählen oder einfügen (Composer). Schlüsselkarte merken ist optional.'
+            'NFT-Leserecht: NFT-Object-ID wählen oder einfügen (Composer). Schlüsselkarte merken ist optional.'
           )
         }
         /** Zeitkapsel = NFTGATE nur mit Object-ID; lokale Schlüsselkarte ist Komfort, kein Muss. */
@@ -828,7 +835,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           if (getNftKeycard(cardOid!)) await flushNftKeycardVaultPersist()
           if (cardOid) writeZeitkapselLastNftObjectId(cardOid)
           sharedPassphraseNote = zeitkapselMode
-            ? ' Zeitkapsel-Nachricht (NFTGATE) gesendet — Ciphertext im Wire; Leserecht = NFT. Unten „Dieses NFT verleihen…“ oder On-Chain → Zeitkapsel.'
+            ? ' NFT-Leserecht gesendet — Klartext nur mit NFT-Besitz. Unten „NFT verleihen…“ oder On-Chain → Verleihen.'
             : p4b
               ? ' Starkes P4b Seal: DEK nur mit Key-Broker nach NFT-AddressOwner. Wire allein reicht nicht. Klartext danach kopierbar.'
               : p4a2

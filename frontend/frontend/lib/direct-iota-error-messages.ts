@@ -49,6 +49,12 @@ export function formatDirectIotaSubmitError(reason: unknown): string {
   if (lower.includes('objectnotfound') || lower.includes('object not found')) {
     return 'Mailbox- oder Package-Objekt auf der Kette nicht gefunden — Ketten-IDs aus der Basis aktualisieren.'
   }
+  if (lower.includes('is owned by object') || lower.includes('owned by object')) {
+    return (
+      'Objekt steckt unter einem Parent (Zeitkapsel/Escrow o. Ä.) und kann so nicht als Wallet-Input. ' +
+      'NFT zuerst zurückholen — bei Bearer-Treasury: Anfordern nutzt Admin-Reclaim ohne NFT.'
+    )
+  }
   if (lower.includes('package object does not exist') || lower.includes('dependent package not found')) {
     return (
       'Package existiert auf diesem Netz nicht — Testnet- und Mainnet-IDs vermischt oder falsches Netzwerk aktiv. ' +

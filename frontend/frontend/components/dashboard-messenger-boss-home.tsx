@@ -35,6 +35,7 @@ export function DashboardMessengerBossHome(p: {
             ...(p.apiSnapshot?.mailboxId ? [p.apiSnapshot.mailboxId] : []),
             ...(p.apiSnapshot?.inboxUnionMailboxIds ?? []),
           ]}
+          primaryMailboxId={p.apiSnapshot?.mailboxId || undefined}
         />
         <DashboardIotaActivityCard compact />
       </div>

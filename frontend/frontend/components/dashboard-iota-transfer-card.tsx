@@ -2,13 +2,14 @@
 
 /**
  * IOTA-Überweisung über die Wallet-Session — Dashboard (voll oder kompakt für Boss-Start).
- * Frei | Gesichert (NFT) im gleichen Stil; Gesichert öffnet inline im Send-Bereich.
+ * Frei | Gesichert: eine Form; NFT/Vault-Block dazwischen (Frei = ausgegraut).
  */
 
-import { useCallback, useEffect, useState } from 'react'
-import { Check, Copy, QrCode, RefreshCw, WifiOff } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Check, Copy, QrCode, RefreshCw, ScanLine, WifiOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { transferCoins } from '@/frontend/lib/api'
+import { Input } from '@/components/ui/input'
 import {
   Dialog,
   DialogContent,
@@ -27,7 +28,12 @@ import {
   DashboardNftSecuredBalanceAmount,
   requestNftVaultBalanceRefresh,
 } from '@/frontend/components/dashboard-nft-secured-balances'
-import { DashboardNftSecuredSpendPanel } from '@/frontend/components/dashboard-nft-secured-spend-panel'
+import {
+  DashboardNftSecuredSpendPanel,
+  type DashboardNftSecuredSpendHandle,
+} from '@/frontend/components/dashboard-nft-secured-spend-panel'
+import { QrCameraScanDialog } from '@/frontend/components/qr-camera-scan-dialog'
+import { recordIotaActivity } from '@/frontend/lib/iota-activity-local-log'
 import { nftVaultSessionHint } from '@/frontend/lib/nft-vault-session-gate'
 import { VAULT_PASSWORD_SESSION_CHANGED } from '@/frontend/lib/vault-password-session'
 import { listParkedNftVaults } from '@/frontend/lib/nft-vault-parked-store'
@@ -37,6 +43,26 @@ import {
   listNftOwnedSnapshot,
   NFT_ACTIVITY_CHANGED_EVENT,
 } from '@/frontend/lib/nft-activity-local-log'
+import {
+  buildReceiveSharePayload,
+  defaultMailboxLabel,
+  readMailboxLabelMap,
+  writeMailboxLabel,
+} from '@/frontend/lib/receive-share-payload'
+import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
+import {
+  CONTACT_PHONEBOOK_META_CHANGED_EVENT,
+  readContactNotes,
+  readContactPhones,
+  writeContactNote,
+  writeContactPhone,
+} from '@/frontend/lib/contact-phonebook-meta-store'
+import { saveContactEntry } from '@/frontend/lib/api'
+
+function extractIotaAddressFromScan(raw: string): string | null {
+  const m = raw.trim().match(/0x[a-fA-F0-9]{64}/)
+  return m ? m[0] : null
+}
 
 export type DashboardIotaTransferCardProps = {
   compact?: boolean
@@ -48,8 +74,10 @@ export type DashboardIotaTransferCardProps = {
   addressSuggestions?: string[]
   /** Telefonbuch + Favoriten für Empfängerwahl (T19). */
   recipientOptions?: { address: string; label: string; favorite?: boolean }[]
-  /** Aktive Chat-Mailboxen (Server/Team/Privat) — nur Anzeige beim Empfangen. */
+  /** Aktive Chat-Mailboxen (Server/Team/Privat) — Empfangen/Teilen. */
   mailboxIds?: string[]
+  /** Primäre/Privat-Mailbox (für Default-Label). */
+  primaryMailboxId?: string
 }
 
 export function DashboardIotaTransferCard({
@@ -62,14 +90,24 @@ export function DashboardIotaTransferCard({
   addressSuggestions = [],
   recipientOptions = [],
   mailboxIds = [],
+  primaryMailboxId,
 }: DashboardIotaTransferCardProps) {
   const [transferNote, setTransferNote] = useState('')
   const { t } = useAppTranslation('dashboard')
   const [transferOpen, setTransferOpen] = useState(!compact)
   const [securedSpendOpen, setSecuredSpendOpen] = useState(false)
   const [securedPreferOid, setSecuredPreferOid] = useState<string | undefined>()
+  const securedSpendRef = useRef<DashboardNftSecuredSpendHandle>(null)
   const [receiveOpen, setReceiveOpen] = useState(false)
   const [receiveQrUrl, setReceiveQrUrl] = useState('')
+  const [shareWallet, setShareWallet] = useState(true)
+  const [shareContact, setShareContact] = useState(false)
+  const [shareMailboxIds, setShareMailboxIds] = useState<string[]>([])
+  const [mailboxLabels, setMailboxLabels] = useState<Record<string, string>>({})
+  const [contactName, setContactName] = useState('')
+  const [contactPhone, setContactPhone] = useState('')
+  const [contactNote, setContactNote] = useState('')
+  const { directory: contactDirectory, refresh: refreshContactDirectory } = useContactDirectory()
   const [copied, setCopied] = useState(false)
   const [transferTo, setTransferTo] = useState('')
   const [transferAmount, setTransferAmount] = useState('')
@@ -81,9 +119,16 @@ export function DashboardIotaTransferCard({
   const [parkedCount, setParkedCount] = useState(0)
   const [nftCount, setNftCount] = useState(0)
   const [nftGalleryOpenNonce, setNftGalleryOpenNonce] = useState(0)
+  const [nftGalleryMode, setNftGalleryMode] = useState<'owner' | 'guthaben'>('owner')
+  const [scanRecipientOpen, setScanRecipientOpen] = useState(false)
 
   const myAddress = (myAddressFull || '').trim()
   const addrOk = /^0x[a-fA-F0-9]{64}$/i.test(myAddress)
+
+  const openNftGallery = (mode: 'owner' | 'guthaben' = 'owner') => {
+    setNftGalleryMode(mode)
+    setNftGalleryOpenNonce((n) => n + 1)
+  }
 
   useEffect(() => {
     const sync = () => {
@@ -133,15 +178,26 @@ export function DashboardIotaTransferCard({
     if (!transferTo || !transferAmount) return
     setTransferring(true)
     setTransferStatus('idle')
-    const res = await transferCoins(transferTo, parseFloat(transferAmount))
+    const to = transferTo.trim()
+    const amount = parseFloat(transferAmount)
+    const note = transferNote.trim()
+    const res = await transferCoins(to, amount)
     if (res.ok) {
       setTransferStatus('success')
-      const note = transferNote.trim()
       setTransferMsg(
         note
           ? `${t('iota.transferSuccess')} · Notiz (nur hier): ${note.slice(0, 80)}`
           : t('iota.transferSuccess')
       )
+      const amountLabel = Number.isFinite(amount) ? String(amount) : transferAmount
+      recordIotaActivity({
+        kind: 'coin_out',
+        summary: note
+          ? `${amountLabel} IOTA gesendet · Notiz: ${note.slice(0, 80)}`
+          : `${amountLabel} IOTA gesendet`,
+        counterparty: to,
+        digest: typeof res.txDigest === 'string' ? res.txDigest : undefined,
+      })
       setTransferTo('')
       setTransferAmount('')
       setTransferNote('')
@@ -154,32 +210,110 @@ export function DashboardIotaTransferCard({
     setTimeout(() => setTransferStatus('idle'), 5000)
   }
 
+  const mailboxChoices = [
+    ...new Set(
+      mailboxIds.map((id) => id.trim().toLowerCase()).filter((id) => /^0x[a-f0-9]{64}$/.test(id))
+    ),
+  ]
+  const primaryMb = (primaryMailboxId || mailboxChoices[0] || '').trim().toLowerCase()
+
+  const receivePayload = buildReceiveSharePayload({
+    includeWallet: shareWallet,
+    walletAddress: addrOk ? myAddress : undefined,
+    mailboxes: shareMailboxIds
+      .filter((id) => mailboxChoices.includes(id))
+      .map((id, i) => ({
+        id,
+        label:
+          mailboxLabels[id]?.trim() ||
+          defaultMailboxLabel(id, mailboxChoices.indexOf(id) >= 0 ? mailboxChoices.indexOf(id) : i, primaryMb),
+      })),
+    includeContact: shareContact,
+    contactName,
+    contactPhone,
+    contactNote,
+  })
+
   const loadReceiveQr = useCallback(async () => {
-    if (!addrOk) {
+    const payload = receivePayload.trim()
+    if (!payload) {
       setReceiveQrUrl('')
       return
     }
     try {
-      const url = await QRCode.toDataURL(myAddress, { width: 220, margin: 2 })
+      const url = await QRCode.toDataURL(payload, { width: 220, margin: 2 })
       setReceiveQrUrl(url)
     } catch {
       setReceiveQrUrl('')
     }
-  }, [addrOk, myAddress])
+  }, [receivePayload])
+
+  const seedReceiveContactFromPhonebook = useCallback(() => {
+    if (!addrOk) return
+    const key = myAddress.toLowerCase()
+    const entry = contactDirectory[key]
+    const fromOpts = recipientOptions.find((o) => o.address.toLowerCase() === key)
+    const name =
+      (entry?.label || '').trim() ||
+      (fromOpts?.label || '').trim() ||
+      ''
+    const phone = readContactPhones()[key] || ''
+    const note = readContactNotes()[key] || ''
+    if (name) setContactName(name)
+    setContactPhone(phone)
+    setContactNote(note)
+  }, [addrOk, myAddress, contactDirectory, recipientOptions])
 
   useEffect(() => {
-    if (receiveOpen) void loadReceiveQr()
-  }, [receiveOpen, loadReceiveQr])
+    if (!receiveOpen) return
+    const stored = readMailboxLabelMap()
+    setMailboxLabels(stored)
+    seedReceiveContactFromPhonebook()
+    void loadReceiveQr()
+  }, [receiveOpen, loadReceiveQr, seedReceiveContactFromPhonebook])
 
-  const copyAddress = async () => {
-    if (!addrOk) return
+  useEffect(() => {
+    if (!receiveOpen || !shareContact) return
+    const onMeta = () => seedReceiveContactFromPhonebook()
+    window.addEventListener(CONTACT_PHONEBOOK_META_CHANGED_EVENT, onMeta)
+    return () => window.removeEventListener(CONTACT_PHONEBOOK_META_CHANGED_EVENT, onMeta)
+  }, [receiveOpen, shareContact, seedReceiveContactFromPhonebook])
+
+  const persistReceiveContactToPhonebook = useCallback(
+    async (patch: { name?: string; phone?: string; note?: string }) => {
+      if (!addrOk) return
+      const key = myAddress.toLowerCase()
+      if (patch.phone !== undefined) writeContactPhone(key, patch.phone)
+      if (patch.note !== undefined) writeContactNote(key, patch.note)
+      if (patch.name !== undefined) {
+        const label = patch.name.trim()
+        if (label) {
+          try {
+            await saveContactEntry({ address: key, label })
+            refreshContactDirectory()
+          } catch {
+            /* offline / vault — Phone/Notiz sind trotzdem lokal */
+          }
+        }
+      }
+    },
+    [addrOk, myAddress, refreshContactDirectory]
+  )
+
+  const copyReceivePayload = async () => {
+    const payload = receivePayload.trim()
+    if (!payload) return
     try {
-      await navigator.clipboard.writeText(myAddress)
+      await navigator.clipboard.writeText(payload)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
       /* ignore */
     }
+  }
+
+  const toggleMailboxShare = (id: string) => {
+    setShareMailboxIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
   }
 
   const freeBalanceLine = (() => {
@@ -212,7 +346,7 @@ export function DashboardIotaTransferCard({
               {freeBalanceLine}
             </div>
             <div className="min-w-[5.5rem]">
-              <p className="text-[10px] text-muted-foreground">Gesichert:</p>
+              <p className="text-[10px] text-muted-foreground">NFT gesichert:</p>
               <DashboardNftSecuredBalanceAmount compact={compact} />
             </div>
             <div className="min-w-[4.5rem]">
@@ -222,7 +356,7 @@ export function DashboardIotaTransferCard({
                 className="text-left text-xs text-muted-foreground hover:underline"
                 title="NFT-Galerie öffnen"
                 aria-label="NFT-Galerie öffnen"
-                onClick={() => setNftGalleryOpenNonce((n) => n + 1)}
+                onClick={() => openNftGallery('owner')}
               >
                 <strong className="text-foreground">{nftCount}</strong>
               </button>
@@ -256,7 +390,7 @@ export function DashboardIotaTransferCard({
   const nftButton = (
     <ChatViewEvidenceImageViewerButton
       triggerLabel={t('iota.nft')}
-      defaultMode="owner"
+      defaultMode={nftGalleryMode}
       autoLoadOwnOnOpen
       allowedModes={NFT_WALLET_MODES}
       openNonce={nftGalleryOpenNonce}
@@ -266,53 +400,148 @@ export function DashboardIotaTransferCard({
 
   const receiveDialog = (
     <Dialog open={receiveOpen} onOpenChange={setReceiveOpen}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t('iota.receiveTitle')}</DialogTitle>
           <DialogDescription>{t('iota.receiveDescription')}</DialogDescription>
         </DialogHeader>
+        <div className="space-y-3 text-[11px]">
+          <label className="flex items-start gap-2 text-foreground">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={shareWallet}
+              disabled={!addrOk}
+              onChange={(e) => setShareWallet(e.target.checked)}
+            />
+            <span>
+              Wallet-Adresse (Coins)
+              {addrOk ? (
+                <span className="mt-0.5 block break-all font-mono text-[10px] text-muted-foreground">
+                  {myAddress}
+                </span>
+              ) : (
+                <span className="mt-0.5 block text-muted-foreground">{t('iota.noValidAddress')}</span>
+              )}
+            </span>
+          </label>
+
+          <div className="space-y-1.5">
+            <p className="font-medium text-foreground">Mailboxen (Chat)</p>
+            {mailboxChoices.length === 0 ? (
+              <p className="text-muted-foreground">Keine Mailbox-ID aktiv.</p>
+            ) : (
+              mailboxChoices.map((id, idx) => {
+                const checked = shareMailboxIds.includes(id)
+                const label =
+                  mailboxLabels[id]?.trim() || defaultMailboxLabel(id, idx, primaryMb)
+                return (
+                  <div key={id} className="space-y-1 rounded border border-border/50 px-2 py-1.5">
+                    <label className="flex items-start gap-2 text-foreground">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5"
+                        checked={checked}
+                        onChange={() => toggleMailboxShare(id)}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="font-medium">{label}</span>
+                        <span className="mt-0.5 block break-all font-mono text-[10px] text-muted-foreground">
+                          {id}
+                        </span>
+                      </span>
+                    </label>
+                    <Input
+                      className="h-7 text-[11px]"
+                      value={mailboxLabels[id] ?? ''}
+                      placeholder={defaultMailboxLabel(id, idx, primaryMb)}
+                      onChange={(e) => {
+                        const v = e.target.value
+                        setMailboxLabels((prev) => ({ ...prev, [id]: v }))
+                        writeMailboxLabel(id, v)
+                      }}
+                    />
+                  </div>
+                )
+              })
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="flex items-start gap-2 text-foreground">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={shareContact}
+                onChange={(e) => {
+                  const on = e.target.checked
+                  setShareContact(on)
+                  if (on) seedReceiveContactFromPhonebook()
+                }}
+              />
+              <span>
+                Kontakt
+                <span className="mt-0.5 block text-[10px] font-normal text-muted-foreground">
+                  Aus Telefonbuch (dein Wallet-Eintrag: Name / Telefon / Notiz)
+                </span>
+              </span>
+            </label>
+            {shareContact ? (
+              <div className="space-y-1.5 pl-5">
+                <Input
+                  className="h-8 text-[12px]"
+                  value={contactName}
+                  onChange={(e) => setContactName(e.target.value)}
+                  onBlur={() => void persistReceiveContactToPhonebook({ name: contactName })}
+                  placeholder="Name"
+                  autoComplete="name"
+                />
+                <Input
+                  className="h-8 text-[12px]"
+                  value={contactPhone}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setContactPhone(v)
+                    void persistReceiveContactToPhonebook({ phone: v })
+                  }}
+                  placeholder="Telefon (optional)"
+                  autoComplete="tel"
+                />
+                <Input
+                  className="h-8 text-[12px]"
+                  value={contactNote}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setContactNote(v)
+                    void persistReceiveContactToPhonebook({ note: v })
+                  }}
+                  placeholder="Notiz (optional)"
+                />
+              </div>
+            ) : null}
+          </div>
+        </div>
+
         {receiveQrUrl ? (
           <img src={receiveQrUrl} alt={t('iota.receiveQrAlt')} className="mx-auto rounded-lg border border-border" />
         ) : (
-          <p className="text-sm text-muted-foreground">{t('iota.noValidAddress')}</p>
+          <p className="text-sm text-muted-foreground">Häkchen setzen — dann erscheint der QR.</p>
         )}
-        {addrOk ? (
+        {receivePayload.trim() ? (
           <div className="space-y-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Wallet — Coins hierher
+            <p className="max-h-28 overflow-y-auto break-all whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground">
+              {receivePayload}
             </p>
-            <p className="break-all font-mono text-[11px] leading-relaxed text-foreground">{myAddress}</p>
             <button
               type="button"
-              onClick={() => void copyAddress()}
+              onClick={() => void copyReceivePayload()}
               className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
             >
               {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? t('iota.copied') : t('iota.copyAddress')}
+              {copied ? t('iota.copied') : 'Alles kopieren'}
             </button>
           </div>
         ) : null}
-        {(() => {
-          const ids = [...new Set(mailboxIds.map((id) => id.trim()).filter((id) => /^0x[a-fA-F0-9]{64}$/i.test(id)))]
-          if (ids.length === 0) return null
-          return (
-            <div className="space-y-2 border-t border-border pt-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Chat-Mailboxen — Nachrichten, keine Coins
-              </p>
-              <ul className="space-y-1.5">
-                {ids.map((id) => (
-                  <li key={id} className="break-all font-mono text-[10px] text-muted-foreground">
-                    {id}
-                  </li>
-                ))}
-              </ul>
-              <p className="text-[11px] text-muted-foreground">
-                Coins gehören auf die Wallet-Adresse oben. Chat läuft über die Mailbox-Objekt-IDs.
-              </p>
-            </div>
-          )
-        })()}
       </DialogContent>
     </Dialog>
   )
@@ -326,12 +555,74 @@ export function DashboardIotaTransferCard({
           favorite: false,
         }))
 
-  const freeTransferForm = (
-    <>
+  const handleSend = async () => {
+    if (!securedSpendOpen) {
+      await handleTransfer()
+      return
+    }
+    if (!transferTo || !transferAmount) return
+    setTransferring(true)
+    setTransferStatus('idle')
+    try {
+      const r = await securedSpendRef.current?.payWith(transferTo.trim(), transferAmount.trim())
+      if (!r) {
+        setTransferStatus('error')
+        setTransferMsg('Vault-Auswahl nicht bereit.')
+      } else if (r.ok) {
+        setTransferStatus('success')
+        setTransferMsg(t('iota.transferSuccess'))
+        setTransferAmount('')
+        void handleRefreshBalance()
+      } else {
+        setTransferStatus('error')
+        setTransferMsg(r.error || t('iota.transferFailed'))
+      }
+    } finally {
+      setTransferring(false)
+      setTimeout(() => setTransferStatus('idle'), 5000)
+    }
+  }
+
+  const sendSection = (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          onClick={() => {
+            setSecuredSpendOpen(false)
+            setSecuredPreferOid(undefined)
+          }}
+          className={cn(
+            'rounded-md border px-2.5 py-1 text-[11px] font-medium',
+            !securedSpendOpen
+              ? 'border-primary bg-primary/10 text-foreground'
+              : 'border-border bg-muted/40 text-muted-foreground hover:bg-muted'
+          )}
+        >
+          Frei (normales IOTA)
+        </button>
+        <button
+          type="button"
+          onClick={() => openSecuredSpend()}
+          className={cn(
+            'rounded-md border px-2.5 py-1 text-[11px] font-medium',
+            securedSpendOpen
+              ? 'border-primary bg-primary/10 text-foreground'
+              : 'border-border bg-muted/40 text-muted-foreground hover:bg-muted'
+          )}
+        >
+          NFT gesichert
+        </button>
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        {securedSpendOpen
+          ? 'Sender braucht die NFT-Schlüsselkarte; Empfänger nur die Wallet-Adresse.'
+          : 'Direkte Wallet-Überweisung. Empfänger aus dem Telefonbuch oder 0x eintippen.'}
+      </p>
       {transferStatus !== 'idle' && (
         <div
           className={cn(
-            'mb-2 flex items-center gap-2 rounded-lg p-2 text-xs font-medium',
+            'flex items-center gap-2 rounded-lg p-2 text-xs font-medium',
             transferStatus === 'success' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
           )}
         >
@@ -361,14 +652,26 @@ export function DashboardIotaTransferCard({
               ))}
             </select>
           ) : null}
-          <input
-            type="text"
-            list="dashboard-iota-transfer-recipients"
-            value={transferTo}
-            onChange={(e) => setTransferTo(e.target.value)}
-            placeholder="0x… oder oben wählen"
-            className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
-          />
+          <div className="flex gap-1.5">
+            <input
+              type="text"
+              list="dashboard-iota-transfer-recipients"
+              value={transferTo}
+              onChange={(e) => setTransferTo(e.target.value)}
+              placeholder="0x… oder oben wählen"
+              className="min-w-0 flex-1 rounded-md border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={() => setScanRecipientOpen(true)}
+              className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-muted/40 px-2 py-1.5 text-[11px] font-medium text-foreground hover:bg-muted"
+              title="Empfänger-Adresse per Kamera/QR einlesen"
+              aria-label="Empfänger-QR scannen"
+            >
+              <ScanLine className="h-3.5 w-3.5" aria-hidden />
+              QR
+            </button>
+          </div>
           <datalist id="dashboard-iota-transfer-recipients">
             {recipientSelectOptions.map((o) => (
               <option key={o.address} value={o.address}>
@@ -390,74 +693,65 @@ export function DashboardIotaTransferCard({
           />
         </div>
       </div>
-      <div>
-        <label className="mb-0.5 block text-[11px] text-muted-foreground">
-          Notiz (nur dieses Gerät, nicht on-chain)
-        </label>
-        <input
-          type="text"
-          value={transferNote}
-          onChange={(e) => setTransferNote(e.target.value.slice(0, 120))}
-          placeholder="optional"
-          className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
-        />
-      </div>
-      <button
-        type="button"
-        onClick={() => void handleTransfer()}
-        disabled={transferring || !transferTo || !transferAmount}
-        className="mt-2 w-full rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-      >
-        {transferring ? t('iota.sending') : t('iota.send')}
-      </button>
-    </>
-  )
 
-  const sendSection = (
-    <div className="space-y-3">
-      <div className="flex flex-wrap gap-1.5">
-        <button
-          type="button"
-          onClick={() => setSecuredSpendOpen(false)}
-          className={cn(
-            'rounded-md border px-2.5 py-1 text-[11px] font-medium',
-            !securedSpendOpen
-              ? 'border-primary bg-primary/10 text-foreground'
-              : 'border-border bg-muted/40 text-muted-foreground hover:bg-muted'
-          )}
-        >
-          Frei (normales IOTA)
-        </button>
-        <button
-          type="button"
-          onClick={() => openSecuredSpend()}
-          className={cn(
-            'rounded-md border px-2.5 py-1 text-[11px] font-medium',
-            securedSpendOpen
-              ? 'border-primary bg-primary/10 text-foreground'
-              : 'border-border bg-muted/40 text-muted-foreground hover:bg-muted'
-          )}
-        >
-          Gesichert hinter NFT
-        </button>
-      </div>
-      <p className="text-[11px] text-muted-foreground">
-        {securedSpendOpen
-          ? 'Coins liegen hinter einer NFT-Schlüsselkarte — Empfänger braucht Freigabe/Pass.'
-          : 'Direkte Wallet-Überweisung. Empfänger aus dem Telefonbuch oder 0x eintippen.'}
-      </p>
       {securedSpendOpen ? (
         <DashboardNftSecuredSpendPanel
+          ref={securedSpendRef}
+          embed
+          vaultOnly
+          interactive
           preferredObjectId={securedPreferOid}
-          onClose={() => {
-            setSecuredSpendOpen(false)
-            setSecuredPreferOid(undefined)
-          }}
         />
-      ) : (
-        freeTransferForm
-      )}
+      ) : null}
+
+      {!securedSpendOpen ? (
+        <div>
+          <label className="mb-0.5 block text-[11px] text-muted-foreground">
+            Notiz (nur dieses Gerät, nicht on-chain)
+          </label>
+          <input
+            type="text"
+            value={transferNote}
+            onChange={(e) => setTransferNote(e.target.value.slice(0, 120))}
+            placeholder="optional"
+            className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+          />
+        </div>
+      ) : null}
+
+      <button
+        type="button"
+        onClick={() => void handleSend()}
+        disabled={transferring || !transferTo || !transferAmount}
+        className="mt-1 w-full rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+      >
+        {transferring
+          ? t('iota.sending')
+          : securedSpendOpen
+            ? 'Aus Vault senden'
+            : t('iota.send')}
+      </button>
     </div>
+  )
+
+  const scanRecipientDialog = (
+    <QrCameraScanDialog
+      open={scanRecipientOpen}
+      onOpenChange={setScanRecipientOpen}
+      title="Empfänger-QR scannen"
+      description="Wallet-Adresse als QR zeigen lassen — 0x… wird ins Empfängerfeld übernommen."
+      onScan={(text) => {
+        const addr = extractIotaAddressFromScan(text)
+        if (addr) {
+          setTransferTo(addr)
+          setScanRecipientOpen(false)
+          return
+        }
+        setTransferStatus('error')
+        setTransferMsg('Kein gültiges 0x… (64 Hex) im QR gefunden.')
+        setTimeout(() => setTransferStatus('idle'), 4000)
+      }}
+    />
   )
 
   if (compact) {
@@ -487,6 +781,7 @@ export function DashboardIotaTransferCard({
           {transferOpen ? <div className="mt-3 border-t border-border/60 pt-3">{sendSection}</div> : null}
         </div>
         {receiveDialog}
+        {scanRecipientDialog}
       </>
     )
   }
@@ -510,6 +805,7 @@ export function DashboardIotaTransferCard({
         {sendSection}
       </div>
       {receiveDialog}
+      {scanRecipientDialog}
     </>
   )
 }

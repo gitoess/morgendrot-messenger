@@ -5,6 +5,8 @@ import { isStandaloneSoloPath, readStandaloneOnboardingPath } from '@/frontend/l
 import { ensureI18nInitialized, i18n } from '@/frontend/lib/i18n/client'
 import { standaloneT } from '@/frontend/lib/i18n/standalone-tt'
 import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/standalone-device-mode'
+import { getDirectChainIdsReadiness } from '@/frontend/lib/direct-iota-chain-context'
+import { getDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-mnemonic-session'
 
 export { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/standalone-device-mode'
 
@@ -29,6 +31,10 @@ export function getMessengerDashboardOfflineHint(): string {
     return tt('hints.firstStartChoice')
   }
   if (isStandaloneSoloPath()) {
+    const chainReady = getDirectChainIdsReadiness().ready
+    const walletReady = Boolean(getDirectIotaSessionSigner())
+    if (chainReady && walletReady) return tt('hints.soloReadyOpenInbox')
+    if (walletReady && !chainReady) return tt('hints.soloWalletSetup')
     return tt('hints.soloActive')
   }
   const parts = [tt('offline.awaitHandoffSteps')]

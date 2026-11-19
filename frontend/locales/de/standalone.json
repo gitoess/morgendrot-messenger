@@ -38,6 +38,7 @@
     "firstStartChoice": "Erststart: Einsatz (Handoff) oder Privat/Solo wählen — dann Wallet wie am PC einrichten.",
     "einsatzAwaitHandoff": "Einsatz-Modus: Handoff-ZIP importieren — danach Seed vom Boss. Kein PC-Server nötig (Basis-URL leer).",
     "soloActive": "Privat/Solo aktiv — Wallet entsperren, danach Netz & Postfach im Solo-Wizard auf dem Dashboard.",
+    "soloReadyOpenInbox": "Privat/Solo bereit — „Nachrichten“ öffnen → Tab Posteingang (unten). Empfangene Chain-Mails erscheinen dort.",
     "soloWalletSetup": "Privat/Solo: Wallet einrichten (Seed). Danach Netz & Postfach im Solo-Wizard — kein Boss nötig.",
     "handoffOkNeedSeed": "Handoff OK — Seed einrichten (QR vom Boss), dann Chat unter Nachrichten.",
     "standaloneActive": "Standalone-APK aktiv — Direkt-RPC, kein Morgendrot-Server nötig.",

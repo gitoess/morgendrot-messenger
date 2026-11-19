@@ -61,11 +61,11 @@
   "features": {
     "chat": {
       "title": "Messages",
-      "subtitle": "Communicate securely",
+      "subtitle": "Inbox & chats",
       "variants": {
         "private-chat": {
-          "title": "Messages",
-          "hint": "Chats, radio, team mailboxes"
+          "title": "Open messages",
+          "hint": "Inbox, chats, handshake — one entry"
         }
       }
     },
@@ -170,14 +170,14 @@
     "nft": "NFT",
     "copyAddress": "Copy address",
     "copied": "Copied",
-    "refreshBalance": "Refresh balance",
+    "refreshBalance": "Refresh balance + vault index",
     "balanceFailed": "Balance: query failed",
     "balanceAfterAddress": "Balance after valid MY_ADDRESS",
     "balanceLoading": "Loading balance…",
     "recipient": "Recipient",
     "amount": "Amount (IOTA)",
-    "receiveTitle": "Receive IOTA",
-    "receiveDescription": "QR code with your wallet address — pay to this address.",
+    "receiveTitle": "Receive / share",
+    "receiveDescription": "Check what goes into one QR/text (wallet, mailboxes, contact).",
     "receiveQrAlt": "Wallet address QR code",
     "noValidAddress": "No valid address — set MY_ADDRESS first.",
     "transferSuccess": "Transfer successful!",

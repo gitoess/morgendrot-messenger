@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { isCapacitorNativePlatform } from '@/frontend/lib/capacitor-platform'
+import { OPEN_MESSENGER_INBOX_EVENT } from '@/frontend/hooks/use-chat-view-pending-handshakes'
 import {
   ChatViewMobileBottomNav,
   type ChatViewMobileTab,
@@ -223,10 +224,18 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const [telegramAlarmSelected, setTelegramAlarmSelected] = useState(false)
   const [messengerSearchQuery, setMessengerSearchQuery] = useState('')
   const isNativeMobile = isCapacitorNativePlatform()
-  const [mobileTab, setMobileTab] = useState<ChatViewMobileTab>('chats')
+  /** APK: Posteingang zuerst — PC zeigt Inbox in der Hauptspalte; Chats-Tab allein wirkte „leer“. */
+  const [mobileTab, setMobileTab] = useState<ChatViewMobileTab>('inbox')
   useEffect(() => {
     if (phonebookOpen) refreshContactDirectory()
   }, [phonebookOpen, refreshContactDirectory])
+
+  useEffect(() => {
+    if (!isNativeMobile) return
+    const onOpenInbox = () => setMobileTab('inbox')
+    window.addEventListener(OPEN_MESSENGER_INBOX_EVENT, onOpenInbox)
+    return () => window.removeEventListener(OPEN_MESSENGER_INBOX_EVENT, onOpenInbox)
+  }, [isNativeMobile])
 
   useEffect(() => {
     if (phonebookNavRequest != null && phonebookNavRequest > 0) setPhonebookOpen(true)

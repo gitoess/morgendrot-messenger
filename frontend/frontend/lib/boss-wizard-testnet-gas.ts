@@ -85,9 +85,7 @@ export function requestBossTestnetGas(
   }
 
   const { url: openUrl, mode } = resolveBossTestnetFaucetOpenUrl(recipient, prefs)
-  if (typeof window !== 'undefined') {
-    window.open(openUrl, '_blank', 'noopener,noreferrer')
-  }
+  // Rückgabe; Öffnen über openExternalHttpUrl (APK: window.open oft tot).
 
   return {
     ok: true,

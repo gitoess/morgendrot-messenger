@@ -9,12 +9,14 @@
 
 **Arbeitsstand 2026-11-17 (kurz):** PC-Messenger-Durchgang **in `main`** (PR #1). WhatsApp/Paywall **gestrichen**; Linkify nur Ideen-Backlog.  
 
-**Als Nächstes (verbessert, User 2026-11-17):**  
-1. **Standalone PC + Handy** — Schreibtisch `test:h15-direct-submit` / `smoke:standalone-desk`, dann APK + Handoff laut **`docs/STANDALONE-SMOKE-CHECKLIST.md`** (**4b–4d** zuerst, 1 Gerät).  
-2. **Zwei Standalone-Geräte Alltags-Chat** (**4e/4f** / „C2“ = zweites Gerät senden/empfangen) — **nicht** Session-C-NFT.  
-3. **Session C** (Privacy/NFT 2-Geräte) **ganz am Schluss**.  
+**Als Nächstes (verbessert, User 2026-11-17 → Nachzug Naming):**  
+1. **Desk-Prep** (`smoke:standalone-desk` / H.15) — schon grün; nicht mit Doppelklick-PC verwechseln.  
+2. **PC Doppelklick** (dein „PC-Standalone“): Bundle/Electron **mit** Node, Start ohne Terminal — Ist: `Start-Messenger.bat` / `npm run desktop`; **keine** fertige `.exe`/MSI. Kann **vor oder parallel** Handy-Feldtest.  
+3. **Handy Variante B** — frische APK + Handoff **`STANDALONE-SMOKE-CHECKLIST` 4b–4d** (1 Gerät), dann **4e/4f**.  
+4. **Session C** (Privacy/NFT) **ganz am Schluss**.  
+5. **Matrix H** („PC ohne Server“) bleibt Backlog — **nicht** dein Doppelklick-Ziel.
 
-**Nicht parallel:** H.25a Funk-Bild, H.37 Multi-Profil, P5d, Feature-Wildwuchs.
+**Nicht parallel:** H.25a Funk-Bild, H.37 Multi-Profil, P5d, Feature-Wildwuchs, Matrix-H-Unlock im Browser.
 
 ---
 

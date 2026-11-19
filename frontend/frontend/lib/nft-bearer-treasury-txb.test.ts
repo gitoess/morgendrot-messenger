@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildAdminReclaimBearerTreasuryTransaction,
+  buildAdminReclaimToSelfBearerTreasuryTransaction,
   buildAdminSetFrozenBearerTreasuryTransaction,
   buildCreateBearerTreasuryTransaction,
   buildDepositBearerTreasuryTransaction,
@@ -56,6 +57,14 @@ describe('nft-bearer-treasury-txb B2-S3', () => {
 
     expect(
       buildAdminReclaimBearerTreasuryTransaction({
+        messagingPackageId: MSG,
+        senderAddress: W1,
+        treasuryObjectId: TREASURY,
+      })
+    ).toBeTruthy()
+
+    expect(
+      buildAdminReclaimToSelfBearerTreasuryTransaction({
         messagingPackageId: MSG,
         senderAddress: W1,
         treasuryObjectId: TREASURY,

@@ -26,6 +26,7 @@ import {
   type WalletNetworkId,
 } from '@/frontend/lib/wallet-balance-by-network'
 import { toast } from 'sonner'
+import { openExternalHttpUrl } from '@/frontend/lib/open-external-url'
 
 type Props = {
   network: WalletNetworkId
@@ -121,36 +122,44 @@ export function BossWalletGasFundingPanel(p: Props) {
   const runTestnetFaucet = () => {
     if (!canRequestTestnet) return
     setBusy(true)
-    try {
-      const r = requestBossTestnetGas(fullAddress, { serverWalletUnlocked, faucetPrefs })
-      if (!r.ok) {
-        toast.error(r.error || 'Faucet konnte nicht geöffnet werden')
-        return
+    void (async () => {
+      try {
+        const r = requestBossTestnetGas(fullAddress, { serverWalletUnlocked, faucetPrefs })
+        if (!r.ok || !r.openUrl) {
+          toast.error(r.error || 'Faucet konnte nicht geöffnet werden')
+          return
+        }
+        const how = await openExternalHttpUrl(r.openUrl)
+        if (how === 'opened') {
+          toast.success('Faucet geöffnet — Captcha im Browser lösen, sonst kommt kein Gas.')
+        } else if (how === 'copied') {
+          toast.message('Faucet-URL kopiert. Im Chrome/Firefox einfügen, Captcha lösen.', { duration: 10_000 })
+        } else {
+          toast.error(`Faucet-URL manuell öffnen:\n${r.openUrl}`)
+        }
+      } finally {
+        window.setTimeout(() => setBusy(false), 400)
       }
-      toast.success(r.message || 'Faucet im Browser geöffnet.')
-    } finally {
-      window.setTimeout(() => setBusy(false), 400)
-    }
+    })()
   }
 
   const runReload = async () => {
     if (refreshing) return
     setRefreshing(true)
-    let refreshed = false
     try {
-      if (p.backendOnline !== false) {
-        const r = await fetchWalletBalances()
-        if (r.ok) {
-          setBalancePatch(r)
-          refreshed = true
-        } else if (!p.onReload) {
-          toast.error(r.error || 'Saldo konnte nicht geladen werden')
-          return
-        }
+      const r = await fetchWalletBalances()
+      if (r.ok) {
+        setBalancePatch(r)
+        await p.onReload?.()
+        toast.success('Saldo aktualisiert')
+        return
       }
       await p.onReload?.()
-      if (refreshed || p.onReload) toast.success('Saldo aktualisiert')
-      setBalancePatch(null)
+      if (!p.onReload) {
+        toast.error(r.error || 'Saldo konnte nicht geladen werden')
+        return
+      }
+      toast.success('Status aktualisiert')
     } catch {
       toast.error('Saldo konnte nicht aktualisiert werden')
     } finally {

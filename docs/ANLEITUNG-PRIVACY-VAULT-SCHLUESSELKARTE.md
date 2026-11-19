@@ -117,19 +117,30 @@ Chat ⋮ → **Double Ratchet (Experiment)** setzt nur ein LocalStorage-Flag. **
 
 ## 3. ImageNFT / On-Chain Evidenz
 
-**Wo:** Chat → Posteingang-Leiste → **On-Chain / NFT** (Object / Besitzer / Wire / Mint / Klartext-MB). Längere Galerie-/Schlüsselkarte-Erklärung nur hier im Handbuch — Dialog bleibt kurz.
+**Wo:** Hauptmenü → **NFT / Evidenz** bzw. Posteingang → **On-Chain / NFT**. Dialog-Titel oft **NFT & Schlüsselkarte**.
 
-| Funktion | Kurz |
-|----------|------|
-| Object-ID laden | Einzelnes NFT anzeigen |
-| Besitzer-Galerie | Eigene ImageNFT/SimpleNFT |
-| Mint (+ optional Enc) | `MORGIMGE1` Ciphertext on-chain |
-| Passphrase nach Mint | Anzeigen/kopieren; lokal merken |
-| Alle entsperren & merken | Galerie mit eingegebener Passphrase |
-| Als Schlüsselkarte merken | Siehe §4 |
-| Multi-Slot | Mehrere Passphrasen pro Karten-NFT |
-| Mint → Schlüsselkarte-Slot | Passphrase in Slot `img` (o. ä.) + `boundObjects` |
-| `[morg-keycard]` | Öffentlicher Description-Hinweis (Karten-OID + Slot, **keine** Secrets) |
+### Tabs (Ist 2026-11-19)
+
+| Bereich | Tabs | Kurz |
+|---------|------|------|
+| **1 · Schauen** | **Eigene NFT anzeigen** · **NFT Suche** | Eigene Galerie laden (auch zurück aus Guthaben/Verleihen); Suche = `0x…` oder **Aus Telefonbuch wählen** (Liste im Dialog, kein System-Dropdown) |
+| **2 · Handeln** | **Minten** · **NFT gesichert** · **Verleihen** | Mint; Vault; Escrow-Leihe. **NFT-Leserecht** = Composer beim Senden, kein eigener Tab |
+
+### Galerie-Karte (Eigene NFT)
+
+| Element | Bedeutung |
+|---------|-----------|
+| Name + Thumbnail | On-chain-Name bzw. lokaler Notiz-Name |
+| Einsatz-Badges | Mehrere gleichzeitig möglich: **Schlüsselkarte** · **Gesichert** · **Verliehen** · **NFT-Leserecht (zuletzt)** — orthogonal (Leserecht ≠ Guthaben) |
+| **Info** | Object-ID (mit Explorer), **Einsatz**, Vault/Lease, Klassifikation, Attribute, Hash, Schlüsselkarte-Slots |
+| **Bild groß** → Tippen | Fast-Vollbild; nochmals tippen / X = zu |
+| **Entsperren** | Pro NFT eigene Passphrase-Zeile (≥8). Verschiedene PWs möglich — kein „Alle entsperren“ |
+| **Senden** (zugeklappt) | Telefonbuch und/oder `0x…`; Besitz wechselt on-chain |
+| **Mehr…** | Bild speichern, Shortcuts NFT gesichert / Verleihen, lokaler Name, Schlüsselkarte merken, Vernichten (Object-ID/Explorer → **Info**) |
+| Passphrase | Nur zum Entschlüsseln nötig; **weglassen** geht nicht bei Enc-NFTs |
+| **Als Schlüsselkarte merken** | Lokal Passphrase+Object-ID für Zeitkapsel/Guthaben/PWMSG — **nicht** nötig nur zum Anschauen |
+
+Mint: PNG/JPEG/WebP, Auto-Resize (~12 KB Ziel / ~98 KB hart). Enc = Ciphertext on-chain; Besitz ≠ Leserecht ohne Passphrase. One-Time / Offline-Index / Partner-Paar **nicht** mehr am Mint (One-Time = Checkbox **Einmal-Auszahlen** im Tab NFT gesichert).
 
 Details Attribute: `docs/EVIDENCE-IMAGE-AND-NFT-ATTRIBUTES.md`.
 
@@ -163,11 +174,12 @@ Nur **lokale Namen** im Vault — on-chain steht nichts davon (außer optionaler
 
 | Ort | Aktion |
 |-----|--------|
-| Hauptmenü → **NFTs / Evidenz** | Galerie öffnen |
-| Posteingang → **On-Chain / NFT** → Besitzer | gleiche Galerie |
-| **NFT senden** | Besitz on-chain an `0x…`-Adresse |
-| **Vernichten** | `image_nft::burn` (unwiderruflich); lokale Merker weg |
-| **NFT-Aktivität** | Lokales Log: Mint / Gesendet / Empfangen (Galerie-Diff) / Vernichtet + TX-Link |
+| Hauptmenü → **NFT / Evidenz** | Dialog → **Eigene NFT anzeigen** |
+| Posteingang → **On-Chain / NFT** | gleiche Galerie / Suche |
+| **NFT senden** | Karte: Telefonbuch und/oder `0x…` |
+| **Mehr… → Vernichten** | `image_nft::burn` (unwiderruflich); lokale Merker weg |
+| **Info** | Object-ID + **Explorer** (nicht doppelt unter Mehr…) |
+| **NFT-Aktivität** | Lokales Log: Mint / Gesendet / Empfangen / Vernichtet + TX-Link |
 
 ### Bindungen (lokal, sinnvoll)
 
@@ -176,7 +188,6 @@ Nur **lokale Namen** im Vault — on-chain steht nichts davon (außer optionaler
 | **Vor** Create | Nur Composer-Auswahl einer **bereits existierenden** Schlüsselkarte (Object-ID muss schon da sein) |
 | **Beim** PWMSG-Send | Wire-Fingerprint → Slot (automatisch) |
 | **Beim/nach** Enc-Mint | neues ImageNFT → Slot; oder **Nachträglich binden** in der Galerie |
-| **Paar-Mint** | 2. Enc-NFT gleiche Passphrase → an Partner senden (beide Token, gleicher Key) |
 | **Lösen** | Einzelne Objekt-/Wire-Bindung; Slot entfernen; ganze Karte vergessen |
 | **Löschen NFT** | on-chain **Vernichten** ≠ Bindung lösen (Bindung nur Vault) |
 
@@ -192,9 +203,19 @@ Nur **lokale Namen** im Vault — on-chain steht nichts davon (außer optionaler
 
 **Passphrase wiederverwenden** verbindet mehrere Nachrichten **nur lokal** mit derselben PW — **nicht** on-chain mit dem NFT. Für echte Zeitkapsel-Semantik: Enc-ImageNFT oder `MORG_NFTGATE_V1`. Spec: `docs/NFT-SCHLUESSELKARTE-PUBLIC-VAULT-TIMELOCK.md` §0a.
 
-**Composer (einfach):** Checkbox **Zeitkapsel-Nachricht (NFT-Leserecht)** → NFT wählen → senden (`MORG_NFTGATE_V1`) → Button **Dieses NFT verleihen…** (öffnet Tab Zeitkapsel). Kein Nachrichten-Passwort.
+**Composer (einfach):** **+** → **NFT-Leserecht…** (oder Checkbox) → NFT wählen → senden (`MORG_NFTGATE_V1`) → optional **NFT verleihen…** (öffnet Tab Verleihen). Kein Nachrichten-Passwort.
 
-UI-Ablauf Leihe (Tab **Zeitkapsel (Leserecht)**): (1) Enc/NFTGATE anlegen (2) Leihe starten an andere Wallet (3) Borrower: Object laden → lesen → Früh zurück / nach Ablauf Reclaim. W2 braucht Morgendrot (nicht nur IOTA-Wallet).
+| Job | Wo | Was |
+|-----|-----|-----|
+| **NFT-Leserecht** | Composer beim Senden | Ciphertext on-chain; Lesen = NFT-Besitz (oder aktive Leihe). **Kein** Reclaim — nichts on-chain zum Zurückholen |
+| **Verleihen** | Tab **Verleihen / Zurückholen** · CTA **NFT verleihen…** | Escrow an andere Wallet (Empfänger aus Telefonbuch oder `0x…`) |
+| **Zurückholen** | Liste **oben** im Tab | Alle offenen Escrow-Leihen dieser Wallet; Zeile = Auswahl (NFT fehlt in der Galerie — normal) |
+| **Vorzeitig zurückgeben** | dieselbe Liste (Entleiher) | NFT sofort an Verleiher |
+| **Liste aktualisieren** | Hub | Chain-Scan (auch auto); findet Leihen ohne Galerie-Besitz |
+| **Notfall: Lease-ID** | Hub, zugeklappt | Nur wenn „ID fehlt“ / Scan leer trotz TX — Object-ID der *Lease*, nicht NFT. In der Liste Lease tippen → Notfall-Feld |
+| **Package (Leihe)** | fest Modules-Package | **Nicht** Chat/Vertrag-Package. Override UI entfernt — Leihe nutzt Messaging-Modules (ggf. ältere P5-Events via Scan) |
+
+Ablauf: (1) NFT-Leserecht im Chat (2) optional Verleihen (3) Entleiher liest → vorzeitig zurückgeben **oder** Verleiher nach Ablauf zurückholen. W2 braucht Morgendrot.
 
 | Modus | Klartext wenn |
 |-------|----------------|
@@ -259,8 +280,8 @@ Intern heißt der Chain-Call weiter `/purge-msg` — in der UI nur noch **Burn**
 | Dual Wallet∧NFT | P4a-dual | Composer unter Starkes Gate; Klartext danach kopierbar |
 | Pubkey-Wrap | P4a2 | Checkbox unter Dual; ECDH-Peer-Pub der erlaubten Wallet nötig |
 | Seal / Key-Broker | P4b | Checkbox unter Starkes Gate; **ein API-Broker ≠ Mysten-Seal**; remote nötig für „unter Zwang“ |
-| Gesichertes Guthaben | S0–S5 Code | Tab **Guthaben**; Discovery; 1 Vault/Modus; One-Time + Offline-QR optional; Digest nur Fallback; Smoke = Joint Session A/B |
-| Zeitkapsel | P5 | Eigener Tab **Zeitkapsel** (nicht in der Galerie-Karte) |
+| NFT gesichert | S0–S5 Code | Tab **NFT gesichert**; Wallet-Saldo/Send ebenfalls **NFT gesichert**; Discovery unter NFT |
+| Zeitkapsel / Verleihen | P5 | Tab **Verleihen / Zurückholen** + Composer **NFT-Leserecht**; Zurückholen-Liste oben |
 | NFT-gesichertes Senden (IOTA) | B2-S0–S3 Ist | **nur Token**; Purse ≠ freie Wallet-Balance; lose Coins außerhalb = ungeschützt (`docs/NFT-GUARDED-SPEND-SPEC.md`) |
 | Öffentlicher Ciphertext-Vault + NFT-Timelock („Zeitkapsel“) | **B2-P5a/b Ist**; **Soll-Ablauf/P5d hinten** | NFT = Gate, Texte getrennt. End-to-End Borrower-Lesen + UX-Retest **nach** 2-Geräte (Roadmap 2026-11-09). Spec **`docs/NFT-SCHLUESSELKARTE-PUBLIC-VAULT-TIMELOCK.md`** §0a |
 | Rotierende Outboxes / voller Dead-Drop | Claims-Check + Architektur | Nicht gebaut |
@@ -282,24 +303,22 @@ Siehe auch Kopf von `docs/ROADMAP-FAHRPLAN.md` (Nachtrag Privacy 2026-11-05): *�
 5. **Später:** MeshSleepyChannel (Phase C); Move One-Time on-chain.  
 6. **Nicht parallel:** Decoys, Outboxes, HW-Fragment, Feature-Wildwuchs während Joint.
 
-### Kurz: Gesichertes Guthaben (Nutzer)
+### Kurz: NFT gesichert (Nutzer)
 
 Zwei Einstiege — nicht verwechseln:
 
 | Ort | Zweck |
 |-----|--------|
-| NFT → Tab **Guthaben** | **Anlegen**, Einzahlen, Auszahlen (voller Lifecycle) |
-| Wallet → **Aus Guthaben senden** | Nur **auszahlen** an eine Empfänger-Wallet |
+| NFT → Tab **NFT gesichert** | **Anlegen**, Einzahlen, leeren Vault entfernen, Option Einmal-Auszahlen |
+| Wallet → **Überweisen → NFT gesichert** | **Auszahlen** an Empfänger-Wallet |
 
-1. NFT-Dialog → Tab **Guthaben** → Schlüsselkarte wählen.  
-2. **Auszahl-Modus:** **Nur ich (Wallet + NFT)** (= Guarded) oder **Karteninhaber** (= Bearer) → Betrag → **Guthaben anlegen**.  
-3. Wallet-Header: **Frei:** … IOTA und **Gesichert:** … IOTA · *n* NFT.  
-4. **Auszahlen:** Tab Guthaben oder Wallet **Aus Guthaben senden** → Empfänger-**Wallet** (nicht NFT-ID).  
-5. **NFT an anderes Gerät:** Betrag erscheint dort nicht automatisch.  
-   - **Karteninhaber (Bearer):** Recht wandert mit dem NFT — Empfänger braucht Index-Bundle unter Guthaben → Erweitert.  
-   - **Nur ich (Guarded):** Coins bleiben bei der ursprünglichen Wallet; NFT-Transfer allein bewegt kein Guthaben.  
-6. **IOTA-Aktivität:** lokale Events; **TX** / **Objekt** öffnen den Explorer; Doppelklick → volle IDs kopieren.  
-7. Digest-Notfall: Guthaben → Erweitert → Create-TX nachtragen.
+1. NFT-Dialog → Tab **NFT gesichert** → **Freies NFT** wählen (Tab **Eigene** laden).  
+2. Modus **Nur ich** oder **Karteninhaber** → Betrag → **Guthaben anlegen** / **Einzahlen**.  
+3. Bei Balance **0**: `destroy_empty` **automatisch** (NFT wieder frei).  
+4. Vault-Index auffrischen = Wallet-↻ (**Saldo + Vault-Index**); kein Extra-Button.  
+5. **Auszahlen** nur Wallet → Überweisen → Gesichert (nur NFTs mit Guthaben).  
+6. **Admin** (nur **Karteninhaber** + Vault): Auszahlen sperren/erlauben; Restguthaben in Admin-Wallet (freeze→reclaim→thaw). Bei 0 Auto-Remove.  
+7. **Empfangen**: Häkchen → ein QR/Text (Wallet, mehrere beschriftete Mailboxen, Kontakt inkl. Notiz).
 
 ---
 

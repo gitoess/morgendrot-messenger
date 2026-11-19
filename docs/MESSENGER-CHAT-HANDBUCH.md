@@ -18,7 +18,7 @@
 | **Chat-Kopf** | Sendepfad (**Alle** / Funk / **IOTA** / Telegram), **Ton/Stumm** (nur In-App-Eingangs-Chime für diesen Chat), **SOS — Hilferuf** (1:1, nicht Telegram). Mit Sidebar: **kein** großer Kanal-/Posteingang-Titel |
 | **Seitenleiste** (Desktop) | **Chats** gleiche Höhe wie Posteingang (`min(70vh,44rem)`), scrollt |
 | **Posteingang** (rechts) | Nachrichten + Toolbar; **Auswahl** ≈ Nachrichten-⋯ (Kopieren, Protokoll, Weiterleiten, JSON, Ausblenden, Burn) |
-| **Composer** | **Volle Breite unter beiden Spalten** (eigene Leiste, kein Overlap): `[+]` = Datei, Kamera, STT, Telefonbuch, **An Adresse senden**, **Sprachnachricht**, **Passphrase-Schutz**, **Zeitkapsel-Nachricht**; Text; Senden. Empfänger-Wallet bei aktivem Chat ausgeblendet |
+| **Composer** | **Volle Breite unter beiden Spalten** (eigene Leiste, kein Overlap): `[+]` = Datei, Kamera, STT, Telefonbuch, **An Adresse senden**, **Sprachnachricht**, **Passphrase-Schutz**, **NFT-Leserecht**; Text; Senden. Empfänger-Wallet bei aktivem Chat ausgeblendet |
 | **Liste (Filter)** | **Beides / Eingang / Ausgang** und **Alles / Verschl. / Klartext** — nur Anzeige, nicht Sendemodus |
 | **Optionen** | **Posteingang · Tools** (Wire, Hash, Export, Pakete) + **Chat · Sicherheit** (Info, Schlüssel, Nach-Lesen-**Modus**) — kein separates Chat-⋮ mehr |
 | **Nachrichten-⋯** (pro Zeile) | Kopieren, Telefonbuch, lokal ausblenden, **Von Chain löschen (Burn)** |
@@ -57,12 +57,13 @@ Badge **Eingang/Ausgang**, **Verschlüsselt**, **PWMSG** oder **NFT-Gate** ankli
 | **Optionen → Wire einfügen** | Paste `MORG_PWMSG_V1` + Passphrase (**nur** PWMSG). ECDH braucht Handshake; NFT-Gate **nicht** hier. |
 | **Optionen → Export / Decrypt-JSON** | Passwort-geschützte Einsatzbericht-JSON wieder öffnen (eigene HTML-Seite) — nicht Posteingang-Decrypt. |
 
-**Zeitkapsel — zwei Jobs (nicht verwechseln):**
+**NFT-Leserecht vs. Verleihen (nicht verwechseln):**
 
 | Job | Wo | Was |
 |-----|-----|-----|
-| **Senden** | Composer **+** → Zeitkapsel-Nachricht | Ciphertext mit Badge **NFT-Gate**; NFT bleibt bei dir → du liest weiter |
-| **Verleihen** | Galerie **Verleihen…** / Tab Zeitkapsel / CTA **Dieses NFT verleihen…** | NFT an **fremde** Wallet; nur Empfänger liest; **Zurückholen** = offene Leihen; nach Reclaim wieder Galerie / „Neue Leihe“ |
+| **NFT-Leserecht** | Composer **+** → NFT-Leserecht… | Ciphertext mit Badge **NFT-Gate**; NFT bleibt bei dir → du liest weiter |
+| **Verleihen** | Tab **Verleihen** / Galerie **Mehr… → Verleihen…** / CTA **NFT verleihen…** | Escrow; Liste oben = Zurückholen ohne Galerie-NFT; Entleiher: **Vorzeitig zurückgeben** |
+| **NFT gesichert** | Tab **NFT gesichert** / Wallet **NFT gesichert** | Vault anlegen/einzahlen; Auszahlen über Wallet-Sendepfad |
 
 ---
 

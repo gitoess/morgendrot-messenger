@@ -26,9 +26,12 @@ export function shouldPreferStandaloneHandoffStatus(): boolean {
   return Boolean(readLocalHandoffAppliedSnapshot())
 }
 
-/** APK/Autarkie: Direkt-RPC + lokales Handoff — keine Morgendrot-Basis nötig. */
+/**
+ * APK Variante B: Direkt-RPC + lokales Handoff — keine Morgendrot-Basis nötig.
+ * Desktop-Browser / Electron: absichtlich false (Node-Tresor via POST /api/unlock).
+ * Roadmap Matrix H („PC wie Handy ohne Server“) = Backlog — hier nicht still freischalten.
+ */
 export function isStandaloneMessengerWithoutBasis(): boolean {
-  /** Nur native APK — Desktop-Browser nutzt immer POST /api/unlock gegen den Node-Tresor. */
   if (!isCapacitorNativePlatform()) return false
   if (!isStandaloneDeviceMode()) return false
   if (!getApiBase().trim()) return true

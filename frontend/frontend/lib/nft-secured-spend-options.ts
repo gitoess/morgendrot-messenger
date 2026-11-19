@@ -1,5 +1,6 @@
 /**
- * Optionen für „Schlüsselkarte wählen“: Keycards + aktive Vaults + geparkte Bindungen.
+ * Optionen für „Schlüsselkarte wählen“: Keycards + Vaults + Galerie-Besitz.
+ * Labels bewusst schlicht: Name · Kurz-ID · optional „Guthaben“ wenn noch Mist da.
  */
 
 import { listNftActivity, listNftOwnedSnapshot } from '@/frontend/lib/nft-activity-local-log'
@@ -29,70 +30,174 @@ function norm(id: string): string {
   return id.trim().toLowerCase()
 }
 
+/** Lokaler Mist-Hinweis: 0 / reclaimed → kein „Guthaben“-Suffix in der Liste. */
+export function vaultMistHintLooksEmpty(hint: string | undefined): boolean {
+  const t = (hint || '').trim()
+  if (!t) return false
+  if (/reclaimed/i.test(t)) return true
+  const abs = t.match(/^(\d+)\b/)
+  if (abs) {
+    try {
+      return BigInt(abs[1]) === 0n
+    } catch {
+      return false
+    }
+  }
+  return false
+}
+
+function vaultLooksFunded(entry: { status: string; balanceMistHint: string }): boolean {
+  return entry.status === 'active' && !vaultMistHintLooksEmpty(entry.balanceMistHint)
+}
+
+function displayNameForNft(
+  oid: string,
+  fallbacks: Array<string | undefined | null> = []
+): string {
+  for (const f of fallbacks) {
+    const t = (f || '').trim()
+    if (t) return t
+  }
+  const card = getNftKeycard(oid)?.label?.trim()
+  if (card) return card
+  const act = listNftActivity(40).find((a) => a.objectId === oid && a.label?.trim())
+  if (act?.label?.trim()) return act.label.trim()
+  return 'NFT'
+}
+
+function optionLabel(oid: string, name: string, funded: boolean): string {
+  const base = `${name} · ${shortId(oid)}`
+  return funded ? `${base} · Guthaben` : base
+}
+
+function isEscrowedNow(oid: string): boolean {
+  return listNftTimeLeasesLocal().some((e) => norm(e.nftObjectId) === oid && isNftTimeLeaseEscrowActive(e))
+}
+
+/** Aktives Vault-Objekt (auch leer) — blockiert neues Anlegen im gleichen Slot. */
+export function nftHasActiveVaultShell(nftObjectId: string): boolean {
+  const k = norm(nftObjectId)
+  if (listNftGuardedPursesLocal().some((p) => p.nftObjectId === k && p.status === 'active')) return true
+  if (listNftBearerTreasuriesLocal().some((t) => t.nftObjectId === k && t.status === 'active')) return true
+  return false
+}
+
+/** Noch Mist hinter dem NFT (Guarded und/oder Bearer). */
+export function nftHasFundedSecuredBalance(nftObjectId: string): boolean {
+  const k = norm(nftObjectId)
+  if (
+    listNftGuardedPursesLocal().some(
+      (p) => p.nftObjectId === k && p.status === 'active' && vaultLooksFunded(p)
+    )
+  ) {
+    return true
+  }
+  if (
+    listNftBearerTreasuriesLocal().some(
+      (t) => t.nftObjectId === k && t.status === 'active' && vaultLooksFunded(t)
+    )
+  ) {
+    return true
+  }
+  return false
+}
+
+/**
+ * NFT-wählen im Guthaben-/Zeitkapsel-Tab: nur Besitz aus Galerie/Snapshot.
+ * Guthaben: nur frei (kein finanziertes Vault; leere Shells zählen als frei — Auto-Destroy räumt sie).
+ * Zeitkapsel: Besitz ohne aktive Escrow-Leihe.
+ */
+export function buildOwnedNftPickOptions(opts: {
+  ownedObjectIds: string[]
+  purpose: 'guthaben' | 'zeitkapsel'
+  labelsById?: Record<string, string>
+}): SecuredSpendOption[] {
+  const owned = new Set<string>()
+  for (const raw of opts.ownedObjectIds) {
+    const k = norm(raw)
+    if (k) owned.add(k)
+  }
+  for (const oid of listNftOwnedSnapshot()) {
+    const k = norm(oid)
+    if (k) owned.add(k)
+  }
+
+  const out: SecuredSpendOption[] = []
+  for (const k of owned) {
+    if (isEscrowedNow(k)) continue
+    if (opts.purpose === 'guthaben' && nftHasFundedSecuredBalance(k)) continue
+    const name = displayNameForNft(k, [opts.labelsById?.[k]])
+    out.push({
+      objectId: k,
+      label: optionLabel(k, name, false),
+      kindHint: 'keycard',
+    })
+  }
+  return out.sort((a, b) => a.label.localeCompare(b.label, 'de'))
+}
+
+/** Überweisen / Balances: breitere Liste inkl. Vaults. */
 export function buildSecuredSpendOptions(): SecuredSpendOption[] {
   const map = new Map<string, SecuredSpendOption>()
 
+  /** Zuerst Besitz / gemerkte Karten — ohne Jargon. */
   for (const { objectId, entry } of listNftKeycards()) {
     const k = norm(objectId)
     map.set(k, {
       objectId: k,
-      label: `${entry.label || 'Schlüsselkarte'} · ${shortId(k)}`,
-      kindHint: entry.boundVault?.kind || 'keycard',
+      label: optionLabel(k, displayNameForNft(k, [entry.label]), false),
+      kindHint: 'keycard',
+    })
+  }
+
+  for (const oid of listNftOwnedSnapshot()) {
+    const k = norm(oid)
+    if (map.has(k)) continue
+    map.set(k, {
+      objectId: k,
+      label: optionLabel(k, displayNameForNft(k), false),
+      kindHint: 'keycard',
     })
   }
 
   for (const p of listNftGuardedPursesLocal().filter((x) => x.status === 'active')) {
     const k = norm(p.nftObjectId)
-    const label =
-      p.displayLabel?.trim() ||
-      getNftKeycard(k)?.label?.trim() ||
-      `Guarded · ${shortId(k)}`
-    map.set(k, { objectId: k, label: `${label} · Guarded`, kindHint: 'guarded' })
+    const funded = vaultLooksFunded(p)
+    const name = displayNameForNft(k, [p.displayLabel])
+    const prev = map.get(k)
+    map.set(k, {
+      objectId: k,
+      label: optionLabel(k, name, funded || Boolean(prev && / · Guthaben$/.test(prev.label))),
+      kindHint: funded ? 'guarded' : prev?.kindHint || 'keycard',
+    })
   }
 
   for (const t of listNftBearerTreasuriesLocal().filter((x) => x.status === 'active')) {
     const k = norm(t.nftObjectId)
+    const funded = vaultLooksFunded(t)
+    const name = displayNameForNft(k, [t.displayLabel])
     const prev = map.get(k)
-    const label =
-      t.displayLabel?.trim() ||
-      getNftKeycard(k)?.label?.trim() ||
-      `Bearer · ${shortId(k)}`
-    if (!prev || prev.kindHint === 'keycard') {
-      map.set(k, { objectId: k, label: `${label} · Bearer`, kindHint: 'bearer' })
-    } else if (prev.kindHint === 'guarded') {
-      map.set(k, {
-        objectId: k,
-        label: `${prev.label.replace(/ · Guarded$/, '')} · Guarded+Bearer`,
-        kindHint: 'guarded',
-      })
-    }
+    const alreadyFunded = Boolean(prev && / · Guthaben$/.test(prev.label))
+    map.set(k, {
+      objectId: k,
+      label: optionLabel(k, name, funded || alreadyFunded),
+      kindHint: funded ? 'bearer' : prev?.kindHint === 'guarded' ? 'guarded' : prev?.kindHint || 'keycard',
+    })
   }
 
   for (const p of listParkedNftVaults()) {
     const k = norm(p.nftObjectId)
     if (map.has(k)) continue
-    const label = p.displayLabel?.trim() || `${p.kind} · ${shortId(k)}`
+    const name = displayNameForNft(k, [p.displayLabel])
     map.set(k, {
       objectId: k,
-      label: `${label} · geparkt (NFT war unterwegs)`,
+      label: `${optionLabel(k, name, false)} · unterwegs`,
       kindHint: 'parked',
     })
   }
 
-  /** Galerie-/Mint-Snapshot: auch ohne „Karte merken“ im Dropdown. */
-  for (const oid of listNftOwnedSnapshot()) {
-    const k = norm(oid)
-    if (map.has(k)) continue
-    const act = listNftActivity(40).find((a) => a.objectId === k && a.label)
-    map.set(k, {
-      objectId: k,
-      label: `${act?.label || 'NFT'} · ${shortId(k)} · Besitz`,
-      kindHint: 'keycard',
-    })
-  }
-
   /**
-   * Zurückgeholte / beendete Leihen: NFT wieder wählbar für neue Zeitkapsel-Leihe.
+   * Zurückgeholte / beendete Leihen: NFT wieder wählbar.
    * Aktive Escrow-Leihen weglassen (NFT nicht bei dir).
    */
   for (const e of listNftTimeLeasesLocal()) {
@@ -102,15 +207,9 @@ export function buildSecuredSpendOptions(): SecuredSpendOption[] {
       continue
     }
     if (map.has(k)) continue
-    const tag =
-      e.status === 'reclaimed' || e.status === 'returned'
-        ? 'zurückgeholt'
-        : e.status === 'cancelled'
-          ? 'Leihe beendet'
-          : 'Leihe'
     map.set(k, {
       objectId: k,
-      label: `NFT · ${shortId(k)} · ${tag}`,
+      label: optionLabel(k, displayNameForNft(k), false),
       kindHint: 'keycard',
     })
   }
