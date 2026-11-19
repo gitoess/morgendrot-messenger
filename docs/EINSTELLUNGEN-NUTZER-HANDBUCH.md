@@ -12,7 +12,7 @@
 | **IOTA** | alle | Netz (Boss/Kommandant), Gas, Chain-IDs, Mailboxen; Boss: **Package & Move-Upgrade** |
 | **Funk** | Einsatz | Meshtastic/Puls — Strategie später (offizielle App vs. eigene UI) |
 | **Telegram** | Boss (+ Helfer Join) | Bot, Alarme, optional Gruppenalarm, Hinweis nach Online-Send |
-| **Sicherheit** | alle | Passwort/Backup/Schatten, Tresor-Landkarte, Notfall-Löschung |
+| **Tresor** | alle | Ein Passwort: Seed anzeigen, Notizen/Passwörter, Backup lokal/Chain, Schatten, Notfall. Header-Badge = Sitzung. Netz-IDs → **IOTA** |
 
 **.env:** nur Link ganz unten → „Konfiguration öffnen“. Nicht in Allgemein.
 

@@ -344,7 +344,13 @@ export function buildNftInfoSections(p: {
   packageId?: string
   name?: string
   label?: string
+  classification?: string
+  attrsText?: string
+  contentHash?: string
   keycardBound?: boolean
+  keycardSlots?: string
+  /** Komma-/Mittelpunkt-getrennte Einsatz-Rollen (Galerie). */
+  rolesSummary?: string
   vaultObjectId?: string
   vaultKind?: 'guarded' | 'bearer'
   vaultCreateDigest?: string
@@ -360,6 +366,16 @@ export function buildNftInfoSections(p: {
 }): MessengerInfoSection[] {
   const fields: MessengerInfoField[] = []
   push(fields, field('name', 'Name', p.name || p.label, { copyable: false }))
+  push(fields, field('class', 'Klassifikation', p.classification, { copyable: false }))
+  push(
+    fields,
+    field('roles', 'Einsatz', p.rolesSummary, {
+      copyable: false,
+      hint: 'Mehrere Rollen möglich (Leserecht, Gesichert, Verliehen, Schlüsselkarte)',
+    })
+  )
+  push(fields, field('attrs', 'Attribute', p.attrsText, { copyable: false }))
+  push(fields, field('hash', 'Content-Hash', p.contentHash))
   push(
     fields,
     field('oid', 'Object-ID (NFT)', p.objectId, {
@@ -418,9 +434,10 @@ export function buildNftInfoSections(p: {
   if (p.keycardBound != null) {
     push(
       fields,
-      field('keycard', 'Keycard-Bindung', p.keycardBound ? 'ja' : 'nein', { copyable: false })
+      field('keycard', 'Schlüsselkarte lokal', p.keycardBound ? 'ja' : 'nein', { copyable: false })
     )
   }
+  push(fields, field('keycard-slots', 'Schlüsselkarte-Slots', p.keycardSlots, { copyable: false }))
   return [
     {
       id: 'nft',

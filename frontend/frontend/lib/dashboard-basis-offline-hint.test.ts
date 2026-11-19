@@ -15,11 +15,18 @@ vi.mock('@/frontend/lib/standalone-onboarding', () => ({
   readStandaloneOnboardingPath: vi.fn(() => null),
   isStandaloneSoloPath: vi.fn(() => false),
 }))
+vi.mock('@/frontend/lib/direct-iota-chain-context', () => ({
+  getDirectChainIdsReadiness: vi.fn(() => ({ ready: false, missing: ['Package-ID'] })),
+}))
+vi.mock('@/frontend/lib/direct-iota-mnemonic-session', () => ({
+  getDirectIotaSessionSigner: vi.fn(() => null),
+}))
 vi.mock('@/frontend/lib/i18n/client', () => ({
   ensureI18nInitialized: vi.fn(),
   i18n: {
     t: (key: string, opts?: { ns?: string }) => {
       if (key === 'hints.firstStartChoice') return 'Erststart: Einsatz oder Solo wählen.'
+      if (key === 'hints.soloReadyOpenInbox') return 'Privat/Solo bereit — Nachrichten öffnen.'
       if (key === 'offline.awaitHandoffSteps') return 'Handoff aktiv — Schritt 2.'
       return key
     },

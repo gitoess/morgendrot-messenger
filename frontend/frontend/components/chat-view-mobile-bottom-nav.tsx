@@ -21,8 +21,8 @@ export function ChatViewMobileBottomNav(p: ChatViewMobileBottomNavProps) {
     icon: typeof MessageCircle
     badge?: number
   }[] = [
-    { id: 'chats', label: 'Chats', icon: MessageCircle },
     { id: 'inbox', label: 'Posteingang', icon: Inbox, badge: p.inboxUnreadCount },
+    { id: 'chats', label: 'Chats', icon: MessageCircle },
     { id: 'contacts', label: 'Kontakte', icon: BookUser },
   ]
 

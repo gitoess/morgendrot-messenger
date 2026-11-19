@@ -17,12 +17,14 @@ import {
 import { formatDirectIotaSubmitError } from '@/frontend/lib/direct-iota-error-messages'
 import {
   buildAdminReclaimBearerTreasuryTransaction,
+  buildAdminReclaimToSelfBearerTreasuryTransaction,
   buildAdminSetFrozenBearerTreasuryTransaction,
   buildCreateBearerTreasuryTransaction,
   buildDepositBearerTreasuryTransaction,
   buildDestroyEmptyBearerTreasuryTransaction,
   buildWithdrawBearerTreasuryTransaction,
 } from '@/frontend/lib/nft-bearer-treasury-txb'
+import { withStaleObjectVersionRetry } from '@/frontend/lib/direct-iota-stale-version-retry'
 import { recordNftVaultActivity } from '@/frontend/lib/iota-activity-local-log'
 import {
   bindVaultToNftKeycard,
@@ -387,6 +389,48 @@ export async function adminReclaimNftBearerTreasury(input: {
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }
   }
+}
+
+/** Anfordern: Freeze+Reclaim+Thaw in einer TX (Admin, ohne NFT). */
+export async function adminReclaimNftBearerTreasuryToSelf(input: {
+  messagingPackageId: string
+  treasuryObjectId: string
+}): Promise<NftBearerTreasuryActionResult> {
+  const prep = await prepare()
+  if (!prep.ok) return prep
+  const { client, signer, sender } = prep
+  return withStaleObjectVersionRetry(async () => {
+    try {
+      const txb = buildAdminReclaimToSelfBearerTreasuryTransaction({
+        messagingPackageId: input.messagingPackageId,
+        senderAddress: sender,
+        treasuryObjectId: input.treasuryObjectId,
+      })
+      await attachGasPaymentForOwner(client, txb, sender, GAS_BUDGET)
+      const out = await signAndExecuteTransactionWithSigner({ client, transaction: txb, signer })
+      if (!isDirectChainExecutionSuccess(out.digest, out.status) || !out.digest) {
+        return {
+          ok: false as const,
+          error: `Anfordern fehlgeschlagen${out.errorDetail ? ` — ${out.errorDetail}` : ''}.`,
+        }
+      }
+      patchNftBearerTreasuryLocal(input.treasuryObjectId, {
+        balanceMistHint: '0 (reclaimed)',
+        frozen: false,
+      })
+      const local = findNftBearerTreasuryById(input.treasuryObjectId)
+      recordNftVaultActivity({
+        op: 'treasury_reclaim',
+        vaultObjectId: input.treasuryObjectId,
+        nftObjectId: local?.nftObjectId,
+        digest: out.digest,
+        nftLabel: local?.displayLabel,
+      })
+      return { ok: true as const, digest: out.digest, treasuryObjectId: input.treasuryObjectId }
+    } catch (e) {
+      return { ok: false as const, error: formatDirectIotaSubmitError(e) }
+    }
+  })
 }
 
 export async function destroyEmptyNftBearerTreasury(input: {

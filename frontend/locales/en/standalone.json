@@ -38,6 +38,7 @@
     "firstStartChoice": "First launch: choose deployment (handoff) or private/solo — then set up wallet like on desktop.",
     "einsatzAwaitHandoff": "Deployment mode: import handoff ZIP — then seed from boss. No PC server (empty API base URL).",
     "soloActive": "Private/solo active — unlock wallet, then network & mailbox in the solo wizard on the dashboard.",
+    "soloReadyOpenInbox": "Private/solo ready — open Messages → Inbox tab (bottom). Incoming chain mail shows there.",
     "soloWalletSetup": "Private/solo: set up wallet (seed). Then network & mailbox in the solo wizard — no boss needed.",
     "handoffOkNeedSeed": "Handoff OK — set up seed (QR from boss), then chat under Messages.",
     "standaloneActive": "Standalone APK active — direct RPC, no Morgendrot server required.",

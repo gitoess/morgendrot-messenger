@@ -690,12 +690,12 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     const runtimeConfigJson = String(data.runtimeConfigJson ?? '').trim();
                     if (!envText.trim()) {
                         sendJson(res, 400, { ok: false, error: 'envText fehlt' }, cors);
-                        return;
-                    }
+                    return;
+                }
                     if (envText.length > 256_000) {
                         sendJson(res, 400, { ok: false, error: 'envText zu groß' }, cors);
-                        return;
-                    }
+                    return;
+                }
                     const dryRun = data.dryRun !== false;
                     if (dryRun) {
                         const preview = previewHandoffEnvImport(envText);
@@ -1767,7 +1767,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         return;
                     }
                     _purgeAfterLieferungHandler(purges).then((result) => {
-                        sendJson(res, 200, result, cors);
+                    sendJson(res, 200, result, cors);
                     }).catch((e: any) => {
                         sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
                     });
@@ -2701,7 +2701,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     archive.finalize();
                     archive.on('error', (err: Error) => {
                         try {
-                            res.end();
+        res.end();
                         } catch {}
                         logger.warn('standalone-smartphone-handoff-zip: ' + (err?.message || err));
                     });
@@ -3250,7 +3250,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
     }
 
     const startListen = () => {
-        tryListen(port);
+    tryListen(port);
     };
     if (CFG.API_KILL_PREVIOUS_INSTANCE) {
         killOldInstance(port)

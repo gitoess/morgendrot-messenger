@@ -1,15 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Settings, Copy, Check, KeyRound, Radio, Send, Globe, Shield, BookOpen } from 'lucide-react'
+import { Settings, Radio, Send, Globe, Shield, BookOpen } from 'lucide-react'
 import Link from 'next/link'
 import { Switch } from '@/components/ui/switch'
-import {
-  getStatus,
-  fetchStatus,
-  revealVaultSignerImport,
-  type ApiStatus,
-} from '@/frontend/lib/api'
+import { getStatus, fetchStatus, type ApiStatus } from '@/frontend/lib/api'
 import { LazyHandoffImportPanel } from '@/frontend/components/lazy/messenger-scope-b'
 import { SettingsTelegramIntegration } from '@/frontend/components/views/settings-telegram-integration'
 import { SettingsTelegramEinsatzGroup } from '@/frontend/components/views/settings-telegram-einsatz-group'
@@ -22,7 +17,7 @@ import { DashboardEinsatzChainPanel } from '@/frontend/components/dashboard-eins
 import { SettingsVaultBackupSection } from '@/frontend/components/views/settings-vault-backup-section'
 import { SettingsVaultPasswordSection } from '@/frontend/components/views/settings-vault-password-section'
 import { SettingsEmergencyPurgeSection } from '@/frontend/components/views/settings-emergency-purge-section'
-import { SettingsTresorMapCard } from '@/frontend/components/settings-tresor-map-card'
+import { SettingsTresorHubSection } from '@/frontend/components/views/settings-tresor-hub-section'
 import { SettingsFunkSection } from '@/frontend/components/views/settings-funk-section'
 import { ChatViewShadowSweep } from '@/frontend/components/chat-view-shadow-sweep'
 import { SettingsOnboardingSection } from '@/frontend/components/views/settings-onboarding-section'
@@ -36,8 +31,9 @@ import {
 } from '@/frontend/components/settings-collapsible-section'
 import { SETTINGS_ACTIVE_CATEGORY_KEY, type SettingsCategoryId } from '@/frontend/lib/settings-navigation'
 import { SettingsProjectDisclaimerSection } from '@/frontend/components/views/settings-project-disclaimer-section'
-import { UiPasswordInput } from '@/frontend/components/ui-password-input'
 import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
+import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/standalone-device-mode'
+import { isStandaloneSoloPath } from '@/frontend/lib/standalone-onboarding'
 
 interface SettingsViewProps {
   onOpenConfig?: () => void
@@ -76,18 +72,22 @@ export function SettingsView({
     vaultHasLocal?: boolean
     role?: string
   } | null>(null)
-  const [copied, setCopied] = useState<string | null>(null)
-  const [recoveryPw, setRecoveryPw] = useState('')
-  const [recoveryBusy, setRecoveryBusy] = useState(false)
-  const [recoveryErr, setRecoveryErr] = useState('')
-  const [revealedSigner, setRevealedSigner] = useState<string | null>(null)
   const [advancedIotaStatus, setAdvancedIotaStatus] = useState<ApiStatus | null>(null)
 
   const isBossRole =
     (advancedIotaStatus?.role || status?.role || '').trim().toLowerCase() === 'boss'
   const isKommandant =
     (advancedIotaStatus?.role || status?.role || '').trim().toLowerCase() === 'kommandant'
-  const managedNetwork = isBossRole || isKommandant
+  /**
+   * „Wo senden?“ + Gas-Panels: bisher nur Boss/Kommandant.
+   * Solo/Standalone (Rolle messenger) braucht dasselbe für Testnet-Faucet + Netz-Wahl —
+   * sonst fehlt genau der IOTA-Messenger-Pfad in den Einstellungen.
+   */
+  const managedNetwork =
+    isBossRole ||
+    isKommandant ||
+    isStandaloneSoloPath() ||
+    isStandaloneMessengerWithoutBasis()
 
   const backendOnline =
     status?.backendOnline === true ||
@@ -119,32 +119,12 @@ export function SettingsView({
     })
   }, [])
 
-  const handleRevealSignerImport = async () => {
-    setRecoveryErr('')
-    if (!recoveryPw.trim()) {
-      setRecoveryErr('Tresor-Passwort eingeben.')
-      return
-    }
-    setRecoveryBusy(true)
-    try {
-      const res = await revealVaultSignerImport(recoveryPw.trim())
-      if (res.ok && res.signerImport) {
-        setRevealedSigner(res.signerImport)
-        setRecoveryPw('')
-      } else {
-        setRecoveryErr(res.error || res.message || 'Anzeige fehlgeschlagen.')
-      }
-    } finally {
-      setRecoveryBusy(false)
-    }
-  }
-
   const categories = [
     { id: 'general' as const, label: 'Allgemein', icon: <Globe className="h-4 w-4" /> },
     { id: 'iota' as const, label: 'IOTA', icon: <Send className="h-4 w-4" /> },
     { id: 'funk' as const, label: 'Funk', icon: <Radio className="h-4 w-4" /> },
     { id: 'telegram' as const, label: 'Telegram', icon: <Send className="h-4 w-4" /> },
-    { id: 'security' as const, label: 'Sicherheit', icon: <Shield className="h-4 w-4" /> },
+    { id: 'security' as const, label: 'Tresor', icon: <Shield className="h-4 w-4" /> },
   ]
 
   return (
@@ -221,15 +201,15 @@ export function SettingsView({
           />
         )}
         <p className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-[12px] text-muted-foreground">
-          <span className="font-medium text-foreground">Tresor / Passwort / Schatten</span> → Tab{' '}
+          <span className="font-medium text-foreground">Seed, Notizen, Passwörter, Backup</span> → Tab{' '}
           <button
             type="button"
             className="font-semibold text-primary underline hover:no-underline"
             onClick={() => selectCategory('security')}
           >
-            Sicherheit
+            Tresor
           </button>
-          .
+          . Package/Mailbox/RPC bleiben hier unter IOTA.
         </p>
         <SettingsMyMailboxesSection
           apiStatus={advancedIotaStatus}
@@ -239,7 +219,7 @@ export function SettingsView({
             (advancedIotaStatus?.myAddressFull || advancedIotaStatus?.myAddress || status?.address || '').trim()
           }
         />
-        {managedNetwork ? (
+        {isBossRole || isKommandant ? (
           <div className="rounded-xl border border-border bg-card p-4">
             <p className="mb-1 text-sm font-semibold text-foreground">Package &amp; Move-Upgrade</p>
             <p className="mb-3 text-[12px] text-muted-foreground">
@@ -251,56 +231,6 @@ export function SettingsView({
               apiStatus={advancedIotaStatus}
               onRefreshStatus={() => void loadStatus()}
             />
-          </div>
-        ) : null}
-        {!slimMessengerEinsatz && status?.backendOnline && status.signer === 'sdk' ? (
-          <div className="rounded-xl border border-border bg-card p-4">
-            <div className="mb-3 flex items-start gap-3">
-              <KeyRound className="h-5 w-5 text-primary" aria-hidden />
-              <h4 className="font-semibold text-foreground">Wallet-Recovery (SIGNER=sdk)</h4>
-            </div>
-            {!status.vaultHasLocal ? (
-              <p className="mb-3 text-sm text-muted-foreground">Keine lokale Tresor-Datei.</p>
-            ) : null}
-            <div className="space-y-3">
-              <div className="max-w-md">
-                <UiPasswordInput
-                  label="Tresor-Passwort"
-                  value={recoveryPw}
-                  onChange={setRecoveryPw}
-                  autoComplete="off"
-                  inputClassName="w-full rounded-lg border border-border bg-input px-3 py-2"
-                />
-              </div>
-              {recoveryErr ? <p className="text-sm text-destructive">{recoveryErr}</p> : null}
-              <button
-                type="button"
-                disabled={recoveryBusy || !status.vaultHasLocal}
-                onClick={() => void handleRevealSignerImport()}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-              >
-                {recoveryBusy ? 'Lade…' : 'Signer-Import anzeigen'}
-              </button>
-              {revealedSigner ? (
-                <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all rounded border border-border bg-muted/50 p-3 font-mono text-xs">
-                  {revealedSigner}
-                </pre>
-              ) : null}
-              {revealedSigner ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    void navigator.clipboard.writeText(revealedSigner)
-                    setCopied('signerImport')
-                    setTimeout(() => setCopied(null), 2000)
-                  }}
-                  className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
-                >
-                  {copied === 'signerImport' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  Kopieren
-                </button>
-              ) : null}
-            </div>
           </div>
         ) : null}
       </SettingsCollapsiblePanel>
@@ -333,8 +263,20 @@ export function SettingsView({
         )}
       </SettingsCollapsiblePanel>
 
-      <SettingsCollapsiblePanel open={activeCategory === 'security'} title="Sicherheit & Notfall" icon={<Shield className="h-5 w-5" />} onRefresh={() => void loadStatus()}>
-        <SettingsTresorMapCard />
+      <SettingsCollapsiblePanel
+        open={activeCategory === 'security'}
+        title="Tresor & Notfall"
+        icon={<Shield className="h-5 w-5" />}
+        onRefresh={() => void loadStatus()}
+      >
+        <SettingsTresorHubSection
+          vaultLocked={vaultLocked}
+          onRequestVaultUnlock={onRequestVaultUnlock}
+          vaultHasLocal={status?.vaultHasLocal === true}
+          backendOnline={backendOnline}
+          onAfterReveal={() => void loadStatus()}
+          onOpenIotaCategory={() => selectCategory('iota')}
+        />
         <SettingsVaultPasswordSection vaultLocked={vaultLocked} />
         <SettingsVaultBackupSection vaultLocked={vaultLocked} onRequestVaultUnlock={onRequestVaultUnlock} />
         {backendOnline ? (

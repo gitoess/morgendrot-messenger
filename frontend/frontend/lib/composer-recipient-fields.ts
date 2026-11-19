@@ -7,6 +7,42 @@ import {
 
 const IOTA_ADDR = /^0x[a-f0-9]{64}$/i
 
+/** Kurzform aus UI („0x7988…adb3“) oder Ellipse — keine gültige Chain-Adresse. */
+export function looksLikeTruncatedIotaAddress(raw: string): boolean {
+  const t = raw.trim()
+  if (!t) return false
+  if (IOTA_ADDR.test(t)) return false
+  if (/[…⋯]|\.\.\./.test(t) && /^0x/i.test(t)) return true
+  const hex = t.replace(/^0x/i, '').replace(/[^a-f0-9]/gi, '')
+  return /^0x/i.test(t) && hex.length > 0 && hex.length < 64
+}
+
+/** Composer-/Partner-Eingabe säubern (kein Erfinden fehlender Hex-Zeichen). */
+export function sanitizeComposerAddressInput(raw: string): string {
+  return raw.trim().toLowerCase().replace(/\s+/g, '')
+}
+
+/** Nutzerhinweis wenn Empfänger fehlt oder nur als Kurzform klebt. */
+export function describeMissingComposerIotaRecipient(p: {
+  recipient: string
+  partner: string
+  encrypted: boolean
+  isPrivate?: boolean
+}): string | null {
+  const resolved = p.encrypted
+    ? resolveComposerIotaAddress(p.recipient, p.partner, true)
+    : resolveComposerKlartextIotaAddress(p.recipient, p.partner, p.isPrivate !== false)
+  if (resolved && IOTA_ADDR.test(resolved)) return null
+  const raw = `${p.recipient} ${p.partner}`.trim()
+  if (looksLikeTruncatedIotaAddress(p.recipient) || looksLikeTruncatedIotaAddress(p.partner) || looksLikeTruncatedIotaAddress(raw)) {
+    return 'Kurzadresse erkannt (z. B. 0x7988…adb3). Volle 0x + 64 Hex eintragen — im Header „Eigene Adresse“ aufklappen und „Kopieren“.'
+  }
+  if (p.encrypted) {
+    return 'Verschlüsselt: volle 0x-Empfängeradresse im Partner-Feld (Handshake) oder Empfängerfeld — Telefonbuch optional.'
+  }
+  return 'Empfänger fehlt: volle Wallet-0x (64 Hex) im Empfängerfeld. Telefonbuch nicht nötig.'
+}
+
 function collectIotaAddressesFromField(raw: string, seen: Set<string>, out: string[]): void {
   for (const part of raw.split(/[,;\n]+/)) {
     const a = part.trim().toLowerCase()

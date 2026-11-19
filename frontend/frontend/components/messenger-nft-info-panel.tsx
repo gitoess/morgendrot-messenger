@@ -10,6 +10,7 @@ import { findNftGuardedPurseByNft } from '@/frontend/lib/nft-guarded-purse-local
 import { findNftBearerTreasuryByNft } from '@/frontend/lib/nft-bearer-treasury-local-store'
 import { findNftTimeLeaseByNft } from '@/frontend/lib/nft-time-lease-local-store'
 import { getNftKeycard } from '@/frontend/lib/nft-keycard-local-store'
+import { nftRoleBadgesSummary } from '@/frontend/lib/nft-role-badges'
 import { listNftActivity } from '@/frontend/lib/nft-activity-local-log'
 import {
   explorerObjectUrlFromId,
@@ -34,12 +35,16 @@ export type MessengerNftInfoPanelProps = {
   digest?: string
   packageId?: string
   name?: string
+  classification?: string
+  attrsText?: string
+  contentHash?: string
   className?: string
   /**
    * compact (default bei showInfoButton): Object-ID-Zeile + Info-Dialog.
    * full: alle Felder inline.
+   * button: nur Info-Button (kein „Technische IDs“ / Kurz-Kasten).
    */
-  variant?: 'compact' | 'full'
+  variant?: 'compact' | 'full' | 'button'
   showInfoButton?: boolean
 }
 
@@ -48,6 +53,9 @@ function buildSectionsForNft(p: {
   digest?: string
   packageId?: string
   name?: string
+  classification?: string
+  attrsText?: string
+  contentHash?: string
 }) {
   const oid = (p.objectId || '').trim()
   const purse = oid ? findNftGuardedPurseByNft(oid) : null
@@ -64,13 +72,22 @@ function buildSectionsForNft(p: {
     getDirectMailboxChainSnapshot()?.packageId ||
     MESSAGING_MODULES_PACKAGE_ID
   const digest = resolveNftDigest(oid, p.digest)
+  const slots =
+    keycard?.slots?.length
+      ? keycard.slots.map((s) => (s.note ? `${s.id} (${s.note})` : s.id)).join(', ')
+      : undefined
 
   return buildNftInfoSections({
     objectId: oid || undefined,
     digest: digest || undefined,
     packageId: pkg || undefined,
     name: p.name || keycard?.label,
+    classification: p.classification,
+    attrsText: p.attrsText,
+    contentHash: p.contentHash,
+    rolesSummary: oid ? nftRoleBadgesSummary(oid) || undefined : undefined,
     keycardBound: keycard ? true : undefined,
+    keycardSlots: slots,
     vaultObjectId: vault?.id,
     vaultKind: vault?.kind,
     vaultCreateDigest: vault?.digest,
@@ -105,56 +122,79 @@ export function MessengerNftInfoPanel(p: MessengerNftInfoPanelProps) {
         digest: p.digest,
         packageId: p.packageId,
         name: p.name,
+        classification: p.classification,
+        attrsText: p.attrsText,
+        contentHash: p.contentHash,
       }),
-    [p.objectId, p.digest, p.packageId, p.name, infoOpen]
+    [
+      p.objectId,
+      p.digest,
+      p.packageId,
+      p.name,
+      p.classification,
+      p.attrsText,
+      p.contentHash,
+      infoOpen,
+    ]
   )
   const section = sections[0]
   const hasFields = Boolean(section && section.fields.length > 0)
-  if (!hasFields) return null
+  if (!hasFields && variant !== 'button') return null
+  if (variant === 'button' && !(p.objectId || '').trim()) return null
 
   const inlineFields =
     variant === 'compact'
       ? section!.fields.filter((f) => f.id === 'oid' || f.id === 'vault' || f.id === 'lease')
-      : section!.fields
+      : variant === 'full'
+        ? section!.fields
+        : []
+
+  const infoButton =
+    (showBtn || variant === 'button') && (p.objectId || '').trim() ? (
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="h-7 text-[11px]"
+        onClick={() => setInfoOpen(true)}
+      >
+        <Info className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+        Info
+      </Button>
+    ) : null
 
   return (
     <div className={p.className}>
-      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[11px] font-medium text-foreground">Technische IDs</p>
-        {showBtn && (p.objectId || '').trim() ? (
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-7 text-[11px]"
-            onClick={() => setInfoOpen(true)}
-          >
-            <Info className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-            Info
-          </Button>
-        ) : null}
-      </div>
-
-      <TechnicalIdSection title={variant === 'full' ? section!.title : 'Kurz'}>
-        {inlineFields.map((f) => (
-          <TechnicalIdRow
-            key={f.id}
-            label={f.label}
-            value={f.value}
-            copyable={f.copyable}
-            hint={f.hint}
-            href={f.href}
-            hrefLabel={f.hrefLabel}
-          />
-        ))}
-      </TechnicalIdSection>
+      {variant === 'button' ? (
+        infoButton
+      ) : (
+        <>
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[11px] font-medium text-foreground">Technische IDs</p>
+            {infoButton}
+          </div>
+          <TechnicalIdSection title={variant === 'full' ? section!.title : 'Kurz'}>
+            {inlineFields.map((f) => (
+              <TechnicalIdRow
+                key={f.id}
+                label={f.label}
+                value={f.value}
+                copyable={f.copyable}
+                hint={f.hint}
+                href={f.href}
+                hrefLabel={f.hrefLabel}
+              />
+            ))}
+          </TechnicalIdSection>
+        </>
+      )}
 
       {infoOpen ? (
         <MessengerEntityInfoDialog
           open={infoOpen}
           onOpenChange={setInfoOpen}
           title={p.name?.trim() ? `Info · ${p.name.trim()}` : 'NFT-Info'}
-          description="Object-ID, Vault, Lease, Package — kopierbar; Explorer öffnet die Chain-Ansicht."
+          description="Name, IDs, Vault, Lease, Schlüsselkarte — kopierbar; Explorer öffnet die Chain-Ansicht."
           sections={sections}
         />
       ) : null}

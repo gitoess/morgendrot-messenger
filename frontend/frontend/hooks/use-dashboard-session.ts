@@ -3,6 +3,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { flushSync } from 'react-dom'
 import { fetchStatus, unlockBackend, fetchHelp, vaultLockCommand, type ApiStatus } from '@/frontend/lib/api'
+import {
+  fetchWalletBalances,
+  mergeWalletBalancesIntoApiStatus,
+} from '@/frontend/lib/api/wallet-balances'
+import { getDirectChainFieldIdsFromLs } from '@/frontend/lib/direct-iota-chain-context'
 import type { ProjectType, ProjectVariant } from '@/frontend/lib/types'
 import {
   type DashboardActiveView,
@@ -52,6 +57,7 @@ import {
   clearDirectIotaSessionSigner,
   clearDirectIotaSessionSignerOnLock,
   getDirectIotaSessionSigner,
+  getDirectIotaSessionSignerAddress,
   hasPersistedDirectIotaSessionSigner,
   restoreDirectIotaSessionSignerFromEncryptedStorage,
 } from '@/frontend/lib/direct-iota-mnemonic-session'
@@ -98,6 +104,25 @@ import { useOfflineStatus } from '@/frontend/hooks/use-offline-status'
 import type { ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
 
 const EMPTY_CONNECTED_ADDRESSES: string[] = []
+
+/** Status-Poll ohne Saldo darf Direkt-RPC-Saldo nicht verwerfen (Solo-APK-Flackern). */
+function preserveWalletBalanceFields<T extends ApiStatus>(
+  next: T,
+  prev: (ApiStatus & { error?: string }) | null
+): T {
+  if (!prev?.walletNativeIotaBalance || next.walletNativeIotaBalance) return next
+  return {
+    ...next,
+    walletNativeIotaBalance: prev.walletNativeIotaBalance,
+    walletNativeIotaBalanceTestnet: prev.walletNativeIotaBalanceTestnet ?? next.walletNativeIotaBalanceTestnet,
+    walletNativeIotaBalanceMainnet: prev.walletNativeIotaBalanceMainnet ?? next.walletNativeIotaBalanceMainnet,
+    walletNativeIotaBalanceNetwork: prev.walletNativeIotaBalanceNetwork ?? next.walletNativeIotaBalanceNetwork,
+    walletNativeIotaBalanceFetchFailed:
+      prev.walletNativeIotaBalanceFetchFailed ?? next.walletNativeIotaBalanceFetchFailed,
+    myAddressFull: next.myAddressFull || prev.myAddressFull,
+    myAddress: next.myAddress || prev.myAddress,
+  }
+}
 
 const VAULT_ALREADY_UNLOCKED_RE = /Bereits entsperrt/i
 
@@ -264,7 +289,14 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   const isBossRole = (role || '').toLowerCase() === 'boss'
 
   const hasValidMyAddressForBalance =
-    /^0x[a-fA-F0-9]{64}$/i.test((apiSnapshot?.myAddressFull ?? '').trim()) === true
+    /^0x[a-fA-F0-9]{64}$/i.test(
+      (
+        apiSnapshot?.myAddressFull ||
+        getDirectIotaSessionSignerAddress() ||
+        getDirectChainFieldIdsFromLs().senderAddress ||
+        ''
+      ).trim()
+    ) === true
 
   const setShowAllTilesPersist = (value: boolean) => {
     setShowAllTiles(value)
@@ -283,9 +315,11 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     }
     if ('pollClockHint' in res) {
       const { pollClockHint: _hint, ...snap } = res
-      setApiSnapshot(snap)
+      // Status-Fallback (Solo) hat keine Saldo-Felder — vorherigen Direkt-RPC-Saldo behalten,
+      // sonst flackert die Wallet-UI alle paar Sekunden auf „Saldo wird geladen…“.
+      setApiSnapshot((prev) => preserveWalletBalanceFields(snap, prev))
     } else {
-      setApiSnapshot(res)
+      setApiSnapshot((prev) => preserveWalletBalanceFields(res, prev))
     }
 
     const liveBackend = 'pollClockHint' in res && res.backendRunning === true
@@ -348,10 +382,32 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       }
 
       setRole(res.role || '')
-      const addrLine = (res.myAddressFull || res.myAddress || '').trim()
+      const addrFromChain =
+        getDirectIotaSessionSignerAddress() || getDirectChainFieldIdsFromLs().senderAddress || ''
+      const addrFull =
+        (res.myAddressFull || '').trim() ||
+        (/^0x[a-fA-F0-9]{64}$/i.test(addrFromChain) ? addrFromChain : '')
+      const addrLine = addrFull || (res.myAddress || '').trim()
       setMyAddress(addrLine)
-      if (res.myAddressFull && /^0x[a-fA-F0-9]{64}$/i.test(res.myAddressFull.trim())) {
-        recordSeenMyAddress(res.myAddressFull.trim())
+      if (addrFull && /^0x[a-fA-F0-9]{64}$/i.test(addrFull)) {
+        recordSeenMyAddress(addrFull)
+        if (!(res.myAddressFull || '').trim()) {
+          setApiSnapshot((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  myAddressFull: addrFull,
+                  myAddress: `${addrFull.slice(0, 10)}…${addrFull.slice(-6)}`,
+                }
+              : prev
+          )
+        }
+      }
+      if (standaloneWithoutBasis && addrFull) {
+        void fetchWalletBalances().then((bal) => {
+          if (!bal.ok) return
+          setApiSnapshot((prev) => mergeWalletBalancesIntoApiStatus(prev, bal))
+        })
       }
     } else {
       setBackendReachable(false)
@@ -562,15 +618,28 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
 
   const openMessengerChatView = useCallback(() => {
     navigateTo({ type: 'chat', variant: 'private-chat' })
+    // APK: Chat-Mount defaultet auf Posteingang; Event setzt Tab falls Chat schon offen.
+    if (typeof window !== 'undefined') {
+      window.setTimeout(() => {
+        try {
+          window.dispatchEvent(new CustomEvent(OPEN_MESSENGER_INBOX_EVENT))
+        } catch {
+          /* ignore */
+        }
+      }, 0)
+    }
   }, [navigateTo])
 
   useEffect(() => {
-    const onOpenInbox = () => openMessengerChatView()
+    const onOpenInbox = () => {
+      navigateTo({ type: 'chat', variant: 'private-chat' })
+    }
     window.addEventListener(OPEN_MESSENGER_INBOX_EVENT, onOpenInbox)
     return () => window.removeEventListener(OPEN_MESSENGER_INBOX_EVENT, onOpenInbox)
-  }, [openMessengerChatView])
+  }, [navigateTo])
 
   const openVaultView = useCallback(() => {
+    primeSettingsCategory('security')
     navigateTo({ type: 'settings' })
   }, [navigateTo])
 
@@ -972,6 +1041,15 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     (featureId: ProjectType, variant: ProjectVariant) => {
       const next: DashboardActiveView = { type: featureId, variant }
       navigateTo(next)
+      if (featureId === 'chat' && typeof window !== 'undefined') {
+        window.setTimeout(() => {
+          try {
+            window.dispatchEvent(new CustomEvent(OPEN_MESSENGER_INBOX_EVENT))
+          } catch {
+            /* ignore */
+          }
+        }, 0)
+      }
     },
     [navigateTo]
   )

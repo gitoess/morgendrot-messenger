@@ -12,6 +12,7 @@ import {
   getDirectIotaSessionSignerAddress,
   hasPersistedDirectIotaSessionSigner,
   persistDirectIotaSessionSignerEncrypted,
+  revealDirectIotaSessionSignerFromEncryptedStorage,
   resetDirectIotaMnemonicSessionModuleForTests,
   restoreDirectIotaSessionSignerFromEncryptedStorage,
   restoreDirectIotaSessionSignerFromTabSession,
@@ -96,6 +97,21 @@ describe('direct-iota-mnemonic-session encrypted local storage', () => {
       password: 'wrong-pass-2026',
     })
     expect(restored.ok).toBe(false)
+    expect(getDirectIotaSessionSignerAddress()).toBeNull()
+  })
+
+  it('reveal shows signer without requiring prior RAM session', async () => {
+    const saved = await persistDirectIotaSessionSignerEncrypted({
+      signerImportRaw: rawHexSecret,
+      password: 'reveal-pass-2026',
+    })
+    expect(saved.ok).toBe(true)
+    clearDirectIotaSessionSigner()
+    const shown = await revealDirectIotaSessionSignerFromEncryptedStorage({
+      password: 'reveal-pass-2026',
+    })
+    expect(shown.ok).toBe(true)
+    if (shown.ok) expect(shown.signerImportRaw).toBe(rawHexSecret)
     expect(getDirectIotaSessionSignerAddress()).toBeNull()
   })
 

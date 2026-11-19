@@ -89,6 +89,7 @@ export function hideContactFromPhonebook(address: string): void {
 }
 
 const NOTES_KEY = 'morgendrot.contactPhonebook.notes'
+const PHONES_KEY = 'morgendrot.contactPhonebook.phones'
 
 export function readContactNotes(): Record<string, string> {
   const raw = readJson<Record<string, string>>(NOTES_KEY, {})
@@ -109,6 +110,28 @@ export function writeContactNote(address: string, note: string): void {
   if (!next) delete all[a]
   else all[a] = next
   writeJson(NOTES_KEY, all)
+  notifyContactPhonebookMetaChanged()
+}
+
+export function readContactPhones(): Record<string, string> {
+  const raw = readJson<Record<string, string>>(PHONES_KEY, {})
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(raw)) {
+    const a = norm(k)
+    const phone = String(v ?? '').trim()
+    if (a && phone) out[a] = phone.slice(0, 40)
+  }
+  return out
+}
+
+export function writeContactPhone(address: string, phone: string): void {
+  const a = norm(address)
+  if (!a) return
+  const all = readContactPhones()
+  const next = phone.trim().slice(0, 40)
+  if (!next) delete all[a]
+  else all[a] = next
+  writeJson(PHONES_KEY, all)
   notifyContactPhonebookMetaChanged()
 }
 export function showContactInPhonebook(address: string): void {

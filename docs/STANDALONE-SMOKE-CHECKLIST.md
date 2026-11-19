@@ -21,13 +21,28 @@
 
 ---
 
+## PC-Browser vs. Standalone (kritisch — nicht vermischen)
+
+| Was man meint | Ist | Was tun |
+|---------------|-----|---------|
+| **„Standalone PC-Schreibtisch“** | Vitest/`smoke:standalone-desk` — Prep für **Handy** Variante B | Schon vor APK; ersetzt **kein** Gerät |
+| **PC Direct-IOTA (Stage‑2)** | Browser + `npm run dm`: Tresor **über API**, Send/Inbox **Direkt-RPC** gegen Fullnode | **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** § 2 — **nicht** „kein API“ |
+| **Matrix H** „PC wie Handy ohne Server“ | Roadmap **Backlog** ~40 %; Code: `isStandaloneMessengerWithoutBasis()` **nur Capacitor** (Desktop bleibt bei `/api/unlock`) | **Nicht** als aktuelles Smoke verkaufen; Produkt später opt-in |
+| **PC Doppelklick** (`.bat` / Electron / später `.exe`) | Bundle **mit** Node (**B/C**) — ohne Terminal tippen; **kein** „ohne Server“ | `Start-Messenger.bat` / `npm run desktop`; echte `.exe` noch offen (Roadmap B/C) |
+
+**Verbesserter PC-Smoke vor frischer APK (optional, Hybrid):** Stage‑2 Klartext + Enc mit Puls „Direkt“, Fullnode OK, Chat-Kopf „Direkt-RPC“ — API darf für Tresor laufen. **Echter** „kein Morgendrot-API“-Pfad = **nur APK 4b–4d** (dieses Dokument ab § A).
+
+**APK-Alter:** Debug-APK älter als **14 Tage** → **nicht** als Abnahme werten. Neu: `cd frontend` → `npm run apk:debug:build` → Install → erst dann 4b.
+
+---
+
 ## 0. Schreibtisch (Blocker — vor dem Handy)
 
 - [ ] `cd frontend` → **`npm run test:h15-direct-submit`** grün (Stand Repo; **2026-11-17:** **87** Tests).
 - [ ] **Oder Root:** **`npm run smoke:standalone-desk`** (führt H.15-Tests + druckt §0/§A–C Hinweise; warnt bei **veralteter** Debug-APK >14 Tage).
 - [ ] Optional Root: **`npm run test:smoke`**.
 - [ ] APK **frisch** bauen: **`npm run apk:debug:build`** → `frontend/android/app/build/outputs/apk/debug/app-debug.apk` (altes Artefakt reicht nicht).
-- [ ] Zwei **Handoff-ZIPs** (verschiedene Profile/Adressen) vom Boss oder Test-Export — je ~3 KB, **ohne** Secrets im Chat.
+- [ ] **Nur wenn Einsatz-Pfad:** Handoff-ZIP(s). **Solo-4b:** ZIP **nicht** nötig (RPC/Package/Mailbox manuell oder Lab-Defaults).
 
 **Ergebnis:** nur bei grün → Gerätetest starten.
 
@@ -49,13 +64,20 @@
 
 **Gerät A** — Profil 1
 
+**Handoff?** Nur **Einsatz** (Boss → Helfer). Für **„von überall wie Messenger“ / IOTA-Messenger-Ziel** reicht **Solo ohne ZIP** — Handoff **weglassen**. Peering später ≠ Handoff.
+
+| Pfad | Wann | Bootstrap |
+|------|------|-----------|
+| **Solo (empfohlen jetzt)** | Privat / IOTA-Messenger-Nähe | Erststart **Solo** → Seed → Puls/Solo: RPC + Package + Mailbox (Lab-Defaults ok) |
+| **Einsatz + Handoff** | Boss-Helfer-Abnahme | ZIP → **Lokal vormerken** → Seed |
+
 | ID | Schritt | Erwartung | PASS / FAIL / N/A | Notiz |
 |----|---------|-----------|-------------------|-------|
-| **4b** | Handoff-ZIP → **Handoff übernehmen** (Standalone) | Dashboard-Karte Schritt 1/2; kein API-Fehler | | |
+| **4b** | **Solo:** Pfad Solo wählen · **oder Einsatz:** Handoff-ZIP → Lokal vormerken | Kein API-/Basis-Fehler; Ketten-IDs da (Solo: Formular/Defaults) | | |
 | **4b** | Dialog **Seed einrichten?** → QR oder Mnemonic | Wallet aktiv; Absender-Adresse in Status | | |
-| **4b** | App neu starten (kalt) | Handoff + Seed bleiben; optional App-Passwort-Entsperren | | |
-| **4b** | Chat: Online, Klartext an **eigene zweite Adresse** oder Partner (wenn schon da) | Erfolg; Kopf **Direkt-RPC** (nicht „über Relay“) | | |
-| **4b** | Optional: Kurz LoRa/Mesh — nur „Funk startet“, kein voller Funk-Smoke | Kein Crash | | |
+| **4b** | App neu starten (kalt) | Seed (+ Solo-Chain bzw. Handoff) bleiben; optional App-Passwort | | |
+| **4b** | Chat: Online, Klartext (Self/Partner) | Erfolg; Kopf **Direkt-RPC** (nicht „über Relay“) | | |
+| **4b** | Optional: Kurz LoRa/Mesh — nur „Funk startet“ | Kein Crash | | |
 
 ---
 

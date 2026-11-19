@@ -23,7 +23,9 @@ import {
   parseComposerIotaRecipientAddresses,
   resolveComposerIotaAddress,
   resolveComposerIotaFieldValue,
+  describeMissingComposerIotaRecipient,
   resolveComposerKlartextIotaAddress,
+  sanitizeComposerAddressInput,
   resolveComposerTelegramChatIds,
 } from '@/frontend/lib/composer-recipient-fields'
 import { telegramRecipientToComposerDisplay } from '@/frontend/lib/telegram-notify-pref'
@@ -373,6 +375,18 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     groupSendReady ||
     (forcedTransport === 'mesh' &&
       (!meshPlaintextToNodeEnabled || parseMeshtasticNodeIdToNumber(meshPlaintextNodeId) !== null))
+  const encryptedRecipientOk =
+    !encrypted ||
+    /^0x[a-f0-9]{64}$/i.test(
+      resolveComposerIotaAddress(recipient, partner ?? '', true).trim()
+    ) ||
+    groupSendReady
+  const recipientMissingHint = describeMissingComposerIotaRecipient({
+    recipient,
+    partner: partner ?? '',
+    encrypted,
+    isPrivate,
+  })
 
   const [privacySoftLocked, setPrivacySoftLockedState] = useState(() => isPrivacySoftLocked())
   useEffect(() => {
@@ -406,6 +420,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     (groupMailboxInternetChain && !groupTeamBroadcastReady) ||
     groupEncNeedsTeamKey ||
     (!encrypted && !meshKlartextRecipientOk) ||
+    !encryptedRecipientOk ||
     meshPlaintextBlocked ||
     meshPath4Blocked ||
     sendPathCapabilityBlocked ||
@@ -432,10 +447,11 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     if (groupEncNeedsTeamKey) {
       return GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG
     }
-    if (!encrypted && !meshKlartextRecipientOk) {
+    if ((!encrypted && !meshKlartextRecipientOk) || !encryptedRecipientOk) {
       return isGroupChannel && groupMemberCount === 0
         ? 'Gruppe: unter Verwalten Mitglieder eintragen und speichern — dann geht Senden ohne Empfängerfeld.'
-        : 'Empfänger (0x…) fehlt — Partner-Adresse prüfen oder im Empfängerfeld eintragen.'
+        : recipientMissingHint ||
+            'Empfänger fehlt: volle Wallet-0x (64 Hex) im Empfänger- oder Partner-Feld. Telefonbuch nicht nötig.'
     }
     if (meshPlaintextBlocked) return 'Nachricht zu lang oder Anhang für Funk-Klartext nicht erlaubt.'
     if (meshPath4Blocked) return 'Funk-Optionen passen nicht zur aktuellen Anhang-Auswahl.'
@@ -454,6 +470,8 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     hasNoPayload,
     encrypted,
     meshKlartextRecipientOk,
+    encryptedRecipientOk,
+    recipientMissingHint,
     meshPlaintextBlocked,
     meshPath4Blocked,
     apiStatus,
@@ -700,7 +718,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
         {forcedTransport === 'internet' && privacyToolsOpen ? (
           <div className="space-y-2 rounded-xl border border-border/70 bg-muted/15 p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs font-semibold text-foreground">Passphrase &amp; Zeitkapsel</p>
+              <p className="text-xs font-semibold text-foreground">Passphrase &amp; NFT-Leserecht</p>
               <button
                 type="button"
                 className="text-[11px] text-muted-foreground underline hover:no-underline"
@@ -721,14 +739,14 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
         !privacyToolsOpen ? (
           <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/70 bg-muted/15 px-2.5 py-2">
             <span className="text-[11px] text-foreground">
-              Zeitkapsel-NFT {lastZeitkapselNft.slice(0, 10)}…
+              NFT-Leserecht {lastZeitkapselNft.slice(0, 10)}…
             </span>
             <button
               type="button"
               className="rounded border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
               onClick={() => requestOpenZeitkapselLease(lastZeitkapselNft)}
             >
-              Dieses NFT verleihen…
+              NFT verleihen…
             </button>
             <button
               type="button"
@@ -793,11 +811,15 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                   list="chat-recipient-addresses"
                   value={composerIotaField}
                   onChange={(e) => {
-                    const v = e.target.value.trim().toLowerCase()
+                    const v = sanitizeComposerAddressInput(e.target.value)
                     onPartnerChange?.(v)
                     onRecipientChange(v)
                   }}
-                  placeholder={composerIotaBroadcast ? '0x…, 0x…' : '0x…'}
+                  placeholder={
+                    composerIotaBroadcast
+                      ? '0x + 64 Hex, mehrere mit Komma'
+                      : 'volle 0x + 64 Hex (nicht Kurzform 0x…abcd)'
+                  }
                   className="w-full rounded-lg border border-border bg-input px-4 py-2.5 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 />
                 <datalist id="chat-recipient-addresses">
@@ -805,6 +827,9 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                     <option key={addr} value={addr} />
                   ))}
                 </datalist>
+                {recipientMissingHint && (recipient.trim() || (partner ?? '').trim()) ? (
+                  <p className="mt-1 text-[10px] text-amber-800 dark:text-amber-200">{recipientMissingHint}</p>
+                ) : null}
                 {composerIotaBroadcast ? (
                   <p className="mt-1 text-[10px] text-muted-foreground">
                     {composerIotaTargets.length} Empfänger — Verschlüsselt/Klartext oben wählen; Senden erzeugt pro
@@ -1020,7 +1045,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                           disabled={sending || voiceLocksComposer || encrypted}
                           title={
                             encrypted
-                              ? 'Zuerst Verschlüsselung aus — Zeitkapsel nutzt NFT-Gate, nicht ECDH.'
+                              ? 'Zuerst Verschlüsselung aus — NFT-Leserecht nutzt NFT-Gate, nicht ECDH.'
                               : undefined
                           }
                           onClick={() => {
@@ -1034,7 +1059,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/70 text-muted-foreground">
                             <KeyRound className="h-4 w-4" aria-hidden />
                           </span>
-                          Zeitkapsel-Nachricht…
+                          NFT-Leserecht…
                         </button>
                       </>
                     ) : null}
