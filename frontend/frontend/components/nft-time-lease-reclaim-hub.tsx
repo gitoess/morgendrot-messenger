@@ -31,6 +31,8 @@ import { getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mn
 import { getNftKeycard } from '@/frontend/lib/nft-keycard-local-store'
 
 const LS_MSG_PKG = 'morgendrot.nftTimeLease.messagingPackageId.v1'
+/** Liste → Notfall-Feld (wenn Notfall unter „Leihe starten“ liegt). */
+export const NFT_TIME_LEASE_NOTFALL_ID_EVENT = 'morgendrot:nft-time-lease-notfall-id'
 
 function readMsgPkg(): string {
   if (typeof window === 'undefined') return MESSAGING_MODULES_PACKAGE_ID
@@ -85,7 +87,16 @@ export function NftTimeLeaseReclaimHub(p: {
   /** Kompakt unter Wallet / Dialog-Kopf. */
   compact?: boolean
   className?: string
+  /**
+   * `list` = nur offene Leihen (oben).
+   * `notfall` = nur Lease-ID-Import (unten unter Leihe starten).
+   * `all` = beides (Default).
+   */
+  sections?: 'all' | 'list' | 'notfall'
 }) {
+  const sections = p.sections ?? 'all'
+  const showList = sections === 'all' || sections === 'list'
+  const showNotfall = sections === 'all' || sections === 'notfall'
   const [nowMs, setNowMs] = useState(() => Date.now())
   const [q, setQ] = useState('')
   const [manualLeaseId, setManualLeaseId] = useState('')
@@ -131,12 +142,22 @@ export function NftTimeLeaseReclaimHub(p: {
     sync()
     window.addEventListener(NFT_TIME_LEASE_CHANGED, sync)
     const t = window.setInterval(() => setNowMs(Date.now()), 1000)
-    void refreshFromChain(true)
+    if (sections !== 'notfall') void refreshFromChain(true)
+    const onNotfallId = (ev: Event) => {
+      const id = String((ev as CustomEvent<string>).detail || '').trim()
+      if (!id) return
+      setManualLeaseId(id)
+      setInfo('Lease-ID übernommen — ggf. laden / zurückholen.')
+    }
+    if (showNotfall) {
+      window.addEventListener(NFT_TIME_LEASE_NOTFALL_ID_EVENT, onNotfallId as EventListener)
+    }
     return () => {
       window.removeEventListener(NFT_TIME_LEASE_CHANGED, sync)
       window.clearInterval(t)
+      window.removeEventListener(NFT_TIME_LEASE_NOTFALL_ID_EVENT, onNotfallId as EventListener)
     }
-  }, [])
+  }, [sections, showNotfall])
 
   const pkgForLease = (e: NftTimeLeaseLocalEntry) =>
     (e.messagingPackageId || '').trim() || readMsgPkg() || MESSAGING_MODULES_PACKAGE_ID_P5
@@ -259,6 +280,8 @@ export function NftTimeLeaseReclaimHub(p: {
 
   return (
     <div className={`space-y-2 ${p.className || ''}`}>
+      {showList ? (
+        <>
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <p className="text-sm font-medium text-foreground">Zurückholen</p>
@@ -353,14 +376,18 @@ export function NftTimeLeaseReclaimHub(p: {
                         className="font-mono text-primary hover:underline"
                         title="In Notfall-Feld übernehmen"
                         onClick={() => {
-                          setManualLeaseId(e.leaseObjectId)
                           void copyTextSafe(e.leaseObjectId)
-                          setInfo('Lease-ID ins Notfall-Feld übernommen (auch in Zwischenablage).')
+                          window.dispatchEvent(
+                            new CustomEvent(NFT_TIME_LEASE_NOTFALL_ID_EVENT, {
+                              detail: e.leaseObjectId,
+                            })
+                          )
+                          setInfo('Lease-ID → Notfall unten (auch Zwischenablage).')
                         }}
                       >
                         {shortId(e.leaseObjectId)}
                       </button>
-                      <span className="text-muted-foreground"> — tippen → Notfall</span>
+                      <span className="text-muted-foreground"> — tippen → Notfall unten</span>
                     </p>
                   ) : null}
                   <p className="flex flex-wrap gap-2 text-[10px]">
@@ -441,6 +468,13 @@ export function NftTimeLeaseReclaimHub(p: {
         </ul>
       ) : null}
 
+      {rows.length === 0 && q.trim() ? (
+        <p className="text-[10px] text-muted-foreground">Kein Treffer für „{q.trim()}“.</p>
+      ) : null}
+        </>
+      ) : null}
+
+      {showNotfall ? (
       <details className="rounded-md border border-border/70 bg-muted/15 p-2.5" open={hasPendingId}>
         <summary className="cursor-pointer text-[10px] font-medium text-foreground">
           Notfall: Lease-ID (selten)
@@ -449,7 +483,7 @@ export function NftTimeLeaseReclaimHub(p: {
           <p className="text-[10px] text-muted-foreground">
             Nur wenn „ID fehlt“ oder der Chain-Scan die Leihe nicht findet. Object-ID der{' '}
             <em>NftTimeLease</em> aus Explorer/TX — nicht die NFT-ID. Normale Nutzung: Liste
-            aktualisieren reicht.
+            aktualisieren reicht. Aus der Liste oben: Lease tippen → landet hier.
           </p>
           <Input
             className="h-8 font-mono text-[11px]"
@@ -482,10 +516,8 @@ export function NftTimeLeaseReclaimHub(p: {
           </div>
         </div>
       </details>
-
-      {rows.length === 0 && q.trim() ? (
-        <p className="text-[10px] text-muted-foreground">Kein Treffer für „{q.trim()}“.</p>
       ) : null}
+
       {err ? <p className="text-[11px] text-destructive whitespace-pre-wrap">{err}</p> : null}
       {info ? <p className="text-[11px] text-foreground">{info}</p> : null}
     </div>

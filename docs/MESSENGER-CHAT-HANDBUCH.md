@@ -62,7 +62,7 @@ Badge **Eingang/Ausgang**, **Verschlüsselt**, **PWMSG** oder **NFT-Gate** ankli
 | Job | Wo | Was |
 |-----|-----|-----|
 | **NFT-Leserecht** | Composer **+** → NFT-Leserecht… | Ciphertext mit Badge **NFT-Gate**; NFT bleibt bei dir → du liest weiter |
-| **Verleihen** | Tab **Verleihen** / Galerie **Mehr… → Verleihen…** / CTA **NFT verleihen…** | Escrow; Liste oben = Zurückholen ohne Galerie-NFT; Entleiher: **Vorzeitig zurückgeben** |
+| **Verleihen / Zurückholen** | Tab **Verleihen / Zurückholen** / Galerie **Mehr… → Verleihen…** / CTA **NFT verleihen…** | Escrow; Liste oben = Zurückholen; Notfall-Lease-ID ganz unten; Entleiher: **Vorzeitig zurückgeben** |
 | **NFT gesichert** | Tab **NFT gesichert** / Wallet **NFT gesichert** | Vault anlegen/einzahlen; Auszahlen über Wallet-Sendepfad |
 
 ---
