@@ -124,7 +124,7 @@ Chat ⋮ → **Double Ratchet (Experiment)** setzt nur ein LocalStorage-Flag. **
 | Bereich | Tabs | Kurz |
 |---------|------|------|
 | **1 · Schauen** | **Eigene NFT anzeigen** · **NFT Suche** | Eigene Galerie laden (auch zurück aus Guthaben/Verleihen); Suche = `0x…` oder **Aus Telefonbuch wählen** (Liste im Dialog, kein System-Dropdown) |
-| **2 · Handeln** | **Minten** · **NFT gesichert** · **Verleihen** | Mint; Vault; Escrow-Leihe. **NFT-Leserecht** = Composer beim Senden, kein eigener Tab |
+| **2 · Handeln** | **Minten** · **NFT gesichert** · **Verleihen / Zurückholen** | Mint; Vault; Escrow-Leihe. **NFT-Leserecht** = Composer beim Senden, kein eigener Tab |
 
 ### Galerie-Karte (Eigene NFT)
 
@@ -212,7 +212,7 @@ Nur **lokale Namen** im Vault — on-chain steht nichts davon (außer optionaler
 | **Zurückholen** | Liste **oben** im Tab | Alle offenen Escrow-Leihen dieser Wallet; Zeile = Auswahl (NFT fehlt in der Galerie — normal) |
 | **Vorzeitig zurückgeben** | dieselbe Liste (Entleiher) | NFT sofort an Verleiher |
 | **Liste aktualisieren** | Hub | Chain-Scan (auch auto); findet Leihen ohne Galerie-Besitz |
-| **Notfall: Lease-ID** | Hub, zugeklappt | Nur wenn „ID fehlt“ / Scan leer trotz TX — Object-ID der *Lease*, nicht NFT. In der Liste Lease tippen → Notfall-Feld |
+| **Notfall: Lease-ID** | ganz unten unter Leihe starten | Nur wenn „ID fehlt“ / Scan leer — Lease tippen in der Liste oben → Feld unten |
 | **Package (Leihe)** | fest Modules-Package | **Nicht** Chat/Vertrag-Package. Override UI entfernt — Leihe nutzt Messaging-Modules (ggf. ältere P5-Events via Scan) |
 
 Ablauf: (1) NFT-Leserecht im Chat (2) optional Verleihen (3) Entleiher liest → vorzeitig zurückgeben **oder** Verleiher nach Ablauf zurückholen. W2 braucht Morgendrot.

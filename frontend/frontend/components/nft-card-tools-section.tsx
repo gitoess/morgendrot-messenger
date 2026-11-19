@@ -140,7 +140,7 @@ export function NftCardToolsSection(p: {
 
       {p.tool === 'zeitkapsel' ? (
         <div className="space-y-2 rounded-md border border-amber-800/25 bg-amber-950/10 px-3 py-2.5">
-          <NftTimeLeaseReclaimHub disabled={p.disabled} />
+          <NftTimeLeaseReclaimHub disabled={p.disabled} sections="list" />
         </div>
       ) : null}
 
@@ -194,6 +194,12 @@ export function NftCardToolsSection(p: {
           <NftTimeLeasePanel nftObjectId={activeId} disabled={p.disabled} />
         )}
       </div>
+
+      {p.tool === 'zeitkapsel' ? (
+        <div className="space-y-2 rounded-md border border-border/60 bg-muted/10 px-3 py-2.5">
+          <NftTimeLeaseReclaimHub disabled={p.disabled} sections="notfall" />
+        </div>
+      ) : null}
     </div>
   )
 }

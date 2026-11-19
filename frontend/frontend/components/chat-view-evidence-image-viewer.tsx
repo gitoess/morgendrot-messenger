@@ -179,17 +179,8 @@ const ALL_EVIDENCE_MODES: { id: Mode; label: string }[] = [
   /** Wie Hauptmenü „Gesichert hinter NFT“ — anlegen + verwalten, nicht nur Erstellen. */
   { id: 'guthaben', label: 'NFT gesichert' },
   /** NFT zeitlich verleihen (Escrow / Zurückholen). Leserecht = Composer „NFT-Leserecht“. */
-  { id: 'zeitkapsel', label: 'Verleihen' },
+  { id: 'zeitkapsel', label: 'Verleihen / Zurückholen' },
 ]
-
-/** Kurze, stabile Tab-Labels (kein Springen durch lange Texte / Ausblenden-Umschalten). */
-const NFT_WALLET_TAB_LABEL: Partial<Record<Mode, string>> = {
-  owner: 'Eigene',
-  object: 'Suche',
-  mint: 'Minten',
-  guthaben: 'NFT gesichert',
-  zeitkapsel: 'Verleihen',
-}
 
 /** Nur anschauen / suchen / laden — keine Mint-/Spend-Aktion. */
 const BROWSE_MODE_IDS: readonly Mode[] = ['wire', 'mailbox', 'owner', 'object']
@@ -1215,60 +1206,63 @@ export function ChatViewEvidenceImageViewerButton(p?: {
             Schließen
           </Button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
-        <div className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-2 border-b border-border/60 bg-background/95 px-1 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-8 text-[11px]"
-            disabled={busy || globalRefreshing}
-            title="Aktuellen Bereich + Purse-Summen + Lease-Index neu laden"
-            onClick={() => void onRefreshEverything()}
-          >
-            <RefreshCw
-              className={`mr-1.5 h-3.5 w-3.5 ${globalRefreshing || busy ? 'animate-spin' : ''}`}
-              aria-hidden
-            />
-            Aktualisieren
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={mode === 'zeitkapsel' ? 'default' : 'outline'}
-            className="h-8 min-w-[7.5rem] text-[11px]"
-            disabled={leaseCounts.open === 0}
-            title={
-              leaseCounts.open === 0
-                ? 'Keine offene Leihe'
-                : 'Offene Verleihungen — Zurückholen unter Verleihen'
-            }
-            onClick={() => {
-              setMode('zeitkapsel')
-              setError('')
-              setInfo(
-                leaseCounts.ready > 0
-                  ? `${leaseCounts.ready} bereit zum Zurückholen — Liste oben unter Verleihen.`
-                  : `${leaseCounts.open} offene Leihe(n) — Countdown abwarten oder Entleiher gibt vorzeitig zurück.`
-              )
-            }}
-          >
-            {leaseCounts.open === 0
-              ? 'Zurückholen'
-              : leaseCounts.ready > 0
-                ? `Zurückholen (${leaseCounts.ready})`
-                : `Zurückholen · ${leaseCounts.open}`}
-          </Button>
-        </div>
-        <div className="space-y-3">
+        <div className="flex min-h-0 flex-1 flex-col px-6 pb-6">
+        <div className="shrink-0 space-y-2 border-b border-border/60 bg-background pb-2 pt-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-8 text-[11px]"
+              disabled={busy || globalRefreshing}
+              title="Aktuellen Bereich + Purse-Summen + Lease-Index neu laden"
+              onClick={() => void onRefreshEverything()}
+            >
+              <RefreshCw
+                className={`mr-1.5 h-3.5 w-3.5 ${globalRefreshing || busy ? 'animate-spin' : ''}`}
+                aria-hidden
+              />
+              Aktualisieren
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={mode === 'zeitkapsel' ? 'default' : 'outline'}
+              className="h-8 min-w-[7.5rem] text-[11px]"
+              disabled={leaseCounts.open === 0}
+              title={
+                leaseCounts.open === 0
+                  ? 'Keine offene Leihe'
+                  : 'Offene Verleihungen — Zurückholen unter Verleihen'
+              }
+              onClick={() => {
+                setMode('zeitkapsel')
+                setError('')
+                setInfo(
+                  leaseCounts.ready > 0
+                    ? `${leaseCounts.ready} bereit zum Zurückholen — Liste oben unter Verleihen.`
+                    : `${leaseCounts.open} offene Leihe(n) — Countdown abwarten oder Entleiher gibt vorzeitig zurück.`
+                )
+              }}
+            >
+              {leaseCounts.open === 0
+                ? 'Zurückholen'
+                : leaseCounts.ready > 0
+                  ? `Zurückholen (${leaseCounts.ready})`
+                  : `Zurückholen · ${leaseCounts.open}`}
+            </Button>
+          </div>
           {(() => {
             const switchMode = (id: Mode) => {
               setMode(id)
               setError('')
               setInfo('')
               clearSinglePreview()
-              /* Galerie behalten, wenn man zu Guthaben/Zeitkapsel wechselt (Auswahlhilfe). */
-              if (id !== 'guthaben' && id !== 'zeitkapsel') {
+              /**
+               * Galerie behalten beim Wechsel innerhalb Wallet-Tabs (sonst springt der Dialog,
+               * weil der Inhalt schrumpft). Nur Wire/Klartext leeren die Galerie.
+               */
+              if (id === 'wire' || id === 'mailbox') {
                 clearOwnerGallery()
               }
               setWireRows([])
@@ -1278,25 +1272,26 @@ export function ChatViewEvidenceImageViewerButton(p?: {
             }
             const browseTabs = allowed.filter((m) => BROWSE_MODE_IDS.includes(m.id))
             const actTabs = allowed.filter((m) => ACT_MODE_IDS.includes(m.id))
-            const showGroups = !nftWalletUi && browseTabs.length > 0 && actTabs.length > 0
-            const tabLabel = (id: Mode, fallback: string) =>
-              (nftWalletUi ? NFT_WALLET_TAB_LABEL[id] : undefined) || fallback
+            const showGroups = browseTabs.length > 0 && actTabs.length > 0
             const renderTabs = (tabs: typeof allowed, opts?: { ownFirst?: boolean }) => (
               <div className="flex min-h-9 flex-wrap items-center gap-2">
                 {opts?.ownFirst && tabs.some((t) => t.id === 'owner') ? (
                   <Button
                     type="button"
                     size="sm"
-                    className="h-8 min-w-[4.5rem]"
+                    className="h-8"
                     variant={mode === 'owner' ? 'default' : 'outline'}
                     disabled={busy}
                     title="Eigene NFT laden / anzeigen"
                     onClick={() => void loadOwnWalletGallery()}
                   >
                     {busy && mode === 'owner' ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-label="Laden" />
+                      <>
+                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        Laden…
+                      </>
                     ) : (
-                      tabLabel('owner', 'Eigene NFT anzeigen')
+                      'Eigene NFT anzeigen'
                     )}
                   </Button>
                 ) : null}
@@ -1307,11 +1302,11 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                       key={id}
                       type="button"
                       size="sm"
-                      className="h-8 min-w-[4.5rem]"
+                      className="h-8"
                       variant={mode === id ? 'default' : 'outline'}
                       onClick={() => switchMode(id)}
                     >
-                      {tabLabel(id, label)}
+                      {label}
                     </Button>
                   ))}
               </div>
@@ -1321,13 +1316,25 @@ export function ChatViewEvidenceImageViewerButton(p?: {
             }
             return (
               <div className="space-y-2">
-                <div className="space-y-1 rounded-md p-2">
+                <div
+                  className={`space-y-1 rounded-md p-2 ${
+                    BROWSE_MODE_IDS.includes(mode)
+                      ? 'bg-muted/40 ring-1 ring-border/60'
+                      : 'opacity-90'
+                  }`}
+                >
                   <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                     1 · Schauen / suchen
                   </p>
                   {renderTabs(browseTabs, { ownFirst: true })}
                 </div>
-                <div className="space-y-1 rounded-md border-t border-border/50 p-2 pt-2">
+                <div
+                  className={`space-y-1 rounded-md border-t border-border/50 p-2 pt-2 ${
+                    ACT_MODE_IDS.includes(mode)
+                      ? 'bg-muted/40 ring-1 ring-border/60'
+                      : 'opacity-90'
+                  }`}
+                >
                   <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                     2 · Handeln
                   </p>
@@ -1336,7 +1343,9 @@ export function ChatViewEvidenceImageViewerButton(p?: {
               </div>
             )
           })()}
+        </div>
 
+        <div className="min-h-[min(52vh,28rem)] flex-1 overflow-y-auto pt-3">
           {mode === 'guthaben' || mode === 'zeitkapsel' ? (
             <NftCardToolsSection
               tool={mode}

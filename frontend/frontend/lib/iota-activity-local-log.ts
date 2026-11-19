@@ -293,7 +293,7 @@ export const IOTA_ACTIVITY_LISTEN_EVENTS = [IOTA_ACTIVITY_CHANGED_EVENT, NFT_ACT
 export function iotaActivityKindLabel(kind: IotaActivityKind): string {
   switch (kind) {
     case 'msg_burned':
-      return 'Burn'
+      return 'Nachricht vernichtet'
     case 'nft_mint':
       return 'NFT Mint'
     case 'nft_sent':
@@ -301,7 +301,7 @@ export function iotaActivityKindLabel(kind: IotaActivityKind): string {
     case 'nft_received':
       return 'NFT ←'
     case 'nft_burned':
-      return 'NFT Burn'
+      return 'NFT vernichtet'
     case 'coin_in':
       return 'Coin ←'
     case 'coin_out':
@@ -333,10 +333,10 @@ export const IOTA_ACTIVITY_FILTER_OPTIONS: Array<{ id: IotaActivityFilterId; lab
   { id: 'nft_mint', label: 'Mint' },
   { id: 'nft_sent', label: 'NFT raus' },
   { id: 'nft_received', label: 'NFT rein' },
-  { id: 'nft_burned', label: 'NFT Burn' },
+  { id: 'nft_burned', label: 'NFT vernichtet' },
   { id: 'coin_in', label: 'Coin rein' },
   { id: 'coin_out', label: 'Coin raus' },
-  { id: 'msg_burned', label: 'Msg-Burn' },
+  { id: 'msg_burned', label: 'Nachricht vernichtet' },
 ]
 
 function looksLikeLeaseActivity(e: IotaActivityEntry): boolean {
