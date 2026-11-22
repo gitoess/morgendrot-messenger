@@ -329,7 +329,6 @@ export const DashboardNftSecuredSpendPanel = forwardRef<
       busy,
     }),
     // pay closes over latest activeId/vault; refresh when those change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [activeId, vault, busy, recipient, amountIota]
   )
 
