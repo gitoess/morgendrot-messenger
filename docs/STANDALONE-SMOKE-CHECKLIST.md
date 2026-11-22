@@ -28,7 +28,7 @@
 | Was man meint | Ist | Was tun |
 |---------------|-----|---------|
 | **„Standalone PC-Schreibtisch“** | Vitest/`smoke:standalone-desk` — Prep für **Handy** Variante B | Schon vor APK; ersetzt **kein** Gerät |
-| **PC Direct-IOTA (Stage‑2)** | Browser + `npm run dm`: Tresor **über API**, Send/Inbox **Direkt-RPC** gegen Fullnode | **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** § 2 — **nicht** „kein API“ |
+| **PC Direct-IOTA (Stage‑2)** | Browser + `npm run dm`: Tresor **über API**, Send/Inbox **Direkt-RPC** gegen Fullnode | Kurz: **`docs/PC-STAGE2-DIRECT-IOTA-SMOKE.md`**; Lang: Stage‑2 § 2 — **nicht** „kein API“ |
 | **Matrix H** „PC wie Handy ohne Server“ | Roadmap **Backlog** ~40 %; Code: `isStandaloneMessengerWithoutBasis()` **nur Capacitor** (Desktop bleibt bei `/api/unlock`) | **Nicht** als aktuelles Smoke verkaufen; Produkt später opt-in |
 | **PC Doppelklick** (`.bat` / Electron / später `.exe`) | Bundle **mit** Node (**B/C**) — ohne Terminal tippen; **kein** „ohne Server“ | `Start-Messenger.bat` / `npm run desktop`; echte `.exe` noch offen (Roadmap B/C) |
 

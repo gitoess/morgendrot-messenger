@@ -30,7 +30,7 @@
 
 1. **Fokus jetzt:** **PC-Messenger fertig ziehen**. **Nicht jetzt:** Handy-Abnahme, Funk-Feld, physisches 2. Gerät, Helfer/Boss.  
 2. **Erledigt (PC):** Settings/TG/G2–G4; Posteingang-UX; fail-closed; product-identity; Mailbox/Handshake-Klarheit; Desk-Smoke 87/87; `SIGNER=sdk`.  
-3. **Als Nächstes (nur PC):** Stage‑2 Direct-IOTA Browser (Klartext+Enc Self/Zwei-Wallet); PC-UX-Rest; Vitest/Merge. **Kein** APK-/Funk-Zwang.  
+3. **Als Nächstes (nur PC):** Stage‑2 Direct-IOTA Browser — Kurzprotokoll **`docs/PC-STAGE2-DIRECT-IOTA-SMOKE.md`** (Klartext+Enc Self/Zwei-Wallet); PC-UX-Rest; Vitest/Merge. **Kein** APK-/Funk-Zwang.  
 4. **Danach:** Phase 2 Handy → Phase 3 Funk → Phase 4 physisches 2. Gerät.  
 5. **Wallet/IOTA-Aktivität:** Freeze. **Gestrichen:** WhatsApp/Paywall.  
 6. **Merge-Ritual** nach sinnvollem Paket.
@@ -86,7 +86,7 @@
 | **H.18** | TTS/STT Ausbau | Vorlesen Ist-teilweise; Cloud-STT später |
 | **H.19** | Forensic Capture | Nach Kern |
 | **H.21** (Rest) | Verschlüsselter Kurier-Umschlag | Später |
-| **H.23 Rest** | Session C, C1-Default, P5d, MeshSleepy | **Physisches 2. Gerät ganz am Schluss** / Phase 3 |
+| **H.23 Rest** | Session C, C1-Default, P5d | **Physisches 2. Gerät = Phase 4**; MeshSleepy mit Funk = Phase 3 |
 | **H.3 / Funk** | Meshtastic-Feld | **Phase 3** (nach Handy 1 Gerät) |
 | **H.15 4e/4f** | Zwei-Geräte Peering/QR (APK) | **Phase 4** |
 | **Physisches 2. Gerät** | Session C Privacy/NFT Joint | **Phase 4** — PC vorher 2-Wallet-Surrogat ok |
