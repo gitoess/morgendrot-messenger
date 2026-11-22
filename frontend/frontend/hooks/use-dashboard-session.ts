@@ -96,6 +96,7 @@ import { DIRECT_IOTA_UI_CHANGED } from '@/frontend/lib/direct-iota-ui-events'
 import { clearDirectChatEcdhKeyMaterial } from '@/frontend/lib/direct-chat-ecdh-session'
 import { wipeLocalPassphraseStoresOnLock } from '@/frontend/lib/privacy-lock-wipe'
 import { unlockLocalSecretVaults } from '@/frontend/lib/local-secret-vaults'
+import { hydrateVaultPasswordSessionFromTab } from '@/frontend/lib/vault-password-session'
 import { setPrivacySoftLocked } from '@/frontend/lib/privacy-soft-lock'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { readContactFavorites } from '@/frontend/lib/contact-phonebook-meta-store'
@@ -268,6 +269,17 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   useEffect(() => {
     setShowAllTiles(readShowAllTilesPref())
     setFirstStepsVisible(readFirstStepsVisible())
+  }, [])
+
+  /** F5/HMR: Browser-Vault-PW aus Tab-sessionStorage → Sidecars wieder öffnen (API bleibt ggf. schon offen). */
+  useEffect(() => {
+    const pw = hydrateVaultPasswordSessionFromTab()
+    if (!pw) return
+    void unlockLocalSecretVaults(pw).then((secrets) => {
+      if (!secrets.ok) {
+        console.warn('[vault] Tab-Session Sidecar-Unlock:', secrets.errors.join('; '))
+      }
+    })
   }, [])
 
   useEffect(() => {
