@@ -97,6 +97,7 @@ import { clearDirectChatEcdhKeyMaterial } from '@/frontend/lib/direct-chat-ecdh-
 import { wipeLocalPassphraseStoresOnLock } from '@/frontend/lib/privacy-lock-wipe'
 import { unlockLocalSecretVaults } from '@/frontend/lib/local-secret-vaults'
 import { hydrateVaultPasswordSessionFromTab } from '@/frontend/lib/vault-password-session'
+import { readVaultIdleLockMinutes } from '@/frontend/lib/vault-idle-lock-pref'
 import { setPrivacySoftLocked } from '@/frontend/lib/privacy-soft-lock'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { readContactFavorites } from '@/frontend/lib/contact-phonebook-meta-store'
@@ -1120,6 +1121,38 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     }
     return r
   }, [checkStatus, navigateTo])
+
+  /**
+   * Optional Idle-Hard-Lock (Einstellung, Default aus).
+   * Kein Auto-Lock bei F5 — nur Abmelden / Sitzung beenden / Idle wenn gewählt.
+   */
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    let lastActivity = Date.now()
+    let timer: ReturnType<typeof setInterval> | null = null
+    const bump = () => {
+      lastActivity = Date.now()
+    }
+    const tick = () => {
+      const minutes = readVaultIdleLockMinutes()
+      if (minutes <= 0) return
+      if (locked || apiSnapshot?.locked === true) return
+      if (Date.now() - lastActivity < minutes * 60_000) return
+      lastActivity = Date.now()
+      void lockSession()
+    }
+    const opts: AddEventListenerOptions = { passive: true }
+    window.addEventListener('pointerdown', bump, opts)
+    window.addEventListener('keydown', bump, opts)
+    window.addEventListener('mousemove', bump, opts)
+    timer = setInterval(tick, 15_000)
+    return () => {
+      window.removeEventListener('pointerdown', bump)
+      window.removeEventListener('keydown', bump)
+      window.removeEventListener('mousemove', bump)
+      if (timer != null) clearInterval(timer)
+    }
+  }, [locked, apiSnapshot?.locked, lockSession])
 
   const requestVaultUnlock = useCallback((opts?: { navigateHome?: boolean }) => {
     vaultUnlockRequestedRef.current = true

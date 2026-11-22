@@ -149,6 +149,6 @@ Details Nutzer: `docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md` §1.
 
 ---
 
-**Nachtrag 2026-11-22 (Schicht C / F5):** Vault-Passwort-Session überlebt **Reload im selben Tab** (`sessionStorage`); **Abmelden** / Soft-Lock leert sie. **API-Prozess-Neustart** (`npm run dm`) braucht weiterhin Unlock — Keys liegen nur in Node-RAM. Idle-Auto-Lock (Abwesenheit) = optional später, Default aus.
+**Nachtrag 2026-11-22 (Schicht C / F5 + Idle):** Vault-Passwort-Session überlebt **Reload im selben Tab** (`sessionStorage`); **Abmelden** / Soft-Lock leert sie. **F5 sperrt den API-Tresor nicht** (solange der Node-Prozess läuft). **API-Prozess-Neustart** (`npm run dm`) braucht weiterhin Unlock. Optional: Einstellungen → Tresor → **Auto-Sperren nach Abwesenheit** (Default **aus**).
 
 *Stand: 2026-11-22 — §9 Seed/PW-SPOF; Schicht C Tab-Persist; Soft-Lock / Sidecar.*
