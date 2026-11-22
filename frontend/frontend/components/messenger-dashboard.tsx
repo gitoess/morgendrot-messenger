@@ -48,6 +48,8 @@ import { DashboardHeaderAddress } from '@/frontend/components/dashboard-header-a
 import { TresorSessionBadge } from '@/frontend/components/chat-view-chat-header'
 import { DashboardMessengerBossHome } from '@/frontend/components/dashboard-messenger-boss-home'
 import { DashboardSharedDialogs } from '@/frontend/components/dashboard-shared-dialogs'
+import { VaultFailClosedSurface } from '@/frontend/components/vault-fail-closed-surface'
+import { shouldApplyVaultFailClosedOverlay } from '@/frontend/lib/vault-fail-closed'
 import { messengerFeatures, featureTitle } from '@/frontend/components/dashboard-features-messenger'
 import { useMessengerFeatures } from '@/frontend/hooks/use-messenger-features'
 import { DashboardMyAddressPicker } from '@/frontend/components/dashboard-my-address-picker'
@@ -167,6 +169,11 @@ function MessengerDashboardBody({
   }, [s.checkStatus])
 
   const vaultSessionLocked = !!(s.locked || s.apiSnapshot?.locked)
+  const applyVaultFailClosed = shouldApplyVaultFailClosedOverlay({
+    vaultSessionLocked,
+    suppressForHelperSeed: s.unlock.suppressVaultUnlockForHelperSeed,
+    suppressForOnboardingWizard: !vaultOverWizard && onboardingWizardOpen,
+  })
   const browserSignerReady = isBrowserSessionSignerReady(s.locked)
   const vaultKeysReady = browserSignerReady
   const standaloneApkWithoutBasis = isStandaloneMessengerWithoutBasis()
@@ -379,7 +386,8 @@ function MessengerDashboardBody({
         onReloadStatus={() => void s.checkStatus()}
       />
       {s.activeView ? (
-      <div
+      <VaultFailClosedSurface
+        active={applyVaultFailClosed}
         className={cn(
           'bg-background',
           isCapacitorNativePlatform() && s.activeView.type === 'chat'
@@ -567,10 +575,11 @@ function MessengerDashboardBody({
             />
           )}
         </main>
-      </div>
+      </VaultFailClosedSurface>
       ) : (
     <DeploymentProfileBackdrop status={s.apiSnapshot} hideWatermark={isEinsatzLeadHome}>
-    <div
+    <VaultFailClosedSurface
+      active={applyVaultFailClosed}
       className={cn(
         'bg-background/80',
         isCapacitorNativePlatform()
@@ -890,7 +899,7 @@ function MessengerDashboardBody({
           </div>
         ) : null}
       </main>
-    </div>
+    </VaultFailClosedSurface>
     </DeploymentProfileBackdrop>
       )}
     </>
