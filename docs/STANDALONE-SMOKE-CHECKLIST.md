@@ -2,7 +2,7 @@
 
 **Zweck:** Eine **einzige Abnahme-Runde** für **APK + Handoff + Direkt-RPC** — abgeleitet aus **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** § 10 **4b–4f**, ohne die Relay-/Boss-LAN-Schritte zu vermischen.
 
-**Reihenfolge (2026-11-22):** Zuerst **PC-Messenger komplett** (inkl. Desk-Smoke + optional Zwei-Wallet am PC). **Dann** diese Checkliste ab **4b–4d** (1 Handy). **4e–4f / physisches 2. Gerät** und Funk → **ganz am Schluss** (`docs/ROADMAP-FAHRPLAN.md` Arbeitsstand).
+**Reihenfolge (2026-11-22):** (1) **PC komplett** → (2) diese Checkliste **4b–4d** (1 Handy) → (3) **Funk/Meshtastic** → (4) **4e–4f / physisches 2. Gerät** (`docs/ROADMAP-FAHRPLAN.md` Arbeitsstand).
 
 **Nicht dasselbe wie:** § 9 Offline/Reconnect, § 10 Schritt 4 (Basis-URL), § 2 Browser-am-PC — die brauchen einen laufenden Morgendrot-Server und stehen in **`docs/HANDY-LATER-MANUAL-TESTS.md`** (A–D). **Diese Liste nur ausführen, wenn ihr bewusst Standalone testet** — und **nach** stabilem PC.
 

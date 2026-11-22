@@ -20,21 +20,20 @@
 
 **Aktueller Arbeitsstand (verbindlich 2026-11-22 — IOTA-Messenger + Phasen-Reihenfolge):**
 
-**Phasen-Reihenfolge (User 2026-11-22 — verbindlich verbessert):**
+**Phasen-Reihenfolge (User 2026-11-22 — verbindlich):**
 1. **PC zuerst komplett** — Messenger-Kern, UX, Desk-Smoke, Direct-IOTA Stage‑2, optional **Zwei-Wallet/Zwei-Browser auf demselben PC** für Handshake/E2EE/NFT-Solo.  
 2. **Dann Handy (1 Gerät)** — frische APK, Standalone **4b–4d** (kein zweites Handy nötig).  
-3. **Physisches 2. Gerät ganz am Schluss** — Session C, Standalone **4e/4f**, echte Zwei-Geräte-QR/Peering.  
-4. **Funk/Meshtastic** — separat ganz hinten (braucht wirklich 2 Radios/Geräte); nicht Messenger-PC-Blocker.
+3. **Funk / Meshtastic** — Heltec/Web-BT, Klartext-Pfad, Feld (braucht Radios; **nicht** physisches 2. Handy-Messenger-Gerät).  
+4. **Physisches 2. Gerät ganz am Schluss** — Session C, Standalone **4e/4f**, echte Zwei-Geräte-QR/Peering.
 
-**Kritisch ehrlich:** Fast alles außer Funk lässt sich **ohne zweites Handy** prüfen (2 Browser-Profile / 2 Seeds auf dem PC). Ein zweites **physisches** Gerät bleibt sinnvoll für APK-Realität und 4e/4f — aber **nicht** vor „PC sauber“.
+**Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
-1. **Fokus jetzt:** **PC-Messenger fertig ziehen** (IOTA-Messenger: Wallet, Mailbox-Chat, Gruppen leicht, Transfer, Telefonbuch/QR, Handshake). **Nicht jetzt:** Handy-Abnahme, physisches 2. Gerät, Helfer/Boss/Mesh.  
-2. **Erledigt (PC):** Settings/TG/G2–G4; Posteingang-UX; fail-closed Overlay; product-identity; Mailbox/Handshake-Klarheit; Desk-Smoke 87/87; `SIGNER=sdk` Default.  
-3. **Als Nächstes (nur PC):** Stage‑2 Direct-IOTA am Browser (Klartext+Enc Self/Zwei-Wallet); restliche PC-UX-Lücken; Vitest/Merge-Hygiene. **Kein** APK-Zwang in dieser Phase.  
-4. **Danach Handy:** `apk:debug:build` → **4b–4d** (1 Gerät).  
-5. **Ganz am Schluss:** Session C / **4e–4f** / physisches 2. Gerät; dann Funk.  
-6. **Wallet/IOTA-Aktivität:** Freeze. **Gestrichen:** WhatsApp/Paywall.  
-7. **Merge-Ritual** nach sinnvollem Paket.
+1. **Fokus jetzt:** **PC-Messenger fertig ziehen**. **Nicht jetzt:** Handy-Abnahme, Funk-Feld, physisches 2. Gerät, Helfer/Boss.  
+2. **Erledigt (PC):** Settings/TG/G2–G4; Posteingang-UX; fail-closed; product-identity; Mailbox/Handshake-Klarheit; Desk-Smoke 87/87; `SIGNER=sdk`.  
+3. **Als Nächstes (nur PC):** Stage‑2 Direct-IOTA Browser (Klartext+Enc Self/Zwei-Wallet); PC-UX-Rest; Vitest/Merge. **Kein** APK-/Funk-Zwang.  
+4. **Danach:** Phase 2 Handy → Phase 3 Funk → Phase 4 physisches 2. Gerät.  
+5. **Wallet/IOTA-Aktivität:** Freeze. **Gestrichen:** WhatsApp/Paywall.  
+6. **Merge-Ritual** nach sinnvollem Paket.
 
 ### Jetzt machen (IOTA-Messenger — User-Durchgang 2026-11-22)
 
@@ -88,8 +87,9 @@
 | **H.19** | Forensic Capture | Nach Kern |
 | **H.21** (Rest) | Verschlüsselter Kurier-Umschlag | Später |
 | **H.23 Rest** | Session C, C1-Default, P5d, MeshSleepy | **Physisches 2. Gerät ganz am Schluss** / Phase 3 |
-| **H.15 4e/4f** | Zwei-Geräte Peering/QR (APK) | Nach PC + nach 1-Gerät-4b–4d |
-| **Physisches 2. Gerät** | Session C Privacy/NFT Joint | **Schluss** — auf PC vorher 2-Wallet-Surrogat ok |
+| **H.3 / Funk** | Meshtastic-Feld | **Phase 3** (nach Handy 1 Gerät) |
+| **H.15 4e/4f** | Zwei-Geräte Peering/QR (APK) | **Phase 4** |
+| **Physisches 2. Gerät** | Session C Privacy/NFT Joint | **Phase 4** — PC vorher 2-Wallet-Surrogat ok |
 | **H.24 / H.24a/b** | Package-Profile Multi-Einsatz UI | Nach Messenger-Kern |
 | **H.25 / H.25a** | LoRa-Bilder LUMA/CHROMA | Feld später |
 | **H.26** (Rest) | Alarmgruppe B4b / Einsatz-TG | Split: Edition weg |
@@ -289,7 +289,7 @@
 **Session B Joint (2026-11-09):** B7a–d Kern PASS; Burn 2. TX + B8 Self-Borrower FAIL → **Fix Code** (Spend+Burn eine TX; Lease Self-Guard). Retest: neues One-Time → Auszahlen; Zeitkapsel an fremde Wallet `0x0bbc…`.  
 **B2-S6 Rest (2026-11-09):** Offline Compact → Index empfangen Self-Paste PASS; Lease `0xa802…` Früh-zurück UX (Signer-Gate); Reclaim skip bis unlock. **Freeze** dieser Welle.  
 **Nachzug 2026-11-16:** PC-UX/Settings-Durchgang dazwischen (T-Rituale).  
-**Nachzug 2026-11-22:** **PC komplett → Handy 1 Gerät → physisches 2. Gerät/Session C ganz am Schluss.** Session C ist **kein** nächster Schritt mehr.
+**Nachzug 2026-11-22:** **PC → Handy 1 Gerät → Funk/Meshtastic → physisches 2. Gerät/Session C.** Session C / 4e–4f sind **kein** nächster Schritt. Code: stabile Scheiben, oft testen.
 
 **Nachtrag 2026-11-09 (IOTA-Aktivität kritisch + Zeitkapsel-Soll hinten):**
 - **IOTA-Aktivität = lokal kuratiert** (App-Events), **kein** Explorer-Wallet-Feed. Vollhistorie aller TXs + Nachrichten **würde Sinn machen als späteres Produktfeature**, aber **nicht jetzt**: RPC-Query-Last, Failed/Gas-Spam, Privacy (fremde Digests im UI), Duplikat-Risiko vs. Posteingang.
@@ -635,7 +635,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 
 **Prinzip:** Erst **Phase A** absichern, dann **Phase B** (Mesh + Delayed Upload), dann **Phase C** (Makros/Gateway). **Nicht** parallel: großer UI-Refactor (**§ H.1b**) und neuer **Mesh-Kern** in derselben Woche; **§ I**-Produktversprechen vor **B**; **Kabel-Bridge** (**§ A.8**) bewusst **nach** klarer Queue-/Sync-Semantik (**§ H.12**) oder mit Spec-Abgleich. **Ab 2026-04-28:** **§ H.15** (Client-IOTA, optionaler Node) in **kleinen Scheiben** parallel zu **§ H.0–H.2** **erlaubt**, solange **`TESTING.md`**-Ritual und **kein** unkontrollierter Cross-Refactor mit **Mesh-Kern** (**§ C.0b** weiter beachten).
 
-**Operative Reihenfolge (einheitlich):** **Ab 2026-11-22:** (1) **PC-Messenger komplett** (*Jetzt*-Tabelle + Stage‑2 am Browser). (2) **Handy 1 Gerät** 4b–4d. (3) **Physisches 2. Gerät / Session C / 4e–4f** ganz am Schluss. (4) Funk/Mesh (**H.3***) separat hinten. Historisch: C.0b → Phase A → Handy — ersetzt durch diese Phasen.
+**Operative Reihenfolge (einheitlich):** **Ab 2026-11-22:** (1) **PC-Messenger komplett**. (2) **Handy 1 Gerät** 4b–4d. (3) **Funk/Meshtastic**. (4) **Physisches 2. Gerät** / Session C / 4e–4f. Stabil: kleine Scheiben + Tests.
 
 | Stufe | Reihenfolge | Hinweis |
 |-------|-------------|---------|

@@ -1,0 +1,23 @@
+---
+description: PC-Phase — Code stabil halten (2026-11-22)
+alwaysApply: true
+---
+
+# PC-Phase: Stabilität
+
+User 2026-11-22: **Alles läuft gut — nicht kaputt machen.**
+
+## Phasen
+
+1. PC komplett → 2. Handy 1 Gerät → 3. Funk/Meshtastic → 4. Physisches 2. Gerät
+
+## Pflicht
+
+- Kleine Scheiben; nach Code: gezielte Vitest / `smoke:standalone-desk` wo betroffen.
+- Kein Big-Bang-Refactor parallel zu Messenger-Kern.
+- Wallet/IOTA-Aktivität: Freeze (`wallet-activity-freeze.mdc`).
+- Kein Handy-/Funk-/2-Geräte-Druck in der PC-Phase.
+
+## Erlaubt
+
+- Copy/Klarheit, kleine Bugfixes, Docs, Tests, Stage‑2 Direct-IOTA am PC.
