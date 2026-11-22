@@ -12,7 +12,6 @@ export type ChatViewPinnwandFeedPanelPropsDeps = {
     | 'inboxFeedRead'
     | 'inboxViewUi'
     | 'inboxActions'
-    | 'inboxExportActions'
     | 'pinnwandFeedRead'
     | 'attachmentBar'
     | 'inboxHandshakePanelActions'
@@ -32,7 +31,6 @@ export function useChatViewPinnwandFeedPanelProps(
     inboxFeedRead,
     inboxViewUi,
     inboxActions,
-    inboxExportActions,
     pinnwandFeedRead,
     attachmentBar,
     inboxHandshakePanelActions,
@@ -56,7 +54,6 @@ export function useChatViewPinnwandFeedPanelProps(
       myAddress: inboxFeedRead.myAddress,
       contactDirectory: contactDirectoryRead.directory,
       isMeshVerifiedForAddress: contactDirectoryRead.isMeshVerifiedForAddress,
-      exportEcdhMorgPkgForMessage: inboxExportActions.exportEcdhMorgPkgForMessage,
       onHideInboxMessageLocal: inboxActions.onHideInboxMessageLocal,
       onPurgeInboxMessageChain: inboxActions.onPurgeInboxMessageChain,
       onForwardMessage: inboxActions.onForwardMessage,
@@ -86,7 +83,6 @@ export function useChatViewPinnwandFeedPanelProps(
       inboxFeedRead.myAddress,
       inboxViewUi,
       inboxActions,
-      inboxExportActions,
       pinnwandFeedRead.feedMessages,
       pinnwandFeedRead.feedInboxRows,
       attachmentBar.sending,

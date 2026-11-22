@@ -36,4 +36,29 @@ describe('resolveMorgPkgRecipientAddress', () => {
       })
     ).toEqual({ recipient: A, error: null })
   })
+
+  it('erlaubt Self wenn in peerMap', () => {
+    expect(
+      resolveMorgPkgRecipientAddress({
+        connectedAddresses: [A],
+        partner: '',
+        recipient: '',
+        exportRecipient: A,
+        myAddress: A,
+      })
+    ).toEqual({ recipient: A, error: null })
+  })
+
+  it('Self ohne peerMap → klarer Hinweis', () => {
+    const r = resolveMorgPkgRecipientAddress({
+      connectedAddresses: [B],
+      partner: '',
+      recipient: '',
+      exportRecipient: A,
+      myAddress: A,
+    })
+    expect(r.recipient).toBeNull()
+    expect(r.error).toMatch(/An mich|eigenen Adresse|Self-Handshake/i)
+  })
 })
+

@@ -27,7 +27,6 @@ function makeProps(overrides: Partial<ChatViewInboxListProps> = {}): ChatViewInb
     ] as unknown as ChatViewInboxListProps['inboxRows'],
     contactDirectory: {},
     isMeshVerifiedForAddress: () => false,
-    exportEcdhMorgPkgForMessage: vi.fn(),
     onHideInboxMessageLocal: vi.fn(),
     onPurgeInboxMessageChain: vi.fn(),
     onForwardMessage: vi.fn(),

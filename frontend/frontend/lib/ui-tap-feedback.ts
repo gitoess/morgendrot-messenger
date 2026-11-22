@@ -269,7 +269,7 @@ export function playUiTone(kind: UiToneKind): void {
 }
 
 const TAP_SELECTOR =
-  'button, [role="button"], [data-slot="button"], a[href], summary, [data-tap-feedback], input[type="button"], input[type="submit"], input[type="reset"], input[type="search"]'
+  'button, [role="button"], [role="menuitem"], [data-slot="button"], [data-slot="dropdown-menu-item"], a[href], summary, [data-tap-feedback], input[type="button"], input[type="submit"], input[type="reset"], input[type="search"]'
 
 function isInteractiveTapTarget(el: Element | null): Element | null {
   if (!el || !(el instanceof Element)) return null
@@ -295,15 +295,17 @@ function clearHoverMagnet(): void {
   hoverTarget = null
 }
 
-function applyHoverMagnet(el: Element): void {
-  if (!readMagnetFeedbackEnabled()) return
+/** Hover: Ton folgt Sound-Pref; Magnet-Optik nur wenn Magnet an. Menuitems (Optionen) zählen mit. */
+function applyHoverFeedback(el: Element): void {
   if (!(el instanceof HTMLElement)) return
   if (hoverTarget === el) return
   clearHoverMagnet()
   hoverTarget = el
-  el.classList.add('ui-magnet-hover')
+  if (readMagnetFeedbackEnabled()) {
+    el.classList.add('ui-magnet-hover')
+  }
   const now = Date.now()
-  if (now - lastHoverToneAt > 220) {
+  if (readSoundFeedbackEnabled() && now - lastHoverToneAt > 220) {
     lastHoverToneAt = now
     playTapClick('hover')
   }
@@ -326,7 +328,7 @@ export function ensureUiTapFeedbackInstalled(): void {
         clearHoverMagnet()
         return
       }
-      applyHoverMagnet(hit)
+      applyHoverFeedback(hit)
     },
     true
   )

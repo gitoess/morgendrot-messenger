@@ -49,7 +49,6 @@ import {
 } from '@/frontend/components/chat-view-pending-sends-button'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
-import { triggerHiddenFileInput } from '@/frontend/lib/trigger-hidden-file-input'
 import {
   inboxToolbarToolsForSendPath,
   type InboxToolbarPathTools,
@@ -230,7 +229,7 @@ function morgPkgDeviceTitle(apiStatus: ApiStatus | null, busy: boolean): string 
   if (!apiStatus?.connectedAddresses?.length) {
     return 'Zuerst Partner verbinden (Handshake) — Export verschlüsselt für verbundenen 0x-Partner.'
   }
-  return 'Dateien vom Gerät zu einem verschlüsselten .morg-pkg bündeln (Sneakernet).'
+  return 'Partner gewählt → Dateien wählen → verschlüsseltes .morg-pkg zum Weitergeben.'
 }
 
 export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
@@ -957,51 +956,107 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             <DialogContent className="max-w-md sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Datei-Paket (.morg-pkg)</DialogTitle>
-                <DialogDescription className="sr-only">
-                  ECDH-Datei für einen Handshake-Partner; Import in Paket-Archiv.
+                <DialogDescription>
+                  ECDH-Offline-Paket: Empfänger-0x (verbunden / Self-Handshake) → Dateien wählen → Datei
+                  weitergeben. Klartext ohne ECDH: Nachrichten-⋯ → Export.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-3 text-sm">
-                {morgPkgExportPartnerOptions.length > 0 && onMorgPkgExportRecipientChange ? (
+                {onMorgPkgExportRecipientChange ? (
                   <div className="space-y-1.5">
                     <label htmlFor="morg-pkg-export-recipient" className="text-xs font-medium text-foreground">
-                      Partner (Handshake)
+                      Empfänger (0x — Handshake in peerMap)
                     </label>
-                    <select
+                    <input
                       id="morg-pkg-export-recipient"
+                      list="morg-pkg-export-partner-list"
                       value={morgPkgExportRecipient}
-                      onChange={(e) => onMorgPkgExportRecipientChange(e.target.value)}
-                      className="h-10 w-full rounded-md border border-border bg-background px-2 text-sm text-foreground"
-                    >
-                      {morgPkgExportPartnerOptions.length > 1 ? (
-                        <option value="">— Partner wählen —</option>
-                      ) : null}
+                      onChange={(e) => onMorgPkgExportRecipientChange(e.target.value.trim())}
+                      placeholder="0x… volle 64 Hex — oder Vorschlag wählen"
+                      spellCheck={false}
+                      autoComplete="off"
+                      className="h-10 w-full rounded-md border border-border bg-background px-2 font-mono text-xs text-foreground"
+                    />
+                    <datalist id="morg-pkg-export-partner-list">
                       {morgPkgExportPartnerOptions.map((o) => (
                         <option key={o.address} value={o.address}>
                           {o.label}
                         </option>
                       ))}
-                    </select>
+                    </datalist>
+                    <div className="flex flex-wrap gap-1.5">
+                      {myAddress.trim() ? (
+                        <button
+                          type="button"
+                          className="rounded-md border border-border bg-muted/40 px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
+                          title="Eigene Wallet — nur wenn Self-Handshake/Connect aktiv (wie verschlüsselte Nachricht an dich)."
+                          onClick={() => onMorgPkgExportRecipientChange(myAddress.trim())}
+                        >
+                          Ich
+                        </button>
+                      ) : null}
+                      {morgPkgExportPartnerOptions
+                        .filter((o) => !o.self)
+                        .slice(0, 4)
+                        .map((o) => (
+                          <button
+                            key={o.address}
+                            type="button"
+                            className="max-w-[11rem] truncate rounded-md border border-border bg-muted/40 px-2 py-1 text-[11px] text-foreground hover:bg-muted"
+                            title={o.address}
+                            onClick={() => onMorgPkgExportRecipientChange(o.address)}
+                          >
+                            {o.label.split(' · ')[0]}
+                          </button>
+                        ))}
+                    </div>
+                    {morgPkgExportPartnerOptions.length === 0 ? (
+                      <p className="rounded-md border border-amber-600/35 bg-amber-500/10 px-2.5 py-2 text-xs text-amber-950 dark:text-amber-100">
+                        Noch keine peerMap-Einträge. Zuerst Handshake/Connect mit dem Empfänger (oder mit
+                        dir selbst für „Ich“). Telefonbuch allein reicht nicht.
+                      </p>
+                    ) : null}
                   </div>
-                ) : (
-                  <p className="rounded-md border border-amber-600/35 bg-amber-500/10 px-2.5 py-2 text-xs text-amber-950 dark:text-amber-100">
-                    Kein Handshake-Partner — ECDH-.morg-pkg braucht Connect. Speichern gesperrt.
-                  </p>
-                )}
+                ) : null}
                 <div className="grid gap-2">
-                  {onOpenMorgPkgArchive ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="h-10 justify-start"
-                      onClick={() => {
-                        onOpenMorgPkgArchive()
-                        setPkgToolsOpen(false)
-                      }}
-                    >
-                      Paket-Archiv{morgPkgImportCount > 0 ? ` (${morgPkgImportCount})` : ''}
-                    </Button>
-                  ) : null}
+                  <Button
+                    type="button"
+                    variant="default"
+                    className="h-10 justify-start"
+                    disabled={
+                      pkgDeviceDisabled ||
+                      !/^0x[a-fA-F0-9]{64}$/i.test(morgPkgExportRecipient.trim())
+                    }
+                    title={
+                      !/^0x[a-fA-F0-9]{64}$/i.test(morgPkgExportRecipient.trim())
+                        ? 'Volle Empfänger-Adresse 0x + 64 Hex eintragen.'
+                        : morgPkgDeviceTitle(apiStatus, morgPkgDeviceBusy)
+                    }
+                    onClick={() => {
+                      if (!/^0x[a-fA-F0-9]{64}$/i.test(morgPkgExportRecipient.trim())) {
+                        setStatus('error')
+                        setStatusMsg('Empfänger: volle 0x-Adresse (64 Hex) eintragen.')
+                        setTimeout(() => setStatus('idle'), 6000)
+                        return
+                      }
+                      if (pkgDeviceDisabled) {
+                        setStatus('error')
+                        setStatusMsg(morgPkgDeviceTitle(apiStatus, morgPkgDeviceBusy))
+                        setTimeout(() => setStatus('idle'), 8000)
+                        return
+                      }
+                      // Dialog offen lassen bis File-Picker läuft — sonst verliert der Browser die User-Geste.
+                      void (async () => {
+                        try {
+                          await onMorgPkgDeviceExportPick()
+                        } finally {
+                          setPkgToolsOpen(false)
+                        }
+                      })()
+                    }}
+                  >
+                    {morgPkgDeviceBusy ? 'Paket wird erstellt…' : '.morg-pkg erstellen…'}
+                  </Button>
                   <Button
                     type="button"
                     variant="outline"
@@ -1015,43 +1070,26 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                         setTimeout(() => setStatus('idle'), 7000)
                         return
                       }
+                      // Input synchron in dieser Geste — Dialog erst danach schließen.
+                      morgPkgFileRef.current?.click()
                       setPkgToolsOpen(false)
-                      triggerHiddenFileInput(morgPkgFileRef)
                     }}
                   >
                     Import: .morg-pkg → Archiv
                   </Button>
-                  <Button
-                    type="button"
-                    variant="default"
-                    className="h-10 justify-start"
-                    disabled={pkgDeviceDisabled || morgPkgExportPartnerOptions.length === 0}
-                    title={
-                      morgPkgExportPartnerOptions.length === 0
-                        ? 'Handshake-Partner nötig (Connect).'
-                        : morgPkgDeviceTitle(apiStatus, morgPkgDeviceBusy)
-                    }
-                    onClick={() => {
-                      if (morgPkgExportPartnerOptions.length === 0) {
-                        setStatus('error')
-                        setStatusMsg('Handshake-Partner nötig — zuerst Connect.')
-                        setTimeout(() => setStatus('idle'), 8000)
-                        return
-                      }
-                      if (pkgDeviceDisabled) {
-                        setStatus('error')
-                        setStatusMsg(morgPkgDeviceTitle(apiStatus, morgPkgDeviceBusy))
-                        setTimeout(() => setStatus('idle'), 8000)
-                        return
-                      }
-                      setPkgToolsOpen(false)
-                      void onMorgPkgDeviceExportPick()
-                    }}
-                  >
-                    {morgPkgDeviceBusy
-                      ? 'Paket wird gebaut…'
-                      : 'Dateien → .morg-pkg speichern'}
-                  </Button>
+                  {onOpenMorgPkgArchive ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-10 justify-start"
+                      onClick={() => {
+                        onOpenMorgPkgArchive()
+                        setPkgToolsOpen(false)
+                      }}
+                    >
+                      Paket-Archiv{morgPkgImportCount > 0 ? ` (${morgPkgImportCount})` : ''}
+                    </Button>
+                  ) : null}
                 </div>
               </div>
             </DialogContent>
@@ -1263,7 +1301,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               </button>
             </div>
             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Auswahl ({selectedInboxCount}) — wie Nachrichten-⋯, gebündelt
+              Auswahl ({selectedInboxCount}) — Zeilen-Aktionen gebündelt
             </p>
             <div className="grid gap-1.5 sm:grid-cols-2">
               <button
@@ -1304,9 +1342,9 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 disabled={selectedInboxCount === 0}
                 onClick={onBulkExportJsonSelected}
                 className="rounded-md border border-border px-2 py-1.5 text-left hover:bg-muted disabled:opacity-50"
-                title="Auswahl als JSON-Datei (Inhalt wie angezeigt). ECDH-Datei-Paket → Optionen → .morg-pkg."
+                title="Auswahl als JSON-Snapshot. Einzelzeile: ⋯ → Exportieren (JSON/TXT/Medien). ECDH → Optionen → .morg-pkg erstellen."
               >
-                Als JSON-Datei…
+                Als JSON (Snapshot)…
               </button>
               <button
                 type="button"
@@ -1337,7 +1375,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               </button>
             </div>
             <p className="text-[11px] text-muted-foreground">
-              ⋯-Menü bleibt je Sendepfad stabil (ungeeignete Einträge grau). Massen-.morg-pkg → Optionen.
+              Kopieren/Vorlesen unter der Nachricht; Hash/Medien/.morg-pkg → Optionen. Mesh-Paket nur im Zeilen-⋯ bei Funk.
             </p>
           </div>
         ) : null}

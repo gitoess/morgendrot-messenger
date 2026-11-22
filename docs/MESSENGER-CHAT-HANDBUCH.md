@@ -17,12 +17,14 @@
 | **App-Header** (Boss/Messenger) | **Tresor**, **Aktualisieren** (Status + Posteingang + Kontakte), Handbuch, Einstellungen — **nicht** in der Posteingang-Leiste. In **Nachrichten** / **Einsatzleitung**: nur das **Gegenstück** als Schalter. In **Einstellungen**: Titel + Sprünge zu Nachrichten und Einsatzleitung |
 | **Chat-Kopf** | Sendepfad (**Alle** / Funk / **IOTA** / Telegram) steuert **Senden** (nicht die Posteingangs-Liste), **Ton/Stumm**, **SOS**. Liste filtern: Filter/Kanal. Mit Sidebar: **kein** großer Kanal-/Posteingang-Titel |
 | **Seitenleiste** (Desktop) | **Chats** gleiche Höhe wie Posteingang (`min(70vh,44rem)`), scrollt |
-| **Posteingang** (rechts) | Nachrichten + Toolbar; **Auswahl** ≈ Nachrichten-⋯ (Kopieren, Protokoll, Weiterleiten, JSON, Ausblenden, Burn) |
+| **Posteingang** (rechts) | Nachrichten + Toolbar; **Auswahl** = gebündelte Zeilen-Aktionen |
 | **Composer** | **Volle Breite unter beiden Spalten** (eigene Leiste, kein Overlap): `[+]` = Datei, Kamera, STT, Telefonbuch, **An Adresse senden**, **Sprachnachricht**, **Passphrase-Schutz**, **NFT-Leserecht**; Text; Senden. Empfänger-Wallet bei aktivem Chat ausgeblendet |
 | **Liste (Filter)** | **Beides / Eingang / Ausgang** und **Alles / Verschl. / Klartext** — nur Anzeige, nicht Sendemodus |
-| **Optionen** | **Posteingang · Tools** (Wire, Hash, Export, Pakete) + **Chat · Sicherheit** (Info, Schlüssel, Nach-Lesen-**Modus**) — kein separates Chat-⋮ mehr |
-| **Nachrichten-⋯** (pro Zeile) | Kopieren, Telefonbuch, lokal ausblenden, **Von Chain löschen (Burn)** |
-| **Auswahl** | Wie ⋯ gebündelt: Kopieren, Protokoll, Weiterleiten, JSON, Ausblenden, **Burn**. Nicht: Antworten, Telefonbuch, Handoff, Mesh-Paket, ECDH-pkg |
+| **Optionen** | **Posteingang · Tools** (Wire, Hash, Export/Medien-Galerie, .morg-pkg) + **Chat · Sicherheit** (Info, Schlüssel, Nach-Lesen-**Modus**) |
+| **Unter der Nachricht** | **Text kopieren**, **Vorlesen** (Klartext); Bild/Datei speichern in der Medien-Kachel |
+| **Nachrichten-⋯** (pro Zeile) | Operativ: Telefonbuch, Protokoll, Weiterleiten, **Exportieren** (JSON/TXT/Medien), ausblenden, **Burn**; Funk: Mesh-Paket; **kein** Kopieren/Vorlesen/Hash/Handoff/.morg-pkg |
+| **Handoff-Zeile** | Sichtbarer Button **Handoff übernehmen** (nicht im ⋯) |
+| **Auswahl** | Gebündelt: Kopieren, Protokoll, Weiterleiten, JSON, Hashes, Ausblenden, **Burn**. Nicht: Antworten, Telefonbuch, Handoff, Mesh-Paket |
 | **Browser** | Zurück/Vor navigiert Dashboard-Ansichten (`morgView`) |
 
 **Dashboard:** Kachel **Nachrichten** öffnet den Chat. **Telefonbuch** zusätzlich über `[+]` im Composer, Sidebar oder Kontakt-Detail.
@@ -42,7 +44,8 @@ Details + Tabelle: **`EINSTELLUNGEN-NUTZER-HANDBUCH.md`**.
 | Wo | Was es ist | Was es nicht ist |
 |----|------------|------------------|
 | **Optionen → Chat · Sicherheit** | Info, Schlüssel erneuern, **Nach-Lesen-Modus**, Verlauf leeren | Kein sofortiges Chain-Löschen |
-| **Nachrichten-⋯** | Diese eine Zeile (Burn, Kopieren, ausblenden, …) | Kein Sendemodus |
+| **Nachrichten-⋯** | Operativ **eine** Zeile (Weiterleiten, Burn, ausblenden, …) | Kein Lesen/Kopieren/Vorlesen; kein Export-Werkzeugkasten |
+| **Unter dem Text** | Kopieren + Vorlesen | Kein Burn / Weiterleiten |
 | **Auswahl** | Dieselben Zeilen-Aktionen für viele Nachrichten | Kein Antworten / Handoff / Mesh-Paket |
 
 **Echter Burn** = Zeilen-⋯ oder Auswahl → „Von Chain löschen“. **Nach Lesen löschen** in Optionen ist nur der Modus (Vorschlag nach Lesen).
@@ -565,20 +568,20 @@ Bei mehreren Package-IDs in `.env` und **package-id-history** liest der Posteing
 
 ## .morg-pkg (Paket-Archiv)
 
-**Posteingang → Optionen → Datei-Paket (.morg-pkg):** ECDH-verschlüsselte Dateien für Sneakernet / Offline-Übergabe.
+**Posteingang → Optionen → Datei-Paket (.morg-pkg):** ECDH-Offline-Paket für einen **verbundenen** Kontakt.
 
 | Aktion | Bedeutung |
 |--------|-----------|
-| **Import: .morg-pkg → Archiv** | Entschlüsselt (Tresor + Handshake zum Absender) → **Paket-Archiv**, nicht Posteingang |
-| **Export: Dateien → .morg-pkg speichern** | Mehrere Dateien ECDH-verschlüsselt für den **gewählten Handshake-Partner** |
-| **Paket-Archiv** | Sheet mit importierten Bundles; Einzeldateien öffnen/weiterleiten |
-| **⋯ → Für Partner (.morg-pkg ECDH)** | Eine Inbox-Zeile als ECDH-Paket für denselben Partner |
+| **Empfänger** | Volle **0x-Adresse** eintippen oder Vorschlag/Chip — muss in der **peerMap** sein (Handshake/Connect). **Ich** = Self-Handshake (wie verschlüsselte Nachricht an dich) |
+| **.morg-pkg erstellen…** | Dateien wählen → verschlüsselte `.morg-pkg`-Datei zum Weitergeben |
+| **Import: .morg-pkg → Archiv** | Entschlüsseln (Tresor + Handshake zum Absender) → **Paket-Archiv** |
+| **Paket-Archiv** | Importierte Bundles; Einzeldateien öffnen/weiterleiten |
 
-**Wer öffnet `.morg-pkg`?** Nur der **gewählte Handshake-Partner** (ECDH). Ohne Partner kein Speichern — Klartext-„für mich“ entfällt (sinnlos neben Datei-Explorer). Import braucht Handshake zum Absender.
+**Wer öffnet `.morg-pkg`?** Nur wer den ECDH-Schlüssel hat (gewählter Partner bzw. du bei Self). Telefonbuch allein reicht nicht — Connect nötig. Klartext-Export bleibt Nachrichten-⋯.
 
-**Unbekannte Adresse:** Sidebar **Direktchats → Adresse…** (wie Gruppen → Verwalten) — leeres Empfängerfeld, Fokus Composer. Zurück zur Übersicht: **Alle**.
+**Zeilen-⋯:** Export JSON · Export Text · Medien (wenn Marker) — flach im Menü (kein Untermenü). Kein ECDH — das bleibt Optionen → .morg-pkg erstellen.
 
-**Nicht verwechseln:** ⋯ → **Als JSON-Datei…** = Klartext-Snapshot der Zeile. Zwischenablage = nur Inhalt kopieren.
+**Unbekannte Adresse:** Sidebar **Direktchats → Adresse…** — leeres Empfängerfeld, Fokus Composer.
 
 ---
 
@@ -590,4 +593,4 @@ Bei mehreren Package-IDs in `.env` und **package-id-history** liest der Posteing
 
 ---
 
-*Stand: 2026-11-20 — Optionen: Export / .morg-pkg / Passwort-JSON / Chain·Warteschlange; ⋯-Menü feste Einträge (grau wenn ungeeignet); NFT in Wallet.*
+*Stand: 2026-11-22 — Zeilen-⋯ operativ (ohne Doppel zu Body/Optionen); Handoff als sichtbarer Button; NFT in Wallet.*

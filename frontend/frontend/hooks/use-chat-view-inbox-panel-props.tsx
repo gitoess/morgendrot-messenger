@@ -196,7 +196,6 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
     inboxRows: [...inboxPanelRead.inboxRows],
     contactDirectory: contactDirectoryRead.directory,
     isMeshVerifiedForAddress: contactDirectoryRead.isMeshVerifiedForAddress,
-    exportEcdhMorgPkgForMessage: inboxExportActions.exportEcdhMorgPkgForMessage,
     onExportEinsatzberichtJson: inboxExportActions.onExportEinsatzberichtJson,
     onExportEinsatzberichtTxt: inboxExportActions.onExportEinsatzberichtTxt,
     onExportEinsatzberichtTxtFull: inboxExportActions.onExportEinsatzberichtTxtFull,

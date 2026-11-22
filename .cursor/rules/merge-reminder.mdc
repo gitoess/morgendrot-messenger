@@ -1,0 +1,24 @@
+---
+description: Nach abgeschlossenen Arbeitspaketen an GitHub-Merge erinnern
+alwaysApply: true
+---
+
+# Merge-Erinnerung (GitHub)
+
+Branch-Arbeit ist erst auf **`main`**, wenn gemerged.
+
+## Wann erinnern
+
+- Sinnvolles Paket fertig (UX/Feature-Scheibe + Doku/Tests), oder User fragt „GitHub aktuell?“ / „fertig“.
+- Nicht nach jedem Einzeiler-Fix nerven.
+
+## Was sagen / tun
+
+1. Kurz: Branch vs. `origin/main` (Commits voraus?).
+2. Vorschlag: PR create → merge (nur wenn User will oder ausdrücklich „push/merge“).
+3. Ritual: siehe `docs/ROADMAP-FAHRPLAN.md` Arbeitsstand Punkt **Merge-Ritual**.
+
+## Nicht
+
+- Still nach `main` mergen ohne Auftrag.
+- Force-push auf `main`/`master`.

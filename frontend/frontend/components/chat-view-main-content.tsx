@@ -43,6 +43,7 @@ import { isPinnwandChannel } from '@/frontend/lib/messenger-chat-channel'
 import { ChatViewNotesTabPanel } from '@/frontend/components/chat-view-notes-tab-panel'
 import { ChatViewContactSidebar } from '@/frontend/components/chat-view-contact-sidebar'
 import { ChatViewContactDetailDialog } from '@/frontend/components/chat-view-contact-detail-dialog'
+import { ChatViewMyWalletIdInline } from '@/frontend/components/chat-view-my-wallet-id-inline'
 import { MessengerEntityInfoDialog } from '@/frontend/components/messenger-entity-info-dialog'
 import { ChatViewMediaGallery } from '@/frontend/components/chat-view-media-gallery'
 import { ChatViewMessengerSearch } from '@/frontend/components/chat-view-messenger-search'
@@ -1811,6 +1812,13 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         myAddress={myAddress}
         packageId={apiStatus?.packageId}
         connectedAddresses={phonebookShellProps.connectedAddresses}
+        selfWalletPanel={
+          contactDetailAddress &&
+          myAddress.trim() &&
+          contactDetailAddress.trim().toLowerCase() === myAddress.trim().toLowerCase() ? (
+            <ChatViewMyWalletIdInline {...myDataPanelProps} variant="panel" />
+          ) : undefined
+        }
         isFavorite={
           contactDetailAddress ? readContactFavorites().has(contactDetailAddress.trim().toLowerCase()) : false
         }

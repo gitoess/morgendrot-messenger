@@ -144,7 +144,6 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     myAddress,
     contactDirectory = {},
     isMeshVerifiedForAddress,
-    exportEcdhMorgPkgForMessage,
     onHideInboxMessageLocal,
     onPurgeInboxMessageChain,
     onForwardMessage,
@@ -417,7 +416,6 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           myAddress={myAddress}
           contactDirectory={contactDirectory}
           isMeshVerifiedForAddress={isMeshVerifiedForAddress}
-          exportEcdhMorgPkgForMessage={exportEcdhMorgPkgForMessage}
           onHideInboxMessageLocal={onHideInboxMessageLocal}
           onPurgeInboxMessageChain={onPurgeInboxMessageChain}
           onForwardMessage={onForwardMessage}
