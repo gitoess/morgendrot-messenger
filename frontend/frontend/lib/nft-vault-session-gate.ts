@@ -20,12 +20,15 @@ export function assertNftVaultMetaSession(): { ok: true } | { ok: false; error: 
   return { ok: false, error: NFT_VAULT_SESSION_REQUIRED_MSG }
 }
 
-/** Hinweistext für UI (gesperrt / noch nie angelegt). */
+/**
+ * Hinweistext für Wallet/NFT-Karten.
+ * „gesperrt“ nur wenn irreführend — oft ist die API schon offen, nur die Browser-Passwort-Sitzung fehlt.
+ */
 export function nftVaultSessionHint(): string {
   if (hasVaultPasswordSession()) return ''
   const hasSidecar =
     hasVaultEncSidecar(NFT_VAULT_INDEX_ENC_LS_KEY) || hasVaultEncSidecar(NFT_KEYCARD_ENC_LS_KEY)
   return hasSidecar
-    ? 'Tresor gesperrt — Index/Schlüsselkarte im Vault. Auszahlen braucht Signer; Index speichern braucht entsperrten Tresor.'
-    : 'Auszahlen braucht Signer. Index/Digests dauerhaft speichern und Guthaben anlegen: Tresor entsperren.'
+    ? 'Tresor-Passwort tippen (Badge) — Index/Schlüsselkarte brauchen die Browser-Sitzung. Die API kann schon offen sein; Auszahlen braucht zusätzlich den Signer.'
+    : 'Auszahlen braucht Signer. Index/Digests dauerhaft speichern: Tresor-Passwort im Badge eingeben.'
 }
