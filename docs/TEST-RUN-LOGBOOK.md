@@ -21,7 +21,8 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
-| **2026-11-22** | PC (Windows), **PC Stage‑2 Hygiene** | Kurzprotokoll `docs/PC-STAGE2-DIRECT-IOTA-SMOKE.md`; H.23 Rest Phase‑4-Klarstellung. `test:h15-direct-submit` + `smoke:standalone-desk` **87/87 PASS**. `npm run dm`: UI Unlock sichtbar; Einstellungen hinter Fail-closed (`pointer-events:none`). Browser Klartext/Enc §1 braucht Tresor-Passwort. | **PASS (Desk+Lock)** — manuell Klartext/Enc Self nach Unlock |
+| **2026-11-22** | PC (Windows), **PC Stage‑2 Browser** | Tresor offen (User-Tab). Klartext Self → Mailbox Tx `4ZNKyN2AmQne…`. Enc Self → `FfbGxHYUwR82…` (UI „Verschlüsselt“). H.15 **87/87**. Inbox-DOM ~5k Controls (Perf-Merker). CI: tsc-Fixes (Pinnwand/hash/toolbar). | **PASS (S2 §1.1–1.3)** — Zwei-Wallet optional; Merge #12 |
+| **2026-11-22** | PC (Windows), **PC Stage‑2 Hygiene** | Kurzprotokoll `docs/PC-STAGE2-DIRECT-IOTA-SMOKE.md`; H.23 Rest Phase‑4-Klarstellung. Desk **87/87**; Fail-closed Lock-Check. | **PASS (Desk+Lock)** |
 | **2026-11-22** | PC (Windows), **Phasen + Re-Smoke** | Phasen: PC→Handy→**Funk**→physisches 2. Gerät. `smoke:standalone-desk` erneut **87/87 PASS** (Stabilität). | **PASS (Desk)** — weiter PC Stage‑2; Handy/Funk/2. Gerät später |
 | **2026-11-22** | PC (Windows), **Fail-closed Overlay + H.15 Desk** | PR#7 gemerged (`VaultFailClosedSurface` Hard-Lock). `npm run smoke:standalone-desk` → **H.15 87/87 PASS**; Debug-APK ~4 Tage (innerhalb 14-Tage-Fenster). | **PASS (Desk)** — Gerät 4b–4d nach PC-Phase |
 | **2026-11-19** | PC (Windows), **NFT-Galerie UX + Anleitung §3** | Tabs Eigene/Suche/Mint/Gesichertes Guthaben/Leserecht; Entsperren pro Karte; Senden+Telefonbuch; Mehr ohne Explorer-Doppel; Vollbild nearly fullscreen; Vitest entity-info+transfer+attrs+spend-policy **21 PASS**. Doku ANLEITUNG §3 + Chat-Handbuch + Roadmap-Nachtrag. | **PASS (Code+Doku)** — User-Retest Vollbild/Senden-Klapp-Idee. |
