@@ -31,7 +31,7 @@ export async function connectPartnerHybrid(
       const replyNote = direct.replySent ? ' Antwort-Handshake gesendet.' : ' (ohne Antwort-Handshake — ECDH-JWK fehlt für Senden.)'
       /** API-peerMap parallel füllen — sonst Enc über Basis / Annehmen-Banner bleibt hängen. */
       if (allowApiRelay) {
-        void connect(addr).catch(() => {})
+        void Promise.resolve(connect(addr)).catch(() => {})
       }
       return {
         ok: true,

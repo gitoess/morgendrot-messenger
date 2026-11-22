@@ -28,17 +28,18 @@ describe('connect-hybrid', () => {
     connectApiMock.mockReset()
   })
 
-  it('nutzt Direkt-RPC bei Erfolg', async () => {
+  it('nutzt Direkt-RPC bei Erfolg und kickt API-Connect parallel', async () => {
     tryConnectMock.mockResolvedValue({
       ok: true,
       peerAddress: ADDR,
       replySent: true,
       source: 'mailbox',
     })
+    connectApiMock.mockResolvedValue({ ok: true, message: 'api peerMap' })
     const r = await connectPartnerHybrid(ADDR, { backendReachable: true })
     expect(r.ok).toBe(true)
     expect(r.path).toBe('direct')
-    expect(connectApiMock).not.toHaveBeenCalled()
+    expect(connectApiMock).toHaveBeenCalledWith(ADDR)
   })
 
   it('fällt auf API zurück', async () => {
