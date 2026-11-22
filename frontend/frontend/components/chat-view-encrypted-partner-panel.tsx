@@ -106,7 +106,7 @@ export function ChatViewEncryptedPartnerPanel(p: ChatViewEncryptedPartnerPanelPr
                         Senden
                       </button>
                     ) : null}
-                    {onConnectAcceptForAddress ? (
+                    {onConnectAcceptForAddress && !connected ? (
                       <button
                         type="button"
                         disabled={sending}

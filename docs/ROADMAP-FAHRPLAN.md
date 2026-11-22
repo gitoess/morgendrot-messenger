@@ -30,7 +30,7 @@
 
 1. **Fokus jetzt:** **PC-Messenger fertig ziehen**. **Nicht jetzt:** Handy-Abnahme, Funk-Feld, physisches 2. Gerät, Helfer/Boss.  
 2. **Erledigt (PC):** Settings/TG/G2–G4; Posteingang-UX; fail-closed; product-identity; Mailbox/Handshake-Klarheit; Desk-Smoke 87/87; `SIGNER=sdk`.  
-3. **Als Nächstes (nur PC):** PC-UX-Rest / kleine Fixes bei Touch; Merge Connect+Enc-Scheibe wenn bereit. **Ist:** Klartext/Enc Self + A↔B Klartext/Enc (Tx `J8RW6iX4…` / `EDsZCV4…`) + Annehmen-Banner-Fix + Inbox-DOM-Drossel. **Kein** APK-/Funk-Zwang.  
+3. **Als Nächstes (nur PC):** PC-UX-Rest / kleine Fixes bei Touch (`ds` inkl. 3345 gemerged). **Ist:** Klartext/Enc Self + A↔B Klartext/Enc (PR #15) + Annehmen-Banner-Fix + Inbox-DOM-Drossel + Desk 88/88. **Kein** APK-/Funk-Zwang.  
 4. **Danach:** Phase 2 Handy → Phase 3 Funk → Phase 4 physisches 2. Gerät.  
 5. **Wallet/IOTA-Aktivität:** Freeze. **Gestrichen:** WhatsApp/Paywall.  
 6. **Merge-Ritual** nach sinnvollem Paket.
