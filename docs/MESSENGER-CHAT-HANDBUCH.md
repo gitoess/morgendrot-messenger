@@ -265,13 +265,15 @@ Weiter: **`docs/HANDSHAKE-PERSISTENZ-UND-H23.md`**, Abschnitt **Handshake Vertra
 
 ## Kanäle, Speicher und Mailboxen
 
-**Drei Ebenen** nicht vermischen: (1) **Kanal** 1:1 / Gruppe / Pinnwand, (2) **Speicher** Event vs. Mailbox, (3) **Ziel-Mailbox** Server / Team / Privat. Verschlüsselung (Schloss oben) ist unabhängig — verschlüsselt braucht Handshake zwischen zwei `0x`-Adressen.
+**Drei Ebenen** nicht vermischen: (1) **Kanal** 1:1 / Gruppe / Pinnwand, (2) **Speicher** flüchtig (Event) vs. persistent (Mailbox), (3) **welches Postfach** — Haupt / Team / Privat. Verschlüsselung (Schloss) ist unabhängig — braucht Handshake zwischen zwei **`0x`-Adressen** (nicht die Mailbox-Object-ID).
 
-**Senden (Persistent, online):** Kontakt-Mailbox im Telefonbuch → aktiv gesetzte Team- oder Private-Mailbox → Server-`MAILBOX_ID`.
+**Hauptpostfach** (`MAILBOX_ID`): gemeinsames Postamt des Deployments — **immer** im Posteingang, meist automatisch. **Privat/Team:** optional unter **Einstellungen → IOTA → Meine Mailboxen** (anlegen/beitreten); Schreiben = **Composer-Ziel**, nicht Settings-Sendeziel.
 
-**Posteingang:** Server-Shared (`.env`) + optional die **aktive** Team- oder Private-Mailbox + Team-Broadcast-Postfächer verknüpfter Gruppen. Gruppen-Filter zeigt Nachrichten **aller Mitglieder** (Union).
+**Senden (persistent, online):** Kontakt-Postfach im Telefonbuch → gewähltes Team/Privat im Composer → sonst Haupt-`MAILBOX_ID`.
 
-**Speicher auf der Chain (online):** **Flüchtig (Event)** = kein Mailbox-Eintrag. **Persistent (Mailbox)** = Ziel unter **Einstellungen → Meine Mailboxen** (Server immer mitgelesen; Team oder Privat **aktiv** setzen), dann **Aktualisieren** im **App-Header neben Tresor**. Klartext vs. verschlüsselt steuert das Schloss im Composer.
+**Posteingang:** Haupt + bekannte Privat/Team (+ Team-Broadcast verknüpfter Gruppen).
+
+**Speicher (online):** **Flüchtig (Event)** = kein Mailbox-DF. **Persistent (Mailbox)** = Eintrag im Postamt; danach **Aktualisieren** im App-Header neben Tresor. Klartext vs. verschlüsselt = Schloss im Composer.
 
 | Kanal / Ziel | Persistenz | Wer sieht was? |
 |--------------|------------|----------------|

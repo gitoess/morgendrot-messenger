@@ -21,7 +21,7 @@
 **Aktueller Arbeitsstand (verbindlich 2026-11-22 — IOTA-Messenger-Fokus):**
 1. **Fokus jetzt:** schlanker **IOTA-Messenger** (Wallet, Mailbox-Chat, leichte Gruppen, Transfer, Telefonbuch/QR, Handshake). **Nicht jetzt:** Helfer/Boss/Einsatzleitung/Handoff/Macro/Streams-Puls/Fern-Purge/Mesh-Kern — siehe *Später…* + *H.*-Triage unten.  
 2. **Erledigt (PC, Welle bis 2026-11-22):** Settings/Telegram/G2–G4 **PASS**; Posteingang-UX (⋯/Optionen/.morg-pkg/Ich); Bubble-Sendepfad-Farben; Mailbox-Produktklarheit; Merge PR#4/#5 auf `main`.  
-3. **Als Nächstes (Messenger):** (a)~~fail-closed~~ **Ist**; (b)~~Desk-Smoke~~ **PASS** → Gerät **4b–4d**; (c) Produkt-Caps **`product-identity.ts`** in Morgendrot verdrahtet (Default voll; `NEXT_PUBLIC_PRODUCT_ID=iota-messenger` schaltet Hide-Flags) — Overlay-Bootstrap bleibt; (d) Mailbox/Handshake-Klarheit wo nötig.  
+3. **Als Nächstes (Messenger):** (a–c) fail-closed / Desk-Smoke / product-identity **Ist**; (d) ~~Mailbox/Handshake-Klarheit~~ **Ist 2026-11-22** (Copy + Persistenz-Labels + Handbuch); Gerät **4b–4d** noch manuell. **H.20:** `.env.example` Default **`SIGNER=sdk`**. **H.30** Voll-Wizard bleibt Backlog.
 4. **Session C** (Privacy/NFT 2-Geräte) + Standalone **4e/4f** → **später**, wenn 2. Gerät.  
 5. **Wallet/IOTA-Aktivität:** Freeze (2026-11-20) — nicht anfassen außer User fordert.  
 6. **Gestrichen:** WhatsApp, Paywall; **Ideen nur:** Linkify, Zauberstab, Visitenkarte-teilen, On-Chain-ReleaseManifest.  
@@ -41,16 +41,15 @@
 | **H.13 / H.14** | Schlankheit / Hardening | Nur bei Bedarf mit Messenger-Scheibe |
 | **H.15** | Handy-first / Client-IOTA / Standalone-Smoke | Kernpfad Messenger |
 | **H.16** (Teil) | Telefonbuch + QR | **ohne** Boss-LAN / Helfer-Onboarding als Fokus |
-| **H.20** | Signer `sdk` + `.env`-Klarheit | Produkt-Default Richtung sdk |
-| **H.21** (Teil) | Empfänger-Auswahl Ist | Kurier-Umschlag-Extras → später |
-| **H.22** | Mailbox M1–M4 Klarheit | Shared auto; Privat/Team optional; Event vs Persistent |
-| **H.23** (Ist halten) | ECDH + Passphrase/NFT-Ist | **Kein** neues Großfeature; C1-Default / Session C → später |
-| **H.26** (Teil) | Telegram Klingel/Notify Ist | Alarmgruppe/Einsatz-Boss → später/Edition weg |
-| **H.27** | Handshake-Anfragen UX | E2EE-Messenger-Kern |
-| **H.30** | „Neu anfangen“ Tresor | Solo-Messenger sinnvoll |
-| **H.34** | Port-Refactor nur bei Touch | Kein Parallel-Epik |
-| **Split** | Morgendrot vs IOTA-Messenger Overlay | Merkliste umsetzen/Defaults |
-| **Ideen** | Fail-closed Overlay | Nächste UX-Scheibe |
+| **H.20** | Signer `sdk` | **Ist:** `.env.example` Default `sdk` (2026-11-22) |
+| **H.21** (Teil) | Empfänger-Auswahl Ist | Kurier-Umschlag → später |
+| **H.22** | Mailbox-Klarheit | **Ist 2026-11-22** Copy/Labels/Handbuch |
+| **H.23** (Ist halten) | ECDH + Passphrase/NFT | kein neues Großfeature |
+| **H.26** (Teil) | Telegram Klingel/Notify Ist | Alarmgruppe → später |
+| **H.27** | Handshake-UX Labels | **Ist** (Partner=0x; Annehmen-Copy) |
+| **H.34** | Port-Refactor bei Touch | kein Parallel-Epik |
+| **Split** | product-identity Caps | **Ist** (Env/Overlay) |
+| **Ideen** | Fail-closed Overlay | **Ist** |
 
 ### Später machen bzw. nochmals später klären (User-Durchgang ab 2026-11-22)
 
@@ -89,6 +88,7 @@
 | **H.32 / H.32b** | Einsatz beenden (Vollprodukt) | IOTA-Messenger: weg/merken |
 | **H.33** | Einsatz-Manifest On-Chain | Boss/Archiv |
 | **H.36** | Team-Member-Update / Einstiegs-Wizard Einsatz | Helfer |
+| **H.30** | „Neu anfangen“ Voll-Wizard | Doku VAULT-EINRICHTEN Ist; UI-Assistent Backlog |
 | **H.37** | Multi-Profil Login | Nach Durchgang; **keine** Multi-Adresse im Account |
 | **T4 / T6 / T56…** | Schatten-Sweep 2. Acc; Funk-Strategie; Komplett-löschen | Ritual-Tabelle |
 | **Ideen** | ReleaseManifest on-chain SHA; Linkify; Zauberstab; Visitenkarte | `IDEEN-BACKLOG.md` |
@@ -597,17 +597,17 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 | **§ H.17** | **Dashboard-Begriffe** — `morgendrot_show_all_tiles` vs. `morgendrot_workspace_tile_set` vs. Chat-`bossView` vs. **`DeviceRadarView`**; Messenger-Zielbild Boss-only / Hauptrepo volle Kacheln; **`docs/UI-ROLLEN-WORKSPACES.md`** §6; **Rollen Zielbild Consumer/Einsatz:** **`docs/ROLLEN-MODELL-CONSUMER-EINSATZ.md`** |
 | **§ H.18** | **TTS / STT** — Ausbau **→ Später**; Vorlesen Ist-teilweise |
 | **§ H.19** | **Forensic Capture** — **→ Später** |
-| **§ H.20** | **Signer cli→sdk** — **Jetzt** (Messenger-Default-Richtung) |
+| **§ H.20** | **Signer cli→sdk** — **Ist** `.env.example` Default `sdk` (2026-11-22) |
 | **§ H.21** | Empfänger-Auswahl Ist; Kurier-Umschlag **→ Später** |
-| **§ H.22** | **Mailbox M1–M4** — **Jetzt** (Klarheit); **`MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** |
+| **§ H.22** | **Mailbox M1–M4** — Klarheit **Ist** 2026-11-22; **`MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** |
 | **§ H.23** | **Verschlüsselung** — Ist halten (**Jetzt**); Session C / C1-Default **→ Später** |
 | **§ H.24** | Package-Profile Multi-UI — **→ Später** |
 | **§ H.25** | Bilder über LoRa — **→ Später** |
 | **§ H.26** | Telegram Klingel/Notify Ist (**Jetzt**-Teil); Alarmgruppe/Einsatz **→ Später** |
-| **§ H.27** | Handshake-UX — **Jetzt** |
+| **§ H.27** | Handshake-UX Labels — **Ist** 2026-11-22 |
 | **§ H.28** | Discord/Matrix — **→ Später** |
 | **§ H.29** | TG-Token ganz aus `.env` — **→ Später** |
-| **§ H.30** | „Neu anfangen“ Tresor — **Jetzt** (Solo) |
+| **§ H.30** | „Neu anfangen“ Tresor — **→ Später** (Voll-Wizard; Doku Ist) |
 | **§ H.31** | Multi-Pinnwand — **→ Später** |
 | **§ H.3n B2.6** | SOS Wanderer v1 — **→ Später** (`SOS-WANDERER-V1.md`) |
 | **§ H.32** | Antworten + Einsatz beenden — Einsatz-Zyklus **→ Später** (Edition oft weg) |

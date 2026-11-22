@@ -15,14 +15,16 @@
 | Bereich | Inhalt |
 |---------|--------|
 | **App-Header** (Boss/Messenger) | **Tresor**, **Aktualisieren** (Status + Posteingang + Kontakte), Handbuch, Einstellungen — **nicht** in der Posteingang-Leiste. In **Nachrichten** / **Einsatzleitung**: nur das **Gegenstück** als Schalter. In **Einstellungen**: Titel + Sprünge zu Nachrichten und Einsatzleitung |
-| **Chat-Kopf** | Sendepfad (**Alle** / Funk / **IOTA** / Telegram), **Ton/Stumm** (nur In-App-Eingangs-Chime für diesen Chat), **SOS — Hilferuf** (1:1, nicht Telegram). Mit Sidebar: **kein** großer Kanal-/Posteingang-Titel |
+| **Chat-Kopf** | Sendepfad (**Alle** / Funk / **IOTA** / Telegram) steuert **Senden** (nicht die Posteingangs-Liste), **Ton/Stumm**, **SOS**. Liste filtern: Filter/Kanal. Mit Sidebar: **kein** großer Kanal-/Posteingang-Titel |
 | **Seitenleiste** (Desktop) | **Chats** gleiche Höhe wie Posteingang (`min(70vh,44rem)`), scrollt |
-| **Posteingang** (rechts) | Nachrichten + Toolbar; **Auswahl** ≈ Nachrichten-⋯ (Kopieren, Protokoll, Weiterleiten, JSON, Ausblenden, Burn) |
-| **Composer** | **Volle Breite unter beiden Spalten** (eigene Leiste, kein Overlap): `[+]` = Datei, Kamera, STT, Telefonbuch, **An Adresse senden**, **Sprachnachricht**, **Passphrase-Schutz**, **Zeitkapsel-Nachricht**; Text; Senden. Empfänger-Wallet bei aktivem Chat ausgeblendet |
+| **Posteingang** (rechts) | Nachrichten + Toolbar; **Auswahl** = gebündelte Zeilen-Aktionen |
+| **Composer** | **Volle Breite unter beiden Spalten** (eigene Leiste, kein Overlap): `[+]` = Datei, Kamera, STT, Telefonbuch, **An Adresse senden**, **Sprachnachricht**, **Passphrase-Schutz**, **NFT-Leserecht**; Text; Senden. Empfänger-Wallet bei aktivem Chat ausgeblendet |
 | **Liste (Filter)** | **Beides / Eingang / Ausgang** und **Alles / Verschl. / Klartext** — nur Anzeige, nicht Sendemodus |
-| **Optionen** | **Posteingang · Tools** (Wire, Hash, Export, Pakete) + **Chat · Sicherheit** (Info, Schlüssel, Nach-Lesen-**Modus**) — kein separates Chat-⋮ mehr |
-| **Nachrichten-⋯** (pro Zeile) | Kopieren, Telefonbuch, lokal ausblenden, **Von Chain löschen (Burn)** |
-| **Auswahl** | Wie ⋯ gebündelt: Kopieren, Protokoll, Weiterleiten, JSON, Ausblenden, **Burn**. Nicht: Antworten, Telefonbuch, Handoff, Mesh-Paket, ECDH-pkg |
+| **Optionen** | **Posteingang · Tools** (Wire, Hash, Export/Medien-Galerie, .morg-pkg) + **Chat · Sicherheit** (Info, Schlüssel, Nach-Lesen-**Modus**) |
+| **Unter der Nachricht** | **Text kopieren**, **Vorlesen** (Klartext); Bild/Datei speichern in der Medien-Kachel |
+| **Nachrichten-⋯** (pro Zeile) | Operativ: Telefonbuch, Protokoll, Weiterleiten, **Exportieren** (JSON/TXT/Medien), ausblenden, **Burn**; Funk: Mesh-Paket; **kein** Kopieren/Vorlesen/Hash/Handoff/.morg-pkg |
+| **Handoff-Zeile** | Sichtbarer Button **Handoff übernehmen** (nicht im ⋯) |
+| **Auswahl** | Gebündelt: Kopieren, Protokoll, Weiterleiten, JSON, Hashes, Ausblenden, **Burn**. Nicht: Antworten, Telefonbuch, Handoff, Mesh-Paket |
 | **Browser** | Zurück/Vor navigiert Dashboard-Ansichten (`morgView`) |
 
 **Dashboard:** Kachel **Nachrichten** öffnet den Chat. **Telefonbuch** zusätzlich über `[+]` im Composer, Sidebar oder Kontakt-Detail.
@@ -42,7 +44,8 @@ Details + Tabelle: **`EINSTELLUNGEN-NUTZER-HANDBUCH.md`**.
 | Wo | Was es ist | Was es nicht ist |
 |----|------------|------------------|
 | **Optionen → Chat · Sicherheit** | Info, Schlüssel erneuern, **Nach-Lesen-Modus**, Verlauf leeren | Kein sofortiges Chain-Löschen |
-| **Nachrichten-⋯** | Diese eine Zeile (Burn, Kopieren, ausblenden, …) | Kein Sendemodus |
+| **Nachrichten-⋯** | Operativ **eine** Zeile (Weiterleiten, Burn, ausblenden, …) | Kein Lesen/Kopieren/Vorlesen; kein Export-Werkzeugkasten |
+| **Unter dem Text** | Kopieren + Vorlesen | Kein Burn / Weiterleiten |
 | **Auswahl** | Dieselben Zeilen-Aktionen für viele Nachrichten | Kein Antworten / Handoff / Mesh-Paket |
 
 **Echter Burn** = Zeilen-⋯ oder Auswahl → „Von Chain löschen“. **Nach Lesen löschen** in Optionen ist nur der Modus (Vorschlag nach Lesen).
@@ -53,16 +56,18 @@ Badge **Eingang/Ausgang**, **Verschlüsselt**, **PWMSG** oder **NFT-Gate** ankli
 
 | Ort | Wofür |
 |-----|--------|
-| **Nachrichtenzeile** | **PWMSG** = Passphrase in der Bubble. **NFT-Gate** = Besitz oder Leihe-Empfänger (Verleiher während Leihe **nicht**). ECDH-Schloss = Composer „Verschlüsselt“, anderer Kanal. |
-| **Optionen → Wire einfügen** | Paste `MORG_PWMSG_V1` + Passphrase (**nur** PWMSG). ECDH braucht Handshake; NFT-Gate **nicht** hier. |
-| **Optionen → Export / Decrypt-JSON** | Passwort-geschützte Einsatzbericht-JSON wieder öffnen (eigene HTML-Seite) — nicht Posteingang-Decrypt. |
+| **Nachrichtenzeile** | **PWMSG** = Passphrase. **NFT-Gate** = Besitz/Leihe. ECDH = Composer „Verschlüsselt“. |
+| **Composer → Nachrichtenschutz** | Getrennt: **NFT-Leserecht** *oder* **Passphrase** (optional **Zusätzlich NFT-Besitz**). Nicht mit ECDH. Seal/Broker später (Boss). |
+| **Optionen → Wire einfügen** | Paste `MORG_PWMSG_V1` + Passphrase. ECDH braucht Handshake. |
+| **Optionen → Passwort-JSON öffnen** | Einsatzbericht-JSON entschlüsseln (eigene HTML-Seite). |
 
-**Zeitkapsel — zwei Jobs (nicht verwechseln):**
+**NFT-Leserecht vs. Verleihen (nicht verwechseln):**
 
 | Job | Wo | Was |
 |-----|-----|-----|
-| **Senden** | Composer **+** → Zeitkapsel-Nachricht | Ciphertext mit Badge **NFT-Gate**; NFT bleibt bei dir → du liest weiter |
-| **Verleihen** | Galerie **Verleihen…** / Tab Zeitkapsel / CTA **Dieses NFT verleihen…** | NFT an **fremde** Wallet; nur Empfänger liest; **Zurückholen** = offene Leihen; nach Reclaim wieder Galerie / „Neue Leihe“ |
+| **NFT-Leserecht** | Composer **+** → NFT-Leserecht… | Ciphertext mit Badge **NFT-Gate**; NFT bleibt bei dir → du liest weiter |
+| **Verleihen / Zurückholen** | Tab **Verleihen / Zurückholen** / Galerie **Mehr… → Verleihen…** / CTA **NFT verleihen…** | Escrow; Liste oben = Zurückholen; Notfall-Lease-ID ganz unten; Entleiher: **Vorzeitig zurückgeben** |
+| **NFT gesichert** | Tab **NFT gesichert** / Wallet **NFT gesichert** | Vault anlegen/einzahlen; Auszahlen über Wallet-Sendepfad |
 
 ---
 
@@ -260,13 +265,15 @@ Weiter: **`docs/HANDSHAKE-PERSISTENZ-UND-H23.md`**, Abschnitt **Handshake Vertra
 
 ## Kanäle, Speicher und Mailboxen
 
-**Drei Ebenen** nicht vermischen: (1) **Kanal** 1:1 / Gruppe / Pinnwand, (2) **Speicher** Event vs. Mailbox, (3) **Ziel-Mailbox** Server / Team / Privat. Verschlüsselung (Schloss oben) ist unabhängig — verschlüsselt braucht Handshake zwischen zwei `0x`-Adressen.
+**Drei Ebenen** nicht vermischen: (1) **Kanal** 1:1 / Gruppe / Pinnwand, (2) **Speicher** flüchtig (Event) vs. persistent (Mailbox), (3) **welches Postfach** — Haupt / Team / Privat. Verschlüsselung (Schloss) ist unabhängig — braucht Handshake zwischen zwei **`0x`-Adressen** (nicht die Mailbox-Object-ID).
 
-**Senden (Persistent, online):** Kontakt-Mailbox im Telefonbuch → aktiv gesetzte Team- oder Private-Mailbox → Server-`MAILBOX_ID`.
+**Hauptpostfach** (`MAILBOX_ID`): gemeinsames Postamt des Deployments — **immer** im Posteingang, meist automatisch. **Privat/Team:** optional unter **Einstellungen → IOTA → Meine Mailboxen** (anlegen/beitreten); Schreiben = **Composer-Ziel**, nicht Settings-Sendeziel.
 
-**Posteingang:** Server-Shared (`.env`) + optional die **aktive** Team- oder Private-Mailbox + Team-Broadcast-Postfächer verknüpfter Gruppen. Gruppen-Filter zeigt Nachrichten **aller Mitglieder** (Union).
+**Senden (persistent, online):** Kontakt-Postfach im Telefonbuch → gewähltes Team/Privat im Composer → sonst Haupt-`MAILBOX_ID`.
 
-**Speicher auf der Chain (online):** **Flüchtig (Event)** = kein Mailbox-Eintrag. **Persistent (Mailbox)** = Ziel unter **Einstellungen → Meine Mailboxen** (Server immer mitgelesen; Team oder Privat **aktiv** setzen), dann **Aktualisieren** im **App-Header neben Tresor**. Klartext vs. verschlüsselt steuert das Schloss im Composer.
+**Posteingang:** Haupt + bekannte Privat/Team (+ Team-Broadcast verknüpfter Gruppen).
+
+**Speicher (online):** **Flüchtig (Event)** = kein Mailbox-DF. **Persistent (Mailbox)** = Eintrag im Postamt; danach **Aktualisieren** im App-Header neben Tresor. Klartext vs. verschlüsselt = Schloss im Composer.
 
 | Kanal / Ziel | Persistenz | Wer sieht was? |
 |--------------|------------|----------------|
@@ -282,8 +289,8 @@ Doku: `docs/SENDEWEGE-KANAL-MAILBOX-UEBERSICHT.md`, `docs/TEAM-MAILBOXES.md`, `d
 
 | Art | Wer darf purgen? | Hinweis |
 |-----|------------------|---------|
-| **1:1 pairwise** | Empfänger oder Sender (je nach Move-Regel) | Shared- oder Private-Mailbox |
-| **Team-Broadcast** | Original-Sender **jederzeit**; **nach TTL jeder** | Team-Mailbox-Object-ID; Badge **Team-Broadcast** |
+| **1:1 pairwise** | **Nur** Sender oder Empfänger | TTL = Metadaten, kein Fremd-Burn nach Ablauf (Move `move-test`, Redeploy nötig) |
+| **Team-Broadcast** | **Nur** Original-Sender | Team-Mailbox-Object-ID; Badge **Team-Broadcast** |
 
 Ganzes Private-Mailbox-Object: **Einstellungen → Meine Mailboxen** → Aufräumen / `purge_private_mailbox`. Team-Mailbox als Ganzes wird on-chain **nicht** zerstört — nur einzelne Broadcasts purgen.
 
@@ -305,10 +312,18 @@ Ganzes Private-Mailbox-Object: **Einstellungen → Meine Mailboxen** → Aufräu
 | **Anheften** | Pinnwand-Posts lokal oben halten (`sessionStorage`). |
 | **Handshake-Anfragen** | Grüner Streifen oben: **Annehmen**, **Als Partner**, **Löschen**. Badge in der Posteingang-Toolbar und an der Dashboard-Kachel. |
 | **Badges** | **Mailbox**, **Team-Broadcast** — unterscheidet Speicherart on-chain. |
-| **Optionen** | Wire einfügen · Hash & Prüfen · Export Nachrichtenverlauf (Journal + Medien-ZIP) · Datei-Paket (.morg-pkg) — Inhalt von Paketen landet im Archiv-Sheet, nicht in der normalen Liste. **Hinweis:** JSON/TXT-Vollhistorie lädt zuerst den gesamten Verlauf von der Chain/Indexer nach — bei vielen Nachrichten kann das **länger dauern** (Status „Lade Posteingang…“); nicht abbrechen, bis der Speichern-Dialog kommt. |
-| **On-Chain / NFT** | Eigener Button in der Posteingang-Leiste (nicht unter Optionen). |
+| **Chat** (Toggle) | Schlanke Blasen + Datum einmal/Tag; bei **Alle** Absendername. Detail-Liste bleibt Default (Badges/Explorer). Pref lokal. |
+| **Optionen** | Wire/PWMSG · Hash & Prüfen · **Export Nachrichtenverlauf** · **Datei-Paket (.morg-pkg)** · **Passwort-JSON öffnen** · (Experten) **Chain / Warteschlange** · Chat · Sicherheit. Paket-Inhalt → Archiv-Sheet, nicht normale Liste. |
+| **On-Chain / NFT** | Unter Optionen (Chain-Pfad), nicht eigene Leiste. |
 
-**Offline-Warteschlange:** Bei fehlender Basis werden Sends lokal gequeued; Status-Streifen im Chat.
+### Export Nachrichtenverlauf (Details)
+
+- **Standard-Umfang:** gesamter Posteingang (alle Mailboxen + Telegram-Journal). Passphrase-Nachrichten werden freigeschaltet, wenn die Passphrase lokal gemerkt ist — sonst bleibt Wire. Scope/Inhalt im Dialog wählbar.
+- **Medien-Galerie:** Start nur sichtbare Inbox-Zeilen; ältere Medien über „Gesamten Verlauf scannen“. Nur MORG-Wire (nicht Telegram-Cloud). Passphrase-Medien nach lokalem Freischalten.
+- **JSON/TXT-Vollhistorie** lädt zuerst den gesamten Verlauf von Chain/Indexer — kann länger dauern (Status „Lade Posteingang…“); nicht abbrechen, bis der Speichern-Dialog kommt.
+- **Passwort-JSON öffnen** und **Chain / Warteschlange** (Verankern, Tangle-Inventar, Offline-Queue) sitzen unter **Optionen**, nicht im Export-Dialog.
+
+**Offline-Warteschlange:** Bei fehlender Basis werden Sends lokal gequeued; Aufruf auch unter Optionen → Chain / Warteschlange.
 
 ---
 
@@ -537,26 +552,38 @@ Nach erfolgreichem **Klartext-Funk**: optionale Kopie per **Klartext-Mailbox** a
 
 ---
 
-## Package-ID und Posteingang
+## Package-ID / Vertrag und Posteingang
 
-Wenn du eine **ID** per Messenger, Datei oder mündlich erhältst: hier eintragen. **Aktiv speichern** schreibt sie wie **`/set-package-id`**. **Nur Posteingang** lädt die Mailbox für diese ID **ohne** die lokale Datei zu ändern.
+Steuerung unter **Einstellungen → Expertenmodus** (nicht in der Nachrichten-Toolbar).
 
-Bei mehreren Package-IDs in `.env` und **package-id-history** liest der Posteingang eine **Event-Union** über alle IDs — das ist Betreiber-Konfiguration, kein UI-Hinweis nötig.
+| Aktion | Wirkung |
+|--------|---------|
+| **Temporär anzeigen** | Posteingang nur für diese Move-Package-ID — Server bleibt unverändert |
+| **Dauerhaft wechseln** | wie **`/set-package-id`** |
+| **Zurück zum aktiven Vertrag** | Temp-Filter aus |
+
+Bei mehreren Package-IDs in `.env` und **package-id-history** liest der Posteingang (ohne Temp-Filter) eine **Event-Union** — Betreiber-Konfiguration.
+
+**Filter:** Richtung, Verschl./Klartext, Medien. **Medien** = Export → Galerie. **Chain-Text** = Mailbox/Adresse oder Object-ID; PWMSG dort mit Passphrase. **PWMSG entschlüsseln** = out-of-band. **Hash & Prüfen** = SHA-256. NFT: Wallet.
 
 ---
 
 ## .morg-pkg (Paket-Archiv)
 
-**Posteingang → Pakete:** ECDH-verschlüsselte **`.morg-pkg`**-Dateien für Sneakernet / Offline-Übergabe.
+**Posteingang → Optionen → Datei-Paket (.morg-pkg):** ECDH-Offline-Paket für einen **verbundenen** Kontakt.
 
 | Aktion | Bedeutung |
 |--------|-----------|
-| **Import: .morg-pkg → Archiv** | Entschlüsselt (Tresor + Handshake zum Absender) → **Paket-Archiv**, nicht Posteingang |
-| **Export: Dateien → .morg-pkg** | Mehrere Dateien zu einem Paket bündeln und herunterladen |
-| **Paket-Archiv** | Sheet mit importierten Bundles; Einzeldateien öffnen/weiterleiten |
-| **Aus Nachricht exportieren** | Kontextmenü an Mailbox-Zeile (wenn implementiert) |
+| **Empfänger** | Volle **0x-Adresse** eintippen oder Vorschlag/Chip — muss in der **peerMap** sein (Handshake/Connect). **Ich** = Self-Handshake (wie verschlüsselte Nachricht an dich) |
+| **.morg-pkg erstellen…** | Dateien wählen → verschlüsselte `.morg-pkg`-Datei zum Weitergeben |
+| **Import: .morg-pkg → Archiv** | Entschlüsseln (Tresor + Handshake zum Absender) → **Paket-Archiv** |
+| **Paket-Archiv** | Importierte Bundles; Einzeldateien öffnen/weiterleiten |
 
-Voraussetzung Import: **Handshake** zum Absender der Datei (Peer in `peerMap`).
+**Wer öffnet `.morg-pkg`?** Nur wer den ECDH-Schlüssel hat (gewählter Partner bzw. du bei Self). Telefonbuch allein reicht nicht — Connect nötig. Klartext-Export bleibt Nachrichten-⋯.
+
+**Zeilen-⋯:** Export JSON · Export Text · Medien (wenn Marker) — flach im Menü (kein Untermenü). Kein ECDH — das bleibt Optionen → .morg-pkg erstellen.
+
+**Unbekannte Adresse:** Sidebar **Direktchats → Adresse…** — leeres Empfängerfeld, Fokus Composer.
 
 ---
 
@@ -568,4 +595,4 @@ Voraussetzung Import: **Handshake** zum Absender der Datei (Peer in `peerMap`).
 
 ---
 
-*Stand: 2026-11-16 — Export-Vollhistorie kann länger laden; Chats|Posteingang Telegram-Muster; Sendepfad Alle/IOTA/Funk/Telegram; Aktualisieren neben Tresor; Optionen Wire/Hash/Export.*
+*Stand: 2026-11-22 — Zeilen-⋯ operativ (ohne Doppel zu Body/Optionen); Handoff als sichtbarer Button; NFT in Wallet.*

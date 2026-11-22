@@ -172,7 +172,7 @@ Die Datei **.env** ist wie die „Einstellungszentrale“ von Morgendrot: Hier t
 | **SPONSOR_GAS_OWNER** | `0x…` | Adresse, die Gas übernimmt (z. B. Boss). Mit SPONSORED_TRANSACTION_ENABLED=true und (bei use_ticket) **SPONSOR_GAS_PASSWORD** zahlt der Sponsor das Gas. |
 | **SPONSOR_GAS_PASSWORD** | (leer) | Passwort des Sponsor-Wallets. Für **Wärter:** Boss zahlt Gas bei `/use-ticket`, wenn Wärter SPONSOR_GAS_OWNER=Boss und SPONSOR_GAS_PASSWORD=Boss-Passwort setzt. **Nur in .env setzen!** |
 | **SPONSORED_TRANSACTION_ENABLED** | `false` | Sponsored Transactions erlauben (create-key, use-ticket etc.). |
-| **SIGNER** | `cli` | **cli** = IOTA-CLI (lokal). **remote** = Boss-Service signiert. **sdk** = Mnemonic im Prozess (keine CLI nötig). **Handy/PWA mit Seed im Browser:** `sdk` setzen, sonst kein Mnemonic-Feld. |
+| **SIGNER** | `sdk` | **sdk** = Mnemonic im Prozess (Messenger/PWA-Default). **cli** = IOTA-CLI lokal (Legacy). **remote** = Boss-Service. Handy/PWA: ohne `sdk` kein Mnemonic-Feld. |
 | **REMOTE_SIGNER_URL** | `https://boss.example:3340/sign` | URL des Boss-Signer-Services. Nur bei SIGNER=remote. |
 | **REMOTE_SIGNER_TOKEN** | (leer) | Bearer-Token für REMOTE_SIGNER_URL. **Nur in .env setzen!** |
 | **WALLET_DERIVATION_PATH** | (leer) | Ableitungspfad (nur bei SIGNER=sdk). Leer = Default. |

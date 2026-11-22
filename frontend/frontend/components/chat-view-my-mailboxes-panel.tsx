@@ -38,6 +38,13 @@ import {
   updateMyTeamMailboxLabel,
   type MyTeamMailboxEntry,
 } from '@/frontend/lib/my-team-mailbox-store'
+import {
+  mainMailboxExplain,
+  mainMailboxSubtitle,
+  mainMailboxTitle,
+  privateMailboxesExplain,
+  teamMailboxesExplain,
+} from '@/frontend/lib/mailbox-clarity-copy'
 
 function maskMid(id: string): string {
   const t = id.trim()
@@ -209,9 +216,9 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
       <section className="space-y-1 rounded-lg border border-sky-500/35 bg-sky-500/8 px-3 py-2.5">
         <div className="flex flex-wrap items-center gap-2">
           <TypeBadge kind="server" />
-          <span className="text-[11px] font-semibold text-foreground">Hauptpostfach (Einsatz)</span>
+          <span className="text-[11px] font-semibold text-foreground">{mainMailboxTitle()}</span>
           <span className="rounded bg-sky-600/25 px-1.5 py-0.5 text-[9px] font-semibold text-sky-950 dark:text-sky-100">
-            Immer im Posteingang
+            {mainMailboxSubtitle()}
           </span>
         </div>
         {serverAvailable ? (
@@ -221,10 +228,7 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
             Hauptpostfach-ID noch nicht konfiguriert (Setup / MAILBOX_ID).
           </p>
         )}
-        <p className="text-[10px] text-muted-foreground">
-          Shared-Object on-chain (= Chain-IDs → Postfach). Wird immer mitgelesen. Composer-Default, wenn kein
-          anderes Ziel gewählt. <em>Nicht</em> Team #1 / Private #n.
-        </p>
+        <p className="text-[10px] text-muted-foreground">{mainMailboxExplain()}</p>
       </section>
 
       <section className="space-y-2">
@@ -254,8 +258,7 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
           </div>
         </div>
         <p className="text-[10px] leading-snug text-muted-foreground">
-          Zweites Shared-Object (andere ID) — z. B. THW getrennt vom Einsatz-Hauptpostfach. Beitreten = ID kennen
-          (kein Chain-Mitgliedschaft). Erstellen = neu on-chain. Schreiben: Ziel im Composer wählen.
+          {teamMailboxesExplain(Boolean(p.teamMailboxCreateAllowed))}
         </p>
         {teamList.length === 0 ? (
           <p className="text-[10px] text-muted-foreground">
@@ -318,10 +321,7 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
             onStatus={p.onStatus}
           />
         </div>
-        <p className="text-[10px] leading-snug text-muted-foreground">
-          Nur für dein Wallet — du erstellst sie selbst. „On-chain löschen“ entfernt das Postfach dauerhaft von der
-          Kette. Bekannte Private werden mitgelesen.
-        </p>
+        <p className="text-[10px] leading-snug text-muted-foreground">{privateMailboxesExplain()}</p>
         {privateList.length === 0 ? (
           <p className="text-[10px] text-muted-foreground">Noch keine private Mailbox.</p>
         ) : (
