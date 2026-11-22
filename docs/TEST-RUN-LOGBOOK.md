@@ -21,6 +21,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-11-22** | PC (Windows), **Vault-PW Tab + Idle-Pref** | F5: Browser-PW Tab-Persist; API bleibt offen ohne Prozess-Neustart. Idle-Auto-Lock Pref Default aus (Einstellungen → Tresor). 2. Terminal (B) nach `dm:b`-Start gesperrt bis Unlock — eigener Prozess. | **CODE** — Vitest vault-password-session + idle-pref |
 | **2026-11-22** | PC (Windows), **B offen + Enc Roundtrip** | A↔B Enc live (`A8opBC8u…` / `Ezc9u4yA…`). B-UI: Badge „Tresor: Passwort“ trotz API offen → Hint-Copy ehrlich (Browser-Sitzung ≠ API-Lock). | **PASS (Enc)** · Hint-Fix PR |
 | **2026-11-22** | PC (Windows), **Post-merge Enc + Group-Annehmen** | Nach #15–#17: Enc A→B Tx `ETT8mK9E…` / `F8jsd7xD…` B entschlüsselt. Group-Panel: Annehmen nur wenn Peer offen (wie Partner-Panel). | **PASS (Enc+UX)** |
 | **2026-11-22** | PC (Windows), **PR #15 merge + Desk** | `#15` Connect/Annehmen/Enc A↔B gemerged (`0978e89`). Follow-up `#16` `dev:stop` inkl. 3345. `smoke:standalone-desk` **88/88 PASS**. | **PASS (Merge+Desk)** |

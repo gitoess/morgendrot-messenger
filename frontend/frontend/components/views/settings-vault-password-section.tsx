@@ -6,6 +6,12 @@ import { toast } from 'sonner'
 import { fetchStatus, vaultChangePassword, vaultLockCommand } from '@/frontend/lib/api'
 import { wipeLocalPassphraseStoresOnLock } from '@/frontend/lib/privacy-lock-wipe'
 import { setVaultPasswordSession } from '@/frontend/lib/vault-password-session'
+import {
+  readVaultIdleLockMinutes,
+  VAULT_IDLE_LOCK_MINUTE_OPTIONS,
+  writeVaultIdleLockMinutes,
+  type VaultIdleLockMinutes,
+} from '@/frontend/lib/vault-idle-lock-pref'
 import { UiPasswordInput } from '@/frontend/components/ui-password-input'
 
 type SettingsVaultPasswordSectionProps = {
@@ -20,6 +26,11 @@ export function SettingsVaultPasswordSection({ vaultLocked = false }: SettingsVa
   const [sessionBusy, setSessionBusy] = useState(false)
   const [hasKeys, setHasKeys] = useState<boolean | undefined>(undefined)
   const [signerKind, setSignerKind] = useState<string | undefined>(undefined)
+  const [idleMinutes, setIdleMinutes] = useState<VaultIdleLockMinutes>(0)
+
+  useEffect(() => {
+    setIdleMinutes(readVaultIdleLockMinutes())
+  }, [])
 
   const canUseVault = !vaultLocked && hasKeys === true
 
@@ -115,8 +126,30 @@ export function SettingsVaultPasswordSection({ vaultLocked = false }: SettingsVa
       <p className="mb-3 text-[12px] leading-relaxed text-muted-foreground">
         <strong className="text-foreground">Sitzung beenden</strong> = volles Sperren wie Abmelden (Keys aus RAM,
         Inbox-Schnellcache weg). <strong className="text-foreground">Badge im Chat</strong> = nur weich (Chat bleibt
-        offen, kein Cache-Löschen). Notfall-Löschung ist darunter separat.
+        offen, kein Cache-Löschen). <strong className="text-foreground">Neu laden (F5)</strong> sperrt den API-Tresor
+        nicht — nur Abmelden / Sitzung beenden / optional Idle. Notfall-Löschung ist darunter separat.
       </p>
+      <label className="mb-4 flex max-w-md flex-col gap-1.5 text-[12px] text-muted-foreground">
+        <span className="font-medium text-foreground">Auto-Sperren nach Abwesenheit</span>
+        <select
+          className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
+          value={idleMinutes}
+          onChange={(e) => {
+            const next = Number(e.target.value) as VaultIdleLockMinutes
+            const allowed = (VAULT_IDLE_LOCK_MINUTE_OPTIONS as readonly number[]).includes(next)
+              ? next
+              : 0
+            setIdleMinutes(allowed as VaultIdleLockMinutes)
+            writeVaultIdleLockMinutes(allowed as VaultIdleLockMinutes)
+          }}
+        >
+          <option value={0}>Aus (nur Knopf)</option>
+          <option value={5}>Nach 5 Minuten</option>
+          <option value={15}>Nach 15 Minuten</option>
+          <option value={30}>Nach 30 Minuten</option>
+          <option value={60}>Nach 60 Minuten</option>
+        </select>
+      </label>
       {!canUseVault ? (
         <p className="mb-3 text-[12px] text-amber-800 dark:text-amber-200">
           {vaultLocked || hasKeys === false
