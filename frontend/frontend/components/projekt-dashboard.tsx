@@ -26,6 +26,8 @@ import { ConfigView } from './views/config-view'
 import { WorkerActionCenterView } from './views/worker-action-center-view'
 import { DeviceRadarView } from './views/device-radar-view'
 import { DashboardSharedDialogs } from '@/frontend/components/dashboard-shared-dialogs'
+import { VaultFailClosedSurface } from '@/frontend/components/vault-fail-closed-surface'
+import { shouldApplyVaultFailClosedOverlay } from '@/frontend/lib/vault-fail-closed'
 import { WorkspaceProjectsPanel } from './workspace-projects-panel'
 import { DashboardIotaTransferCard } from '@/frontend/components/dashboard-iota-transfer-card'
 import { DashboardMyAddressPicker } from '@/frontend/components/dashboard-my-address-picker'
@@ -62,6 +64,10 @@ export function ProjektDashboard() {
 
   const showDeviceRadar =
     s.isBossRole || (s.role || '').toLowerCase() === 'kommandant'
+  const vaultSessionLocked = !!(s.locked || s.apiSnapshot?.locked)
+  const applyVaultFailClosed = shouldApplyVaultFailClosedOverlay({
+    vaultSessionLocked,
+  })
 
   return (
     <>
@@ -74,7 +80,7 @@ export function ProjektDashboard() {
         unlock={{ ...s.unlock, apiSnapshot: s.apiSnapshot }}
       />
       {s.activeView ? (
-      <div className="min-h-screen bg-background">
+      <VaultFailClosedSurface active={applyVaultFailClosed} className="min-h-screen bg-background">
         {/* Slim Header */}
         <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
           <div className="flex h-14 items-center gap-4 px-4">
@@ -175,10 +181,10 @@ export function ProjektDashboard() {
             />
           )}
         </main>
-      </div>
+      </VaultFailClosedSurface>
       ) : (
     <DeploymentProfileBackdrop status={s.apiSnapshot}>
-    <div className="min-h-screen bg-background/80">
+    <VaultFailClosedSurface active={applyVaultFailClosed} className="min-h-screen bg-background/80">
       {/* Header */}
       <header className="border-b border-border bg-card/90 backdrop-blur-sm">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
@@ -538,7 +544,7 @@ export function ProjektDashboard() {
           </div>
         )}
       </main>
-    </div>
+    </VaultFailClosedSurface>
     </DeploymentProfileBackdrop>
       )}
     </>

@@ -8,9 +8,9 @@ Kurznotizen für spätere Phasen — **kein** Implementierungsversprechen.
 
 **Entscheidung 2026-11-20:** Statt vieler Einzel-Gates: bei `locked` Messenger-Hauptfläche ausgrauen/`pointer-events: none`, **nur** Unlock-Dialog bedienbar. Optional Statusleiste sichtbar; SOS nur mit expliziter Whitelist.
 
-**Warum nicht sofort:** PWA-Hintergrund-Lock (`/vault-lock`) + Unlock-Dialog existieren schon; Overlay braucht Shell-Schnitt (Dashboard/Chat-Root), Edge Cases (Erststart, Solo ohne Basis, Notfall) und Regression-Risiko. **Nächste Scheibe** nach aktuellem Posteingang-Feinschliff — nicht parallel.
+**Ist 2026-11-22 (MVP):** `shouldApplyVaultFailClosedOverlay` + `VaultFailClosedSurface` in `messenger-dashboard` / `projekt-dashboard`. Hard-Lock nur; Wizard/Helper-Seed unterdrücken Scrim wie Unlock-Dialog. Soft-Lock unverändert (Chat lesbar). SOS bleibt bei Hard-Lock ohnehin ausgeblendet.
 
-**Nicht:** Soft-Lock (lesen ok / schreiben gesperrt) parallel — verdoppelt Logik.
+**Nicht:** Soft-Lock (lesen ok / schreiben gesperrt) als zweites Fail-Closed — verdoppelt Logik.
 
 ---
 

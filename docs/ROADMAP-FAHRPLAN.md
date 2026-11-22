@@ -21,7 +21,7 @@
 **Aktueller Arbeitsstand (verbindlich 2026-11-22 — IOTA-Messenger-Fokus):**
 1. **Fokus jetzt:** schlanker **IOTA-Messenger** (Wallet, Mailbox-Chat, leichte Gruppen, Transfer, Telefonbuch/QR, Handshake). **Nicht jetzt:** Helfer/Boss/Einsatzleitung/Handoff/Macro/Streams-Puls/Fern-Purge/Mesh-Kern — siehe *Später…* + *H.*-Triage unten.  
 2. **Erledigt (PC, Welle bis 2026-11-22):** Settings/Telegram/G2–G4 **PASS**; Posteingang-UX (⋯/Optionen/.morg-pkg/Ich); Bubble-Sendepfad-Farben; Mailbox-Produktklarheit; Merge PR#4/#5 auf `main`.  
-3. **Als Nächstes (Messenger):** (a) Tresor **fail-closed Overlay** (`IDEEN-BACKLOG`); (b) **H.15** Direct-IOTA / Standalone-Desk-Smoke → frische APK **4b–4d**; (c) Produkt-Split Overlay/Defaults (`iota-messenger`); (d) Mailbox/Handshake-Klarheit wo nötig.  
+3. **Als Nächstes (Messenger):** (a) ~~Tresor fail-closed Overlay~~ **Ist 2026-11-22** (`VaultFailClosedSurface`); (b) **H.15** Direct-IOTA / Standalone-Desk-Smoke → frische APK **4b–4d**; (c) Produkt-Split Overlay/Defaults (`iota-messenger`); (d) Mailbox/Handshake-Klarheit wo nötig.  
 4. **Session C** (Privacy/NFT 2-Geräte) + Standalone **4e/4f** → **später**, wenn 2. Gerät.  
 5. **Wallet/IOTA-Aktivität:** Freeze (2026-11-20) — nicht anfassen außer User fordert.  
 6. **Gestrichen:** WhatsApp, Paywall; **Ideen nur:** Linkify, Zauberstab, Visitenkarte-teilen, On-Chain-ReleaseManifest.  
