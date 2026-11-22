@@ -18,15 +18,23 @@
 
 **Cursor-„Plan“-Modus** = nur Chat-Modus, **kein** zweites Produktdokument.
 
-**Aktueller Arbeitsstand (verbindlich 2026-11-22 — IOTA-Messenger-Fokus):**
-1. **Fokus jetzt:** schlanker **IOTA-Messenger** (Wallet, Mailbox-Chat, leichte Gruppen, Transfer, Telefonbuch/QR, Handshake). **Nicht jetzt:** Helfer/Boss/Einsatzleitung/Handoff/Macro/Streams-Puls/Fern-Purge/Mesh-Kern — siehe *Später…* + *H.*-Triage unten.  
-2. **Erledigt (PC, Welle bis 2026-11-22):** Settings/Telegram/G2–G4 **PASS**; Posteingang-UX (⋯/Optionen/.morg-pkg/Ich); Bubble-Sendepfad-Farben; Mailbox-Produktklarheit; Merge PR#4/#5 auf `main`.  
-3. **Als Nächstes (Messenger):** (a–c) fail-closed / Desk-Smoke / product-identity **Ist**; (d) ~~Mailbox/Handshake-Klarheit~~ **Ist 2026-11-22** (Copy + Persistenz-Labels + Handbuch); Gerät **4b–4d** noch manuell. **H.20:** `.env.example` Default **`SIGNER=sdk`**. **H.30** Voll-Wizard bleibt Backlog.
-4. **Session C** (Privacy/NFT 2-Geräte) + Standalone **4e/4f** → **später**, wenn 2. Gerät.  
-5. **Wallet/IOTA-Aktivität:** Freeze (2026-11-20) — nicht anfassen außer User fordert.  
-6. **Gestrichen:** WhatsApp, Paywall; **Ideen nur:** Linkify, Zauberstab, Visitenkarte-teilen, On-Chain-ReleaseManifest.  
-7. **Merge-Ritual:** nach sinnvollem Paket push → PR → merge → `main` pull.  
-8. **Vollständiger H.*-Split:** Abschnitte *Jetzt (IOTA-Messenger)* und *Später…* unten — kanonisch für diesen Durchgang.
+**Aktueller Arbeitsstand (verbindlich 2026-11-22 — IOTA-Messenger + Phasen-Reihenfolge):**
+
+**Phasen-Reihenfolge (User 2026-11-22 — verbindlich verbessert):**
+1. **PC zuerst komplett** — Messenger-Kern, UX, Desk-Smoke, Direct-IOTA Stage‑2, optional **Zwei-Wallet/Zwei-Browser auf demselben PC** für Handshake/E2EE/NFT-Solo.  
+2. **Dann Handy (1 Gerät)** — frische APK, Standalone **4b–4d** (kein zweites Handy nötig).  
+3. **Physisches 2. Gerät ganz am Schluss** — Session C, Standalone **4e/4f**, echte Zwei-Geräte-QR/Peering.  
+4. **Funk/Meshtastic** — separat ganz hinten (braucht wirklich 2 Radios/Geräte); nicht Messenger-PC-Blocker.
+
+**Kritisch ehrlich:** Fast alles außer Funk lässt sich **ohne zweites Handy** prüfen (2 Browser-Profile / 2 Seeds auf dem PC). Ein zweites **physisches** Gerät bleibt sinnvoll für APK-Realität und 4e/4f — aber **nicht** vor „PC sauber“.
+
+1. **Fokus jetzt:** **PC-Messenger fertig ziehen** (IOTA-Messenger: Wallet, Mailbox-Chat, Gruppen leicht, Transfer, Telefonbuch/QR, Handshake). **Nicht jetzt:** Handy-Abnahme, physisches 2. Gerät, Helfer/Boss/Mesh.  
+2. **Erledigt (PC):** Settings/TG/G2–G4; Posteingang-UX; fail-closed Overlay; product-identity; Mailbox/Handshake-Klarheit; Desk-Smoke 87/87; `SIGNER=sdk` Default.  
+3. **Als Nächstes (nur PC):** Stage‑2 Direct-IOTA am Browser (Klartext+Enc Self/Zwei-Wallet); restliche PC-UX-Lücken; Vitest/Merge-Hygiene. **Kein** APK-Zwang in dieser Phase.  
+4. **Danach Handy:** `apk:debug:build` → **4b–4d** (1 Gerät).  
+5. **Ganz am Schluss:** Session C / **4e–4f** / physisches 2. Gerät; dann Funk.  
+6. **Wallet/IOTA-Aktivität:** Freeze. **Gestrichen:** WhatsApp/Paywall.  
+7. **Merge-Ritual** nach sinnvollem Paket.
 
 ### Jetzt machen (IOTA-Messenger — User-Durchgang 2026-11-22)
 
@@ -39,7 +47,7 @@
 | **H.8** | Dienst vs. privat (Doku) | Zwei Installationen merken; kein Soft-Switch-Bau |
 | **H.10** (Teil) | Ehrliche Claims / schlanke Härtung | Kein „Regierungs-Niveau“-Theater |
 | **H.13 / H.14** | Schlankheit / Hardening | Nur bei Bedarf mit Messenger-Scheibe |
-| **H.15** | Handy-first / Client-IOTA / Standalone-Smoke | Kernpfad Messenger |
+| **H.15** | Direct-IOTA / Desk-Smoke | **PC jetzt**; Handy 4b–4d **nach** PC-Phase |
 | **H.16** (Teil) | Telefonbuch + QR | **ohne** Boss-LAN / Helfer-Onboarding als Fokus |
 | **H.20** | Signer `sdk` | **Ist:** `.env.example` Default `sdk` (2026-11-22) |
 | **H.21** (Teil) | Empfänger-Auswahl Ist | Kurier-Umschlag → später |
@@ -79,7 +87,9 @@
 | **H.18** | TTS/STT Ausbau | Vorlesen Ist-teilweise; Cloud-STT später |
 | **H.19** | Forensic Capture | Nach Kern |
 | **H.21** (Rest) | Verschlüsselter Kurier-Umschlag | Später |
-| **H.23 Rest** | Session C, C1-Default, P5d, MeshSleepy | Nach 2. Gerät / Phase 3 |
+| **H.23 Rest** | Session C, C1-Default, P5d, MeshSleepy | **Physisches 2. Gerät ganz am Schluss** / Phase 3 |
+| **H.15 4e/4f** | Zwei-Geräte Peering/QR (APK) | Nach PC + nach 1-Gerät-4b–4d |
+| **Physisches 2. Gerät** | Session C Privacy/NFT Joint | **Schluss** — auf PC vorher 2-Wallet-Surrogat ok |
 | **H.24 / H.24a/b** | Package-Profile Multi-Einsatz UI | Nach Messenger-Kern |
 | **H.25 / H.25a** | LoRa-Bilder LUMA/CHROMA | Feld später |
 | **H.26** (Rest) | Alarmgruppe B4b / Einsatz-TG | Split: Edition weg |
@@ -238,7 +248,7 @@
 | **B2-S5 One-Time + Offline-QR/Mesh-Text** | **88** | Spend+Burn 1 TX + Offline Index-Paste Smoke PASS; Move-Consume + Auto-Mesh Backlog |
 | **B2-S6 Smoke PASS / Feature-Freeze** | **100** | **2026-11-09** — Welle eingefroren; kein neues Feature parallel |
 | **C1 Double Ratchet** | **40** | Spec+Codec; **kein** Produktiv-Default |
-| **2-Geräte-Feldtest (Privacy/NFT)** | **5** | **Session C** = nächster gemeinsamer Schritt |
+| **2-Geräte-Feldtest (Privacy/NFT)** | **5** | **Session C** = **ganz am Schluss** (nach PC + 1-Gerät-Handy); Surrogat: 2 Wallets/Browser am PC |
 | **Tranche gesamt (Code → nutzbar)** | **~85** | Freeze dieser Welle |
 | **Tranche gesamt (inkl. Smoke/Abnahme)** | **~78** | B2-S6 PASS; Session C / Feld offen |
 
@@ -278,7 +288,8 @@
 **Session B Code (2026-11-08):** One-Time/Offline-Badges, Empfänger Index-Paste, Consume sperrt Auszahlen, Zeitkapsel Notfall-Labels.  
 **Session B Joint (2026-11-09):** B7a–d Kern PASS; Burn 2. TX + B8 Self-Borrower FAIL → **Fix Code** (Spend+Burn eine TX; Lease Self-Guard). Retest: neues One-Time → Auszahlen; Zeitkapsel an fremde Wallet `0x0bbc…`.  
 **B2-S6 Rest (2026-11-09):** Offline Compact → Index empfangen Self-Paste PASS; Lease `0xa802…` Früh-zurück UX (Signer-Gate); Reclaim skip bis unlock. **Freeze** dieser Welle.  
-**Nachzug 2026-11-16:** PC-UX/Settings-Durchgang dazwischen (T-Rituale). **Als Nächstes = Settings-Rest → dann Session C** — nicht P5d/Explorer parallel.
+**Nachzug 2026-11-16:** PC-UX/Settings-Durchgang dazwischen (T-Rituale).  
+**Nachzug 2026-11-22:** **PC komplett → Handy 1 Gerät → physisches 2. Gerät/Session C ganz am Schluss.** Session C ist **kein** nächster Schritt mehr.
 
 **Nachtrag 2026-11-09 (IOTA-Aktivität kritisch + Zeitkapsel-Soll hinten):**
 - **IOTA-Aktivität = lokal kuratiert** (App-Events), **kein** Explorer-Wallet-Feed. Vollhistorie aller TXs + Nachrichten **würde Sinn machen als späteres Produktfeature**, aber **nicht jetzt**: RPC-Query-Last, Failed/Gas-Spam, Privacy (fremde Digests im UI), Duplikat-Risiko vs. Posteingang.
@@ -624,7 +635,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 
 **Prinzip:** Erst **Phase A** absichern, dann **Phase B** (Mesh + Delayed Upload), dann **Phase C** (Makros/Gateway). **Nicht** parallel: großer UI-Refactor (**§ H.1b**) und neuer **Mesh-Kern** in derselben Woche; **§ I**-Produktversprechen vor **B**; **Kabel-Bridge** (**§ A.8**) bewusst **nach** klarer Queue-/Sync-Semantik (**§ H.12**) oder mit Spec-Abgleich. **Ab 2026-04-28:** **§ H.15** (Client-IOTA, optionaler Node) in **kleinen Scheiben** parallel zu **§ H.0–H.2** **erlaubt**, solange **`TESTING.md`**-Ritual und **kein** unkontrollierter Cross-Refactor mit **Mesh-Kern** (**§ C.0b** weiter beachten).
 
-**Operative Reihenfolge (einheitlich):** **Ab 2026-11-22:** zuerst *Jetzt (IOTA-Messenger)* im Arbeitsstand-Kopf (Overlay, H.15 Smoke, Mailbox/Handshake, Split). Phase-B-Feld (**H.3**, H.25a, H.36, SOS Wanderer) bleibt **→ Später**. Historisch: **§ C.0b** → Phase-A-Scheiben → **§ H.15** Handy-Smoke → Mesh/SOS **am Schluss**.
+**Operative Reihenfolge (einheitlich):** **Ab 2026-11-22:** (1) **PC-Messenger komplett** (*Jetzt*-Tabelle + Stage‑2 am Browser). (2) **Handy 1 Gerät** 4b–4d. (3) **Physisches 2. Gerät / Session C / 4e–4f** ganz am Schluss. (4) Funk/Mesh (**H.3***) separat hinten. Historisch: C.0b → Phase A → Handy — ersetzt durch diese Phasen.
 
 | Stufe | Reihenfolge | Hinweis |
 |-------|-------------|---------|
