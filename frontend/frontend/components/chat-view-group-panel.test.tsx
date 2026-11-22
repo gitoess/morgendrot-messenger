@@ -95,4 +95,31 @@ describe('ChatViewGroupPanel (§ H.1a)', () => {
     fireEvent.click(screen.getByRole('button', { name: /Einsatz 2 \(1\)/i }))
     expect(screen.getByDisplayValue('Einsatz 2')).toBeInTheDocument()
   })
+
+  it('Pairwise: Annehmen nur für offene Peers, nicht für verbundene', () => {
+    const id = createMessengerGroupId()
+    upsertMessengerGroup({
+      id,
+      name: 'Pairwise',
+      memberAddresses: [MEMBER_A, MEMBER_B],
+      useTeamBroadcast: false,
+    })
+    writeActiveGroupId(id)
+    render(
+      <ChatViewGroupPanel
+        contactDirectory={{}}
+        encrypted
+        forcedTransport="internet"
+        handshake={{
+          sending: false,
+          connectedAddresses: [MEMBER_A],
+          onHandshakeForAddress: vi.fn(),
+          onConnectAcceptForAddress: vi.fn(),
+        }}
+      />
+    )
+    expect(screen.getByText(/^verbunden$/i)).toBeInTheDocument()
+    expect(screen.getByText(/^offen$/i)).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /^Annehmen$/i })).toHaveLength(1)
+  })
 })

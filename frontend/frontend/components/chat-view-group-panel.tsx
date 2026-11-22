@@ -715,7 +715,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
                         Handshake
                       </button>
                     ) : null}
-                    {handshake?.onConnectAcceptForAddress ? (
+                    {handshake?.onConnectAcceptForAddress && !connected ? (
                       <button
                         type="button"
                         disabled={handshake.sending}
