@@ -843,7 +843,7 @@ function applyRuntimeConfigToCfg(): void {
         runtimeSignerSource = 'runtime';
         runtimeConfigKeysCache.push('SIGNER');
     } else {
-        CFG.SIGNER = ((process.env.SIGNER || 'cli').trim().toLowerCase() as SignerMode) || 'cli';
+        CFG.SIGNER = ((process.env.SIGNER || 'sdk').trim().toLowerCase() as SignerMode) || 'sdk';
         runtimeSignerSource = 'env';
     }
     if (runtime.walletDerivationPath) {
@@ -1264,9 +1264,9 @@ export const CFG = {
     /** Max. Größe pro Log-Datei (z. B. "20m"). Default "20m". */
     LOG_MAX_SIZE: process.env.LOG_MAX_SIZE?.trim() || '20m',
 
-    // --- Signer: cli (lokal) | remote (Boss) | sdk (Mnemonic im Prozess, keine CLI) ---
-    /** cli = IOTA-CLI. remote = Boss-Service. sdk = Mnemonic eingeben, Signatur im Prozess (PC2 ohne CLI). */
-    SIGNER: (process.env.SIGNER || 'cli') as 'cli' | 'remote' | 'sdk',
+    // --- Signer: sdk (Default Messenger/PWA) | cli (IOTA-CLI Legacy) | remote (Boss) ---
+    /** sdk = Mnemonic im Prozess (Default). cli = IOTA-CLI. remote = Boss-Service. */
+    SIGNER: (process.env.SIGNER || 'sdk') as 'cli' | 'remote' | 'sdk',
     /** URL des Boss-Signer-Services (z. B. https://boss.example/sign). Nur bei SIGNER=remote. */
     REMOTE_SIGNER_URL: process.env.REMOTE_SIGNER_URL || '',
     /** Optional: Bearer-Token für REMOTE_SIGNER_URL. */
