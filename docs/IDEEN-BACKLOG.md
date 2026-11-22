@@ -41,11 +41,19 @@ Kurznotizen für spätere Phasen — **kein** Implementierungsversprechen.
 
 ---
 
-## Release: SHA-256 Ist / GPG optional
+## Release: SHA-256 Ist / GPG optional / On-Chain-Manifest optional
 
 **Ist:** Hobby-Release schreibt `SHA256SUMS.txt` (`scripts/package-hobby-release-artifacts.mjs`, Workflow `.github/workflows/release-hobby-artifacts.yml`).  
 **Nicht Ist:** GPG-/cosign-Signatur der Artefakte.  
 **Später optional:** GPG nur mit Key-Verwaltung + Verifikationszeile in Release-Notes — sonst weglassen.
+
+**Idee (später, nicht Messenger-Kern):** `ReleaseManifest` als frozen Move-Objekt (`publish_release(version, sha256, url)` + `freeze_object`) + Anzeige unter Einstellungen → Über. **Kein** Ersatz für `SHA256SUMS`; Publisher-Key/Gas/Prozess klären — sonst Theater. Entscheidung Roadmap-Durchgang 2026-11-22.
+
+---
+
+## Keine Multi-Adresse im Messenger-Account
+
+**Entscheidung 2026-11-22:** Kein IOTA-Wallet-style „mehrere Adressen / ein Login“ in der Chat-UX (Thread-/Saldo-Chaos). Privat/Geschäft → später **§ H.37 Multi-Profil** (eigene Seeds, nie parallel).
 
 ---
 
