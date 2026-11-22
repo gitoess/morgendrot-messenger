@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Beendet lokale Morgendrot-Dev-Prozesse auf den Standard-Ports (UI 3341, API 3342/3343).
+ * Beendet lokale Morgendrot-Dev-Prozesse auf den Standard-Ports
+ * (A: 3341/3342, optional 3343, B: 3344/3345).
  * Hilft bei EADDRINUSE / „Website nicht erreichbar“ nach doppelten `npm run dev`-Starts.
  */
 import { collectListeningPids, DEV_STACK_PORTS, killPid } from './dev-port-utils.mjs'
@@ -21,4 +22,4 @@ for (const pid of pids) {
   }
 }
 
-console.log('Fertig. Neu starten mit: npm run dev:messenger:clean')
+console.log('Fertig. Neu starten: npm run dm  (optional B: npm run dm:b)')

@@ -5,11 +5,14 @@
 import { execSync } from 'node:child_process'
 import { platform } from 'node:os'
 
-/** Standard-Ports des Messenger-Dev-Stacks. */
-export const DEV_STACK_PORTS = [3341, 3342, 3343, 3344]
+/** Standard-Ports: A (3341/3342), Fallback 3343, B Zwei-Wallet (3344/3345). */
+export const DEV_STACK_PORTS = [3341, 3342, 3343, 3344, 3345]
 
-/** Messenger-Dev: Next + API (kein Fallback auf 3343). */
+/** Messenger-Dev A: Next + API (kein Fallback auf 3343). */
 export const MESSENGER_DEV_PORTS = [3341, 3342]
+
+/** Messenger B (`dm:b`): UI 3344 + API 3345. */
+export const MESSENGER_B_DEV_PORTS = [3344, 3345]
 
 function parsePid(line) {
   const parts = line.trim().split(/\s+/)
