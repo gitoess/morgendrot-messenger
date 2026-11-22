@@ -1221,7 +1221,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 ) : null}
                 {onMediaFilterChange ? (
                   <>
-                    {(onDirectionFilterChange || onWireFilterChange) && onMediaFilterChange ? (
+                    {onDirectionFilterChange || onWireFilterChange ? (
                       <DropdownMenuSeparator />
                     ) : null}
                     <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">

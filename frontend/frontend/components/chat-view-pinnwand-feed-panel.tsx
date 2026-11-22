@@ -23,7 +23,6 @@ type FeedListProps = Pick<
   | 'myAddress'
   | 'contactDirectory'
   | 'isMeshVerifiedForAddress'
-  | 'exportEcdhMorgPkgForMessage'
   | 'onHideInboxMessageLocal'
   | 'onPurgeInboxMessageChain'
   | 'onForwardMessage'

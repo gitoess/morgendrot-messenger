@@ -17,7 +17,9 @@
 - **Schreibtisch (ohne Browser, 2026-03-28):** Root **`npm run test:smoke`** (36 Modulgruppen) + **`test:h15-direct-submit`** dokumentiert in **`docs/TEST-RUN-LOGBOOK.md`** — ersetzt **nicht** § 2 (Testnet / Puls / Basis aus).
 - **Nach grünem PWA-Schreibtisch-Check** (`npm run check:pwa-desk:full`, Fahrplan **§ H.2**): laut **`docs/ROADMAP-FAHRPLAN.md`** **§ C.0b** als Nächstes **§ H.1a** und am Gerät **L1–L5** — **§ 2** dieses Dokuments **danach**, wenn **`docs/HANDY-TEST-WINDOW.md`** passt.
 
-**Letzter automatisierter Lauf (Schreibtisch):** **2026-05-28** — **`npm run test:h15-direct-submit`** (**24** Tests, inkl. B.2 Peering-Snapshot) grün; Eintrag **`docs/TEST-RUN-LOGBOOK.md`**. § 2 weiter **manuell** (**`docs/HANDY-LATER-MANUAL-TESTS.md`** § D).
+**PC-Phase (2026-11-22):** Kurzprotokoll ohne Funk/APK → **`docs/PC-STAGE2-DIRECT-IOTA-SMOKE.md`**. Dieses Dokument bleibt Langform (inkl. § 2.4 Basis-aus, Path 4).
+
+**Letzter automatisierter Lauf (Schreibtisch):** **2026-11-22** — **`npm run test:h15-direct-submit`** / Desk-Smoke (**87** Tests) grün; Eintrag **`docs/TEST-RUN-LOGBOOK.md`**. Browser-§ 2 / PC-Kurz § 1 weiter **manuell**.
 
 **Nachtrag 2026-05-28 (Phase 2 + B.1 + B.2 + H.16):** Posteingang/Handshake-RPC; Peering-QR; **Handshake senden + Connect (Partner)** per Fullnode (`connect-hybrid`); Einsatz-Connect (.env) weiter API. Manuelles: **`docs/HANDY-LATER-MANUAL-TESTS.md`** § D/E.
 

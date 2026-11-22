@@ -142,7 +142,7 @@ export function TeamMailboxSyncStatus(p: {
           </li>
           <li>
             <span className="text-foreground">Hauptpostfach</span> (Karte darunter) = Setup-
-            <code className="text-[10px]">MAILBOX_ID</code>, andere ID, Einsatz-Shared.
+            <code className="text-[10px]">MAILBOX_ID</code>, andere ID, gemeinsames Deploy-Postamt.
           </li>
         </ul>
       ) : null}

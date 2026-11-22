@@ -2220,7 +2220,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                               ? it.attrs.map((a) => `${a.key}=${a.value}`).join(' · ')
                               : undefined
                           }
-                          contentHash={it.parsed?.hash || undefined}
+                          contentHash={it.attrs?.find((a) => a.key === 'hash')?.value || undefined}
                           variant="button"
                           className="shrink-0"
                         />

@@ -2,7 +2,7 @@
 
 **Zweck:** Eine **einzige Abnahme-Runde** für **APK + Handoff + Direkt-RPC** — abgeleitet aus **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** § 10 **4b–4f**, ohne die Relay-/Boss-LAN-Schritte zu vermischen.
 
-**Reihenfolge (2026-11-22):** Zuerst **PC-Messenger komplett** (inkl. Desk-Smoke + optional Zwei-Wallet am PC). **Dann** diese Checkliste ab **4b–4d** (1 Handy). **4e–4f / physisches 2. Gerät** und Funk → **ganz am Schluss** (`docs/ROADMAP-FAHRPLAN.md` Arbeitsstand).
+**Reihenfolge (2026-11-22):** (1) **PC komplett** → (2) diese Checkliste **4b–4d** (1 Handy) → (3) **Funk/Meshtastic** → (4) **4e–4f / physisches 2. Gerät** (`docs/ROADMAP-FAHRPLAN.md` Arbeitsstand).
 
 **Nicht dasselbe wie:** § 9 Offline/Reconnect, § 10 Schritt 4 (Basis-URL), § 2 Browser-am-PC — die brauchen einen laufenden Morgendrot-Server und stehen in **`docs/HANDY-LATER-MANUAL-TESTS.md`** (A–D). **Diese Liste nur ausführen, wenn ihr bewusst Standalone testet** — und **nach** stabilem PC.
 
@@ -28,7 +28,7 @@
 | Was man meint | Ist | Was tun |
 |---------------|-----|---------|
 | **„Standalone PC-Schreibtisch“** | Vitest/`smoke:standalone-desk` — Prep für **Handy** Variante B | Schon vor APK; ersetzt **kein** Gerät |
-| **PC Direct-IOTA (Stage‑2)** | Browser + `npm run dm`: Tresor **über API**, Send/Inbox **Direkt-RPC** gegen Fullnode | **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** § 2 — **nicht** „kein API“ |
+| **PC Direct-IOTA (Stage‑2)** | Browser + `npm run dm`: Tresor **über API**, Send/Inbox **Direkt-RPC** gegen Fullnode | Kurz: **`docs/PC-STAGE2-DIRECT-IOTA-SMOKE.md`**; Lang: Stage‑2 § 2 — **nicht** „kein API“ |
 | **Matrix H** „PC wie Handy ohne Server“ | Roadmap **Backlog** ~40 %; Code: `isStandaloneMessengerWithoutBasis()` **nur Capacitor** (Desktop bleibt bei `/api/unlock`) | **Nicht** als aktuelles Smoke verkaufen; Produkt später opt-in |
 | **PC Doppelklick** (`.bat` / Electron / später `.exe`) | Bundle **mit** Node (**B/C**) — ohne Terminal tippen; **kein** „ohne Server“ | `Start-Messenger.bat` / `npm run desktop`; echte `.exe` noch offen (Roadmap B/C) |
 
