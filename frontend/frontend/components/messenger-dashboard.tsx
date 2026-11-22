@@ -50,6 +50,11 @@ import { DashboardMessengerBossHome } from '@/frontend/components/dashboard-mess
 import { DashboardSharedDialogs } from '@/frontend/components/dashboard-shared-dialogs'
 import { VaultFailClosedSurface } from '@/frontend/components/vault-fail-closed-surface'
 import { shouldApplyVaultFailClosedOverlay } from '@/frontend/lib/vault-fail-closed'
+import {
+  IOTA_MESSENGER_UI,
+  isIotaMessengerProduct,
+  PRODUCT_DISPLAY_NAME,
+} from '@/frontend/lib/product-identity'
 import { messengerFeatures, featureTitle } from '@/frontend/components/dashboard-features-messenger'
 import { useMessengerFeatures } from '@/frontend/hooks/use-messenger-features'
 import { DashboardMyAddressPicker } from '@/frontend/components/dashboard-my-address-picker'
@@ -144,7 +149,10 @@ function MessengerDashboardBody({
   const vaultFromWizardFlowRef = useRef(false)
   const liteMessengerFromApi = true
   const effectiveRole = s.role || s.apiSnapshot?.role
-  const isEinsatzLeadHome = canAccessEinsatzleitung(effectiveRole)
+  const isEinsatzLeadHome =
+    !isIotaMessengerProduct() &&
+    !IOTA_MESSENGER_UI.hideEinsatzleitung &&
+    canAccessEinsatzleitung(effectiveRole)
   const offerMessengerSetupInVault = shouldOfferMessengerSetupFromVault(effectiveRole)
   const { t } = useAppTranslation('dashboard')
   const { t: tc } = useAppTranslation('common')
@@ -607,7 +615,9 @@ function MessengerDashboardBody({
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-lg font-bold text-foreground">{t('brand.messenger')}</h1>
+                <h1 className="text-lg font-bold text-foreground">
+                  {isIotaMessengerProduct() ? PRODUCT_DISPLAY_NAME : t('brand.messenger')}
+                </h1>
               </div>
               <p className="text-xs text-muted-foreground">
                 {s.networkInfo || t('network.defaultLabel')}
@@ -620,16 +630,18 @@ function MessengerDashboardBody({
                   </span>
                 ) : null}
               </p>
-              <div className="mt-1">
-                <MeshStatus
-                  mode={s.meshPathMode}
-                  subtitle={
-                    s.rpcProxyActive
-                      ? t('network.meshProxySubtitle')
-                      : t('network.meshDefaultSubtitle')
-                  }
-                />
-              </div>
+              {!IOTA_MESSENGER_UI.hideMeshStatus ? (
+                <div className="mt-1">
+                  <MeshStatus
+                    mode={s.meshPathMode}
+                    subtitle={
+                      s.rpcProxyActive
+                        ? t('network.meshProxySubtitle')
+                        : t('network.meshDefaultSubtitle')
+                    }
+                  />
+                </div>
+              ) : null}
               <DashboardHeaderAddress address={headerMyAddressFull} />
               {!s.locked && s.backendReachable ? (
                 <div className="mt-2">
@@ -758,17 +770,21 @@ function MessengerDashboardBody({
             </button>
           </div>
         ) : null}
-        <StandaloneFirstStartCard apiRole={s.role} />
+        {!IOTA_MESSENGER_UI.hideBossOnboardingChoices ? (
+          <StandaloneFirstStartCard apiRole={s.role} />
+        ) : null}
         <OnboardingResumeCard apiSnapshot={s.apiSnapshot} />
-        <StandaloneHandoffActivateCard
-          apiRole={s.role}
-          onOpenHandoffImport={() => s.openSettingsCategory('general')}
-          onActivateWallet={() => {
-            setOnboardingWizardOpen(false)
-            setVaultOverWizard(false)
-            s.requestStandaloneWalletUnlock()
-          }}
-        />
+        {!IOTA_MESSENGER_UI.hideBossHandoff ? (
+          <StandaloneHandoffActivateCard
+            apiRole={s.role}
+            onOpenHandoffImport={() => s.openSettingsCategory('general')}
+            onActivateWallet={() => {
+              setOnboardingWizardOpen(false)
+              setVaultOverWizard(false)
+              s.requestStandaloneWalletUnlock()
+            }}
+          />
+        ) : null}
         <StandaloneSoloWizardCard apiSnapshot={s.apiSnapshot} />
         {!s.locked && isEinsatzLeadHome ? (
           <DashboardMessengerBossHome
@@ -893,7 +909,10 @@ function MessengerDashboardBody({
             <MessengerDashboardOfflineHint />
           </div>
         )}
-        {!s.locked && !isEinsatzLeadHome && liteMessengerFromApi ? (
+        {!s.locked &&
+        !isEinsatzLeadHome &&
+        liteMessengerFromApi &&
+        !IOTA_MESSENGER_UI.hideSos ? (
           <div className="mt-16 flex justify-center pb-1">
             <DashboardSosEmergencyButton onOpenMessages={s.openMessengerChatView} />
           </div>

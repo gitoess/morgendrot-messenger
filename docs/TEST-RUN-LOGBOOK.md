@@ -21,6 +21,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-11-22** | PC (Windows), **Fail-closed Overlay + H.15 Desk** | PR#7 gemerged (`VaultFailClosedSurface` Hard-Lock). `npm run smoke:standalone-desk` → **H.15 87/87 PASS**; Debug-APK ~4 Tage (innerhalb 14-Tage-Fenster). | **PASS (Desk)** — Gerät 4b–4d noch manuell; 4e/4f braucht 2. Gerät |
 | **2026-11-19** | PC (Windows), **NFT-Galerie UX + Anleitung §3** | Tabs Eigene/Suche/Mint/Gesichertes Guthaben/Leserecht; Entsperren pro Karte; Senden+Telefonbuch; Mehr ohne Explorer-Doppel; Vollbild nearly fullscreen; Vitest entity-info+transfer+attrs+spend-policy **21 PASS**. Doku ANLEITUNG §3 + Chat-Handbuch + Roadmap-Nachtrag. | **PASS (Code+Doku)** — User-Retest Vollbild/Senden-Klapp-Idee. |
 | **2026-11-09** | PC (Windows), **Reclaim-Hub + Purse-Liste + NFT-Aktualisieren** | Zeitkapsel: Liste aller offenen Leases + Einzel-Reclaim; sticky **Aktualisieren** + Reclaim-Badge im NFT-Dialog; Purse Guthaben: Summe+Anzahl, einklappbare scrollbare Positionen + Filter ab 8. | **PASS (Code)** — User-Retest Reclaim-Liste / viele Vaults. |
 | **2026-11-09** | PC (Windows), **Composer Zeitkapsel Solo-Feldtest (User)** | NFTGATE + Leihe OK. „Besitz erneut prüfen“ entfernt. „Nach Ablauf zurückholen“ wirkte tot → Fix: Lease-ID-Extraktion härter, Dauer = **Minuten**, Countdown/Fehlertext, Hinweis wenn Lease-ID fehlt. NFT zurück: nach Unlock Reclaim **oder** Borrower „Früh zurück“. | **PASS (Solo Kern)** · Reclaim-UX-Fix Code — Retest Reclaim nach 1 Min. |
