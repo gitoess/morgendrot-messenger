@@ -21,6 +21,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-11-22** | PC (Windows), **Post-merge Enc + Group-Annehmen** | Nach #15–#17: Enc A→B Tx `ETT8mK9E…` / `F8jsd7xD…` B entschlüsselt. Group-Panel: Annehmen nur wenn Peer offen (wie Partner-Panel). | **PASS (Enc+UX)** |
 | **2026-11-22** | PC (Windows), **PR #15 merge + Desk** | `#15` Connect/Annehmen/Enc A↔B gemerged (`0978e89`). Follow-up `#16` `dev:stop` inkl. 3345. `smoke:standalone-desk` **88/88 PASS**. | **PASS (Merge+Desk)** |
 | **2026-11-22** | PC (Windows), **Enc A↔B + Annehmen-Banner** | Connect A→B + Enc A→B Tx `J8RW6iX4…`, B Inbox entschlüsselt `PC-S2 Enc A→B…`. B→A Enc zuvor `EDsZCV4…`/`DnTTPJe8…`. UI: Annehmen blieb grün weil Direkt-OK ohne API-peerMap + Angebot sichtbar → Fix: Snapshot-Merge, Offer dismiss, API-Connect nach Direct, Peer-Pub→ready. | **PASS (S2 Enc A↔B)** — Annehmen-UI nach Reload prüfen |
 | **2026-11-22** | PC (Windows), **Connect multi-peer + Enc B→A** | Root-cause: `/connect` „Bereits verbunden“ bei *irgendeinem* Peer + shared `.morgendrot-partner` (B schrieb A → A Self-Peer). Fix: peer-guard, cancel leert peerMap, Self-Filter, `PARTNER_ADDRESS_FILE=.morgendrot-partner-b`. Live: B connect→A, Enc Tx `EDsZCV4VsZ1u…`. Vitest connect-peer-guard 5/5. A-Tresor nach API-Restart gesperrt → A→B Enc pending Unlock. | **PASS (B→A Enc + Fix)** — A Unlock → `/connect 0xccfa…` → Enc A→B |
