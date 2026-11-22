@@ -28,7 +28,6 @@ function baseListProps() {
     myAddress: '',
     contactDirectory: {},
     isMeshVerifiedForAddress: () => false,
-    exportEcdhMorgPkgForMessage: vi.fn(),
     onHideInboxMessageLocal: vi.fn(),
     onPurgeInboxMessageChain: vi.fn(),
     onForwardMessage: vi.fn(),
