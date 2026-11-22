@@ -8,6 +8,7 @@ import { TeamMailboxSyncStatus } from '@/frontend/components/team-mailbox-sync-s
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { canCreateTeamMailbox } from '@/frontend/lib/messenger-role-capabilities'
 import { toast } from 'sonner'
+import { myMailboxesSettingsBlurb } from '@/frontend/lib/mailbox-clarity-copy'
 
 type SettingsMyMailboxesSectionProps = {
   apiStatus: ApiStatus | null
@@ -69,10 +70,7 @@ export function SettingsMyMailboxesSection({
           </div>
           <div>
             <h4 className="font-semibold text-foreground">Meine Mailboxen</h4>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Postfach = On-Chain-Speicher. Posteingang: Haupt + bekannte Privat/Team. Wohin geschrieben wird,
-              wählst du beim Senden (Composer). Kontakt-Postfach-IDs: Telefonbuch → Erweitert.
-            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{myMailboxesSettingsBlurb()}</p>
           </div>
         </div>
       </div>

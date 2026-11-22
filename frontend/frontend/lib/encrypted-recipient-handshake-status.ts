@@ -63,13 +63,13 @@ export function encryptedHandshakeBlocksSend(status: EncryptedRecipientHandshake
 export function encryptedHandshakeStatusLabel(status: EncryptedRecipientHandshakeStatus): string {
   switch (status) {
     case 'ready':
-      return 'Handshake aktiv — verschlüsselt senden möglich.'
+      return 'Handshake aktiv — verschlüsselt senden möglich. (Partner = 0x-Adresse, nicht die Mailbox-ID.)'
     case 'needs_handshake':
-      return 'Noch kein Schlüsselaustausch mit dieser Adresse — zuerst Handshake senden.'
+      return 'Kein Schlüsselaustausch mit dieser 0x-Adresse — zuerst Handshake senden (oder Peering-QR).'
     case 'awaiting_peer':
-      return 'Handshake von dir gesendet — der Partner muss noch antworten (öffentlicher Schlüssel). Danach verschlüsselt senden.'
+      return 'Handshake gesendet — warte, bis der Partner annimmt. Danach verschlüsselt senden.'
     case 'needs_accept':
-      return 'Partner hat Handshake gesendet — zuerst annehmen (Connect), dann senden.'
+      return 'Eingehender Handshake — „Annehmen“, dann verschlüsselt senden.'
     case 'checking':
       return 'Prüfe Handshake auf der Chain…'
     default:
