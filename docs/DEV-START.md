@@ -62,7 +62,7 @@ Nach Änderung in der **`.env` im Repo-Root**: **`npm run dev:stop`**, dann **`n
 
 Code: `frontend/frontend/lib/messenger-role-capabilities.ts` → `canAccessEinsatzleitung()`.
 
-**Dev wieder stoppen (Ports 3341–3344 freigeben):** **`npm run dev:stop`** oder **`npm run ds`** im Repo-Root — sinnvoll vor einem erneuten Start, wenn `EADDRINUSE` oder „Website nicht erreichbar“ nach einem abgebrochenen Lauf auftritt. Im laufenden Terminal reicht **Strg+C**.
+**Dev wieder stoppen (Ports 3341–3345 freigeben, inkl. `dm:b` API 3345):** **`npm run dev:stop`** oder **`npm run ds`** im Repo-Root — sinnvoll vor einem erneuten Start, wenn `EADDRINUSE` oder „Website nicht erreichbar“ nach einem abgebrochenen Lauf auftritt. Im laufenden Terminal reicht **Strg+C**.
 
 - **Backend (API):** http://127.0.0.1:3342  
 - **Next.js-UI:** http://127.0.0.1:3341  
