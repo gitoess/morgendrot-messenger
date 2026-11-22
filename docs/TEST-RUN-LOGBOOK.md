@@ -21,6 +21,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-11-22** | PC (Windows), **B offen + Enc Roundtrip** | A↔B Enc live (`A8opBC8u…` / `Ezc9u4yA…`). B-UI: Badge „Tresor: Passwort“ trotz API offen → Hint-Copy ehrlich (Browser-Sitzung ≠ API-Lock). | **PASS (Enc)** · Hint-Fix PR |
 | **2026-11-22** | PC (Windows), **Post-merge Enc + Group-Annehmen** | Nach #15–#17: Enc A→B Tx `ETT8mK9E…` / `F8jsd7xD…` B entschlüsselt. Group-Panel: Annehmen nur wenn Peer offen (wie Partner-Panel). | **PASS (Enc+UX)** |
 | **2026-11-22** | PC (Windows), **PR #15 merge + Desk** | `#15` Connect/Annehmen/Enc A↔B gemerged (`0978e89`). Follow-up `#16` `dev:stop` inkl. 3345. `smoke:standalone-desk` **88/88 PASS**. | **PASS (Merge+Desk)** |
 | **2026-11-22** | PC (Windows), **Enc A↔B + Annehmen-Banner** | Connect A→B + Enc A→B Tx `J8RW6iX4…`, B Inbox entschlüsselt `PC-S2 Enc A→B…`. B→A Enc zuvor `EDsZCV4…`/`DnTTPJe8…`. UI: Annehmen blieb grün weil Direkt-OK ohne API-peerMap + Angebot sichtbar → Fix: Snapshot-Merge, Offer dismiss, API-Connect nach Direct, Peer-Pub→ready. | **PASS (S2 Enc A↔B)** — Annehmen-UI nach Reload prüfen |
