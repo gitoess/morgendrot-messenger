@@ -22,7 +22,8 @@ function baseSendPanel(over: Partial<ChatViewSendPanelProps> = {}): ChatViewSend
   return {
     isPrivate: true,
     encrypted: true,
-    recipient: '',
+    // Encrypted send requires a full 0x recipient (composer gate).
+    recipient: `0x${'11'.repeat(32)}`,
     message: 'Hallo Test',
     onRecipientChange: vi.fn(),
     onMessageChange: vi.fn(),

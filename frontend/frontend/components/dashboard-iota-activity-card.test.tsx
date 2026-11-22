@@ -5,27 +5,30 @@ import { DashboardIotaActivityCard } from '@/frontend/components/dashboard-iota-
 const digest = 'DigABCDEF1234567890'
 const objectId = `0x${'ab'.repeat(32)}`
 
-vi.mock('@/frontend/lib/iota-activity-local-log', () => ({
-  IOTA_ACTIVITY_LISTEN_EVENTS: [],
-  iotaActivityKindLabel: (k: string) => k,
-  listIotaActivity: () => [
-    {
-      id: 'act-1',
-      atMs: Date.UTC(2026, 0, 2, 12, 0, 0),
-      kind: 'nft_mint',
-      summary: 'Mint test',
-      digest,
-      objectId,
-    },
-    {
-      id: 'act-2',
-      atMs: Date.UTC(2026, 0, 2, 13, 0, 0),
-      kind: 'coin_in',
-      summary: 'Index only',
-      objectId: `0x${'cd'.repeat(32)}`,
-    },
-  ],
-}))
+vi.mock('@/frontend/lib/iota-activity-local-log', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/frontend/lib/iota-activity-local-log')>()
+  return {
+    ...actual,
+    IOTA_ACTIVITY_LISTEN_EVENTS: [],
+    listIotaActivity: () => [
+      {
+        id: 'act-1',
+        atMs: Date.UTC(2026, 0, 2, 12, 0, 0),
+        kind: 'nft_mint',
+        summary: 'Mint test',
+        digest,
+        objectId,
+      },
+      {
+        id: 'act-2',
+        atMs: Date.UTC(2026, 0, 2, 13, 0, 0),
+        kind: 'coin_in',
+        summary: 'Index only',
+        objectId: `0x${'cd'.repeat(32)}`,
+      },
+    ],
+  }
+})
 
 vi.mock('@/frontend/lib/iota-tx-explorer-hint', () => ({
   explorerTxUrlFromDigest: (d: string) => `https://explorer.test/tx/${d}`,
