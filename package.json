@@ -29,6 +29,8 @@
     "dev:clean": "npm run dev:messenger:clean",
     "dev:stop": "node scripts/dev-stop.mjs",
     "dm": "npm run dev:messenger:clean",
+    "dm:b": "node scripts/dev-messenger-b.mjs",
+    "dev:messenger:b:serve": "cross-env API_PORT=3345 UI_PORT=3344 VAULT_FILE=.morgendrot-vault-b NEXT_DIST_DIR=.next-b MORGENDROT_API_INTERNAL_URL=http://127.0.0.1:3345 concurrently --kill-others-on-fail --names \"api-b,next-b\" -c \"cyan,magenta\" \"npm run start:secrets\" \"npm run dev:messenger:b --prefix frontend\"",
     "feldtest:boss-readiness": "node scripts/feldtest-boss-readiness-cli.mjs",
     "restore:env:local": "node scripts/restore-morgendrot-env-local.mjs",
     "ds": "npm run dev:stop",

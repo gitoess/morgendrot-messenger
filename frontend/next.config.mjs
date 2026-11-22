@@ -66,8 +66,13 @@ const defaultDevOrigins = [
   '127.0.0.1',
   'localhost:3341',
   '127.0.0.1:3341',
+  'localhost:3344',
+  '127.0.0.1:3344',
   ...collectLanIpv4DevOrigins(),
 ]
+
+/** Zweite Dev-Instanz (dm:b): separates `.next-b`, sonst Next-Lock gegen Instanz A. */
+const nextDistDir = (process.env.NEXT_DIST_DIR || '').trim() || '.next'
 
 /** Client-only: @meshtastic/core → Node `util.formatWithOptions`; Next's `util` stub lacks it. */
 const nodeUtilClientShim = path.join(__dirname, 'frontend/lib/node-util-client-shim.ts')
@@ -75,6 +80,7 @@ const nodeUtilClientShim = path.join(__dirname, 'frontend/lib/node-util-client-s
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   ...(isCapacitorExport ? { output: 'export' } : {}),
+  distDir: nextDistDir,
   allowedDevOrigins: [...new Set([...defaultDevOrigins, ...extraDevOrigins])],
   /* @morgendrot/shared + @morgendrot/core: lokale file:-Pakete — Next transpiliert .ts (siehe docs/MONOREPO-NEXT-AND-SHARED.md, docs/MORGENDROT-CORE-PACKAGE-PLAN.md). */
   transpilePackages: [

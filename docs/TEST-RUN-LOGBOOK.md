@@ -21,6 +21,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-11-22** | PC (Windows), **Inbox-DOM + Zwei-Wallet Teil** | Reset-Fenster 80 + PWMSG lazy: Controls ~882 (vorher ~5k), 0 Passphrase-Inputs. `dm:b` 3344/3345 + `.next-b`. A→B Klartext Tx `53oWyegonCLM…` an `0xf876…`. API-only (`iotaSubmitMode=relay`) Tx `BniNWGBqZzGp…` via Mailbox. B-UI Unlock offen (Profil noch nicht). H.15 87/87. | **PASS (UX+S2 Teil)** — Enc A↔B nach B-Profil |
 | **2026-11-22** | PC (Windows), **PC Stage‑2 Browser** | Tresor offen (User-Tab). Klartext Self → Mailbox Tx `4ZNKyN2AmQne…`. Enc Self → `FfbGxHYUwR82…` (UI „Verschlüsselt“). H.15 **87/87**. Inbox-DOM ~5k Controls (Perf-Merker). CI: tsc-Fixes (Pinnwand/hash/toolbar). | **PASS (S2 §1.1–1.3)** — Zwei-Wallet optional; Merge #12 |
 | **2026-11-22** | PC (Windows), **PC Stage‑2 Hygiene** | Kurzprotokoll `docs/PC-STAGE2-DIRECT-IOTA-SMOKE.md`; H.23 Rest Phase‑4-Klarstellung. Desk **87/87**; Fail-closed Lock-Check. | **PASS (Desk+Lock)** |
 | **2026-11-22** | PC (Windows), **Phasen + Re-Smoke** | Phasen: PC→Handy→**Funk**→physisches 2. Gerät. `smoke:standalone-desk` erneut **87/87 PASS** (Stabilität). | **PASS (Desk)** — weiter PC Stage‑2; Handy/Funk/2. Gerät später |

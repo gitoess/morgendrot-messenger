@@ -276,6 +276,8 @@ function PassphraseMessageBody(p: {
   const [hidden, setHidden] = useState(false)
   const [showPass, setShowPass] = useState(false)
   const [copiedPass, setCopiedPass] = useState(false)
+  /** Formular erst auf Klick — sonst 1 Input pro PWMSG-Zeile × hunderten Messages. */
+  const [formOpen, setFormOpen] = useState(false)
   const [keycardGateHint, setKeycardGateHint] = useState('')
   const [boundCardOid, setBoundCardOid] = useState<string | null>(null)
   const [bindPickOid, setBindPickOid] = useState('')
@@ -401,6 +403,7 @@ function PassphraseMessageBody(p: {
       })
       .catch(() => {
         /* known wrong — user enters manually */
+        if (alive) setFormOpen(true)
       })
       .finally(() => {
         if (alive) setAutoBusy(false)
@@ -567,6 +570,22 @@ function PassphraseMessageBody(p: {
             {vaultForgetButton}
           </div>
         </>
+      ) : !formOpen ? (
+        <>
+          <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
+            Passphrase nötig — Ciphertext on-chain. Tippe erst, wenn du lesen willst.
+          </p>
+          {keycardGateHint ? (
+            <p className="text-[11px] text-amber-800/90 dark:text-amber-100/90">{keycardGateHint}</p>
+          ) : null}
+          <button
+            type="button"
+            className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium hover:bg-muted"
+            onClick={() => setFormOpen(true)}
+          >
+            Passphrase eingeben
+          </button>
+        </>
       ) : (
         <>
           <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
@@ -594,6 +613,7 @@ function PassphraseMessageBody(p: {
             placeholder="Passphrase eingeben (≥8)"
             className="w-full rounded-md border border-border bg-input px-3 py-2 font-mono text-xs"
             autoComplete="off"
+            autoFocus
           />
           {err ? <p className="text-xs text-destructive">{err}</p> : null}
           <div className="flex flex-wrap gap-2 items-center">
@@ -604,6 +624,16 @@ function PassphraseMessageBody(p: {
               className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
             >
               {busy ? '…' : 'Entschlüsseln'}
+            </button>
+            <button
+              type="button"
+              className="text-xs text-muted-foreground hover:underline"
+              onClick={() => {
+                setFormOpen(false)
+                setErr('')
+              }}
+            >
+              Abbrechen
             </button>
           </div>
         </>
