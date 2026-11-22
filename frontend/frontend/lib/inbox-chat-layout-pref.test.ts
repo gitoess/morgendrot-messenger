@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   formatInboxDayHeading,
+  formatInboxMessageTime,
   inboxMessageDayKey,
+  isInboxTimestampKnown,
   readInboxChatLayoutMode,
   writeInboxChatLayoutMode,
 } from '@/frontend/lib/inbox-chat-layout-pref'
@@ -26,5 +28,12 @@ describe('inbox-chat-layout-pref', () => {
 
   it('Heute-Heading', () => {
     expect(formatInboxDayHeading(Date.now())).toBe('Heute')
+  })
+
+  it('fehlende Chain-Zeit nicht als 1970', () => {
+    expect(isInboxTimestampKnown(0)).toBe(false)
+    expect(formatInboxMessageTime(0)).toBe('Zeit unbekannt')
+    expect(formatInboxDayHeading(0)).toBe('Zeit unbekannt')
+    expect(inboxMessageDayKey(0)).toBe('unknown')
   })
 })
