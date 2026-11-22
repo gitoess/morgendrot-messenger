@@ -29,7 +29,7 @@ Voraussetzungen: `npm run dm` (oder `dev`), Tresor offen, Puls **IOTA-Sendeweg =
 | 5 | Puls → **Nur Morgendrot-API** | Klartext geht **nicht** still per RPC | |
 | 6 | Nach Test: Session-Signer in Puls **löschen** | Kein Mnemonic in Support-Screenshots | |
 
-**Zwei-Wallet Hinweis:** Instanz B = eigene Adresse/Gas. Ohne zweites Vault nur A→B-Senden (Adresse B) = Teil-PASS; Empfang Enc braucht B entsperrt.
+**Zwei-Wallet Hinweis:** Instanz B = eigene Adresse/Gas (`VAULT_FILE=.morgendrot-vault-b`, `PARTNER_ADDRESS_FILE=.morgendrot-partner-b`). Ohne getrenntes Partner-File überschreibt B-Handshake `.morgendrot-partner` mit A → A `/connect` ohne Args → Self-Peer. `/connect` „Bereits verbunden“ gilt nur für denselben Peer; `/cancel-connect` leert peerMap. Empfang Enc braucht B entsperrt.
 
 **Nicht abhaken hier:** Basis aus + Outbox-Drain (steht in Langform § 2.4), Path‑4 Funk-Bild, APK.
 

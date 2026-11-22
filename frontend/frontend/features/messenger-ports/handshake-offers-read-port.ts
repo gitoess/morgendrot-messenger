@@ -8,12 +8,15 @@ export type HandshakeOffersReadPort = {
   readonly pendingOffers: readonly PendingHandshakeOffer[]
   readonly outgoingOffers: readonly OutgoingHandshakeOffer[]
   readonly reload: () => void
+  /** Nach „Annehmen“: Angebot lokal ausblenden (Banner/Button weg). */
+  readonly dismissOffer?: (sender: string, nonce: string) => void
 }
 
 export function asHandshakeOffersRead(
   pendingOffers: readonly PendingHandshakeOffer[],
   outgoingOffers: readonly OutgoingHandshakeOffer[],
-  reload: () => void
+  reload: () => void,
+  dismissOffer?: (sender: string, nonce: string) => void
 ): HandshakeOffersReadPort {
-  return { pendingOffers, outgoingOffers, reload }
+  return { pendingOffers, outgoingOffers, reload, dismissOffer }
 }

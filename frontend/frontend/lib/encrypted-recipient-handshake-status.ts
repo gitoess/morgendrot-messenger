@@ -1,4 +1,5 @@
 import type { OutgoingHandshakeOffer, PendingHandshakeOffer } from '@/frontend/lib/api/package-connect'
+import { readConnectedPeersSnapshot } from '@/frontend/lib/connected-peers-snapshot'
 import { canTryLiveEncryptedDirectMailbox } from '@/frontend/lib/direct-iota-encrypted-submit'
 import {
   getDirectChatEcdhMaterialForRecipient,
@@ -34,10 +35,13 @@ export function resolveEncryptedRecipientHandshakeStatusSync(p: {
   const addr = normalizeRecipient0x(p.recipient)
   if (!ADDR_64.test(addr)) return 'idle'
 
-  const connected = p.connectedAddresses.map((a) => a.trim().toLowerCase()).filter(Boolean)
-  if (connected.includes(addr)) return 'ready'
+  const connected = new Set(p.connectedAddresses.map((a) => a.trim().toLowerCase()).filter(Boolean))
+  for (const a of readConnectedPeersSnapshot()?.addresses ?? []) connected.add(a)
+  if (connected.has(addr)) return 'ready'
   if (getDirectChatEcdhMaterialForRecipient(addr)) return 'ready'
   if (canTryLiveEncryptedDirectMailbox(addr)) return 'ready'
+  /** Nach Annehmen/Connect: Peer-Pub lokal → Banner weg (Enc-Send prüft Material separat). */
+  if (hasDirectChatEcdhPeerPubForRecipient(addr)) return 'ready'
 
   const myAddr = normalizeRecipient0x(getDirectIotaSessionSignerAddress() ?? '')
   if (myAddr && addr === myAddr && hasDirectChatEcdhPeerPubForRecipient(addr)) {
@@ -47,9 +51,6 @@ export function resolveEncryptedRecipientHandshakeStatusSync(p: {
   if (p.incomingOffers.some((o) => normalizeRecipient0x(o.sender) === addr)) return 'needs_accept'
 
   if (p.outgoingOffers.some((o) => normalizeRecipient0x(o.recipient) === addr)) {
-    if (hasDirectChatEcdhPeerPubForRecipient(addr) && !getDirectChatEcdhMaterialForRecipient(addr)) {
-      return 'needs_accept'
-    }
     return 'awaiting_peer'
   }
 

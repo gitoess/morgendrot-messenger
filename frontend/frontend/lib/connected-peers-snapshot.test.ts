@@ -35,4 +35,12 @@ describe('connected-peers-snapshot add', () => {
     expect(r.addresses[0]).toBe(ADDR.toLowerCase())
     expect(readConnectedPeersSnapshot()?.addresses).toContain(ADDR.toLowerCase())
   })
+
+  it('mergeLocalSnapshot vereinigt Status + lokales Accept', () => {
+    const statusPeer = '0x' + 'aa'.repeat(32)
+    addConnectedPeerToLocalSnapshot(ADDR)
+    const r = resolveConnectedAddresses({ fromStatus: [statusPeer], mergeLocalSnapshot: true })
+    expect(r.fromCache).toBe(false)
+    expect(r.addresses.sort()).toEqual([ADDR.toLowerCase(), statusPeer.toLowerCase()].sort())
+  })
 })

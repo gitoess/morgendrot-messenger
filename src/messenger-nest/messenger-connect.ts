@@ -41,6 +41,10 @@ export function applyRestoredPeerMapToSession(
     sessionState: { peerMap: Map<string, PeerState> | null; connecting: boolean },
     setSessionStatus: (s: Record<string, unknown>) => void
 ): void {
+    const me = normalizeAddress(myAddress);
+    for (const k of [...pm.keys()]) {
+        if (normalizeAddress(k) === me) pm.delete(k);
+    }
     if (pm.size === 0 || sessionState.peerMap?.size) return;
     sessionState.peerMap = pm;
     setSessionStatus({
@@ -98,20 +102,28 @@ export async function runConnectLogic(
     myKeys: { pubRaw: Uint8Array; privateKey: CryptoKey },
     addrs: string[]
 ): Promise<Map<string, PeerState>> {
+    const me = normalizeAddress(myAddress);
     const peerMap = new Map<string, PeerState>();
-    for (const partnerAddr of addrs) {
+    const targets = addrs
+        .map((a) => a.trim())
+        .filter((a) => a.startsWith('0x') && normalizeAddress(a) !== me);
+    if (targets.length === 0) {
+        throw new Error('Connect: keine gültige Partner-Adresse (Self-Connect ist ungültig).');
+    }
+    for (const partnerAddr of targets) {
         let incoming: { pubKeyRaw: Uint8Array; sender: string; nonce: bigint } | null = null;
         let handshakeSent = false;
         logger.info(
-            `Warte auf Handshake von ${partnerAddr.slice(0, 14)}… (${addrs.indexOf(partnerAddr) + 1}/${addrs.length})`
+            `Warte auf Handshake von ${partnerAddr.slice(0, 14)}… (${targets.indexOf(partnerAddr) + 1}/${targets.length})`
         );
         while (!incoming) {
             incoming =
                 (await getHandshakeFromMailbox(myAddress, partnerAddr)) ??
                 (await findPeerHandshakeFrom(myAddress, partnerAddr)) ??
                 (addrs.length === 1 ? await findPeerHandshake(myAddress) : null);
-            if (incoming && addrs.length > 1 && normalizeAddress(incoming.sender) !== normalizeAddress(partnerAddr))
+            if (incoming && targets.length > 1 && normalizeAddress(incoming.sender) !== normalizeAddress(partnerAddr))
                 incoming = null;
+            if (incoming && normalizeAddress(incoming.sender) === me) incoming = null;
             if (!incoming) {
                 if (!handshakeSent) {
                     await sendHandshake(partnerAddr, myKeys.pubRaw);
@@ -125,7 +137,9 @@ export async function runConnectLogic(
             logger.info(`Handshake von ${incoming.sender.slice(0, 12)}…. Sende Antwort...`);
             await sendHandshake(incoming.sender, myKeys.pubRaw);
         }
-        peerMap.set(incoming.sender, {
+        const peerNorm = normalizeAddress(incoming.sender);
+        if (peerNorm === me) continue;
+        peerMap.set(peerNorm, {
             address: incoming.sender,
             pubKeyRaw: incoming.pubKeyRaw,
             handshakeNonce: incoming.nonce ?? 0n,

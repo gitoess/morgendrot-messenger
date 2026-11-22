@@ -45,6 +45,7 @@ async function main() {
   console.log(`Ports ${PORTS.join(' + ')} frei.`)
   console.log(`UI http://localhost:${UI_PORT}/  API http://127.0.0.1:${API_PORT}/api/status`)
   console.log(`VAULT_FILE=${VAULT_FILE} (eigenes Profil ≠ A)`)
+  console.log('PARTNER_ADDRESS_FILE=.morgendrot-partner-b (nicht A’s .morgendrot-partner)')
   console.log('Hinweis: Telegram Long-Poll kollidiert mit Instanz A — Bot-Warnungen erwartbar.\n')
 
   try {
@@ -58,6 +59,8 @@ async function main() {
     API_PORT: String(API_PORT),
     UI_PORT: String(UI_PORT),
     VAULT_FILE,
+    /** Getrennt von A — sonst überschreibt B-Handshake PARTNER mit A und A connectet zu sich selbst. */
+    PARTNER_ADDRESS_FILE: process.env.PARTNER_ADDRESS_FILE?.trim() || '.morgendrot-partner-b',
     MORGENDROT_API_INTERNAL_URL: `http://127.0.0.1:${API_PORT}`,
     MORGENDROT_DEV_STRICT_PORTS: '0',
     API_KILL_PREVIOUS_INSTANCE: 'false',

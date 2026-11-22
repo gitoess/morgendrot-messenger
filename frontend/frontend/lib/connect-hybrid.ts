@@ -29,6 +29,10 @@ export async function connectPartnerHybrid(
     const direct = await tryConnectPeerViaDirectIota(addr, { pollAttempts: 4, replyHandshake: true })
     if (direct.ok) {
       const replyNote = direct.replySent ? ' Antwort-Handshake gesendet.' : ' (ohne Antwort-Handshake — ECDH-JWK fehlt für Senden.)'
+      /** API-peerMap parallel füllen — sonst Enc über Basis / Annehmen-Banner bleibt hängen. */
+      if (allowApiRelay) {
+        void Promise.resolve(connect(addr)).catch(() => {})
+      }
       return {
         ok: true,
         path: 'direct',
