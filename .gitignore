@@ -24,6 +24,11 @@ frontend/.next
 frontend/.next-b
 .next-b
 .morgendrot-vault-b
+.morgendrot-vault-b.handshakes.enc
+.morgendrot-vault-b.inbox.enc
+.morgendrot-vault-b.package-id
+.morgendrot-vault-b.streams-anchor
+.morgendrot-vault-b.session-keys.enc
 *.log
 logs/
 tmp/
@@ -60,6 +65,7 @@ tsc-out.txt
 .morgendrot-package-id
 .morgendrot-nft-gate-seal-master
 .morgendrot-partner
+.morgendrot-partner-b
 .morgendrot-package-hints.json
 .messenger-gas-state.json
 .morgendrot-voucher-claim-state.json

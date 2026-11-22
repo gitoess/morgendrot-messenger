@@ -133,11 +133,25 @@ export function useChatViewPanelMessengerPorts(deps: UseChatViewPanelMessengerPo
 
   const handleAcceptHandshakeFromInbox = useCallback(
     async (sender: string) => {
-      composeReply.setPartner(sender.trim())
-      await handshakeActions.onConnectAcceptForAddress(sender)
-      window.setTimeout(() => void reloadPendingHandshakes(), 4000)
+      const addr = sender.trim()
+      composeReply.setPartner(addr)
+      await handshakeActions.onConnectAcceptForAddress(addr)
+      /** Banner/grüner Annehmen-Button sofort weg — Connect kann asynchron noch API-peerMap füllen. */
+      const norm = addr.toLowerCase()
+      for (const o of pendingHandshakeOffers) {
+        if (o.sender.trim().toLowerCase() === norm) {
+          dismissPendingHandshake(o.sender, o.nonce)
+        }
+      }
+      window.setTimeout(() => void reloadPendingHandshakes(), 2500)
     },
-    [composeReply.setPartner, handshakeActions, reloadPendingHandshakes]
+    [
+      composeReply.setPartner,
+      handshakeActions,
+      pendingHandshakeOffers,
+      dismissPendingHandshake,
+      reloadPendingHandshakes,
+    ]
   )
 
   const purgeAndDismissHandshake = useCallback(
@@ -341,7 +355,8 @@ export function useChatViewPanelMessengerPorts(deps: UseChatViewPanelMessengerPo
           handshakeOffersRead: asHandshakeOffersRead(
             pendingHandshakeOffers,
             outgoingHandshakeOffers,
-            reloadPendingHandshakes
+            reloadPendingHandshakes,
+            dismissPendingHandshake
           ),
           inboxHandshakePanelActions: asInboxHandshakePanelActions({
             pendingHandshakesLoading,
@@ -366,6 +381,7 @@ export function useChatViewPanelMessengerPorts(deps: UseChatViewPanelMessengerPo
       pendingHandshakeOffers,
       outgoingHandshakeOffers,
       reloadPendingHandshakes,
+      dismissPendingHandshake,
       pendingHandshakesLoading,
       pendingHandshakeCount,
       handleAcceptHandshakeFromInbox,

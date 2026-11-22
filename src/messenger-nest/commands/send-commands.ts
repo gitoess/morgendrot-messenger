@@ -164,6 +164,12 @@ export async function tryHandleSendCommand(ctx: MessengerCommandContext): Promis
         const capDenied = denyMessengerSendCommand(c);
         if (capDenied) return capDenied;
         const pm = sessionState.peerMap;
+        if (pm?.size) {
+            const me = normalizeAddress(MY_ADDR);
+            for (const k of [...pm.keys()]) {
+                if (normalizeAddress(k) === me) pm.delete(k);
+            }
+        }
         if (!pm?.size) return { ok: false, message: 'Nicht verbunden. Zuerst /connect ausführen.' };
         const { resolveSendRecipientAndText } = await import('./send-command-args.js');
         const peerAddrs = [...pm.values()].map((p) => p.address);

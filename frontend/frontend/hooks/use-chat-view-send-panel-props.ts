@@ -138,9 +138,14 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     if (!isValidRecipient0x(addr)) return
     composerPartner.onPartnerChange(addr)
     await handshakeActions.onConnectAcceptForAddress(addr)
+    for (const o of handshakeOffersRead.pendingOffers) {
+      if (o.sender.trim().toLowerCase() === addr) {
+        handshakeOffersRead.dismissOffer?.(o.sender, o.nonce)
+      }
+    }
     encryptedRecipientHandshake.refresh()
     await connectionStatusRead.refreshApiStatus()
-    window.setTimeout(() => void handshakeOffersRead.reload(), 4000)
+    window.setTimeout(() => void handshakeOffersRead.reload(), 2500)
   }, [
     composerEncryptedRecipient,
     composerPartner,

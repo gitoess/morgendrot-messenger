@@ -14,6 +14,7 @@ import {
     ensureStreamsAnchorIdInHistory,
 } from '../config.js';
 import { normalizeAddress } from '../utils.js';
+import { evaluateConnectPeerGuard, mergePeerMaps } from './connect-peer-guard.js';
 import { HEARTBEAT_INTERVAL_PRESETS_MS, isAllowedHeartbeatIntervalMs } from '../shared/heartbeat-presets.js';
 import {
     getClient,
@@ -159,10 +160,12 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                     }
                     if (c === '/cancel-connect') {
                         sessionState.connecting = false;
+                        sessionState.peerMap = null;
+                        setSessionStatus({ connected: false, partnerCount: 0, connectedAddresses: [] });
                         return {
                             ok: true,
                             message:
-                                'Connect-/Warte-Flag zurückgesetzt. Nächster /connect oder /pairing-wait möglich. (Laufender Hintergrund-Connect kann noch kurz laufen – bei Problemen Prozess neu starten.)',
+                                'Connect abgebrochen: peerMap geleert, Warte-Flag zurück. Nächster /connect oder /pairing-wait möglich. (Laufender Hintergrund-Connect kann noch kurz laufen – bei Problemen Prozess neu starten.)',
                         };
                     }
                     const keys = vaultStateRef.current?.keys ?? null;
@@ -1492,30 +1495,52 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         }
                     }
                     if (c === '/connect') {
-                        if (sessionState.peerMap?.size) return { ok: true, message: 'Bereits verbunden.' };
                         if (sessionState.connecting) return { ok: false, message: 'Connect läuft bereits.' };
                         const connectAddr = a[0]?.trim().startsWith('0x') ? a[0].trim() : undefined;
-                        const addrs = connectAddr ? [connectAddr] : getConnectAddresses().filter((addr) => addr && addr.startsWith('0x'));
-                        if (addrs.length === 0) return { ok: false, message: 'Adresse angeben (0x…) oder PARTNER_ADDRESS/KOMMANDANT_ADDRESSES in .env setzen.' };
+                        const guard = evaluateConnectPeerGuard({
+                            myAddress: MY_ADDR,
+                            connectAddr,
+                            peerAddresses: sessionState.peerMap?.keys() ?? [],
+                        });
+                        if (guard.action === 'reject') return { ok: false, message: guard.message };
+                        if (guard.action === 'already') return { ok: true, message: guard.message };
+                        const addrs =
+                            guard.targetAddrs.length > 0
+                                ? guard.targetAddrs
+                                : getConnectAddresses().filter((addr) => {
+                                      const n = normalizeAddress(addr);
+                                      return n.startsWith('0x') && n !== normalizeAddress(MY_ADDR);
+                                  });
+                        if (addrs.length === 0) {
+                            return {
+                                ok: false,
+                                message: 'Adresse angeben (0x…) oder PARTNER_ADDRESS/KOMMANDANT_ADDRESSES in .env setzen.',
+                            };
+                        }
                         sessionState.connecting = true;
                         (async () => {
                             try {
                                 const pm = await runConnectLogic(MY_ADDR, keys!, addrs);
-                                sessionState.peerMap = pm;
+                                sessionState.peerMap = mergePeerMaps(MY_ADDR, sessionState.peerMap, pm);
+                                const merged = sessionState.peerMap;
                                 const vp = CFG.VAULT_FILE || '.morgendrot-vault';
                                 const pw = getWalletPassword();
-                                if (vp && pw && pm.size > 0) {
-                                    saveHandshakeCache(vp, pw, pm)
-                                        .then(() => syncPeerSessionArchiveFromHandshakeMap(pm))
+                                if (vp && pw && merged.size > 0) {
+                                    saveHandshakeCache(vp, pw, merged)
+                                        .then(() => syncPeerSessionArchiveFromHandshakeMap(merged))
                                         .catch(() => {});
                                 }
                                 if (CFG.ENABLE_LISTENER) {
-                                    const firstPeer = pm.values().next().value;
-                                    if (pm.size === 1 && firstPeer) watchHandshakeUpdates(MY_ADDR, firstPeer);
-                                    listenForMessages(MY_ADDR, pm, keys!.privateKey);
+                                    const firstPeer = merged.values().next().value;
+                                    if (merged.size === 1 && firstPeer) watchHandshakeUpdates(MY_ADDR, firstPeer);
+                                    listenForMessages(MY_ADDR, merged, keys!.privateKey);
                                 }
-                                setSessionStatus({ connected: true, partnerCount: pm.size, connectedAddresses: Array.from(pm.keys()) });
-                                logger.info(`Connect via UI: Kanal zu ${pm.size} Partner(n) etabliert.`);
+                                setSessionStatus({
+                                    connected: merged.size > 0,
+                                    partnerCount: merged.size,
+                                    connectedAddresses: Array.from(merged.keys()),
+                                });
+                                logger.info(`Connect via UI: Kanal zu ${merged.size} Partner(n) etabliert.`);
                             } catch (e: any) {
                                 logger.error('Connect via UI fehlgeschlagen: ' + (e?.message || e));
                             } finally {

@@ -253,6 +253,7 @@ export type ChatViewHandshakeOffersSlice = {
   pendingOffers: import('@/frontend/lib/handshake-offers-types').PendingHandshakeOffer[]
   outgoingOffers: import('@/frontend/lib/handshake-offers-types').OutgoingHandshakeOffer[]
   reload: () => void
+  dismissOffer?: (sender: string, nonce: string) => void
 }
 
 export type ChatViewSendActionsSlice = {
@@ -554,7 +555,12 @@ export function assembleHandshakeActionsPort(slice: ChatViewHandshakeActionsSlic
 export function assembleHandshakeOffersReadPort(
   slice: ChatViewHandshakeOffersSlice
 ): HandshakeOffersReadPort {
-  return asHandshakeOffersRead(slice.pendingOffers, slice.outgoingOffers, slice.reload)
+  return asHandshakeOffersRead(
+    slice.pendingOffers,
+    slice.outgoingOffers,
+    slice.reload,
+    slice.dismissOffer
+  )
 }
 
 export function assembleSendActionsPort(slice: ChatViewSendActionsSlice): SendActionsPort {

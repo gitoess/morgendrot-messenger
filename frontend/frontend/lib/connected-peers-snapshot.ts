@@ -61,11 +61,23 @@ export function addConnectedPeerToLocalSnapshot(peerAddress: string): void {
 export function resolveConnectedAddresses(opts: {
   fromStatus?: string[] | null
   preferCacheWhenEmpty?: boolean
+  /**
+   * Direkt-Connect speichert Peers lokal — mit API-Status mergen,
+   * sonst bleibt UI bei „Annehmen“ (needs_accept) obwohl Accept ok war.
+   */
+  mergeLocalSnapshot?: boolean
 }): { addresses: string[]; fromCache: boolean } {
   const fromStatus = [...new Set((opts.fromStatus ?? []).map(normalizeAddr).filter(Boolean))]
-  if (fromStatus.length > 0) return { addresses: fromStatus, fromCache: false }
-  if (!opts.preferCacheWhenEmpty) return { addresses: [], fromCache: false }
   const cached = readConnectedPeersSnapshot()
-  if (!cached) return { addresses: [], fromCache: false }
-  return { addresses: cached.addresses, fromCache: true }
+  const cachedAddrs = cached?.addresses ?? []
+  const merge = opts.mergeLocalSnapshot !== false
+  if (fromStatus.length > 0) {
+    const addresses = merge
+      ? [...new Set([...fromStatus, ...cachedAddrs])]
+      : fromStatus
+    return { addresses, fromCache: false }
+  }
+  if (!opts.preferCacheWhenEmpty) return { addresses: [], fromCache: false }
+  if (!cached || cachedAddrs.length === 0) return { addresses: [], fromCache: false }
+  return { addresses: cachedAddrs, fromCache: true }
 }
