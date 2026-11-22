@@ -78,6 +78,8 @@ import { EinsatzInboxMessageBadges } from '@/frontend/components/einsatz-inbox-m
 import { useEinsatzInboxBadges } from '@/frontend/hooks/use-einsatz-inbox-badges'
 import {
   formatInboxDayHeading,
+  formatInboxMessageTime,
+  isInboxTimestampKnown,
   inboxMessageDayKey,
 } from '@/frontend/lib/inbox-chat-layout-pref'
 import { inboxChatBubbleTransportClass } from '@/frontend/lib/inbox-chat-bubble-transport'
@@ -363,8 +365,11 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   {row.key.length > 24 ? `${row.key.slice(0, 24)}…` : row.key}
                 </span>
               </span>
-              <time className="text-xs tabular-nums text-muted-foreground" dateTime={new Date(row.sortTs).toISOString()}>
-                {new Date(row.sortTs).toLocaleString('de-DE')}
+              <time
+                className="text-xs tabular-nums text-muted-foreground"
+                dateTime={isInboxTimestampKnown(row.sortTs) ? new Date(row.sortTs).toISOString() : undefined}
+              >
+                {formatInboxMessageTime(row.sortTs)}
               </time>
             </div>
             <SlideShowCrossfade frames={row.frames} />
@@ -420,12 +425,18 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     <div className="mt-1 flex items-center justify-end gap-1">
                       <time
                         className="text-[10px] tabular-nums text-muted-foreground"
-                        dateTime={new Date(row.msg.timestamp).toISOString()}
+                        dateTime={
+                          isInboxTimestampKnown(row.msg.timestamp)
+                            ? new Date(row.msg.timestamp).toISOString()
+                            : undefined
+                        }
                       >
-                        {new Date(row.msg.timestamp).toLocaleTimeString('de-DE', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
+                        {isInboxTimestampKnown(row.msg.timestamp)
+                          ? new Date(row.msg.timestamp).toLocaleTimeString('de-DE', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+                          : formatInboxMessageTime(row.msg.timestamp)}
                       </time>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -692,8 +703,15 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <time className="tabular-nums" dateTime={new Date(row.msg.timestamp).toISOString()}>
-                    {new Date(row.msg.timestamp).toLocaleString('de-DE')}
+                  <time
+                    className="tabular-nums"
+                    dateTime={
+                      isInboxTimestampKnown(row.msg.timestamp)
+                        ? new Date(row.msg.timestamp).toISOString()
+                        : undefined
+                    }
+                  >
+                    {formatInboxMessageTime(row.msg.timestamp)}
                   </time>
                   {myAddress.trim() ? (
                     onApplyDirectionFilter ? (

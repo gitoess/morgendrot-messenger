@@ -21,8 +21,14 @@ export function writeInboxChatLayoutMode(mode: InboxChatLayoutMode): void {
   }
 }
 
+/** Chain/RPC ohne Zeit → 0; UI darf nicht „1.1.1970“ zeigen. */
+export function isInboxTimestampKnown(ts: number): boolean {
+  return Number.isFinite(ts) && ts > 0
+}
+
 /** Kalendertag lokal für Tagestrenner (YYYY-MM-DD). */
 export function inboxMessageDayKey(ts: number): string {
+  if (!isInboxTimestampKnown(ts)) return 'unknown'
   const d = new Date(ts)
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
@@ -31,6 +37,7 @@ export function inboxMessageDayKey(ts: number): string {
 }
 
 export function formatInboxDayHeading(ts: number): string {
+  if (!isInboxTimestampKnown(ts)) return 'Zeit unbekannt'
   const d = new Date(ts)
   const today = new Date()
   const yday = new Date()
@@ -44,4 +51,10 @@ export function formatInboxDayHeading(ts: number): string {
     month: 'short',
     year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined,
   })
+}
+
+/** Detail-/Listen-Zeitstempel; fehlende Chain-Zeit → ehrlich statt Epoch. */
+export function formatInboxMessageTime(ts: number, locale = 'de-DE'): string {
+  if (!isInboxTimestampKnown(ts)) return 'Zeit unbekannt'
+  return new Date(ts).toLocaleString(locale)
 }
