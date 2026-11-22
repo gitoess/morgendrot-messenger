@@ -2,7 +2,9 @@
 
 **Zweck:** Eine **einzige Abnahme-Runde** für **APK + Handoff + Direkt-RPC** — abgeleitet aus **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** § 10 **4b–4f**, ohne die Relay-/Boss-LAN-Schritte zu vermischen.
 
-**Nicht dasselbe wie:** § 9 Offline/Reconnect, § 10 Schritt 4 (Basis-URL), § 2 Browser-am-PC — die brauchen einen laufenden Morgendrot-Server und stehen in **`docs/HANDY-LATER-MANUAL-TESTS.md`** (A–D). **Diese Liste nur ausführen, wenn ihr bewusst Standalone testet.**
+**Reihenfolge (2026-11-22):** Zuerst **PC-Messenger komplett** (inkl. Desk-Smoke + optional Zwei-Wallet am PC). **Dann** diese Checkliste ab **4b–4d** (1 Handy). **4e–4f / physisches 2. Gerät** und Funk → **ganz am Schluss** (`docs/ROADMAP-FAHRPLAN.md` Arbeitsstand).
+
+**Nicht dasselbe wie:** § 9 Offline/Reconnect, § 10 Schritt 4 (Basis-URL), § 2 Browser-am-PC — die brauchen einen laufenden Morgendrot-Server und stehen in **`docs/HANDY-LATER-MANUAL-TESTS.md`** (A–D). **Diese Liste nur ausführen, wenn ihr bewusst Standalone testet** — und **nach** stabilem PC.
 
 **Quellen:** **`docs/WANDERER-STANDALONE-BUNDLE.md`** Variante B, **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`** § 6 B, Roadmap **§ H.15** Stufe 2.
 
