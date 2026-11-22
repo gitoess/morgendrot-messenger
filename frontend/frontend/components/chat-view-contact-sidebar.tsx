@@ -370,8 +370,16 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
               active={p.activeSelfSelected === true}
               icon={<User className="h-5 w-5" />}
               onClick={handleSelectSelf}
-              onOpenMore={openSelfProfile}
-              moreLabel="Profil öffnen"
+              onOpenMore={() => {
+                const me = (p.myAddress ?? '').trim()
+                // Gleiches Detail-Sheet wie bei Kontakten (nicht separates Profil-Layout).
+                if (me && /^0x[a-fA-F0-9]{64}$/i.test(me)) {
+                  p.onOpenContactDetail(me)
+                  return
+                }
+                openSelfProfile()
+              }}
+              moreLabel="Mehr zu Ich"
             />
           ) : null}
 

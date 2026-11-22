@@ -70,17 +70,12 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
   )
 
   useEffect(() => {
-    const my = myAddress.trim().toLowerCase()
-    setMorgPkgExportRecipient((cur) => {
-      if (cur.trim() && my && cur.trim().toLowerCase() === my) return ''
-      return cur
-    })
     const partners = morgPkgExportPartnerOptions
     if (partners.length === 1) {
       const only = partners[0]!.address
       setMorgPkgExportRecipient((cur) => cur || only)
     }
-  }, [apiStatus?.connectedAddresses, myAddress, morgPkgExportPartnerOptions])
+  }, [morgPkgExportPartnerOptions])
 
   useEffect(() => {
     writeMorgPkgImports(morgPkgImports)
@@ -106,6 +101,7 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
       partner,
       recipient: composerRecipient,
       exportRecipient: morgPkgExportRecipient,
+      myAddress,
     })
   }, [
     apiStatus?.connectedAddresses,
@@ -113,6 +109,7 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
     partner,
     composerRecipient,
     morgPkgExportRecipient,
+    myAddress,
   ])
 
   const appendMorgPkgImport = useCallback((record: MorgPkgImportRecord) => {

@@ -5,12 +5,17 @@ import { maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
 export type MorgPkgExportPartnerOption = {
   address: string
   label: string
+  /** Eigene Wallet (Self-Handshake in peerMap). */
+  self?: boolean
 }
 
+/**
+ * Vorschläge für .morg-pkg-Empfänger = peerMap (`connectedAddresses`).
+ * Enthält **auch Ich**, wenn Self-Connect aktiv — wie verschlüsselte Nachricht an sich selbst.
+ */
 export function buildMorgPkgExportPartnerOptions(
   connectedAddresses: string[] | undefined,
   contactDirectory: Record<string, ContactMeshEntryClient>,
-  /** Eigene Adresse auslassen — Paket geht an den Partner (ECDH mit dessen Pubkey). */
   myAddress?: string
 ): MorgPkgExportPartnerOption[] {
   const my = (myAddress ?? '').trim().toLowerCase()
@@ -22,13 +27,23 @@ export function buildMorgPkgExportPartnerOptions(
   for (const address of addrs) {
     const key = address.toLowerCase()
     if (seen.has(key)) continue
-    if (my && key === my) continue
     seen.add(key)
+    const isSelf = Boolean(my && key === my)
     const name = contactDisplayLabel(contactDirectory, address)
+    const masked = maskWalletAddress(address, isSelf ? 8 : 10, isSelf ? 6 : 8)
     out.push({
       address,
-      label: name ? `${name} · ${maskWalletAddress(address, 8, 6)}` : maskWalletAddress(address, 10, 8),
+      self: isSelf || undefined,
+      label: isSelf
+        ? `Ich (diese Wallet) · ${masked}`
+        : name
+          ? `${name} · ${maskWalletAddress(address, 8, 6)}`
+          : masked,
     })
   }
-  return out.sort((a, b) => a.label.localeCompare(b.label, 'de'))
+  return out.sort((a, b) => {
+    if (a.self && !b.self) return -1
+    if (!a.self && b.self) return 1
+    return a.label.localeCompare(b.label, 'de')
+  })
 }

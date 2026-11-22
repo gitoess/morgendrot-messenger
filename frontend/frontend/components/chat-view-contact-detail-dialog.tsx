@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
   BarChart3,
   ChevronDown,
@@ -58,6 +58,8 @@ export type ChatViewContactDetailDialogProps = {
   packageId?: string
   /** Medienzeile tippen → Nachricht im Posteingang fokussieren. */
   onFocusMessage?: (messageId: string) => void
+  /** Wenn Adresse = eigene Wallet: Peering-QR / Kontakt-ID wie bisher im Ich-Profil. */
+  selfWalletPanel?: ReactNode
 }
 
 function MediaStatRow(p: {
@@ -268,6 +270,8 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
 
   if (!address) return null
 
+  const isSelf =
+    Boolean(p.myAddress.trim()) && address.toLowerCase() === p.myAddress.trim().toLowerCase()
   const hasLora = Boolean(entry?.meshNodeId?.trim())
   const hasPrivateMailbox = entry ? contactHasAnyMailboxSlot(entry, address) : false
   const loraOnly = hasLora && !connectedSet.has(address.toLowerCase())
@@ -284,9 +288,19 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
     <Dialog open={p.open} onOpenChange={p.onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{displayName}</DialogTitle>
-          <DialogDescription>Adresse, Sendepfade und Medien. Technische Mailbox-IDs unter Mehr.</DialogDescription>
+          <DialogTitle>{isSelf ? 'Ich' : displayName}</DialogTitle>
+          <DialogDescription>
+            {isSelf
+              ? 'Eigene Adresse, Peering, Sendepfade und Medien — gleiches Blatt wie bei Kontakten.'
+              : 'Adresse, Sendepfade und Medien. Technische Mailbox-IDs unter Mehr.'}
+          </DialogDescription>
         </DialogHeader>
+
+        {isSelf && p.selfWalletPanel ? (
+          <section className="space-y-2 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
+            {p.selfWalletPanel}
+          </section>
+        ) : null}
 
         <section className="space-y-2 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Adresse</p>
