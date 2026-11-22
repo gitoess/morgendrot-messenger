@@ -5,6 +5,7 @@ import {
   looksLikeTruncatedIotaAddress,
   parseComposerIotaRecipientAddresses,
   resolveComposerIotaAddress,
+  toggleComposerIotaRecipientAddress,
 } from '@/frontend/lib/composer-recipient-fields'
 
 const a = '0x' + 'a'.repeat(64)
@@ -20,6 +21,15 @@ describe('parseComposerIotaRecipientAddresses', () => {
   it('liefert eine Adresse für 1:1 verschlüsselt', () => {
     expect(parseComposerIotaRecipientAddresses('', a, true)).toEqual([a])
     expect(resolveComposerIotaAddress('', a, true)).toBe(a)
+  })
+
+  it('toggleComposerIotaRecipientAddress fügt hinzu und entfernt', () => {
+    const add = toggleComposerIotaRecipientAddress(a, b)
+    expect(add.added).toBe(true)
+    expect(add.recipient).toBe(`${a}, ${b}`)
+    const rem = toggleComposerIotaRecipientAddress(add.recipient, a)
+    expect(rem.added).toBe(false)
+    expect(rem.recipient).toBe(b)
   })
 })
 

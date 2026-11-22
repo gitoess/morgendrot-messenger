@@ -91,9 +91,12 @@ import {
   type InboxWireImageRow,
 } from '@/frontend/lib/evidence-wire-inbox-images'
 import {
+  scanMailboxMessageObjectById,
   scanMailboxPlaintextForAddress,
   type MailboxPlainScanRow,
 } from '@/frontend/lib/evidence-mailbox-plain-scan'
+import { decryptPastedPassphraseWire } from '@/frontend/lib/wire-paste-import'
+import { isPassphraseMessageWire } from '@/frontend/lib/passphrase-message-crypto'
 import { getDirectMailboxChainSnapshot } from '@/frontend/lib/direct-iota-chain-context'
 import {
   getDefaultEvidencePassphrase,
@@ -170,8 +173,9 @@ function revokeAll(urls: string[]) {
 }
 
 const ALL_EVIDENCE_MODES: { id: Mode; label: string }[] = [
-  { id: 'wire', label: 'Wire' },
-  { id: 'mailbox', label: 'Klartext' },
+  /** Kompaktbilder (MORG_COMPACT_IMG) aus geladenem Posteingang — kein E2EE-Scanner. */
+  { id: 'wire', label: 'Posteingang-Bilder' },
+  { id: 'mailbox', label: 'Chain-Text' },
   /** Intern: eigene Galerie — UI-Button „Eigene NFT anzeigen“, kein Such-Tab. */
   { id: 'owner', label: 'Eigene NFT anzeigen' },
   { id: 'object', label: 'NFT Suche' },
@@ -193,13 +197,15 @@ export const NFT_WALLET_MODES: Mode[] = ['owner', 'object', 'mint', 'guthaben', 
 export function ChatViewEvidenceImageViewerButton(p?: {
   triggerClassName?: string
   triggerLabel?: string
+  /** Kein sichtbarer Trigger — Öffnen nur per openNonce (z. B. Optionen → Wire/Klartext). */
+  hideTrigger?: boolean
   /** Start-Tab beim Öffnen. */
   defaultMode?: Mode
   /** Beim Öffnen sofort eigene Wallet-NFTs laden (Besitzer-Tab). */
   autoLoadOwnOnOpen?: boolean
   /**
-   * Erlaubte Tabs. Default: alle (Posteingang On-Chain).
-   * Hauptmenü: `NFT_WALLET_MODES` (Besitzer / Object-ID / Minten).
+   * Erlaubte Tabs. Default: alle (Legacy).
+   * Posteingang Optionen: `['wire','mailbox']`. Hauptmenü-Wallet: `NFT_WALLET_MODES`.
    */
   allowedModes?: readonly Mode[]
   /** Erhöhen → Dialog öffnen (nutzt defaultMode). */
@@ -230,6 +236,18 @@ export function ChatViewEvidenceImageViewerButton(p?: {
       !p.allowedModes.includes('wire') &&
       !p.allowedModes.includes('mailbox')
   )
+  const wireKlartextOnly =
+    allowed.length > 0 &&
+    allowed.every((m) => m.id === 'wire' || m.id === 'mailbox')
+  const onlyWireBrowse = wireKlartextOnly && allowed.length === 1 && allowed[0]?.id === 'wire'
+  const onlyMailboxBrowse = wireKlartextOnly && allowed.length === 1 && allowed[0]?.id === 'mailbox'
+  const browseDialogTitle = onlyWireBrowse
+    ? 'Posteingang-Bilder'
+    : onlyMailboxBrowse
+      ? 'Chain-Text'
+      : wireKlartextOnly
+        ? 'Bilder & Klartext'
+        : null
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<Mode>(() => {
     const want = p?.defaultMode || (nftWalletUi ? 'owner' : 'object')
@@ -312,6 +330,13 @@ export function ChatViewEvidenceImageViewerButton(p?: {
   const [wireOffset, setWireOffset] = useState(0)
   const [mailboxIdInput, setMailboxIdInput] = useState('')
   const [mailboxAddrInput, setMailboxAddrInput] = useState('')
+  /** Chain-Text: Mailbox+Adresse vs. einzelnes Nachrichten-Objekt. */
+  const [mailboxScanKind, setMailboxScanKind] = useState<'mailbox-addr' | 'object'>('mailbox-addr')
+  const [mailboxObjectIdInput, setMailboxObjectIdInput] = useState('')
+  const [mailboxPwPassphrase, setMailboxPwPassphrase] = useState('')
+  const [mailboxPwPlainByKey, setMailboxPwPlainByKey] = useState<Record<string, string>>({})
+  const showZeitkapselReclaim =
+    allowed.some((m) => m.id === 'zeitkapsel') && !wireKlartextOnly
   const [mailboxPlainRows, setMailboxPlainRows] = useState<MailboxPlainScanRow[]>([])
   const [leaseCounts, setLeaseCounts] = useState({ open: 0, ready: 0 })
   const [globalRefreshing, setGlobalRefreshing] = useState(false)
@@ -355,6 +380,10 @@ export function ChatViewEvidenceImageViewerButton(p?: {
     setMailboxPlainRows([])
     setMailboxIdInput('')
     setMailboxAddrInput('')
+    setMailboxScanKind('mailbox-addr')
+    setMailboxObjectIdInput('')
+    setMailboxPwPassphrase('')
+    setMailboxPwPlainByKey({})
   }, [clearSinglePreview, clearOwnerGallery])
 
   useEffect(() => {
@@ -886,34 +915,47 @@ export function ChatViewEvidenceImageViewerButton(p?: {
     setError('')
     setInfo('')
     setMailboxPlainRows([])
+    setMailboxPwPlainByKey({})
     clearSinglePreview()
     clearOwnerGallery()
     try {
       const snap = getDirectMailboxChainSnapshot()
-      const r = await scanMailboxPlaintextForAddress({
-        mailboxObjectId: mailboxIdInput.trim() || snap?.mailboxId,
-        packageId: snap?.packageId,
-        address: mailboxAddrInput.trim() || getDirectIotaSessionSignerAddress() || '',
-      })
+      const r =
+        mailboxScanKind === 'object'
+          ? await scanMailboxMessageObjectById({ objectId: mailboxObjectIdInput })
+          : await scanMailboxPlaintextForAddress({
+              mailboxObjectId: mailboxIdInput.trim() || snap?.mailboxId,
+              packageId: snap?.packageId,
+              address: mailboxAddrInput.trim() || getDirectIotaSessionSignerAddress() || '',
+            })
       if (!r.ok) {
         setError(r.error)
         return
       }
       setMailboxPlainRows(r.rows)
+      const plainN = r.rows.filter((x) => !x.encrypted).length
+      const encN = r.encryptedDfCount || r.rows.filter((x) => x.encrypted).length
       if (r.rows.length) {
         setInfo(
-          `${r.rows.length} Klartext · DF ${r.dfCount} · Events ${r.eventCount}` +
+          `${plainN} Klartext · ${encN} Enc · DF ${r.dfCount} · Events ${r.eventCount}` +
             (r.mailboxObjectId.startsWith('0x') ? ` · MB ${r.mailboxObjectId.slice(0, 10)}…` : '') +
             (r.hint ? `\n${r.hint}` : '')
         )
       } else {
-        setError(r.hint || 'Kein Klartext gefunden.')
+        setError(r.hint || 'Nichts gefunden.')
         setInfo('')
       }
     } finally {
       setBusy(false)
     }
-  }, [mailboxIdInput, mailboxAddrInput, clearSinglePreview, clearOwnerGallery])
+  }, [
+    mailboxScanKind,
+    mailboxObjectIdInput,
+    mailboxIdInput,
+    mailboxAddrInput,
+    clearSinglePreview,
+    clearOwnerGallery,
+  ])
 
   const onPrimary = useCallback(() => {
     if (mode === 'object') void onSearchNftOrWallet()
@@ -1153,33 +1195,43 @@ export function ChatViewEvidenceImageViewerButton(p?: {
       }}
     >
       {/* Kein DialogTrigger: kontrolliertes open + Trigger toggelt sonst beim X neu auf (Flackern). */}
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className={
-          p?.triggerClassName ||
-          'w-full justify-start rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent'
-        }
-        onClick={() => {
-          setOpen(true)
-          p?.onOpenChange?.(true)
-        }}
-      >
-        <ImageIcon className="mr-2 h-4 w-4 shrink-0" />
-        {p?.triggerLabel ?? 'On-Chain Bild / NFT'}
-      </Button>
+      {p?.hideTrigger ? null : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={
+            p?.triggerClassName ||
+            'w-full justify-start rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent'
+          }
+          onClick={() => {
+            setOpen(true)
+            p?.onOpenChange?.(true)
+          }}
+        >
+          <ImageIcon className="mr-2 h-4 w-4 shrink-0" />
+          {p?.triggerLabel ?? (browseDialogTitle || 'On-Chain Bild / NFT')}
+        </Button>
+      )}
       <DialogContent
         showCloseButton={false}
         className="flex max-h-[90vh] max-w-lg flex-col overflow-hidden p-0 sm:max-w-lg"
       >
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border/60 px-6 pb-3 pt-6">
           <DialogHeader className="flex-1 text-left">
-            <DialogTitle>{nftWalletUi ? 'NFT & Schlüsselkarte' : 'On-Chain / NFT'}</DialogTitle>
-            {!nftWalletUi ? (
-              <DialogDescription>
-                Schauen/suchen (Wire, Klartext, Galerie) vs. Handeln (Minten, Guthaben, Verleihen).
-              </DialogDescription>
+            <DialogTitle>
+              {nftWalletUi
+                ? 'NFT & Schlüsselkarte'
+                : browseDialogTitle || 'On-Chain / NFT'}
+            </DialogTitle>
+            {onlyWireBrowse ? (
+              <DialogDescription className="sr-only">Posteingang-Bilder</DialogDescription>
+            ) : onlyMailboxBrowse ? (
+              <DialogDescription className="sr-only">Chain-Text</DialogDescription>
+            ) : wireKlartextOnly ? (
+              <DialogDescription className="sr-only">Bilder und Klartext</DialogDescription>
+            ) : !nftWalletUi ? (
+              <DialogDescription className="sr-only">On-Chain / NFT</DialogDescription>
             ) : (
               <DialogDescription className="sr-only">
                 Galerie per Wallet-Adresse oder einzelnes NFT per Object-ID; darunter Minten, Guthaben,
@@ -1224,33 +1276,35 @@ export function ChatViewEvidenceImageViewerButton(p?: {
               />
               Aktualisieren
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={mode === 'zeitkapsel' ? 'default' : 'outline'}
-              className="h-8 min-w-[7.5rem] text-[11px]"
-              disabled={leaseCounts.open === 0}
-              title={
-                leaseCounts.open === 0
-                  ? 'Keine offene Leihe'
-                  : 'Offene Verleihungen — Zurückholen unter Verleihen'
-              }
-              onClick={() => {
-                setMode('zeitkapsel')
-                setError('')
-                setInfo(
-                  leaseCounts.ready > 0
-                    ? `${leaseCounts.ready} bereit zum Zurückholen — Liste oben unter Verleihen.`
-                    : `${leaseCounts.open} offene Leihe(n) — Countdown abwarten oder Entleiher gibt vorzeitig zurück.`
-                )
-              }}
-            >
-              {leaseCounts.open === 0
-                ? 'Zurückholen'
-                : leaseCounts.ready > 0
-                  ? `Zurückholen (${leaseCounts.ready})`
-                  : `Zurückholen · ${leaseCounts.open}`}
-            </Button>
+            {showZeitkapselReclaim ? (
+              <Button
+                type="button"
+                size="sm"
+                variant={mode === 'zeitkapsel' ? 'default' : 'outline'}
+                className="h-8 min-w-[7.5rem] text-[11px]"
+                disabled={leaseCounts.open === 0}
+                title={
+                  leaseCounts.open === 0
+                    ? 'Keine offene Leihe'
+                    : 'Offene Verleihungen — Zurückholen unter Verleihen'
+                }
+                onClick={() => {
+                  setMode('zeitkapsel')
+                  setError('')
+                  setInfo(
+                    leaseCounts.ready > 0
+                      ? `${leaseCounts.ready} bereit zum Zurückholen — Liste oben unter Verleihen.`
+                      : `${leaseCounts.open} offene Leihe(n) — Countdown abwarten oder Entleiher gibt vorzeitig zurück.`
+                  )
+                }}
+              >
+                {leaseCounts.open === 0
+                  ? 'Zurückholen'
+                  : leaseCounts.ready > 0
+                    ? `Zurückholen (${leaseCounts.ready})`
+                    : `Zurückholen · ${leaseCounts.open}`}
+              </Button>
+            ) : null}
           </div>
           {(() => {
             const switchMode = (id: Mode) => {
@@ -1360,9 +1414,10 @@ export function ChatViewEvidenceImageViewerButton(p?: {
           ) : mode === 'wire' ? (
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">Nur schauen</span> — MORG_COMPACT_IMG aus dem{' '}
-                <strong className="text-foreground">aktuell geladenen</strong> Posteingang. Kein Mint, keine
-                Schlüsselkarte hier. Nicht über fremde Adresse abrufbar.
+                <span className="font-medium text-foreground">Kompaktbilder</span> aus dem{' '}
+                <strong className="text-foreground">aktuell geladenen</strong> Posteingang (MORG_COMPACT_IMG).
+                Kein E2EE-Entschlüsseln, kein Mint — nur Anzeigen. Filter „Verschlüsselt“ in der Liste ist etwas
+                anderes.
               </p>
               <Button type="button" onClick={onPrimary} disabled={busy}>
                 {busy ? (
@@ -1371,48 +1426,90 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                     Laden…
                   </>
                 ) : (
-                  `Wire-Bilder laden (max. ${EVIDENCE_IMAGE_OWNER_PAGE_SIZE})`
+                  `Bilder laden (max. ${EVIDENCE_IMAGE_OWNER_PAGE_SIZE})`
                 )}
               </Button>
             </div>
           ) : mode === 'mailbox' ? (
             <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">Nur suchen/anschauen</span> — scannt{' '}
-                <strong className="text-foreground">Mailbox-DFs</strong> und{' '}
-                <strong className="text-foreground">Chain-Events</strong> (Klartext). Default-Sendepfad „Event“ legt
-                oft nur Events an — ohne „Anker/Mailbox“ keine PlainMsgKey-DFs. Kein E2EE, kein Mint.
-              </p>
-              <div className="space-y-1.5">
-                <Label htmlFor="mb-scan-id">MAILBOX_ID (optional, für DFs)</Label>
-                <Input
-                  id="mb-scan-id"
-                  value={mailboxIdInput}
-                  onChange={(e) => setMailboxIdInput(e.target.value)}
-                  placeholder="leer = Snapshot; leer+ohne Snapshot = nur Events"
-                  spellCheck={false}
-                />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={mailboxScanKind === 'mailbox-addr' ? 'default' : 'outline'}
+                  className="h-8"
+                  onClick={() => setMailboxScanKind('mailbox-addr')}
+                >
+                  Mailbox / Adresse
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={mailboxScanKind === 'object' ? 'default' : 'outline'}
+                  className="h-8"
+                  onClick={() => setMailboxScanKind('object')}
+                >
+                  Object-ID
+                </Button>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="mb-scan-addr">Adresse Sender/Empfänger (optional)</Label>
-                <Input
-                  id="mb-scan-addr"
-                  value={mailboxAddrInput}
-                  onChange={(e) => setMailboxAddrInput(e.target.value)}
-                  placeholder="leer = eigene Session, sonst 0x…"
-                  spellCheck={false}
-                />
-              </div>
+              {mailboxScanKind === 'mailbox-addr' ? (
+                <>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="mb-scan-id">Mailbox</Label>
+                    <Input
+                      id="mb-scan-id"
+                      value={mailboxIdInput}
+                      onChange={(e) => setMailboxIdInput(e.target.value)}
+                      placeholder="0x… Mailbox (leer = Snapshot)"
+                      spellCheck={false}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="mb-scan-addr">Adresse</Label>
+                    <Input
+                      id="mb-scan-addr"
+                      value={mailboxAddrInput}
+                      onChange={(e) => setMailboxAddrInput(e.target.value)}
+                      placeholder="0x… (leer = eigene Session)"
+                      spellCheck={false}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label htmlFor="mb-scan-oid">Object-ID</Label>
+                  <Input
+                    id="mb-scan-oid"
+                    value={mailboxObjectIdInput}
+                    onChange={(e) => setMailboxObjectIdInput(e.target.value)}
+                    placeholder="0x… PlainMsgKey / MsgKey"
+                    spellCheck={false}
+                  />
+                </div>
+              )}
               <Button type="button" onClick={() => void onScanMailboxPlain()} disabled={busy}>
                 {busy ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Scannen…
                   </>
+                ) : mailboxScanKind === 'object' ? (
+                  'Objekt laden'
                 ) : (
-                  'Klartext scannen'
+                  'Scannen'
                 )}
               </Button>
+              <div className="space-y-1.5">
+                <Label htmlFor="mb-scan-pw">Passphrase (nur PWMSG)</Label>
+                <Input
+                  id="mb-scan-pw"
+                  type="password"
+                  value={mailboxPwPassphrase}
+                  onChange={(e) => setMailboxPwPassphrase(e.target.value)}
+                  placeholder="wenn Wire MORG_PWMSG_V1 ist"
+                  autoComplete="off"
+                />
+              </div>
             </div>
           ) : mode === 'owner' ? (
             ownerAddress ? (
@@ -2589,19 +2686,70 @@ export function ChatViewEvidenceImageViewerButton(p?: {
 
           {mailboxPlainRows.length > 0 ? (
             <ul className="space-y-2">
-              {mailboxPlainRows.map((row, i) => (
+              {mailboxPlainRows.map((row, i) => {
+                const rowKey = `${row.source}-${row.nonce}-${row.ts ?? 0}-${i}`
+                const pwWire = !row.encrypted && isPassphraseMessageWire(row.text)
+                const decrypted = mailboxPwPlainByKey[rowKey]
+                return (
                 <li
-                  key={`${row.source}-${row.nonce}-${row.ts ?? 0}-${row.sender}-${row.recipient}-${i}-${row.text.slice(0, 24)}`}
+                  key={`${rowKey}-${row.sender}-${row.recipient}`}
                   className="rounded-md border border-border p-2 text-xs"
                 >
                   <p className="text-muted-foreground break-all">
-                    {row.source === 'event' ? 'Event' : 'Mailbox-DF'} ·{' '}
+                    {row.source === 'event'
+                      ? 'Event'
+                      : row.source === 'object'
+                        ? 'Object'
+                        : row.encrypted
+                          ? 'MsgKey'
+                          : 'Mailbox-DF'}
+                    {row.encrypted ? ' · Enc' : pwWire ? ' · PWMSG' : ''} ·{' '}
                     {row.ts ? new Date(row.ts).toLocaleString('de-DE') : '—'} · {row.sender.slice(0, 10)}… →{' '}
                     {row.recipient.slice(0, 10)}…
+                    {row.objectId ? ` · ${row.objectId.slice(0, 12)}…` : ''}
                   </p>
-                  <p className="mt-1 whitespace-pre-wrap text-foreground">{row.text}</p>
+                  <p
+                    className={
+                      row.encrypted
+                        ? 'mt-1 whitespace-pre-wrap text-amber-800 dark:text-amber-200'
+                        : 'mt-1 whitespace-pre-wrap text-foreground'
+                    }
+                  >
+                    {decrypted ?? row.text}
+                  </p>
+                  {pwWire && !decrypted ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="mt-2 h-7 text-[11px]"
+                      disabled={busy || !mailboxPwPassphrase.trim()}
+                      onClick={() => {
+                        void (async () => {
+                          setBusy(true)
+                          setError('')
+                          try {
+                            const r = await decryptPastedPassphraseWire(
+                              row.text,
+                              mailboxPwPassphrase
+                            )
+                            if (!r.ok) {
+                              setError(r.error)
+                              return
+                            }
+                            setMailboxPwPlainByKey((prev) => ({ ...prev, [rowKey]: r.plain }))
+                          } finally {
+                            setBusy(false)
+                          }
+                        })()
+                      }}
+                    >
+                      Mit Passphrase entschlüsseln
+                    </Button>
+                  ) : null}
                 </li>
-              ))}
+                )
+              })}
             </ul>
           ) : null}
         </div>

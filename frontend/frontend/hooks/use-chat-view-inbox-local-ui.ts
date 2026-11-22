@@ -39,6 +39,10 @@ import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import type { Message } from '@/frontend/lib/types'
 import { messageMatchesInboxWireFilter, type InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
 import {
+  messageMatchesInboxMediaFilter,
+  type InboxMediaFilter,
+} from '@/frontend/lib/inbox-media-filter'
+import {
   messageMatchesInboxSourceFilter,
   type InboxSourceFilter,
 } from '@/frontend/lib/inbox-source-filter'
@@ -156,6 +160,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     setInboxSourceFilterState('all')
   }, [apiStatus, inboxSourceFilter])
   const [inboxWireFilter, setInboxWireFilterState] = useState<InboxWireFilter>('all')
+  const [inboxMediaFilter, setInboxMediaFilter] = useState<InboxMediaFilter>('all')
   const [inboxOverviewCategory, setInboxOverviewCategoryState] =
     useState<InboxOverviewCategory>('alle')
   const [overviewLastSeen, setOverviewLastSeen] = useState(() =>
@@ -223,6 +228,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       setInboxDirectionFilter('all')
       setInboxSourceFilterState('all')
       setInboxWireFilterState('all')
+      setInboxMediaFilter('all')
       setInboxChannelFiltersArmedState(false)
       setInboxWireFiltersArmedState(false)
       setInboxPartnerFiltersArmedState(false)
@@ -451,6 +457,11 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     return partnerFilteredMessages.filter((m) => messageMatchesInboxWireFilter(m, inboxWireFilter))
   }, [partnerFilteredMessages, inboxWireFilter])
 
+  const mediaFilteredMessages = useMemo(() => {
+    if (inboxMediaFilter === 'all') return wireFilteredMessages
+    return wireFilteredMessages.filter((m) => messageMatchesInboxMediaFilter(m, inboxMediaFilter))
+  }, [wireFilteredMessages, inboxMediaFilter])
+
   useEffect(() => {
     setPartnerLastSeenMap(readPartnerLastSeenMap(inboxScopeKey(myAddress)))
   }, [myAddress])
@@ -537,7 +548,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     [myAddress, partnerLastSeenMap, pinnwandMatchContext]
   )
 
-  const filteredDisplayMessages = useMemo(() => wireFilteredMessages, [wireFilteredMessages])
+  const filteredDisplayMessages = useMemo(() => mediaFilteredMessages, [mediaFilteredMessages])
 
   const sortedFilteredDisplayMessages = useMemo(
     () =>
@@ -941,6 +952,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     setInboxDirectionFilter((cur) => (cur === 'all' ? cur : 'all'))
     setInboxSourceFilterState((cur) => (cur === 'all' ? cur : 'all'))
     setInboxWireFilterState((cur) => (cur === 'all' ? cur : 'all'))
+    setInboxMediaFilter((cur) => (cur === 'all' ? cur : 'all'))
     setInboxChannelFiltersArmedState(false)
     setInboxWireFiltersArmedState(false)
     setInboxPartnerFiltersArmedState(false)
@@ -964,6 +976,15 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     if (inboxWireFilter !== 'all') {
       reasons.push(inboxWireFilter === 'encrypted' ? 'nur verschlüsselt' : 'nur Klartext')
     }
+    if (inboxMediaFilter !== 'all') {
+      reasons.push(
+        inboxMediaFilter === 'images'
+          ? 'nur Bilder'
+          : inboxMediaFilter === 'audio'
+            ? 'nur Audio'
+            : 'nur Dateien'
+      )
+    }
     if (sendPathInboxSourceFilter !== 'all') {
       reasons.push(`Sendepfad „${sendPathInboxSourceFilter}“`)
     } else if (inboxChannelFiltersArmed && inboxSourceFilter !== 'all') {
@@ -982,6 +1003,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     inboxPartnerFiltersArmed,
     inboxDirectionFilter,
     inboxWireFilter,
+    inboxMediaFilter,
     inboxSourceFilter,
     sendPathInboxSourceFilter,
   ])
@@ -1002,6 +1024,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       mbVisible === 0
     const filtersActive =
       hiddenInboxIds.size > 0 ||
+      inboxMediaFilter !== 'all' ||
       (inboxPartnerFiltersArmed && inboxPartnerKey != null) ||
       (inboxChannelFiltersArmed &&
         (inboxDirectionFilter !== 'all' || inboxSourceFilter !== 'all'))
@@ -1020,6 +1043,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     inboxPartnerFiltersArmed,
     inboxDirectionFilter,
     inboxSourceFilter,
+    inboxMediaFilter,
     resetInboxViewFilters,
   ])
 
@@ -1055,6 +1079,8 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     setInboxConversationGroupId,
     inboxWireFilter,
     setInboxWireFilter,
+    inboxMediaFilter,
+    setInboxMediaFilter,
     inboxPartnerOptions,
     inboxUnreadThreadOptions,
     isInboxMessageUnread,

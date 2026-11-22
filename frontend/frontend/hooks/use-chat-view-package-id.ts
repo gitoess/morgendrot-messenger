@@ -7,11 +7,27 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchPackageIdHistory, setPackageIdCommand } from '@/frontend/lib/api'
+import {
+  INBOX_PACKAGE_FILTER_CHANGED,
+  readInboxPackageFilterStore,
+  writeInboxPackageFilterStore,
+} from '@/frontend/lib/inbox-package-filter-store'
 
 export function useChatViewPackageFilterState() {
-  const [inboxPackageFilter, setInboxPackageFilter] = useState('')
+  const [inboxPackageFilter, setInboxPackageFilterState] = useState(() =>
+    typeof window !== 'undefined' ? readInboxPackageFilterStore() : ''
+  )
   const [packageIdSuggestions, setPackageIdSuggestions] = useState<string[]>([])
   const [packageIdBusy, setPackageIdBusy] = useState(false)
+
+  const setInboxPackageFilter = useCallback((v: React.SetStateAction<string>) => {
+    setInboxPackageFilterState((prev) => {
+      const next = typeof v === 'function' ? v(prev) : v
+      writeInboxPackageFilterStore(next, { emit: false })
+      return next
+    })
+  }, [])
+
   return {
     inboxPackageFilter,
     setInboxPackageFilter,
@@ -118,6 +134,17 @@ export function useChatViewPackageIdCommands(p: UseChatViewPackageIdCommandsPara
     setInboxPackageFilter(t)
     await loadMessages('reset', t || undefined)
   }, [inboxPackageFilter, loadMessages, setInboxPackageFilter])
+
+  /** Einstellungen → temporärer Filter (Event) → Posteingang neu laden. */
+  useEffect(() => {
+    const onExt = (ev: Event) => {
+      const detail = String((ev as CustomEvent<string>).detail ?? '').trim().toLowerCase()
+      setInboxPackageFilter(detail)
+      void loadMessages('reset', detail || undefined)
+    }
+    window.addEventListener(INBOX_PACKAGE_FILTER_CHANGED, onExt as EventListener)
+    return () => window.removeEventListener(INBOX_PACKAGE_FILTER_CHANGED, onExt as EventListener)
+  }, [loadMessages, setInboxPackageFilter])
 
   return {
     refreshPackageIdSuggestions,

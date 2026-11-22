@@ -37,7 +37,7 @@ export async function decryptPastedPassphraseWire(
   const t = wire.trim()
   const pass = passphrase.trim()
   if (!isPassphraseMessageWire(t)) {
-    return { ok: false, error: 'Kein MORG_PWMSG_V1-Wire. „Wire kopieren“ aus einer Passphrase-Nachricht einfügen.' }
+    return { ok: false, error: 'Kein MORG_PWMSG_V1-Wire. Nachrichten-⋯ → „PWMSG-Wire kopieren“.' }
   }
   if (pass.length < 8) {
     return { ok: false, error: 'Passphrase mindestens 8 Zeichen.' }

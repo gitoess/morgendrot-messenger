@@ -27,7 +27,8 @@ export function writeBurnOnReadEnabled(on: boolean): void {
 
 export const BURN_ON_READ_CONFIRM =
   'Mailbox-Eintrag jetzt von der Chain löschen (Burn / Storage-Rebate)?\n\n' +
-  'Das Message-Objekt im Postfach verschwindet (Inbox/DF-Scan). Explorer zeigt die alte Send-TX und Events weiter — Ledger-Historie ist unveränderlich.\n\n' +
+  'Nur Sender oder Empfänger dürfen (Team-Broadcast: Original-Sender). TTL ist Hinweis, kein Fremd-Burn.\n\n' +
+  'Objekt verschwindet aus dem Postfach; Explorer behält Send-TX/Events.\n\n' +
   'Nur Mailbox-Nachrichten sind burnbar; reine Events („Nur Wallet-Adresse“) nicht.'
 
 /** Kurzer UI-Hinweis wenn Burn an, aber die Zeile ein Event ist. */

@@ -191,6 +191,8 @@ export function buildChatViewCoreMessengerPorts(
       setInboxPartnerFiltersArmed: inbox.setInboxPartnerFiltersArmed,
       inboxWireFilter: inbox.inboxWireFilter,
       setInboxWireFilter: inbox.setInboxWireFilter,
+      inboxMediaFilter: inbox.inboxMediaFilter,
+      setInboxMediaFilter: inbox.setInboxMediaFilter,
       selectInboxPartnerForSend: inbox.selectInboxPartnerForSend,
       selectInboxConversationAll: inbox.selectInboxConversationAll,
       selectInboxConversationPartner: inbox.selectInboxConversationPartner,

@@ -83,7 +83,7 @@ export function SettingsTresorMapCard() {
             <span className="font-medium text-foreground">6. Browser-Sidecars / NFT</span>
             <span className="mt-0.5 block text-[12px] text-muted-foreground">
               Passphrasen-Merker, NFT-Index: mit Vault-Passwort-Session; Notfall → Browser-Geheimnisse. NFT-Objekte:
-              Posteingang → On-Chain / NFT.
+              Hauptmenü → Wallet (NFT) bzw. Nachrichten → Optionen → Wire/Klartext.
             </span>
           </span>
         </li>

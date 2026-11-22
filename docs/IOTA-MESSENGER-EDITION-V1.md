@@ -21,6 +21,7 @@
 | LoRa / SOS-Funk / Telegram / Lock / Shop / Einsatzleitung | | ✓ |
 | On-chain-Gruppenraum (ein TX für alle) | | ✓ (Backlog: `TEAM-MAILBOX-BROADCAST-1TX`) |
 | Auto-Execute empfangener Chat-Befehle / Coin-Fernsteuerung | | ✓ (siehe §1.1) |
+| Seal / Key-Broker (P4b, Boss-Schlüsseldienst) | | ✓ (Merkliste Roadmap 2026-11-20) |
 
 **Kern:** „**IOTA Messenger**“ = **Wallet + Mailbox-Chat + Gruppen + IOTA-Transfer** — wie eine schlanke Messenger-App, nur dass Transport und Speicher **IOTA/Move** sind. **Kein** Organisationsmodell.
 

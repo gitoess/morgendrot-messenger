@@ -305,6 +305,8 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     setInboxConversationGroupId,
     inboxWireFilter,
     setInboxWireFilter,
+    inboxMediaFilter,
+    setInboxMediaFilter,
     inboxPartnerOptions,
     inboxUnreadThreadOptions,
     isInboxMessageUnread,
@@ -349,12 +351,6 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     apiStatus,
     sendPathInboxSourceFilter,
   })
-
-  /** Kanal-Chip-Filter nur bei Online — sonst steuert der Sendepfad die Quelle. */
-  useEffect(() => {
-    if (sendPathInboxSourceFilter === 'all') return
-    setInboxChannelFiltersArmed(false)
-  }, [sendPathInboxSourceFilter, setInboxChannelFiltersArmed])
 
   useEffect(() => {
     if (!isPinnwandChannel(channelMode)) return
@@ -696,6 +692,8 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     setInboxConversationGroupId,
     inboxWireFilter,
     setInboxWireFilter,
+    inboxMediaFilter,
+    setInboxMediaFilter,
     inboxPartnerOptions,
     inboxUnreadThreadOptions,
     isInboxMessageUnread,

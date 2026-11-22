@@ -54,11 +54,8 @@ import { PassphraseProtectComposerToggle } from '@/frontend/components/chat-view
 import {
   readPassphraseProtectEnabled,
   readPassphraseZeitkapselModeEnabled,
-  readZeitkapselLastNftObjectId,
-  requestOpenZeitkapselLease,
   writePassphraseProtectEnabled,
   writePassphraseZeitkapselModeEnabled,
-  writeZeitkapselLastNftObjectId,
   PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT,
 } from '@/frontend/lib/passphrase-message-local-store'
 import { hasTeamBroadcastKey } from '@/frontend/lib/team-broadcast-key-store'
@@ -495,9 +492,6 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
   const [privacyToolsOpen, setPrivacyToolsOpen] = useState(
     () => readPassphraseProtectEnabled() || readPassphraseZeitkapselModeEnabled()
   )
-  const [lastZeitkapselNft, setLastZeitkapselNft] = useState<string | null>(() =>
-    typeof window !== 'undefined' ? readZeitkapselLastNftObjectId() : null
-  )
   useEffect(() => {
     setManualAddressMode(false)
   }, [partner, activeConversationBar?.displayName, activeConversationBar?.addressLine])
@@ -507,7 +501,6 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
       if (readPassphraseProtectEnabled() || readPassphraseZeitkapselModeEnabled()) {
         setPrivacyToolsOpen(true)
       }
-      setLastZeitkapselNft(readZeitkapselLastNftObjectId())
     }
     window.addEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, syncPrivacy)
     return () => window.removeEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, syncPrivacy)
@@ -718,7 +711,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
         {forcedTransport === 'internet' && privacyToolsOpen ? (
           <div className="space-y-2 rounded-xl border border-border/70 bg-muted/15 p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs font-semibold text-foreground">Passphrase &amp; NFT-Leserecht</p>
+              <p className="text-xs font-semibold text-foreground">Nachrichtenschutz</p>
               <button
                 type="button"
                 className="text-[11px] text-muted-foreground underline hover:no-underline"
@@ -732,32 +725,6 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               onEncryptedChange={onEncryptedChange ?? encryptionModeToggle?.onEncryptedChange}
               onRequestVaultSession={onNavigateHomeWhenLocked}
             />
-          </div>
-        ) : null}
-        {forcedTransport === 'internet' &&
-        lastZeitkapselNft &&
-        !privacyToolsOpen ? (
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/70 bg-muted/15 px-2.5 py-2">
-            <span className="text-[11px] text-foreground">
-              NFT-Leserecht {lastZeitkapselNft.slice(0, 10)}…
-            </span>
-            <button
-              type="button"
-              className="rounded border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
-              onClick={() => requestOpenZeitkapselLease(lastZeitkapselNft)}
-            >
-              NFT verleihen…
-            </button>
-            <button
-              type="button"
-              className="text-[11px] text-muted-foreground underline hover:no-underline"
-              onClick={() => {
-                writeZeitkapselLastNftObjectId(null)
-                setLastZeitkapselNft(null)
-              }}
-            >
-              Weg
-            </button>
           </div>
         ) : null}
         {showRecipientRow ? (
@@ -807,6 +774,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                   Empfänger · Wallet (0x{composerIotaBroadcast ? ', mehrere mit Komma' : ''})
                 </label>
                 <input
+                  id="chat-composer-iota-recipient"
                   type="text"
                   list="chat-recipient-addresses"
                   value={composerIotaField}
@@ -1104,9 +1072,9 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               value={message}
               onChange={(e) => onMessageChange(e.target.value)}
               placeholder={MESSAGE_PLACEHOLDER}
-              rows={2}
+              rows={4}
               className={cn(
-                'min-h-[2.75rem] max-h-40 flex-1 resize-y rounded-2xl border bg-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary',
+                'min-h-[5.5rem] max-h-56 flex-1 resize-y rounded-2xl border bg-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary',
                 !encrypted &&
                   forcedTransport === 'mesh' &&
                   [...message].length > MESH_PLAINTEXT_MAX_CHARS

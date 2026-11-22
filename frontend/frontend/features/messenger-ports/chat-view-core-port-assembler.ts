@@ -56,6 +56,7 @@ import type { InboxPartnerOption } from '@/frontend/components/chat-view-inbox-p
 import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partner-filter'
 import type { InboxOverviewCategory } from '@/frontend/lib/inbox-overview-filter'
 import type { InboxSourceFilter } from '@/frontend/lib/inbox-source-filter'
+import type { InboxMediaFilter } from '@/frontend/lib/inbox-media-filter'
 import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
 import type { InboxUnreadThreadOption } from '@/frontend/components/chat-view-inbox-unread-threads-strip'
 import type { MorgPkgImportItem, MorgPkgImportRecord } from '@/frontend/lib/morg-pkg-import-store'
@@ -194,6 +195,8 @@ export type ChatViewInboxViewUiSlice = {
   setInboxPartnerFiltersArmed: (v: boolean) => void
   inboxWireFilter: InboxWireFilter
   setInboxWireFilter: (f: InboxWireFilter) => void
+  inboxMediaFilter: InboxMediaFilter
+  setInboxMediaFilter: (f: InboxMediaFilter) => void
   selectInboxPartnerForSend: (address: string) => void
   selectInboxConversationAll: () => void
   selectInboxConversationPartner: (address: string) => void

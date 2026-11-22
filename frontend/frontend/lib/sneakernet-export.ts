@@ -1,14 +1,12 @@
 import type { Message } from './types'
 
-/** JSON-Paket für manuellen Transport (USB/SD/Air-Gap); Inhalt = angezeigter Klartext-Wire nach Entschlüsselung. */
+/** JSON-Datei einer Posteingangszeile (Inhalt wie angezeigt — Klartext oder Wire). Kein ECDH. */
 export function buildSneakernetPackageJson(msg: Message): string {
   return JSON.stringify(
     {
       schema: 'morgendrot.sneakernet.v1',
       exportedAt: Date.now(),
-      note: 'Klartext-Snapshot des angezeigten Wire-Inhalts (nach Entschlüsselung). Für ECDH-only-Transport siehe UI „ECDH .morg-pkg“ (schema morgendrot.morgpkg.v1).',
-      v1GoldTarget:
-        'ECDH-.morg-pkg: Chat → ECDH-Button (gleiche Krypto wie /send). Dieses JSON ist der ältere Klartext-Export.',
+      note: 'Snapshot der Zeile (content wie in der UI). ECDH-Datei: Optionen → Datei-Paket (.morg-pkg).',
       notImplementedYet: ['Kein automatischer USB-Stick-Observer.'],
       message: {
         id: msg.id,

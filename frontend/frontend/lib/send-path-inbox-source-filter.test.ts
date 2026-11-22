@@ -7,38 +7,18 @@ import {
   showChainSidebarExtrasOnSendPath,
   showTelegramAlarmOnSendPath,
 } from '@/frontend/lib/send-path-inbox-source-filter'
-import { messageMatchesInboxSourceFilter } from '@/frontend/lib/inbox-source-filter'
-import type { Message } from '@/frontend/lib/types'
-
-function m(partial: Partial<Message>): Message {
-  return {
-    id: 'x',
-    from: '0xs',
-    content: 'hi',
-    timestamp: 1,
-    ...partial,
-  }
-}
 
 describe('inboxSourceFilterForSendPath', () => {
-  it('Online → all', () => {
+  it('filtert die Liste nie mehr nach Sendepfad (immer all)', () => {
     expect(
       inboxSourceFilterForSendPath({ activeSendPath: 'internet', iotaPathFocus: false })
     ).toBe('all')
-  })
-
-  it('IOTA → iota', () => {
     expect(
       inboxSourceFilterForSendPath({ activeSendPath: 'internet', iotaPathFocus: true })
-    ).toBe('iota')
-  })
-
-  it('Funk → funk', () => {
-    expect(inboxSourceFilterForSendPath({ activeSendPath: 'mesh' })).toBe('funk')
-  })
-
-  it('Telegram → telegram', () => {
-    expect(inboxSourceFilterForSendPath({ activeSendPath: 'telegram' })).toBe('telegram')
+    ).toBe('all')
+    expect(inboxSourceFilterForSendPath({ activeSendPath: 'mesh' })).toBe('all')
+    expect(inboxSourceFilterForSendPath({ activeSendPath: 'telegram' })).toBe('all')
+    expect(inboxSourceFilterForSendPath({ activeSendPath: 'adhoc' })).toBe('all')
   })
 })
 
@@ -93,60 +73,26 @@ describe('inboxToolbarToolsForSendPath / conversationMenuChainToolsVisible', () 
     expect(conversationMenuChainToolsVisible({ activeSendPath: 'internet' })).toBe(true)
   })
 
-  it('IOTA: Chain-Tools ohne Kanal-Filter', () => {
+  it('IOTA: Chain-Tools + Kanal-Filter (Liste entkoppelt)', () => {
     const t = inboxToolbarToolsForSendPath({ activeSendPath: 'internet', iotaPathFocus: true })
     expect(t.showWirePaste).toBe(true)
     expect(t.showPakete).toBe(true)
-    expect(t.showKanalFilterToggle).toBe(false)
+    expect(t.showKanalFilterToggle).toBe(true)
     expect(conversationMenuChainToolsVisible({ activeSendPath: 'internet', iotaPathFocus: true })).toBe(
       true
     )
   })
 
-  it('Funk/Telegram: Pakete+Verlauf, kein Wire/On-Chain/Burn', () => {
+  it('Funk/Telegram: Pakete+Verlauf+Kanal-Filter, kein Wire/On-Chain/Burn', () => {
     for (const activeSendPath of ['mesh', 'telegram'] as const) {
       const t = inboxToolbarToolsForSendPath({ activeSendPath })
       expect(t.showWirePaste).toBe(false)
       expect(t.showPakete).toBe(true)
       expect(t.showOnChainNft).toBe(false)
-      expect(t.showKanalFilterToggle).toBe(false)
+      expect(t.showKanalFilterToggle).toBe(true)
       expect(t.showDecryptExport).toBe(true)
       expect(t.showNachrichtenverlauf).toBe(true)
       expect(conversationMenuChainToolsVisible({ activeSendPath })).toBe(false)
     }
-  })
-})
-
-describe('Pfadfilter gegen Beispielnachrichten', () => {
-  const mailbox = m({ source: 'mailbox', transports: ['internet'], chainPurgeable: true })
-  const tg = m({ source: 'telegram', transports: ['telegram'] })
-  const funk = m({ source: 'mesh', transports: ['mesh'] })
-
-  it('Online/all lässt alles durch', () => {
-    const f = inboxSourceFilterForSendPath({ activeSendPath: 'internet' })
-    expect(messageMatchesInboxSourceFilter(mailbox, f)).toBe(true)
-    expect(messageMatchesInboxSourceFilter(tg, f)).toBe(true)
-    expect(messageMatchesInboxSourceFilter(funk, f)).toBe(true)
-  })
-
-  it('IOTA nur Chain', () => {
-    const f = inboxSourceFilterForSendPath({ activeSendPath: 'internet', iotaPathFocus: true })
-    expect(messageMatchesInboxSourceFilter(mailbox, f)).toBe(true)
-    expect(messageMatchesInboxSourceFilter(tg, f)).toBe(false)
-    expect(messageMatchesInboxSourceFilter(funk, f)).toBe(false)
-  })
-
-  it('Funk nur Mesh (sonst leer)', () => {
-    const f = inboxSourceFilterForSendPath({ activeSendPath: 'mesh' })
-    expect(messageMatchesInboxSourceFilter(mailbox, f)).toBe(false)
-    expect(messageMatchesInboxSourceFilter(tg, f)).toBe(false)
-    expect(messageMatchesInboxSourceFilter(funk, f)).toBe(true)
-  })
-
-  it('Telegram nur TG', () => {
-    const f = inboxSourceFilterForSendPath({ activeSendPath: 'telegram' })
-    expect(messageMatchesInboxSourceFilter(mailbox, f)).toBe(false)
-    expect(messageMatchesInboxSourceFilter(tg, f)).toBe(true)
-    expect(messageMatchesInboxSourceFilter(funk, f)).toBe(false)
   })
 })

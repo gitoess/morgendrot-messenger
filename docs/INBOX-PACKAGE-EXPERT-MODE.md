@@ -1,77 +1,67 @@
-# Posteingang: Package-ID im Expertenmodus
+# Posteingang: Package-ID / Vertrag (Expertenmodus)
 
-Stand: 2026-06 — Kompromiss zwischen Lite-UI-Dropdown (früher) und heutigem Messenger (eine kanonische ID + Partner-Filter).
+Stand: 2026-11 — Vertrag-UI sitzt in **Einstellungen → Expertenmodus** (nicht mehr Posteingang-Toolbar).
 
 ## Kurzfassung
 
-| Nutzer | Posteingang Package-UI |
-|--------|-------------------------|
-| Standard (Simple Mode / ohne Toggle) | **Kein** Package-Dropdown — nur Partner/Kanal/Transport |
-| Expertenmodus (Einstellungen, client) + IOTA-Transport | Kleines **Pkg:**-Menü oben rechts im Posteingang |
-| Dauerhafter Wechsel | weiterhin **Einstellungen → System & Identität** (`/set-package-id`) |
+| Nutzer | Package-/Vertrags-UI |
+|--------|----------------------|
+| Standard (Simple Mode / ohne Toggle) | **Keine** Steuerung |
+| Expertenmodus (Einstellungen, client) + IOTA-Transport | Block **IOTA-Vertrag (Package-ID)** unter dem Experten-Toggle |
+| Dauerhafter Wechsel | `/set-package-id` (Button „Dauerhaft wechseln“) |
+| Temporär | nur Posteingang-Filter (`inboxPackageFilter`), **ohne** Server-Wechsel |
+
+## Was „Temporär“ macht
+
+**Ja:** Der Posteingang lädt Nachrichten **nur für diese Move-Package-ID** (ein anderes Deploy/Programm). Server-Config und Sendepfad bleiben auf der aktiven ID.
+
+**Nein:** Kein zweites Konto, kein dauerhafter Wechsel, kein `.morg-pkg`-Datei-Paket.
+
+Amber-Hinweis im Panel = Temp-Filter aktiv. „Zurück zum aktiven Vertrag“ leert den Filter.
 
 ## Drei Schichten (wichtig)
 
-1. **Server Simple Mode** (`ROLE=arbeiter`, `uiMode=simple`, …) — **hard block**, kein Toggle, kein Menü.
-2. **IOTA-Transport sichtbar** (`transportProfile` iota-*, `iotaTransportUiEnabled`) — ohne IOTA kein Package-Menü (Mesh-only-Einsätze).
+1. **Server Simple Mode** (`ROLE=arbeiter`, `uiMode=simple`, …) — **hard block**, kein Toggle, kein Panel.
+2. **IOTA-Transport sichtbar** — ohne IOTA kein Experten-Panel.
 3. **Client Expertenmodus** (`localStorage` `morgendrot.messenger.expertMode`) — **opt-in** pro Browser.
 
-Expert-Relay/R1/Tangle bleiben an Schicht 1+2 gekoppelt (`expertTools`); das Package-Menü ist **schmaler** (nur Schicht 3 zusätzlich).
+## UX
 
-## UX im Expertenmodus
-
-- Button **Pkg: 0xabc…** (amber = temporäre Anzeige).
-- **Temporär anzeigen** — setzt `inboxPackageFilter`, lädt `/inbox` **ohne** `/set-package-id`.
-- **Dauerhaft wechseln** — wie Einstellungen (`applyPackageIdBackend`).
-- **Zurück zur Basis-ID** — Filter leeren, Posteingang neu laden.
+- Einstellungen → Expertenmodus **an** → Vertrags-Panel.
+- **Temporär anzeigen** — `writeInboxPackageFilterStore` + Event → Chat lädt `/inbox` mit Filter.
+- **Dauerhaft wechseln** — `setPackageIdCommand` + Force-Refresh.
 - Verlauf aus `GET /api/package-id-history`.
 
-**Nicht verwechseln** mit Toolbar **Pakete** = `.morg-pkg` Sneakernet (ECDH-Bundle).
+**Nicht verwechseln** mit Nachrichten → Optionen → **Pakete** = `.morg-pkg` Sneakernet.
 
-## Kritische Verbesserungen gegenüber Rohvorschlag
+## Bilder / Wire / Verschlüsselung (Posteingang)
 
-| Punkt | Verbesserung |
-|-------|----------------|
-| Ein Toggle für alles | Package-Menü **nicht** an volle `expertTools` (Relay/R1) koppeln — eigene Gate-Funktion `canShowInboxPackageExpertMenu` |
-| Rollen Boss-only | **Nicht** nur Boss — jeder ohne Server-Simple-Mode; Toggle schützt Normalnutzer |
-| Namenskonflikt „Pakete“ | UI-Label **Pkg:** / „Package-ID (Move)“ |
-| Temporär unsichtbar | Amber **Temp:** + Hinweistext im Menü |
-| Multi-Package später | Typ `InboxPackageViewMode` + `comparePackageIds[]` in `inbox-package-view.ts` |
+| UI | Bedeutung |
+|----|-----------|
+| **Filter** | Richtung + Inhalt (Verschl./Klartext) + **Medien** (Bilder/Audio/Dateien) — nur Listenfilter |
+| **Export → Medien-Galerie** | Kompaktbilder/Audio/Dateien aus Posteingang (Hauptweg für Medien) |
+| **Optionen → Chain-Text…** | **Mailbox/Adresse** oder **Object-ID**; PWMSG mit Passphrase hier lesbar; ECDH-MsgKey nur Hinweis |
+| **Optionen → PWMSG entschlüsseln…** | `MORG_PWMSG_V1` paste → Passphrase → Klartext **lokal** (out-of-band) |
+| **Optionen → Hash & Prüfen** | SHA-256 von Text/Datei — Integrität, kein Entschlüsseln |
+
+**Enc on-chain:** MsgKey findbar wie Klartext-Objekte. Lesen: ECDH-Session (Posteingang) bzw. PWMSG + Passphrase. Chain-Text entschlüsselt ECDH nicht still.
+
+Kompaktbilder wirken in der Liste oft wie „Wire/Geheim“, sind aber nur das Bildformat — Posteingang-Bilder decodiert sie.
+
+NFT-Mint/Galerie: **Hauptmenü-Wallet**.
 
 ## Code-Referenzen
 
 | Datei | Rolle |
 |-------|--------|
 | `frontend/lib/messenger-client-expert-mode.ts` | Toggle localStorage + Event |
+| `frontend/lib/inbox-package-filter-store.ts` | Temporärer Filter + Cross-View-Event |
 | `frontend/lib/inbox-package-view.ts` | View-Modus + Fetch-Auflösung |
-| `frontend/lib/messenger-role-capabilities.ts` | `canShowInboxPackageExpertMenu` |
-| `frontend/hooks/use-chat-view-package-id.ts` | Temporär vs. dauerhaft (bestehend) |
-| `frontend/components/chat-view-inbox-package-expert-menu.tsx` | Posteingang-UI |
-| `frontend/components/settings-expert-mode-section.tsx` | Einstellungen |
+| `frontend/components/settings-expert-mode-section.tsx` | Toggle |
+| `frontend/components/settings-inbox-package-contract-panel.tsx` | Vertrags-UI |
+| `frontend/components/chat-view-inbox-package-expert-menu.tsx` | Shared Menu (`embedded`) |
+| `frontend/hooks/use-chat-view-package-id.ts` | Chat: Filter-Event → Reload |
 
 ## Vorbereitung Multi-Package (Zukunft)
 
-**Wann ein volles Dropdown (oder Side-by-Side) mehr Sinn macht:**
-
-- Mehrere **parallele Einsätze** mit unterschiedlichen Move-Deploys auf **einem** Gerät.
-- Forensik/Vergleich **ohne** dauerndes `/set-package-id`.
-- Backend-**Event-Union** über mehrere IDs in `.env` / `package-id-history` (Betreiber-Konfiguration existiert teilweise).
-
-**Geplante Erweiterung (noch nicht UI):**
-
-```typescript
-// inbox-package-view.ts
-mode: 'multi_union'
-comparePackageIds: ['0x…', '0x…']
-```
-
-Fetch-Schicht (`fetchInbox`, `fetchInboxFromAllOwnedMailboxes`) könnte dann:
-
-- `packageIds: string[]` + `union: true` (ein gemergter Posteingang), oder
-- parallele Fetches + UI **Vergleichsmodus** (zwei Spalten).
-
-Roadmap-Hinweis: `docs/ROADMAP-FAHRPLAN.md` → Abschnitt *Multi-Package Posteingang*.
-
-## Abgrenzung Lite-UI
-
-Die Screenshots mit Package-Dropdown im Posteingang stammen aus **`ui/index.html`** (Alpine Projekt-Dashboard). Der Messenger übernimmt das **nicht** als Default — nur den Experten-Pfad oben.
+Volles Multi-Package-Dropdown / Side-by-Side bleibt Backlog (`docs/ROADMAP-FAHRPLAN.md`).

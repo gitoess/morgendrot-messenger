@@ -10,11 +10,12 @@ import { executeCommand } from '@/frontend/lib/api/execute-command'
 import { isValidRecipient0x, normalizeRecipient0x } from '@/frontend/lib/encrypted-recipient-handshake-status'
 
 export const PEER_KEY_RENEWAL_CONFIRM =
-  'Session-Schlüssel mit diesem Kontakt erneuern (keyEpoch++)?\n\n' +
-  '• Der gespeicherte Peer-Schlüssel bleibt erhalten — alte Nachrichten bleiben lesbar.\n' +
-  '• Ab sofort wird mit neuer Session-Epoch verschlüsselt (Forward Secrecy ab Rotation).\n' +
-  '• Ein neuer Handshake wird an die Chain gesendet; der Partner sollte antworten.\n' +
-  '• Bis zur Partner-Antwort kann verschlüsseltes Senden blockiert sein.\n\n' +
+  'Session-Schlüssel mit diesem Kontakt erneuern (keyEpoch++ lokal)?\n\n' +
+  '• Epoch-Zahl ist lokal (dein Gerät) — der Partner sieht keine gemeinsame Epoch-Anzeige.\n' +
+  '• Alter Peer-Schlüssel bleibt — alte Nachrichten bleiben lesbar.\n' +
+  '• Ab sofort neue Session-Epoch (Forward Secrecy ab Rotation).\n' +
+  '• Neuer Handshake geht an die Chain; Partner muss Connect/Annehmen.\n' +
+  '• Bis dahin kann verschlüsseltes Senden blockiert sein.\n\n' +
   'Fortfahren?'
 
 /** Entfernt gespeicherten Peer-Pub für genau eine 0x-Adresse (Notfall / Legacy). */

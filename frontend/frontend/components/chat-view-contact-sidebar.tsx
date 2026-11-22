@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
-import { BookUser, Megaphone, MessageCircle, MoreVertical, Settings2, User, Users } from 'lucide-react'
+import { BookUser, Check, Megaphone, MessageCircle, MoreVertical, Plus, Settings2, User, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { InboxPartnerOption } from '@/frontend/components/chat-view-inbox-partner-strip'
@@ -55,9 +55,17 @@ export type ChatViewContactSidebarProps = {
   onSelectPinnwand?: () => void
   showAllActive: boolean
   onSelectAll: () => void
+  /** Freie 0x-Adresse — wie „Verwalten“ neben Gruppen. */
+  onWriteUnknownAddress?: () => void
   onSelectSelf?: () => void
   activeSelfSelected?: boolean
   onSelectContact: (address: string) => void
+  /**
+   * Mehrere Empfänger (IOTA/Telegram): + am Kontakt — nicht der normale Klick (der bleibt 1:1).
+   * `inRecipient` = bereits in der Composer-Komma-Liste.
+   */
+  onToggleRecipientContact?: (address: string) => void
+  recipientComposerKeys?: ReadonlySet<string>
   onSelectGroup: (groupId: string) => void
   onSelectTelegramAlarmGroup?: () => void
   onOpenGroupSettings?: () => void
@@ -89,6 +97,8 @@ function SidebarRow(p: {
   handshakeBadge?: ContactHandshakeBadgeKind
   icon?: React.ReactNode
   onClick: () => void
+  onToggleRecipient?: () => void
+  recipientSelected?: boolean
   onOpenMore?: () => void
   moreLabel?: string
 }) {
@@ -131,6 +141,39 @@ function SidebarRow(p: {
           ) : null}
         </span>
       </button>
+      {p.onToggleRecipient ? (
+        <button
+          type="button"
+          className={cn(
+            'my-1 flex w-9 shrink-0 items-center justify-center rounded-lg',
+            p.recipientSelected
+              ? 'bg-primary/20 text-foreground'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+          )}
+          title={
+            p.recipientSelected
+              ? 'Aus Empfänger-Liste entfernen'
+              : 'Zum Empfänger hinzufügen (mehrere möglich)'
+          }
+          aria-label={
+            p.recipientSelected
+              ? 'Aus Empfänger-Liste entfernen'
+              : 'Zum Empfänger hinzufügen'
+          }
+          aria-pressed={p.recipientSelected === true}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            p.onToggleRecipient?.()
+          }}
+        >
+          {p.recipientSelected ? (
+            <Check className="h-4 w-4" aria-hidden />
+          ) : (
+            <Plus className="h-4 w-4" aria-hidden />
+          )}
+        </button>
+      ) : null}
       {p.onOpenMore ? (
         <button
           type="button"
@@ -405,9 +448,22 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
           ) : null}
 
           <section className="mt-2">
-            <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Direktchats
-            </p>
+            <div className="flex items-center justify-between gap-2 px-2 pb-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Direktchats
+              </p>
+              {p.onWriteUnknownAddress ? (
+                <button
+                  type="button"
+                  onClick={() => p.onWriteUnknownAddress?.()}
+                  className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-semibold text-foreground hover:bg-muted"
+                  title="Unbekannte Wallet: 0x-Adresse tippen (ohne Telefonbuch)"
+                >
+                  <Plus className="h-3 w-3" aria-hidden />
+                  Adresse…
+                </button>
+              ) : null}
+            </div>
             <SidebarRow
               title="Alle"
               subtitle={
@@ -427,7 +483,13 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
                   : 'Noch keine Direktchats — oben „Telefonbuch“ und anlegen.'}
               </p>
             ) : (
-              filteredContacts.map((c) => (
+              filteredContacts.map((c) => {
+                const recvKey = c.address.trim().toLowerCase()
+                const inRecipient = p.recipientComposerKeys?.has(recvKey) === true
+                const canToggleRecipient =
+                  Boolean(p.onToggleRecipientContact) &&
+                  (sidebarPathFilter === 'internet' || sidebarPathFilter === 'telegram')
+                return (
                 <SidebarRow
                   key={c.key}
                   title={c.displayName}
@@ -436,10 +498,15 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
                   unreadCount={c.unreadCount}
                   handshakeBadge={handshakeKindFor(c.address)}
                   onClick={() => p.onSelectContact(c.address)}
+                  onToggleRecipient={
+                    canToggleRecipient ? () => p.onToggleRecipientContact?.(c.address) : undefined
+                  }
+                  recipientSelected={inRecipient}
                   onOpenMore={() => p.onOpenContactDetail(c.address, c.entry)}
                   moreLabel={`Mehr zu ${c.displayName}`}
                 />
-              ))
+                )
+              })
             )}
           </section>
         </div>

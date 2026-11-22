@@ -77,7 +77,7 @@ Diese Move-Module gehören zum **Morgendrot Projekt**, nicht zur Messenger-App (
 | Verschlüsselt (Legacy) | `send_encrypted_message` | Jeder; **nicht purgebar** | Mailbox vs. Event | Ja |
 | Klartext persistent | `store_plaintext_message_stored` (+ `_private`, `_with_credits*`) | wie oben | `MAILBOX_STORE_PLAINTEXT`, TTL | Ja |
 | Klartext (Legacy) | `send_plaintext_message` / `store_plaintext_message` | Event / alt | `ENABLE_PLAINTEXT_CHANNEL` | Ja |
-| Purge verschlüsselt | `purge_message` (+ `_private`) | Sender, Empfänger; nach TTL jeder | `ENABLE_PURGE` | Ja |
+| Purge verschlüsselt | `purge_message` (+ `_private`) | **Nur** Sender oder Empfänger (TTL = Metadaten) | `ENABLE_PURGE` | Ja |
 | Purge Klartext | `purge_plaintext_mail_entry` (+ `_private`) | **Gleiche Rechte** wie `purge_message` | `ENABLE_PURGE` | Ja |
 
 ---
@@ -87,7 +87,7 @@ Diese Move-Module gehören zum **Morgendrot Projekt**, nicht zur Messenger-App (
 | Bereich | Move-Funktion | On-chain (Move) | Off-chain (Boss) | Edition |
 |---------|---------------|-----------------|------------------|---------|
 | Senden | `store_team_plaintext_broadcast` | **Jeder mit Team-Mailbox-Ref + Gas**; Key `{sender, nonce}` | Team-Mailbox-ID in Gruppe/Handoff | Ja (Allowlist möglich) |
-| Purge | `purge_team_plaintext_broadcast` | **Original-Sender jederzeit**; **nach TTL jeder** | `ENABLE_PURGE` | Ja |
+| Purge | `purge_team_plaintext_broadcast` | **Nur Original-Sender** (TTL = Metadaten) | `ENABLE_PURGE` | Ja |
 | Ganzes Team-Postfach | — | **Nicht in Move** | UI: „Aus Liste“ (nur lokal) | Backlog |
 
 **UI:** Posteingang → ⋯ → **Auf Chain löschen (Rebate)** (Badge **Team-Broadcast**). **Deploy:** `purge_team_plaintext_broadcast` muss im Package sein (`docs/DEPLOY-MOVE-M2c-TEAM-BROADCAST.md`).
@@ -148,10 +148,10 @@ Diese Move-Module gehören zum **Morgendrot Projekt**, nicht zur Messenger-App (
 
 | Objekt / Eintrag | Owner? | Purge einzeln? | Wer purgt? | Ganzes Object löschen? |
 |------------------|--------|----------------|------------|-------------------------|
-| Server-Mailbox (DF) | Shared | HS, Msg, Plain | Parteien + nach TTL jeder | ❌ |
-| Team-Broadcast (DF) | — | ✅ | Sender; nach TTL jeder | — |
+| Server-Mailbox (DF) | Shared | HS, Msg, Plain | Parteien (TTL = Metadaten) | ❌ |
+| Team-Broadcast (DF) | — | ✅ | Nur Sender | — |
 | Team-Mailbox (Object) | Shared | nur Broadcasts | s.o. | ❌ |
-| Private Mailbox | `owner` | HS, Msg, Plain | Parteien + nach TTL; MB: Owner | ✅ Owner |
+| Private Mailbox | `owner` | HS, Msg, Plain | Parteien (Msg/Plain); HS: +TTL jeder; MB: Owner | ✅ Owner |
 | Vault | `owner` | ✅ | s. §9 | ✅ |
 | Legacy-Events | — | ❌ | — | — |
 | MessengerCredits | Holder | ❌ | — | — |

@@ -2,9 +2,8 @@
 
 /**
  * Posteingang: Shared-Mailbox + alle eigenen privaten Mailboxen (M4d), Merge mit Mesh, Dedup.
- * Standard: 50 Nachrichten pro Seite; „Weitere laden“ holt ältere Chunks (offset).
- * Erster Load / „Aktualisieren“: Reset merged Chain-Zeilen wie Poll (kein Voll-Ersatz),
- * außer bei Wallet-/Package-Scope-Wechsel oder forceLive.
+ * Stabil-Kern (788330f / Logbuch 2026-07-07): Reset merged wie Poll; Poll nur novel;
+ * Epoch nur Scope/forceLive — sonst „neueste nachgezogen“.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
@@ -106,8 +105,8 @@ const RESET_PAGE_SIZE_NATIVE = 200
 function resetPageSize(): number {
   return isCapacitorNativePlatform() ? RESET_PAGE_SIZE_NATIVE : RESET_PAGE_SIZE_WEB
 }
-/** Auto-Append nach Reset bei hasMore (Indexer liefert oft schon 500). */
-const AUTO_APPEND_ROUNDS_ON_RESET = 8
+/** Auto-Append nach Reset bei hasMore — wie Boss-Inbox-stabil (788330f), nicht aufblasen. */
+const AUTO_APPEND_ROUNDS_ON_RESET = 3
 /** Auto-Poll (Status-Tick): klein — volle Union nur bei Aktualisieren. */
 const POLL_PAGE_SIZE = 80
 
@@ -256,6 +255,10 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
         lastInboxCacheKeyRef.current = cacheKey
         lastInboxWalletScopeRef.current = walletScopeKey
       }
+      /**
+       * Epoch nur bei Scope-Wechsel / sichtbarem Aktualisieren (788330f Boss-Inbox-stabil).
+       * Jeder stille Reset invalidiert sonst Append/Poll und neueste Zeilen wirken „nachgezogen“.
+       */
       if (walletScopeChanged || forceLive) {
         inboxLoadEpochRef.current += 1
       }
@@ -279,7 +282,8 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
          * Gruppenauswahl / Partner-Filter nicht per sessionStorage-Event killen
          * (sonst: Nachricht kurz in „Alle“, dann weg / Gruppe zeigt alles).
          */
-        if (!silent) clearInboxBrowserViewFilters()
+        /** Nur sichtbares Aktualisieren — stille Reloads / Package-Wechsel dürfen Filter nicht killen. */
+        if (forceLive) clearInboxBrowserViewFilters()
         autoAppendBudgetRef.current = 0
       }
       const applyLocalOverlayFallback = () => {
@@ -318,10 +322,13 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
            */
           const replaceOnReset = mode === 'reset' && walletScopeChanged
           if (mode === 'poll') {
+            /** 788330f: nur wirklich neue Zeilen — kein Soft-Remerge der ganzen Poll-Seite. */
             let novelForTone: Message[] = []
             setMessages((prev) => {
               const prevIds = new Set(prev.map((m) => m.id))
-              const prevDedup = new Set(prev.map((m) => m.dedupKey).filter((k): k is string => Boolean(k)))
+              const prevDedup = new Set(
+                prev.map((m) => m.dedupKey).filter((k): k is string => Boolean(k))
+              )
               const novel = mapped.filter(
                 (m) => !prevIds.has(m.id) && (!m.dedupKey || !prevDedup.has(m.dedupKey))
               )
@@ -334,6 +341,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
               ])
               if (inboxMessageListSignature(prev) === inboxMessageListSignature(next)) return prev
               novelForTone = novel
+              messagesSnapRef.current = next
               return next
             })
             if (novelForTone.length > 0) {
@@ -346,25 +354,40 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
           } else {
             mailboxOffsetRef.current += stride
           }
-          const prevSnap = messagesSnapRef.current
-          const next = mergeFetchedInboxPageIntoState(prevSnap, mapped, {
-            replaceChainRows: replaceOnReset,
-          })
+          /**
+           * Funktionales setMessages — nicht messagesSnapRef allein.
+           * Sonst: Optimistic/Journal-Merge zwischen Snap-Lesen und setState → Zeilen weg,
+           * bis forceLive (Aktualisieren) sie wieder holt.
+           */
           if (mode === 'append') {
+            const prevSnap = messagesSnapRef.current
+            const preview = mergeFetchedInboxPageIntoState(prevSnap, mapped, {
+              replaceChainRows: false,
+            })
             const prevIds = new Set(prevSnap.map((m) => m.id))
-            const prevDedup = new Set(prevSnap.map((m) => m.dedupKey).filter((k): k is string => Boolean(k)))
-            const novel = next.filter(
+            const prevDedup = new Set(
+              prevSnap.map((m) => m.dedupKey).filter((k): k is string => Boolean(k))
+            )
+            const novel = preview.filter(
               (m) => !prevIds.has(m.id) && (!m.dedupKey || !prevDedup.has(m.dedupKey))
             )
             setInboxHasMore(novel.length > 0 && chainHasMore)
           } else {
             setInboxHasMore(chainHasMore)
           }
-          if (!replaceOnReset && inboxMessageListSignature(prevSnap) === inboxMessageListSignature(next)) {
-            return
-          }
-          messagesSnapRef.current = next
-          setMessages(next)
+          setMessages((prev) => {
+            const next = mergeFetchedInboxPageIntoState(prev, mapped, {
+              replaceChainRows: replaceOnReset,
+            })
+            if (
+              !replaceOnReset &&
+              inboxMessageListSignature(prev) === inboxMessageListSignature(next)
+            ) {
+              return prev
+            }
+            messagesSnapRef.current = next
+            return next
+          })
         }
 
         /** Shared (immer) + Team-Postfächer + aktive private Mailbox (M4d), falls gesetzt. */
@@ -388,11 +411,19 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
         if (loadEpoch !== inboxLoadEpochRef.current) return
         if (res.ok && raw != null) {
           let mapped: Message[] = raw
-          /** Aktualisieren: kürzeren Live-Fetch mit Browser-Cache auffüllen (ältere Zeilen behalten). */
+          /** Kürzeren Live-Fetch mit Cache + RAM auffüllen (sonst neue Zeilen weg bis Aktualisieren). */
           if (mode === 'reset' && !walletScopeChanged) {
             const cached = readInboxCache(cacheKey)
             if (cached && cached.messages.length > mapped.length) {
               mapped = mergeAllMessages([...cached.messages, ...mapped])
+            }
+            const ram = messagesSnapRef.current
+            if (ram.length > 0) {
+              mapped = mergeAllMessages([
+                ...retainPriorChainRowsForInboxMerge(ram),
+                ...pickInboxOverlayRowsForMerge(ram, mapped),
+                ...mapped,
+              ])
             }
           }
           const tgJournal = mode === 'poll' ? [] : await loadTelegramJournalMessages(myAddress)

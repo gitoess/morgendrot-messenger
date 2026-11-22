@@ -3,6 +3,7 @@ import {
   collectContactsForSendPath,
   contactReachableOnSendPath,
   formatAllRecipientsForSendPath,
+  toggleComposerTelegramRecipient,
 } from '@/frontend/lib/contact-send-path'
 
 const alice = '0x' + '2'.repeat(64)
@@ -41,5 +42,14 @@ describe('contact-send-path', () => {
     const formatted = formatAllRecipientsForSendPath(contacts, 'internet')
     expect(formatted.recipient).toBe(`${alice}, ${bob}`)
     expect(formatted.partner).toBe(alice)
+  })
+
+  it('toggleComposerTelegramRecipient schaltet tg:-Ziele um', () => {
+    const add = toggleComposerTelegramRecipient('', '111')
+    expect(add.recipient).toBe('tg:111')
+    const two = toggleComposerTelegramRecipient(add.recipient, '222')
+    expect(two.recipient).toBe('tg:111, tg:222')
+    const rem = toggleComposerTelegramRecipient(two.recipient, '111')
+    expect(rem.recipient).toBe('tg:222')
   })
 })

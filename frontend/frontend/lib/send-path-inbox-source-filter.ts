@@ -1,6 +1,9 @@
 /**
  * Sendepfad → Posteingangs-Quellenfilter.
- * Online = alles; Funk / IOTA / Telegram = nur der jeweilige Kanal.
+ *
+ * 2026-11: **immer `all`**. Sendepfad steuert nur Senden/Toolbar/Kontakte — nicht die Liste.
+ * Sonst: Funk/IOTA wechseln → neueste Chain-Zeilen weg, zurück = „nachgezogen“.
+ * Bewusste Quelle: Filter/Kanal-Chips im Posteingang.
  */
 
 import type { ActiveSendPath } from '@/frontend/lib/messenger-channel-send-path'
@@ -10,12 +13,8 @@ export function inboxSourceFilterForSendPath(p: {
   activeSendPath: ActiveSendPath
   iotaPathFocus?: boolean
 }): InboxSourceFilter {
-  if (p.activeSendPath === 'telegram') return 'telegram'
-  if (p.activeSendPath === 'mesh') return 'funk'
-  /** Ad-hoc (falls wieder aktiv): kein Mesh-Inhalt → wie Funk ohne Traffic. */
-  if (p.activeSendPath === 'adhoc') return 'funk'
-  if (p.iotaPathFocus) return 'iota'
-  /** Online: alle Nachrichten / Quellen. */
+  void p.activeSendPath
+  void p.iotaPathFocus
   return 'all'
 }
 
@@ -57,7 +56,7 @@ export type InboxToolbarPathTools = {
   showNachrichtenverlauf: boolean
   showOnChainNft: boolean
   showIotaExpertInHistory: boolean
-  /** Kanal-Filter-Toggle: nur Online (sonst steuert der Sendepfad die Quelle). */
+  /** Kanal-Filter-Toggle: Quelle bewusst filtern (Sendepfad filtert die Liste nicht mehr). */
   showKanalFilterToggle: boolean
 }
 
@@ -79,7 +78,7 @@ export function inboxToolbarToolsForSendPath(p: {
     showNachrichtenverlauf: true,
     showOnChainNft: chain,
     showIotaExpertInHistory: chain,
-    showKanalFilterToggle: onlineAll,
+    showKanalFilterToggle: true,
   }
 }
 

@@ -52,6 +52,30 @@ function collectIotaAddressesFromField(raw: string, seen: Set<string>, out: stri
   }
 }
 
+/**
+ * IOTA-Empfänger in der Komma-Liste ein-/ausklappen (mehrere, aber nicht „Alle“).
+ * Normaler Kontakt-Klick bleibt 1:1 — diese Funktion nur für „+ Empfänger“.
+ */
+export function toggleComposerIotaRecipientAddress(
+  recipientField: string,
+  address: string
+): { recipient: string; added: boolean; count: number } {
+  const addr = sanitizeComposerAddressInput(address).toLowerCase()
+  if (!IOTA_ADDR.test(addr)) {
+    return { recipient: recipientField.trim(), added: false, count: 0 }
+  }
+  const seen = new Set<string>()
+  const list: string[] = []
+  collectIotaAddressesFromField(recipientField, seen, list)
+  const had = seen.has(addr)
+  if (had) {
+    const next = list.filter((a) => a !== addr)
+    return { recipient: next.join(', '), added: false, count: next.length }
+  }
+  list.push(addr)
+  return { recipient: list.join(', '), added: true, count: list.length }
+}
+
 /** Alle 0x-Empfänger aus Composer (Komma-Liste bei „Alle“ / Broadcast). */
 export function parseComposerIotaRecipientAddresses(
   recipient: string,

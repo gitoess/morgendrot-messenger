@@ -2,6 +2,7 @@ import type { InboxPartnerOption } from '@/frontend/components/chat-view-inbox-p
 import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partner-filter'
 import type { InboxOverviewCategory } from '@/frontend/lib/inbox-overview-filter'
 import type { InboxSourceFilter } from '@/frontend/lib/inbox-source-filter'
+import type { InboxMediaFilter } from '@/frontend/lib/inbox-media-filter'
 import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
 import type { Message } from '@/frontend/lib/types'
 
@@ -22,6 +23,8 @@ export type InboxViewUiPort = {
   readonly setInboxPartnerFiltersArmed: (v: boolean) => void
   readonly inboxWireFilter: InboxWireFilter
   readonly setInboxWireFilter: (f: InboxWireFilter) => void
+  readonly inboxMediaFilter: InboxMediaFilter
+  readonly setInboxMediaFilter: (f: InboxMediaFilter) => void
   readonly selectInboxPartnerForSend: (address: string) => void
   readonly selectInboxConversationAll: () => void
   readonly selectInboxConversationPartner: (address: string) => void

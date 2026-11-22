@@ -254,7 +254,7 @@ Gruppen-Enc ohne Auto-Fork: Team-Key erzeugen/rotieren, Handoff, Vault-Sidecar. 
 | Aktion | Was passiert |
 |--------|----------------|
 | **Lokal ausblenden** | Nur UI/Session — Chain unverändert |
-| **Burn** | Mailbox-Objekt on-chain löschen (Rebate); braucht `chainPurgeable` |
+| **Burn** | Mailbox-Objekt on-chain löschen (Rebate); braucht `chainPurgeable`; **nur Sender/Empfänger** (Team: Sender). TTL bleibt, kein Fremd-Burn |
 | **Burn-on-read (Modus)** | Opt-in: Composer erzwingt Mailbox; burnbare Zeilen orange + Badge **Burnbar**; Burn mit Confirm |
 
 Intern heißt der Chain-Call weiter `/purge-msg` — in der UI nur noch **Burn**. „Emergency Purge“ in den Einstellungen ist etwas anderes (Vault/Cache).
