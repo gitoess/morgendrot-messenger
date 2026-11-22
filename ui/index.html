@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="styles.css" />
   <script defer src="https://unpkg.com/alpinejs@3.14.3/dist/cdn.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@master/qrcode.min.js"></script>
-    <style>
+  <style>
     [x-cloak] { display: none !important; }
     .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
     .boss-doc-html h1 { font-size: 1.25rem; font-weight: 700; margin: 0.75rem 0 0.35rem; color: #e2e8f0; }
@@ -53,7 +53,7 @@
             <input type="radio" class="mt-1" name="lite-unlock-flow" value="create" x-model="unlockFlow" @change="showUnlockSignerImport = false; unlockError = ''" />
             <span><span class="font-medium text-white">Neu anlegen</span><span class="block text-xs text-slate-400 mt-0.5">Neues Profil ohne lokale <span class="font-mono">.morgendrot-vault</span>. Bei <span class="font-mono">SIGNER=sdk</span>: Seed + Passwort jeweils zweimal.</span></span>
           </label>
-        </div>
+    </div>
         <p class="mt-2 rounded border border-amber-500/30 bg-amber-950/40 p-2 text-xs text-amber-200/95" x-show="status && status.vaultStatus && status.vaultStatus.hasLocal && unlockFlow === 'create'" x-cloak>Es existiert bereits eine lokale Vault-Datei — normalerweise <strong>Tresor öffnen</strong> wählen.</p>
         <p class="mt-2 rounded border border-slate-600 bg-slate-900/50 p-2 text-xs text-slate-400" x-show="status && status.signer === 'sdk' && unlockFlow === 'open' && status.vaultStatus && !status.vaultStatus.hasLocal" x-cloak>Keine lokale Vault-Datei: mit nur Passwort entsperrt <span class="font-mono">SIGNER=sdk</span> nicht — <strong class="text-slate-200">Seed importieren</strong> oder <strong>Neu anlegen</strong> (oder Mnemonic unten ergänzen).</p>
 
@@ -63,7 +63,7 @@
               <input type="password" x-model="password" @keydown.enter="!unlockSubmitDisabled() && doUnlock()"
                 class="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
                 placeholder="Passwort eingeben" autocomplete="current-password" />
-            </div>
+  </div>
             <div x-show="status && status.signer === 'sdk'" x-cloak>
               <button type="button" @click="showUnlockSignerImport = !showUnlockSignerImport" class="w-full rounded-lg border border-dashed border-slate-500 px-3 py-2 text-left text-xs text-slate-400 hover:bg-slate-700/60" x-text="showUnlockSignerImport ? 'Mnemonic-Eingabe ausblenden' : 'Mnemonic oder Secret eingeben (nur wenn Vault keinen Signer-Import enthält)'"></button>
               <div class="mt-2 space-y-1" x-show="showUnlockSignerImport">
@@ -71,7 +71,7 @@
                 <textarea x-model="unlockMnemonic" rows="3"
                   class="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none font-mono"
                   placeholder="12+ Wörter oder Secret …" autocomplete="off"></textarea>
-              </div>
+      </div>
             </div>
         </div>
         <div class="mt-4 space-y-3" x-show="unlockFlow === 'import'" x-cloak>
@@ -183,7 +183,7 @@
       </div>
     </div>
     <div x-show="unlockBanner" x-cloak class="border-b border-emerald-500/25 bg-emerald-950/50 px-4 py-2 text-center text-sm text-emerald-200/95" x-text="unlockBanner"></div>
-  </header>
+    </header>
 
   <main class="mx-auto max-w-5xl px-4 py-8">
     <!-- Zurück-Button -->
@@ -4023,7 +4023,7 @@
               m.compactPreviewError = (d && d.error) ? String(d.error) : ('HTTP ' + r.status + (d && d.message ? ' – ' + d.message : ''));
             } else if (String(d.pngBase64).length < 32) {
               m.compactPreviewError = 'Server lieferte leere oder zu kurze PNG-Daten.';
-            } else {
+          } else {
               const b64 = String(d.pngBase64).replace(/\s/g, '');
               let bin;
               try {
@@ -4656,13 +4656,13 @@
               const magic = String.fromCharCode(u8[0] || 0, u8[1] || 0, u8[2] || 0, u8[3] || 0);
               if (u8.length < 4 || magic !== 'OggS') {
                 this.cmdResult = 'Erwartet Ogg-Container (Magic „OggS“), typisch für .opus.';
-                return;
-              }
+          return;
+        }
               const MEDIA_NET = 10752;
               if (u8.length > MEDIA_NET) {
                 this.cmdResult = 'Audiodatei zu groß (' + u8.length + ' B, max. ' + MEDIA_NET + ' B Rohdaten).';
-                return;
-              }
+          return;
+        }
               let bin = '';
               for (let i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
               const b64 = btoa(bin);
@@ -4936,7 +4936,7 @@
               ...komms.map(a => ({ address: a, role: 'kommandant', name: nameMap[a] || '' })),
               ...workers.map(a => ({ address: a, role: 'arbeiter', name: nameMap[a] || '' })),
             ];
-          } catch {}
+      } catch {}
         },
         addDevice() {
           if (!Array.isArray(this.boss.devices)) this.boss.devices = [];

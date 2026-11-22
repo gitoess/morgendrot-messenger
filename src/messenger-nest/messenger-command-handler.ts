@@ -1424,8 +1424,14 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             if (amountMist > maxMist) return { ok: false, message: `MAX_SEND_AMOUNT_IOTA überschritten (max ${maxIota} IOTA).` };
                         }
                         try {
-                            await chainTransferCoins(toAddr, amountMist, MY_ADDR, getWalletPassword());
-                            return { ok: true, message: `${iotaStr} IOTA an ${toAddr.slice(0, 18)}… gesendet.` };
+                            const sent = await chainTransferCoins(toAddr, amountMist, MY_ADDR, getWalletPassword());
+                            return {
+                                ok: true,
+                                message: `${iotaStr} IOTA an ${toAddr.slice(0, 18)}… gesendet.`,
+                                ...(typeof sent?.digest === 'string' && sent.digest
+                                    ? { txDigest: sent.digest }
+                                    : {}),
+                            };
                         } catch (e: any) {
                             return { ok: false, message: String(e?.message || e) };
                         }
@@ -1472,8 +1478,14 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                                 if (amountMist > maxMist) return { ok: false, message: `MAX_SEND_AMOUNT_IOTA überschritten (max ${maxIota} IOTA).` };
                             }
                             try {
-                                await chainTransferCoins(toAddr, amountMist, MY_ADDR, getWalletPassword());
-                                return { ok: true, message: `${iotaStr} IOTA an ${toAddr.slice(0, 18)}… gesendet.` };
+                                const sent = await chainTransferCoins(toAddr, amountMist, MY_ADDR, getWalletPassword());
+                                return {
+                                    ok: true,
+                                    message: `${iotaStr} IOTA an ${toAddr.slice(0, 18)}… gesendet.`,
+                                    ...(typeof sent?.digest === 'string' && sent.digest
+                                        ? { txDigest: sent.digest }
+                                        : {}),
+                                };
                             } catch (e: any) {
                                 return { ok: false, message: String(e?.message || e) };
                             }

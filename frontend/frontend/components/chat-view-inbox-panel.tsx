@@ -5,7 +5,12 @@
  * Ergänzt `ChatViewInboxList` (Zeileninhalt) und `ChatViewInboxToolbar` (Aktionen) – die View orchestriert nur noch Daten.
  */
 
-import { useEffect, type ComponentProps } from 'react'
+import { useEffect, useState, type ComponentProps } from 'react'
+import {
+  readInboxChatLayoutMode,
+  writeInboxChatLayoutMode,
+  type InboxChatLayoutMode,
+} from '@/frontend/lib/inbox-chat-layout-pref'
 import { cn } from '@/lib/utils'
 import { ChatViewInboxList } from '@/frontend/components/chat-view-inbox-list'
 import {
@@ -14,6 +19,7 @@ import {
 } from '@/frontend/components/chat-view-inbox-partner-strip'
 import { ChatViewInboxToolbar } from '@/frontend/components/chat-view-inbox-toolbar'
 import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partner-filter'
+import type { InboxMediaFilter } from '@/frontend/lib/inbox-media-filter'
 import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
 import type { InboxSourceFilter } from '@/frontend/lib/inbox-source-filter'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
@@ -68,6 +74,8 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
     setInboxPartnerFiltersArmed: (v: boolean) => void
     inboxWireFilter: InboxWireFilter
     setInboxWireFilter: (f: InboxWireFilter) => void
+    inboxMediaFilter: InboxMediaFilter
+    setInboxMediaFilter: (f: InboxMediaFilter) => void
     selectInboxPartnerForSend: (address: string) => void
     removeInboxPartnerFromQuickList: (
       address: string,
@@ -173,6 +181,8 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     setInboxPartnerFiltersArmed,
     inboxWireFilter,
     setInboxWireFilter,
+    inboxMediaFilter,
+    setInboxMediaFilter,
     selectInboxPartnerForSend,
     removeInboxPartnerFromQuickList,
     onDismissMeshInboundBanner,
@@ -243,12 +253,25 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     syncJoinRequestsFromInboxMessages(messages, boss)
   }, [messages, myAddress, apiStatus?.role, apiStatus?.myAddress, apiStatus?.myAddressFull])
 
+  const [chatLayoutMode, setChatLayoutMode] = useState<InboxChatLayoutMode>(() =>
+    readInboxChatLayoutMode()
+  )
+  const chatLayout = chatLayoutMode === 'chat'
+  const chatShowSenderName =
+    !inboxPartnerFiltersArmed || !Boolean(inboxPartnerKey?.trim())
+
   return (
     <div className={cn('flex flex-col rounded-xl border border-border bg-card', className)}>
       <ChatViewInboxToolbar
         {...toolbarProps}
         messages={messages}
         myAddress={myAddress}
+        chatLayout={chatLayout}
+        onChatLayoutChange={(next) => {
+          const mode: InboxChatLayoutMode = next ? 'chat' : 'detail'
+          writeInboxChatLayoutMode(mode)
+          setChatLayoutMode(mode)
+        }}
         inboxSelectMode={inboxSelectMode}
         setInboxSelectMode={setInboxSelectMode}
         selectedInboxCount={selectedInboxIds.size}
@@ -266,6 +289,8 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           setInboxWireFilter(f)
           if (f !== 'all') setInboxWireFiltersArmed(true)
         }}
+        mediaFilter={inboxMediaFilter}
+        onMediaFilterChange={setInboxMediaFilter}
         showPartnerFilterMenu={!hidePartnerStrip}
         onBulkHideSelected={onBulkHideSelected}
         onBulkPurgeSelected={() => void onBulkPurgeSelected()}
@@ -319,10 +344,10 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           apiStatus={apiStatus}
         />
       ) : null}
-      {inboxWireFilter !== 'all' || inboxDirectionFilter !== 'all' ? (
+      {inboxWireFilter !== 'all' || inboxDirectionFilter !== 'all' || inboxMediaFilter !== 'all' ? (
         <p className="border-b border-border/60 px-3 py-1.5 text-[11px] text-muted-foreground" role="status">
           {filteredInboxRows.length === 0
-            ? 'Keine Zeile passt — Beides und Alles zeigen wieder die ganze Liste.'
+            ? 'Keine Zeile passt — Filter → Beides / Alles / Alle Medien zeigen wieder die ganze Liste.'
             : [
                 inboxDirectionFilter === 'in'
                   ? 'nur Eingang'
@@ -334,6 +359,13 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
                   : inboxWireFilter === 'plaintext'
                     ? 'nur Klartext'
                     : null,
+                inboxMediaFilter === 'images'
+                  ? 'nur Bilder'
+                  : inboxMediaFilter === 'audio'
+                    ? 'nur Audio'
+                    : inboxMediaFilter === 'files'
+                      ? 'nur Dateien'
+                      : null,
                 `${filteredInboxRows.length} sichtbar`,
               ]
                 .filter(Boolean)
@@ -413,6 +445,8 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
             setInboxWireFilter(f)
             if (f !== 'all') setInboxWireFiltersArmed(true)
           }}
+          chatLayout={chatLayout}
+          chatShowSenderName={chatShowSenderName}
         />
       </div>
     </div>

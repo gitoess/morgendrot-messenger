@@ -70,7 +70,7 @@ export function sidebarAllSubtitleForSendPath(path: ActiveSendPath, contactCount
   switch (path) {
     case 'telegram':
       return contactCount > 0
-        ? `${contactCount} Telegram-Empfänger — alle eintragen`
+        ? `${contactCount} Telegram — Alle = alle IDs; einzeln: + am Kontakt`
         : 'Alle Telegram-Chat-IDs eintragen'
     case 'mesh':
       return contactCount > 0
@@ -82,9 +82,30 @@ export function sidebarAllSubtitleForSendPath(path: ActiveSendPath, contactCount
         : 'Alle Ad-hoc-Kontakte'
     default:
       return contactCount > 0
-        ? `${contactCount} IOTA-Adressen — alle eintragen (PTB pro Empfänger beim Senden)`
+        ? `${contactCount} IOTA — Alle = alle Adressen; einzeln: + am Kontakt`
         : 'Alle IOTA-Empfänger eintragen'
   }
+}
+
+/** Telegram-Empfänger (`tg:…`) in der Komma-Liste umschalten. */
+export function toggleComposerTelegramRecipient(
+  recipientField: string,
+  telegramChatId: string
+): { recipient: string; added: boolean; count: number } {
+  const id = telegramChatId.trim()
+  if (!id) return { recipient: recipientField.trim(), added: false, count: 0 }
+  const token = `tg:${id}`
+  const parts = recipientField
+    .split(/[,;\n]+/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+  const norm = (s: string) => s.replace(/^tg:/i, '').trim()
+  const had = parts.some((p) => norm(p) === id || p.toLowerCase() === token.toLowerCase())
+  if (had) {
+    const next = parts.filter((p) => norm(p) !== id && p.toLowerCase() !== token.toLowerCase())
+    return { recipient: next.join(', '), added: false, count: next.length }
+  }
+  return { recipient: [...parts, token].join(', '), added: true, count: parts.length + 1 }
 }
 
 export function formatAllRecipientsForSendPath(

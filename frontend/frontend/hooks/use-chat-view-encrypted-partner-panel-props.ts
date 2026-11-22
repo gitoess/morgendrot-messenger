@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import type { ChatViewEncryptedPartnerPanelProps } from '@/frontend/components/chat-view-encrypted-partner-panel'
 import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
 
@@ -9,6 +9,7 @@ export type ChatViewEncryptedPartnerPanelPropsDeps = {
     ChatViewMessengerPorts,
     | 'sendTransportRead'
     | 'composerPartner'
+    | 'composerDraft'
     | 'composerSendPath'
     | 'contactDirectoryRead'
     | 'connectionStatusRead'
@@ -26,6 +27,7 @@ export function useChatViewEncryptedPartnerPanelProps(deps: ChatViewEncryptedPar
   const {
     sendTransportRead,
     composerPartner,
+    composerDraft,
     composerSendPath,
     contactDirectoryRead,
     connectionStatusRead,
@@ -48,10 +50,19 @@ export function useChatViewEncryptedPartnerPanelProps(deps: ChatViewEncryptedPar
     ]
   )
 
+  const onPartnerChangeSynced = useCallback(
+    (v: string) => {
+      const t = v.trim().toLowerCase()
+      composerPartner.onPartnerChange(t)
+      if (composerSendPath.isPrivate) composerDraft.onRecipientChange(t)
+    },
+    [composerPartner, composerSendPath.isPrivate, composerDraft]
+  )
+
   const encryptedPartnerPanelProps: ChatViewEncryptedPartnerPanelProps | null = showEncryptedPartnerPanel
     ? {
         partner: composerPartner.partner,
-        onPartnerChange: composerPartner.onPartnerChange,
+        onPartnerChange: onPartnerChangeSynced,
         sending: attachmentBar.sending,
         onHandshake: handshakeActions.onHandshake,
         onConnectAcceptPartner: handshakeActions.onConnectAcceptPartner,

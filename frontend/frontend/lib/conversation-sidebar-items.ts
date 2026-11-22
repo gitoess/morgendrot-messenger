@@ -190,9 +190,8 @@ export function buildConversationSidebarTelegramAlarm(
     kind: 'telegram-alarm',
     key: 'telegram-alarm:membership',
     displayName: label,
-    subtitle: membership.groupChatId
-      ? `Telegram · Alarmgruppe · ${membership.groupChatId}`
-      : 'Telegram · Alarmgruppe',
+    /** Chat-ID nicht in der Liste — wie Kontakte nur Kanal-Label, ID im Detail/Info. */
+    subtitle: 'Telegram · Alarmgruppe',
     inviteLink: membership.inviteLink.trim(),
     groupChatId: membership.groupChatId?.trim() || undefined,
   }

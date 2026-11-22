@@ -293,7 +293,7 @@ export const IOTA_ACTIVITY_LISTEN_EVENTS = [IOTA_ACTIVITY_CHANGED_EVENT, NFT_ACT
 export function iotaActivityKindLabel(kind: IotaActivityKind): string {
   switch (kind) {
     case 'msg_burned':
-      return 'Burn'
+      return 'Nachricht vernichtet'
     case 'nft_mint':
       return 'NFT Mint'
     case 'nft_sent':
@@ -301,12 +301,59 @@ export function iotaActivityKindLabel(kind: IotaActivityKind): string {
     case 'nft_received':
       return 'NFT ←'
     case 'nft_burned':
-      return 'NFT Burn'
+      return 'NFT vernichtet'
     case 'coin_in':
       return 'Coin ←'
     case 'coin_out':
-      return 'Guthaben'
+      return 'Coin →'
     default:
       return kind
   }
+}
+
+/** UI-Filter für IOTA-Aktivität (lokal). */
+export type IotaActivityFilterId =
+  | 'all'
+  | 'in'
+  | 'out'
+  | 'nft'
+  | 'coin'
+  | 'msg'
+  | 'lease'
+  | IotaActivityKind
+
+export const IOTA_ACTIVITY_FILTER_OPTIONS: Array<{ id: IotaActivityFilterId; label: string }> = [
+  { id: 'all', label: 'Alle' },
+  { id: 'in', label: 'Eingang' },
+  { id: 'out', label: 'Ausgang' },
+  { id: 'nft', label: 'NFT' },
+  { id: 'coin', label: 'Coins' },
+  { id: 'msg', label: 'Nachrichten' },
+  { id: 'lease', label: 'Verleihen/Zurück' },
+  { id: 'nft_mint', label: 'Mint' },
+  { id: 'nft_sent', label: 'NFT raus' },
+  { id: 'nft_received', label: 'NFT rein' },
+  { id: 'nft_burned', label: 'NFT vernichtet' },
+  { id: 'coin_in', label: 'Coin rein' },
+  { id: 'coin_out', label: 'Coin raus' },
+  { id: 'msg_burned', label: 'Nachricht vernichtet' },
+]
+
+function looksLikeLeaseActivity(e: IotaActivityEntry): boolean {
+  const s = `${e.summary || ''} ${e.kind}`
+  return /zeitkapsel|verleih|zurück|reclaim|lease|escrow/i.test(s)
+}
+
+export function iotaActivityMatchesFilter(
+  e: IotaActivityEntry,
+  filter: IotaActivityFilterId
+): boolean {
+  if (filter === 'all') return true
+  if (filter === 'in') return e.kind === 'coin_in' || e.kind === 'nft_received'
+  if (filter === 'out') return e.kind === 'coin_out' || e.kind === 'nft_sent'
+  if (filter === 'nft') return e.kind.startsWith('nft_')
+  if (filter === 'coin') return e.kind === 'coin_in' || e.kind === 'coin_out'
+  if (filter === 'msg') return e.kind === 'msg_burned'
+  if (filter === 'lease') return looksLikeLeaseActivity(e)
+  return e.kind === filter
 }

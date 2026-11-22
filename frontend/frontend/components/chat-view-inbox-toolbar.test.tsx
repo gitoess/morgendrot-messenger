@@ -120,25 +120,30 @@ describe('ChatViewInboxToolbar actions (§ H.1a)', () => {
     expect(updater(false)).toBe(true)
   })
 
-  it('zeigt Liste-Filter: Richtung und Inhalt direkt', () => {
+  it('zeigt Listenfilter als Dropdown (ohne Liste-Label)', async () => {
     render(
       <ChatViewInboxToolbar
         {...makeProps({
           onDirectionFilterChange: vi.fn(),
           onWireFilterChange: vi.fn(),
+          onMediaFilterChange: vi.fn(),
         })}
       />
     )
-    expect(screen.getByText(/^Liste$/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^Beides$/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^Eingang$/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^Ausgang$/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^Alles$/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^Verschl\.$/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^Klartext$/i })).toBeInTheDocument()
+    expect(screen.queryByText(/^Liste$/i)).not.toBeInTheDocument()
+    const filterBtn = screen.getByRole('button', { name: /Listenfilter/i })
+    expect(filterBtn).toHaveTextContent(/^Filter$/i)
+    fireEvent.pointerDown(filterBtn, { button: 0, ctrlKey: false, pointerType: 'mouse' })
+    fireEvent.click(filterBtn)
+    expect(await screen.findByRole('menuitem', { name: /Beides/i })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /Eingang/i })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /Verschlüsselt/i })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /^Klartext$/i })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /Bilder/i })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /^Audio$/i })).toBeInTheDocument()
   })
 
-  it('Richtung- und Inhalt-Klick filtern die Liste', () => {
+  it('Richtung- und Inhalt-Klick im Filter-Menü', async () => {
     const onDirectionFilterChange = vi.fn()
     const onWireFilterChange = vi.fn()
     render(
@@ -151,15 +156,17 @@ describe('ChatViewInboxToolbar actions (§ H.1a)', () => {
         })}
       />
     )
-    expect(screen.getByRole('button', { name: /^Eingang$/i })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('button', { name: /^Verschl\.$/i })).toHaveAttribute('aria-pressed', 'true')
-    fireEvent.click(screen.getByRole('button', { name: /^Eingang$/i }))
+    const filterBtn = screen.getByRole('button', { name: /Listenfilter/i })
+    expect(filterBtn).toHaveTextContent(/Eingang · Verschl\./i)
+    fireEvent.pointerDown(filterBtn, { button: 0, ctrlKey: false, pointerType: 'mouse' })
+    fireEvent.click(filterBtn)
+    fireEvent.click(await screen.findByRole('menuitem', { name: /Eingang/i }))
     expect(onDirectionFilterChange).toHaveBeenCalledWith('in')
-    fireEvent.click(screen.getByRole('button', { name: /^Verschl\.$/i }))
+    fireEvent.click(screen.getByRole('menuitem', { name: /Verschlüsselt/i }))
     expect(onWireFilterChange).toHaveBeenCalledWith('encrypted')
   })
 
-  it('blendet On-Chain bei Funk-pathTools aus; Optionen bleibt', () => {
+  it('blendet Wire/Klartext bei Funk-pathTools aus; Optionen bleibt', () => {
     render(
       <ChatViewInboxToolbar
         {...makeProps({
@@ -182,26 +189,59 @@ describe('ChatViewInboxToolbar actions (§ H.1a)', () => {
     expect(onOpenPhonebook).toHaveBeenCalledTimes(1)
   })
 
-  it('bündelt Werkzeuge unter Optionen; On-Chain oben; Aktualisieren nicht in der Leiste', () => {
+  it('bündelt Werkzeuge unter Optionen; kein On-Chain-Button; Aktualisieren nicht in der Leiste', () => {
     render(<ChatViewInboxToolbar {...makeProps({ messageCount: 2 })} />)
     expect(screen.getByRole('button', { name: /Optionen/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /On-Chain \/ NFT/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /On-Chain \/ NFT/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Aktualisieren/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Pakete$/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /^Nachrichtenverlauf$/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /^Wire einfügen$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /PWMSG entschlüsseln/i })).not.toBeInTheDocument()
   })
 
-  it('zeigt T36 Export und T38 Hash unter Optionen', async () => {
-    render(<ChatViewInboxToolbar {...makeProps({ messageCount: 3 })} />)
+  it('zeigt Chain-Text, PWMSG, Hash, Passwort-JSON und Chain/Warteschlange unter Optionen', async () => {
+    render(
+      <ChatViewInboxToolbar
+        {...makeProps({
+          messageCount: 3,
+          showIotaExpertInboxActions: true,
+          pathTools: inboxToolbarToolsForSendPath({ activeSendPath: 'internet' }),
+        })}
+      />
+    )
     const btn = screen.getByRole('button', { name: /Optionen/i })
     fireEvent.pointerDown(btn, { button: 0, ctrlKey: false, pointerType: 'mouse' })
     fireEvent.click(btn)
-    expect(await screen.findByRole('menuitem', { name: /Hash & Prüfen/i })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: /Posteingang-Bilder/i })).not.toBeInTheDocument()
+    expect(await screen.findByRole('menuitem', { name: /Chain-Text/i })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /PWMSG entschlüsseln/i })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /Hash & Prüfen/i })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: /Export Nachrichtenverlauf/i })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /Passwort-JSON öffnen/i })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /Chain \/ Warteschlange/i })).toBeInTheDocument()
   })
 
-  it('lässt Optionen offen wenn Export gesperrt (Wire/Pakete bleiben nutzbar)', () => {
+  it('hält Passwort-JSON und Chain/Warteschlange außerhalb des Export-Dialogs', async () => {
+    render(
+      <ChatViewInboxToolbar
+        {...makeProps({
+          messageCount: 2,
+          showIotaExpertInboxActions: true,
+          pathTools: inboxToolbarToolsForSendPath({ activeSendPath: 'internet' }),
+        })}
+      />
+    )
+    const btn = screen.getByRole('button', { name: /Optionen/i })
+    fireEvent.pointerDown(btn, { button: 0, ctrlKey: false, pointerType: 'mouse' })
+    fireEvent.click(btn)
+    fireEvent.click(await screen.findByRole('menuitem', { name: /Export Nachrichtenverlauf/i }))
+    expect(screen.queryByText(/Standard: gesamter Posteingang/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Vorhandene Passwort-JSON/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Experten · Chain/i)).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Nachrichtenverlauf exportieren/i })).toBeInTheDocument()
+  })
+
+  it('lässt Optionen offen wenn Export gesperrt (Bilder/Pakete bleiben nutzbar)', () => {
     render(
       <ChatViewInboxToolbar
         {...makeProps({

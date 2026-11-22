@@ -1,4 +1,7 @@
-/** Lokales Archiv für importierte .morg-pkg (nicht im Posteingang). */
+/**
+ * Lokales Archiv für importierte .morg-pkg (nicht Posteingang).
+ * sessionStorage — bis Tab/Session zu; Klartext nach Import, **nicht** vault-verschlüsselt.
+ */
 
 export type MorgPkgImportItem = {
   label: string

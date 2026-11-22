@@ -5,6 +5,11 @@ import { DashboardIotaTransferCard } from './dashboard-iota-transfer-card'
 
 vi.mock('@/frontend/lib/api', () => ({
   transferCoins: vi.fn(),
+  saveContactEntry: vi.fn().mockResolvedValue({ ok: true }),
+}))
+
+vi.mock('@/frontend/hooks/use-contact-directory', () => ({
+  useContactDirectory: () => ({ directory: {}, refresh: vi.fn() }),
 }))
 
 vi.mock('@/frontend/components/chat-view-evidence-image-viewer', () => ({
@@ -20,19 +25,34 @@ vi.mock('@/frontend/components/dashboard-nft-secured-balances', () => ({
   countSecuredNftObjects: () => 0,
 }))
 
+vi.mock('@/frontend/lib/iota-activity-local-log', () => ({
+  recordIotaActivity: vi.fn(),
+}))
+
+vi.mock('@/frontend/components/qr-camera-scan-dialog', () => ({
+  QrCameraScanDialog: () => null,
+}))
+
 vi.mock('@/frontend/lib/nft-vault-discover-onchain', () => ({
   syncDiscoveredVaultsIntoLocalIndex: vi.fn().mockResolvedValue({ ok: true, guarded: 0, bearer: 0 }),
 }))
 
-vi.mock('@/frontend/components/dashboard-nft-secured-spend-panel', () => ({
-  DashboardNftSecuredSpendPanel: () => (
-    <div>
-      <span>1. NFT / Schlüsselkarte</span>
-      <input placeholder="0x… Empfänger-Adresse" />
-      <button type="button">Jetzt senden</button>
-    </div>
-  ),
-}))
+vi.mock('@/frontend/components/dashboard-nft-secured-spend-panel', async () => {
+  const React = await import('react')
+  return {
+    DashboardNftSecuredSpendPanel: React.forwardRef(function MockSecured(
+      p: { interactive?: boolean },
+      _ref: unknown
+    ) {
+      return (
+        <div aria-disabled={p.interactive === false}>
+          <span>NFT / Schlüsselkarte</span>
+          <span>Guthaben</span>
+        </div>
+      )
+    }),
+  }
+})
 
 describe('DashboardIotaTransferCard', () => {
   beforeEach(() => {
@@ -63,19 +83,30 @@ describe('DashboardIotaTransferCard', () => {
       />
     )
     expect(screen.getByTitle('Exakt: 1500000000 MIST')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Saldo aktualisieren/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Saldo \+ Vault-Index aktualisieren/i })).toBeInTheDocument()
   })
 
   it('ruft transferCoins auf und zeigt Erfolg', async () => {
+    const { recordIotaActivity } = await import('@/frontend/lib/iota-activity-local-log')
+    vi.mocked(transferCoins).mockResolvedValue({ ok: true, txDigest: 'digest1' })
     render(<DashboardIotaTransferCard />)
     fireEvent.change(screen.getByPlaceholderText(/0x/i), { target: { value: '0xabc' } })
     fireEvent.change(screen.getByPlaceholderText('0.1'), { target: { value: '1.5' } })
+    fireEvent.change(screen.getByPlaceholderText('optional'), { target: { value: 'Miete' } })
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /Überweisen/i }))
     })
 
     expect(transferCoins).toHaveBeenCalledWith('0xabc', 1.5)
-    expect(screen.getByText('Transfer erfolgreich!')).toBeInTheDocument()
+    expect(screen.getByText(/Transfer erfolgreich/i)).toBeInTheDocument()
+    expect(recordIotaActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        kind: 'coin_out',
+        counterparty: '0xabc',
+        digest: 'digest1',
+        summary: expect.stringContaining('Notiz: Miete'),
+      })
+    )
   })
 
   it('ruft nach erfolgreichem Transfer onRefreshStatus auf', async () => {
@@ -104,12 +135,14 @@ describe('DashboardIotaTransferCard', () => {
     expect(screen.getByText('Gas')).toBeInTheDocument()
   })
 
-  it('öffnet Gesichert hinter NFT inline mit Empfängerfeld', () => {
+  it('NFT gesichert zeigt NFT-Block inline (sonst unsichtbar)', () => {
     render(<DashboardIotaTransferCard />)
-    fireEvent.click(screen.getByRole('button', { name: /^Gesichert hinter NFT$/i }))
-    expect(screen.getByText('1. NFT / Schlüsselkarte')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('0x… Empfänger-Adresse')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Jetzt senden|Zuerst Guthaben anlegen/i })).toBeInTheDocument()
+    expect(screen.queryByText('NFT / Schlüsselkarte')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /^NFT gesichert$/i }))
+    expect(screen.getByText('NFT / Schlüsselkarte')).toBeInTheDocument()
+    expect(screen.getByText('Guthaben')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(/0x… oder oben wählen/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Aus Vault senden/i })).toBeInTheDocument()
   })
 
   it('Aktualisieren refresht auch ohne onRefreshStatus (Purse-Summe)', async () => {
@@ -118,7 +151,7 @@ describe('DashboardIotaTransferCard', () => {
     )
     render(<DashboardIotaTransferCard />)
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Saldo aktualisieren/i }))
+      fireEvent.click(screen.getByRole('button', { name: /Saldo \+ Vault-Index aktualisieren/i }))
     })
     expect(requestNftVaultBalanceRefresh).toHaveBeenCalled()
   })

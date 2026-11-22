@@ -19,7 +19,7 @@ export type ChatViewActiveConversationBarProps = {
   myAddress?: string
   onEncryptedHandshakeForRecipient?: () => void | Promise<void>
   onEncryptedAcceptHandshakeForRecipient?: () => void | Promise<void>
-  /** Kontakt/Filter leeren — Empfängerfeld wieder editierbar. */
+  /** Optional: Kontakt/Filter leeren (UI: Sidebar „Alle“ / „Adresse…“). */
   onClearRecipient?: () => void
 }
 
@@ -35,15 +35,6 @@ export function ChatViewActiveConversationBar(p: ChatViewActiveConversationBarPr
           </div>
           {p.addressLine ? (
             <p className="truncate font-mono text-[10px] text-muted-foreground">{p.addressLine}</p>
-          ) : null}
-          {p.onClearRecipient ? (
-            <button
-              type="button"
-              className="mt-1 text-[11px] font-medium text-primary hover:underline"
-              onClick={p.onClearRecipient}
-            >
-              Empfänger leeren / ändern
-            </button>
           ) : null}
         </div>
         <ChatViewEncryptionModeToggle

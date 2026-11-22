@@ -1,7 +1,9 @@
 'use client'
 
 /**
- * Posteingang: Kopfzeile — On-Chain/NFT, Optionen (Wire/Hash/Export/Pakete).
+ * Posteingang: Kopfzeile — Optionen (Wire/Klartext/Hash/Export/Pakete).
+ * Move-Vertrag (Package-ID): Einstellungen → Expertenmodus.
+ * NFT-Mint/Galerie: Hauptmenü-Wallet (nicht hier).
  * Aktualisieren liegt im App-Header neben Tresor (nicht hier).
  */
 
@@ -16,6 +18,7 @@ import {
   Inbox,
   KeyRound,
   Lock,
+  MessageSquare,
   Package,
   Settings2,
   StickyNote,
@@ -165,8 +168,13 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   /** Inhalt — immer sichtbar und aktiv (Listenfilter, nicht Sendemodus). */
   wireFilter?: 'all' | 'encrypted' | 'plaintext'
   onWireFilterChange?: (f: 'all' | 'encrypted' | 'plaintext') => void
+  mediaFilter?: 'all' | 'images' | 'audio' | 'files'
+  onMediaFilterChange?: (f: 'all' | 'images' | 'audio' | 'files') => void
   /** Partner-Schnellliste — aus wenn die Chat-Seitenleiste Partner schon wählt. */
   showPartnerFilterMenu?: boolean
+  /** Schlanke Chat-Blasen statt Detail-Zeilen. */
+  chatLayout?: boolean
+  onChatLayoutChange?: (chat: boolean) => void
   onSelectAllVisible: () => void
   onClearInboxSelection: () => void
   onBulkHideSelected: () => void
@@ -273,7 +281,11 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     onDirectionFilterChange,
     wireFilter = 'all',
     onWireFilterChange,
+    mediaFilter = 'all',
+    onMediaFilterChange,
     showPartnerFilterMenu = true,
+    chatLayout = false,
+    onChatLayoutChange,
     onSelectAllVisible,
     onClearInboxSelection,
     onBulkHideSelected,
@@ -297,8 +309,8 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     onRemoveOfflineMailboxQueueItems,
     pendingHandshakeCount = 0,
     showIotaExpertInboxActions = true,
-    showInboxPackageExpertMenu = false,
-    inboxPackageExpertMenu,
+    showInboxPackageExpertMenu: _showInboxPackageExpertMenu = false,
+    inboxPackageExpertMenu: _inboxPackageExpertMenu,
     pathTools: pathToolsProp,
     inboxHeading = 'Posteingang Alle',
   } = p
@@ -320,7 +332,38 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     'asStored' | 'plaintextOnly' | 'redactEncrypted'
   >('asStored')
   const [pkgToolsOpen, setPkgToolsOpen] = useState(false)
+  const [chainQueueToolsOpen, setChainQueueToolsOpen] = useState(false)
   const [hashToolsOpen, setHashToolsOpen] = useState(false)
+  const [evidenceOpenNonce, setEvidenceOpenNonce] = useState(0)
+  const [evidenceDefaultMode, setEvidenceDefaultMode] = useState<'wire' | 'mailbox'>('wire')
+  const [evidenceAllowedModes, setEvidenceAllowedModes] = useState<readonly ('wire' | 'mailbox')[]>([
+    'wire',
+  ])
+  const openEvidenceBrowse = (mode: 'wire' | 'mailbox') => {
+    setEvidenceDefaultMode(mode)
+    setEvidenceAllowedModes([mode])
+    setEvidenceOpenNonce((n) => n + 1)
+  }
+
+  const directionFilterLabel =
+    directionFilter === 'in' ? 'Eingang' : directionFilter === 'out' ? 'Ausgang' : 'Beides'
+  const wireFilterLabel =
+    wireFilter === 'encrypted' ? 'Verschl.' : wireFilter === 'plaintext' ? 'Klartext' : 'Alles'
+  const mediaFilterLabel =
+    mediaFilter === 'images'
+      ? 'Bilder'
+      : mediaFilter === 'audio'
+        ? 'Audio'
+        : mediaFilter === 'files'
+          ? 'Dateien'
+          : 'Medien'
+  const listFilterActive =
+    directionFilter !== 'all' || wireFilter !== 'all' || mediaFilter !== 'all'
+  const listFilterTriggerLabel = listFilterActive
+    ? [directionFilterLabel, wireFilterLabel, mediaFilter !== 'all' ? mediaFilterLabel : null]
+        .filter(Boolean)
+        .join(' · ')
+    : 'Filter'
   const pkgImportDisabled = morgPkgImportDisabled(apiStatus)
   const pkgDeviceDisabled =
     morgPkgDeviceBusy || apiStatus?.locked === true || !(apiStatus?.connectedAddresses?.length ?? 0)
@@ -443,10 +486,6 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
           ) : null}
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {/* Move-Vertrags-ID (IOTA) — nicht .morg-pkg / Datei-Paket */}
-          {showInboxPackageExpertMenu && pathTools.showOnChainNft && inboxPackageExpertMenu
-            ? inboxPackageExpertMenu
-            : null}
           <input
             ref={morgPkgFileRef}
             type="file"
@@ -468,14 +507,13 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
           />
 
           {pathTools.showOnChainNft ? (
-            <div className="inline-flex items-center">
-              <ChatViewEvidenceImageViewerButton
-                messages={messages}
-                triggerLabel="On-Chain / NFT"
-                defaultMode="owner"
-                triggerClassName="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-muted"
-              />
-            </div>
+            <ChatViewEvidenceImageViewerButton
+              hideTrigger
+              messages={messages}
+              defaultMode={evidenceDefaultMode}
+              allowedModes={evidenceAllowedModes}
+              openNonce={evidenceOpenNonce}
+            />
           ) : null}
 
           {p.onOpenNotes ? (
@@ -500,7 +538,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               <button
                 type="button"
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-                title="Optionen: Posteingang (Wire, Export, Hash) und Chat (Info, Schlüssel, Nach-Lesen-Modus). Echter Chain-Burn: Nachrichten-⋯ oder Auswahl."
+                title="Optionen: Chain-Text, PWMSG entschlüsseln, Hash, Export. Medien: Export → Galerie. Vertrag: Einstellungen → Expertenmodus."
               >
                 <Settings2 className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
                 Optionen
@@ -511,6 +549,17 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Posteingang · Tools
               </DropdownMenuLabel>
+              {pathTools.showOnChainNft ? (
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault()
+                    openEvidenceBrowse('mailbox')
+                  }}
+                >
+                  <Inbox className="mr-2 h-4 w-4 opacity-80" aria-hidden />
+                  Chain-Text…
+                </DropdownMenuItem>
+              ) : null}
               {pathTools.showWirePaste ? (
                 <DropdownMenuItem
                   onSelect={(e) => {
@@ -519,7 +568,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   }}
                 >
                   <ClipboardPaste className="mr-2 h-4 w-4 opacity-80" aria-hidden />
-                  Wire einfügen
+                  PWMSG entschlüsseln…
                 </DropdownMenuItem>
               ) : null}
               <DropdownMenuItem
@@ -531,7 +580,12 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 <Hash className="mr-2 h-4 w-4 opacity-80" aria-hidden />
                 Hash &amp; Prüfen…
               </DropdownMenuItem>
-              {pathTools.showPakete || pathTools.showNachrichtenverlauf ? <DropdownMenuSeparator /> : null}
+              {pathTools.showPakete ||
+              pathTools.showNachrichtenverlauf ||
+              pathTools.showDecryptExport ||
+              (showIotaExpertInboxActions && pathTools.showIotaExpertInHistory) ? (
+                <DropdownMenuSeparator />
+              ) : null}
               {pathTools.showNachrichtenverlauf ? (
                 <DropdownMenuItem
                   onSelect={(e) => {
@@ -551,7 +605,29 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   }}
                 >
                   <Package className="mr-2 h-4 w-4 opacity-80" aria-hidden />
-                  Datei-Paket (Sneakernet)…
+                  Datei-Paket (.morg-pkg)…
+                </DropdownMenuItem>
+              ) : null}
+              {pathTools.showDecryptExport ? (
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault()
+                    window.open('/einsatzbericht-decrypt.html', '_blank', 'noopener,noreferrer')
+                  }}
+                >
+                  <KeyRound className="mr-2 h-4 w-4 opacity-80" aria-hidden />
+                  Passwort-JSON öffnen…
+                </DropdownMenuItem>
+              ) : null}
+              {showIotaExpertInboxActions && pathTools.showIotaExpertInHistory ? (
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault()
+                    setChainQueueToolsOpen(true)
+                  }}
+                >
+                  <Inbox className="mr-2 h-4 w-4 opacity-80" aria-hidden />
+                  Chain / Warteschlange…
                 </DropdownMenuItem>
               ) : null}
               {conversationMenu ? (
@@ -560,11 +636,6 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Chat · Sicherheit
                   </DropdownMenuLabel>
-                  {conversationMenu.burnOnRead ? (
-                    <p className="px-2 pb-1.5 text-[10px] leading-snug text-muted-foreground">
-                      Nach-Lesen = Modus. Echter Burn: Zeilen-⋯ oder Auswahl.
-                    </p>
-                  ) : null}
                   <ChatConversationMenuItems
                     {...conversationMenu}
                     /* Gruppe verwalten bleibt in Sidebar / Info — nicht doppelt hier */
@@ -580,19 +651,18 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             <DialogContent className="max-h-[min(90vh,36rem)] max-w-md overflow-y-auto sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Nachrichtenverlauf exportieren</DialogTitle>
-                <DialogDescription>
-                  Standard: gesamter Posteingang (alle Mailboxen + Telegram-Journal). Passphrase-Nachrichten
-                  werden freigeschaltet, wenn die Passphrase lokal gemerkt ist — sonst Wire. Optionen unten.
+                <DialogDescription className="sr-only">
+                  Export JSON/Text/ZIP und Medien-Galerie.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-3 text-sm">
-                <p className="rounded-md border border-border/70 bg-muted/30 px-2.5 py-2 text-xs text-muted-foreground">
-                  {exportBlocked
-                    ? exportDenied
-                    : exportEmpty
-                      ? 'Keine Nachrichten geladen — zuerst „Aktualisieren“ oben neben Tresor. Telegram braucht Bot + Chat-ID im Telefonbuch.'
-                      : `${messageCount} Nachricht(en) in der Ansicht — Export lädt zusätzlich den vollständigen Verlauf.`}
-                </p>
+                {exportBlocked || exportEmpty ? (
+                  <p className="rounded-md border border-border/70 bg-muted/30 px-2.5 py-2 text-xs text-muted-foreground">
+                    {exportBlocked
+                      ? exportDenied
+                      : 'Keine Nachrichten geladen — zuerst „Aktualisieren“ neben Tresor.'}
+                  </p>
+                ) : null}
                 <div className="space-y-1.5 rounded-md border border-border/60 bg-muted/15 px-2.5 py-2">
                   <p className="text-[11px] font-medium text-foreground">Umfang</p>
                   <label className="flex items-center gap-2 text-xs">
@@ -621,7 +691,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                       checked={exportContentMode === 'asStored'}
                       onChange={() => setExportContentMode('asStored')}
                     />
-                    Wie gespeichert (gemerkte Passphrase → Klartext, sonst Wire)
+                    Wie gespeichert (gemerkte Passphrase → Klartext, sonst PWMSG-Wire)
                   </label>
                   <label className="flex items-center gap-2 text-xs">
                     <input
@@ -630,7 +700,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                       checked={exportContentMode === 'plaintextOnly'}
                       onChange={() => setExportContentMode('plaintextOnly')}
                     />
-                    Nur Klartext (versiegelt weglassen)
+                    Nur lesbarer Klartext (nach Unlock; Rest ohne Merker weglassen)
                   </label>
                   <label className="flex items-center gap-2 text-xs">
                     <input
@@ -639,7 +709,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                       checked={exportContentMode === 'redactEncrypted'}
                       onChange={() => setExportContentMode('redactEncrypted')}
                     />
-                    Versiegelt als „[Verschlüsselt]“ (kein Unlock)
+                    Enc/PWMSG als „[Verschlüsselt]“ (kein Unlock, auch mit Merker)
                   </label>
                 </div>
                 <div className="grid gap-2">
@@ -784,9 +854,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   </Button>
                 </div>
                 <div className="grid gap-2 border-t border-border pt-3">
-                  <p className="text-[11px] font-medium text-muted-foreground">
-                    Medien — Galerie (MORG im Wire; Telegram-Server-Fotos/-Audio fehlen)
-                  </p>
+                  <p className="text-[11px] font-medium text-muted-foreground">Medien — Galerie</p>
                   <div className="grid gap-1.5 text-[11px] sm:grid-cols-2">
                     {(
                       [
@@ -812,10 +880,6 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                       </label>
                     ))}
                   </div>
-                  <p className="text-[10px] text-muted-foreground">
-                    Start: nur sichtbare Inbox-Zeilen. Ältere Medien: „Gesamten Verlauf scannen“. Nur
-                    MORG-Wire (nicht Telegram-Cloud). Passphrase-Medien nach lokalem Freischalten.
-                  </p>
                   {galleryBlocked ? (
                     <p className="text-xs text-muted-foreground">
                       {exportBlocked ? exportDenied : 'Keine Nachrichten geladen.'}
@@ -833,56 +897,45 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     />
                   )}
                 </div>
-                {pathTools.showDecryptExport ? (
-                  <div className="border-t border-border pt-3">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="h-auto w-full justify-start whitespace-normal py-2 text-left text-muted-foreground"
-                      onClick={() => {
-                        window.open('/einsatzbericht-decrypt.html', '_blank', 'noopener,noreferrer')
-                      }}
-                    >
-                      <KeyRound className="mr-2 h-4 w-4 shrink-0 opacity-80" aria-hidden />
-                      Vorhandene Passwort-JSON wieder öffnen…
-                    </Button>
-                  </div>
-                ) : null}
-                {showIotaExpertInboxActions && pathTools.showIotaExpertInHistory ? (
-                  <details className="rounded-md border border-border/70 bg-muted/15 p-2">
-                    <summary className="cursor-pointer text-xs font-medium text-foreground">
-                      Experten · Chain / Warteschlange
-                    </summary>
-                    <div className="mt-2 space-y-2">
-                      <LazyChatViewProtokollAnchorButton
-                        messageCount={messageCount}
-                        messages={messages}
-                        myAddress={myAddress}
-                        recipient={recipient}
-                        vaultLocked={vaultLocked}
-                        messagingPersistenceMode={messagingPersistenceMode}
-                        setStatus={setStatus}
-                        setStatusMsg={setStatusMsg}
-                        onOpenPartnerSetup={onOpenPartnerSetup}
-                        triggerClassName="w-full justify-start rounded-md border border-border bg-background px-3 py-2 text-left text-sm hover:bg-muted"
-                        triggerLabel="Auf Chain verankern"
-                      />
-                      <LazyChatViewTangleInventoryButton
-                        inventoryScope="anchored"
-                        messages={messages}
-                        packageId={apiStatus?.packageId?.trim() || undefined}
-                      />
-                      <ChatViewPendingSendsButton
-                        offlineMailboxQueuePending={offlineMailboxQueuePending}
-                        offlineMailboxQueueItems={offlineMailboxQueueItems}
-                        offlineMailboxQueueErrorHint={offlineMailboxQueueErrorHint}
-                        onManualRefresh={onOfflineMailboxQueueRefresh}
-                        onRemoveOfflineMailboxQueueItems={onRemoveOfflineMailboxQueueItems}
-                        showRelayManage={showIotaExpertInboxActions}
-                      />
-                    </div>
-                  </details>
-                ) : null}
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={chainQueueToolsOpen} onOpenChange={setChainQueueToolsOpen}>
+            <DialogContent className="max-w-md sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Chain / Warteschlange</DialogTitle>
+                <DialogDescription className="sr-only">
+                  Verankern, Tangle-Inventar, Offline-Warteschlange.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-2">
+                <LazyChatViewProtokollAnchorButton
+                  messageCount={messageCount}
+                  messages={messages}
+                  myAddress={myAddress}
+                  recipient={recipient}
+                  vaultLocked={vaultLocked}
+                  messagingPersistenceMode={messagingPersistenceMode}
+                  setStatus={setStatus}
+                  setStatusMsg={setStatusMsg}
+                  onOpenPartnerSetup={onOpenPartnerSetup}
+                  triggerClassName="w-full justify-start rounded-md border border-border bg-background px-3 py-2 text-left text-sm hover:bg-muted"
+                  triggerLabel="Auf Chain verankern"
+                />
+                <LazyChatViewTangleInventoryButton
+                  inventoryScope="anchored"
+                  messages={messages}
+                  packageId={apiStatus?.packageId?.trim() || undefined}
+                />
+                <ChatViewPendingSendsButton
+                  offlineMailboxQueuePending={offlineMailboxQueuePending}
+                  offlineMailboxQueueItems={offlineMailboxQueueItems}
+                  offlineMailboxQueueErrorHint={offlineMailboxQueueErrorHint}
+                  onManualRefresh={onOfflineMailboxQueueRefresh}
+                  onRemoveOfflineMailboxQueueItems={onRemoveOfflineMailboxQueueItems}
+                  showRelayManage={showIotaExpertInboxActions}
+                />
               </div>
             </DialogContent>
           </Dialog>
@@ -904,24 +957,15 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             <DialogContent className="max-w-md sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Datei-Paket (.morg-pkg)</DialogTitle>
-                <DialogDescription>
-                  Offline-Übergabe (USB/SD/AirDrop): Dateien werden für genau einen Handshake-Partner
-                  verschlüsselt (ECDH mit dessen IOTA-Pubkey) — kein Chain-Posteingang, kein Passwort.
-                  Mehrere Dateien in einem Paket ja; mehrere Empfänger = Paket je Partner neu erzeugen.
+                <DialogDescription className="sr-only">
+                  ECDH-Datei für einen Handshake-Partner; Import in Paket-Archiv.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-3 text-sm">
-                <p className="rounded-md border border-border/70 bg-muted/25 px-2.5 py-2 text-[11px] text-muted-foreground">
-                  Partner = Connect/Handshake-Adresse unten. Nicht verwechseln:{' '}
-                  <span className="font-medium text-foreground">Package-ID</span> = Move-Vertrag (bei neuem Deploy
-                  neu). <span className="font-medium text-foreground">Mailbox-Objekt-ID</span> = Postfach on-chain
-                  (ändert sich mit dem Package). <span className="font-medium text-foreground">.morg-pkg</span> =
-                  lokale Datei für einen Partner — unabhängig von Package/Mailbox-IDs.
-                </p>
                 {morgPkgExportPartnerOptions.length > 0 && onMorgPkgExportRecipientChange ? (
                   <div className="space-y-1.5">
                     <label htmlFor="morg-pkg-export-recipient" className="text-xs font-medium text-foreground">
-                      Partner hier wählen (Pflicht für Export)
+                      Partner (Handshake)
                     </label>
                     <select
                       id="morg-pkg-export-recipient"
@@ -938,13 +982,10 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                         </option>
                       ))}
                     </select>
-                    <p className="text-[11px] text-muted-foreground">
-                      Nur Connect/Handshake — ohne Pubkey keine Entschlüsselung beim Partner.
-                    </p>
                   </div>
                 ) : (
                   <p className="rounded-md border border-amber-600/35 bg-amber-500/10 px-2.5 py-2 text-xs text-amber-950 dark:text-amber-100">
-                    Zuerst Handshake/Connect mit dem Partner — dann erscheint die Adresse hier (nicht die eigene).
+                    Kein Handshake-Partner — ECDH-.morg-pkg braucht Connect. Speichern gesperrt.
                   </p>
                 )}
                 <div className="grid gap-2">
@@ -952,25 +993,19 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     <Button
                       type="button"
                       variant="outline"
-                      className="h-auto justify-start whitespace-normal py-2.5 text-left"
+                      className="h-10 justify-start"
                       onClick={() => {
                         onOpenMorgPkgArchive()
                         setPkgToolsOpen(false)
                       }}
                     >
-                      <span className="flex flex-col items-start gap-0.5">
-                        <span>Paket-Archiv{morgPkgImportCount > 0 ? ` (${morgPkgImportCount})` : ''}</span>
-                        <span className="text-[11px] font-normal text-muted-foreground">
-                          Lokal im Browser (session): importierte .morg-pkg-Inhalte öffnen/speichern — nicht der
-                          Chain-Posteingang.
-                        </span>
-                      </span>
+                      Paket-Archiv{morgPkgImportCount > 0 ? ` (${morgPkgImportCount})` : ''}
                     </Button>
                   ) : null}
                   <Button
                     type="button"
                     variant="outline"
-                    className="h-auto justify-start whitespace-normal py-2.5 text-left"
+                    className="h-10 justify-start"
                     disabled={pkgImportDisabled}
                     title={morgPkgImportTitle(apiStatus)}
                     onClick={() => {
@@ -989,10 +1024,20 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   <Button
                     type="button"
                     variant="default"
-                    className="h-auto justify-start whitespace-normal py-2.5 text-left"
-                    disabled={pkgDeviceDisabled}
-                    title={morgPkgDeviceTitle(apiStatus, morgPkgDeviceBusy)}
+                    className="h-10 justify-start"
+                    disabled={pkgDeviceDisabled || morgPkgExportPartnerOptions.length === 0}
+                    title={
+                      morgPkgExportPartnerOptions.length === 0
+                        ? 'Handshake-Partner nötig (Connect).'
+                        : morgPkgDeviceTitle(apiStatus, morgPkgDeviceBusy)
+                    }
                     onClick={() => {
+                      if (morgPkgExportPartnerOptions.length === 0) {
+                        setStatus('error')
+                        setStatusMsg('Handshake-Partner nötig — zuerst Connect.')
+                        setTimeout(() => setStatus('idle'), 8000)
+                        return
+                      }
                       if (pkgDeviceDisabled) {
                         setStatus('error')
                         setStatusMsg(morgPkgDeviceTitle(apiStatus, morgPkgDeviceBusy))
@@ -1005,14 +1050,8 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   >
                     {morgPkgDeviceBusy
                       ? 'Paket wird gebaut…'
-                      : 'Dateien wählen → als .morg-pkg speichern'}
+                      : 'Dateien → .morg-pkg speichern'}
                   </Button>
-                  <p className="text-[11px] text-muted-foreground">
-                    Zuerst Dateiauswahl, dann Download der verschlüsselten .morg-pkg. Öffnen nur mit
-                    Handshake-Schlüssel des Partners — kein Passwort. Klartext-Budget ca.{' '}
-                    <span className="font-medium text-foreground">512 KiB</span> (Server-Env bis ~4 MiB) — Limit wegen
-                    Speicher/JSON im Browser, nicht wegen ECDH. Größer = mehrere Pakete.
-                  </p>
                 </div>
               </div>
             </DialogContent>
@@ -1029,6 +1068,27 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
       </div>
       <div className="border-t border-border/70 px-4 py-2 text-xs">
         <div className="flex flex-wrap items-center gap-2">
+          {onChatLayoutChange ? (
+            <button
+              type="button"
+              onClick={() => onChatLayoutChange(!chatLayout)}
+              className={cn(
+                'inline-flex items-center gap-1 rounded-md border px-2 py-1 font-medium transition-colors',
+                chatLayout
+                  ? 'border-primary/40 bg-primary/10 text-primary'
+                  : 'border-border bg-muted/40 text-foreground hover:bg-muted'
+              )}
+              title={
+                chatLayout
+                  ? 'Zurück zur Detail-Liste (Badges, Explorer, Filter-Chips)'
+                  : 'Chat-Ansicht: Blasen, Datum einmal pro Tag'
+              }
+              aria-pressed={chatLayout}
+            >
+              <MessageSquare className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+              Chat
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => setInboxSelectMode((v) => !v)}
@@ -1036,71 +1096,127 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
           >
             {inboxSelectMode ? 'Auswahl beenden' : 'Auswahl'}
           </button>
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            <Filter className="h-3.5 w-3.5" aria-hidden />
-            Liste
-          </span>
-          {onDirectionFilterChange ? (
-            <div
-              className="inline-flex flex-wrap items-center gap-1 rounded-md border border-border bg-background p-0.5"
-              role="group"
-              aria-label="Richtung in der Liste"
-              title="Nur empfangene oder nur gesendete Zeilen"
-            >
-              {(
-                [
-                  ['all', 'Beides'],
-                  ['in', 'Eingang'],
-                  ['out', 'Ausgang'],
-                ] as const
-              ).map(([id, label]) => (
+          {onDirectionFilterChange || onWireFilterChange || onMediaFilterChange ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <button
-                  key={id}
                   type="button"
-                  aria-pressed={directionFilter === id}
-                  onClick={() => onDirectionFilterChange(id)}
                   className={cn(
-                    'rounded px-2.5 py-1 text-xs font-medium transition-colors',
-                    directionFilter === id
-                      ? 'bg-primary/15 text-primary'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    'inline-flex max-w-[min(100%,16rem)] items-center gap-1 rounded-md border px-2 py-1 font-medium transition-colors',
+                    listFilterActive
+                      ? 'border-primary/40 bg-primary/10 text-primary'
+                      : 'border-border bg-background text-foreground hover:bg-muted'
                   )}
+                  title="Richtung, Inhalt und Medien filtern — Entschlüsseln bleibt in der Nachrichten-Zeile"
+                  aria-label={`Listenfilter: ${directionFilterLabel}, ${wireFilterLabel}, ${mediaFilterLabel}`}
                 >
-                  {label}
+                  <Filter className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                  <span className="truncate">{listFilterTriggerLabel}</span>
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
                 </button>
-              ))}
-            </div>
-          ) : null}
-          {onWireFilterChange ? (
-            <div
-              className="inline-flex flex-wrap items-center gap-1 rounded-md border border-border bg-background p-0.5"
-              role="group"
-              aria-label="Inhalt in der Liste"
-              title="Nur verschlüsselte oder nur Klartext-Zeilen — ändert nicht, wie du sendest"
-            >
-              {(
-                [
-                  ['all', 'Alles'],
-                  ['encrypted', 'Verschl.'],
-                  ['plaintext', 'Klartext'],
-                ] as const
-              ).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  aria-pressed={wireFilter === id}
-                  onClick={() => onWireFilterChange(id)}
-                  className={cn(
-                    'rounded px-2.5 py-1 text-xs font-medium transition-colors',
-                    wireFilter === id
-                      ? 'bg-emerald-500/15 text-emerald-900 dark:text-emerald-100'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-[min(100vw-2rem,16rem)]">
+                {onDirectionFilterChange ? (
+                  <>
+                    <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Richtung
+                    </DropdownMenuLabel>
+                    {(
+                      [
+                        ['all', 'Beides'],
+                        ['in', 'Eingang'],
+                        ['out', 'Ausgang'],
+                      ] as const
+                    ).map(([id, label]) => (
+                      <DropdownMenuItem
+                        key={id}
+                        onSelect={(e) => {
+                          e.preventDefault()
+                          onDirectionFilterChange(id)
+                        }}
+                      >
+                        <span
+                          aria-hidden
+                          className={cn('mr-2 w-3 text-center', directionFilter === id ? 'opacity-100' : 'opacity-0')}
+                        >
+                          ✓
+                        </span>
+                        {label}
+                      </DropdownMenuItem>
+                    ))}
+                  </>
+                ) : null}
+                {onDirectionFilterChange && onWireFilterChange ? <DropdownMenuSeparator /> : null}
+                {onWireFilterChange ? (
+                  <>
+                    <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Inhalt
+                    </DropdownMenuLabel>
+                    {(
+                      [
+                        ['all', 'Alles'],
+                        ['encrypted', 'Verschlüsselt'],
+                        ['plaintext', 'Klartext'],
+                      ] as const
+                    ).map(([id, label]) => (
+                      <DropdownMenuItem
+                        key={id}
+                        onSelect={(e) => {
+                          e.preventDefault()
+                          onWireFilterChange(id)
+                        }}
+                      >
+                        <span
+                          aria-hidden
+                          className={cn('mr-2 w-3 text-center', wireFilter === id ? 'opacity-100' : 'opacity-0')}
+                        >
+                          ✓
+                        </span>
+                        {label}
+                      </DropdownMenuItem>
+                    ))}
+                    <p className="px-2 pb-1.5 pt-1 text-[10px] leading-snug text-muted-foreground">
+                      „Verschlüsselt“ filtert nur die Liste. Entschlüsseln: in der Zeile oder Optionen → Wire
+                      entschlüsseln.
+                    </p>
+                  </>
+                ) : null}
+                {onMediaFilterChange ? (
+                  <>
+                    {(onDirectionFilterChange || onWireFilterChange) && onMediaFilterChange ? (
+                      <DropdownMenuSeparator />
+                    ) : null}
+                    <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      Medien
+                    </DropdownMenuLabel>
+                    {(
+                      [
+                        ['all', 'Alle Medien'],
+                        ['images', 'Bilder'],
+                        ['audio', 'Audio'],
+                        ['files', 'Dateien'],
+                      ] as const
+                    ).map(([id, label]) => (
+                      <DropdownMenuItem
+                        key={id}
+                        onSelect={(e) => {
+                          e.preventDefault()
+                          onMediaFilterChange(id)
+                        }}
+                      >
+                        <span
+                          aria-hidden
+                          className={cn('mr-2 w-3 text-center', mediaFilter === id ? 'opacity-100' : 'opacity-0')}
+                        >
+                          ✓
+                        </span>
+                        {label}
+                      </DropdownMenuItem>
+                    ))}
+                  </>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : null}
           {showPartnerFilterMenu ? (
             <button
@@ -1188,8 +1304,9 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 disabled={selectedInboxCount === 0}
                 onClick={onBulkExportJsonSelected}
                 className="rounded-md border border-border px-2 py-1.5 text-left hover:bg-muted disabled:opacity-50"
+                title="Auswahl als JSON-Datei (Inhalt wie angezeigt). ECDH-Datei-Paket → Optionen → .morg-pkg."
               >
-                JSON-Snapshot
+                Als JSON-Datei…
               </button>
               <button
                 type="button"
@@ -1220,7 +1337,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               </button>
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Nicht in Auswahl: Antworten, Telefonbuch, Handoff, Mesh-Paket, ECDH-.morg-pkg (je Zeile im ⋯).
+              ⋯-Menü bleibt je Sendepfad stabil (ungeeignete Einträge grau). Massen-.morg-pkg → Optionen.
             </p>
           </div>
         ) : null}

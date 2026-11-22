@@ -185,6 +185,27 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
     [finishMorgPkgDownload, setMorgPkgDeviceBusy, setStatus, setStatusMsg]
   )
 
+  const pickMorgPkgDeviceFiles = useCallback(async (): Promise<File[] | null> => {
+    setStatus('idle')
+    setStatusMsg('Dateiauswahl: Fotos/Text wählen…')
+    try {
+      const files = await pickFilesForMorgPkgExport(morgPkgDeviceFilesRef.current)
+      if (!files.length) {
+        setStatusMsg('Dateiauswahl abgebrochen.')
+        setTimeout(() => setStatus('idle'), 3000)
+        return null
+      }
+      return files
+    } catch (err) {
+      const errMsg = err instanceof Error ? err.message : String(err)
+      setStatus('error')
+      setStatusMsg(errMsg)
+      toast.error(errMsg)
+      setTimeout(() => setStatus('idle'), 8000)
+      return null
+    }
+  }, [morgPkgDeviceFilesRef, setStatus, setStatusMsg])
+
   const runMorgPkgDeviceExportPick = useCallback(async () => {
     if (morgPkgDeviceBusy) return
     const { recipient: rec, error } = resolveMorgPkgRecipient()
@@ -192,28 +213,12 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
       showMorgPkgRecipientError(error, setStatus, setStatusMsg)
       return
     }
-    setStatus('idle')
-    setStatusMsg('Dateiauswahl: Fotos/Text wählen…')
-    let files: File[]
-    try {
-      files = await pickFilesForMorgPkgExport(morgPkgDeviceFilesRef.current)
-    } catch (err) {
-      const errMsg = err instanceof Error ? err.message : String(err)
-      setStatus('error')
-      setStatusMsg(errMsg)
-      toast.error(errMsg)
-      setTimeout(() => setStatus('idle'), 8000)
-      return
-    }
-    if (!files.length) {
-      setStatusMsg('Dateiauswahl abgebrochen.')
-      setTimeout(() => setStatus('idle'), 3000)
-      return
-    }
+    const files = await pickMorgPkgDeviceFiles()
+    if (!files) return
     await processMorgPkgDeviceFiles(files, rec)
   }, [
-    morgPkgDeviceFilesRef,
     morgPkgDeviceBusy,
+    pickMorgPkgDeviceFiles,
     processMorgPkgDeviceFiles,
     resolveMorgPkgRecipient,
     setStatus,

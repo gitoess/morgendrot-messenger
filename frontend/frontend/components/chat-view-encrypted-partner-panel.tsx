@@ -136,12 +136,16 @@ export function ChatViewEncryptedPartnerPanel(p: ChatViewEncryptedPartnerPanelPr
               <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">verbunden</span>
             ) : null}
           </div>
+          <p className="text-[11px] text-muted-foreground">
+            Ohne Telefonbuch: volle Empfänger-0x eintragen (64 Hex), dann Handshake starten. Kurzform
+            „0x….abcd“ aus dem Header reicht nicht — dort aufklappen und Kopieren.
+          </p>
           <input
             type="text"
             list="chat-partner-addresses-encrypted"
             value={partner}
-            onChange={(e) => onPartnerChange(e.target.value)}
-            placeholder="0x + 64 Zeichen Hex (IOTA-Wallet des Empfängers)"
+            onChange={(e) => onPartnerChange(e.target.value.trim().toLowerCase())}
+            placeholder="volle 0x + 64 Hex (nicht Kurzform)"
             className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
           />
           <datalist id="chat-partner-addresses-encrypted">
@@ -149,6 +153,11 @@ export function ChatViewEncryptedPartnerPanel(p: ChatViewEncryptedPartnerPanelPr
               <option key={addr} value={addr} />
             ))}
           </datalist>
+          {partnerTrim && !partnerValid ? (
+            <p className="text-[11px] text-amber-800 dark:text-amber-200">
+              Adresse unvollständig — bitte volle 64 Hex-Zeichen nach 0x.
+            </p>
+          ) : null}
           <button
             type="button"
             onClick={onHandshake}

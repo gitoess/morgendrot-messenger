@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, type ReactNode } from 'react'
 import { toast } from 'sonner'
-import { ChatViewInboxPackageExpertMenu } from '@/frontend/components/chat-view-inbox-package-expert-menu'
 import type { ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
 import type { ChatViewPanelMessengerPorts } from '@/frontend/features/messenger-ports'
 import { resolveActiveSendPath } from '@/frontend/lib/messenger-channel-send-path'
@@ -27,7 +26,6 @@ export type ChatViewInboxPanelPropsDeps = {
     | 'attachmentBar'
     | 'inboxActions'
     | 'inboxExportActions'
-    | 'packageExpert'
     | 'inboxHandshakePanelActions'
     | 'inboxPanelLocalActions'
   >
@@ -61,7 +59,6 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
     attachmentBar,
     inboxActions,
     inboxExportActions,
-    packageExpert,
     inboxHandshakePanelActions,
     inboxPanelLocalActions,
   } = deps.messengerPorts
@@ -116,30 +113,8 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
     [composerDraft.onRecipientChange, inboxViewUi.selectInboxPartnerForSend]
   )
 
-  const inboxPackageExpertMenu: ReactNode = useMemo(
-    () =>
-      deps.showInboxPackageExpertMenu ? (
-        <ChatViewInboxPackageExpertMenu
-          serverPackageId={connectionStatusRead.apiStatus?.packageId}
-          inboxPackageFilter={packageExpert.inboxPackageFilter}
-          packageIdSuggestions={packageExpert.packageIdSuggestions}
-          packageIdBusy={packageExpert.packageIdBusy}
-          onApplyTemporary={packageExpert.applyTemporaryInboxPackage}
-          onClearTemporary={packageExpert.clearTemporaryInboxPackage}
-          onApplyPermanent={packageExpert.applyPackageIdBackend}
-        />
-      ) : null,
-    [
-      deps.showInboxPackageExpertMenu,
-      connectionStatusRead.apiStatus?.packageId,
-      packageExpert.inboxPackageFilter,
-      packageExpert.packageIdSuggestions,
-      packageExpert.packageIdBusy,
-      packageExpert.applyTemporaryInboxPackage,
-      packageExpert.clearTemporaryInboxPackage,
-      packageExpert.applyPackageIdBackend,
-    ]
-  )
+  /** Vertrag/Package-ID nur noch Einstellungen → Expertenmodus (kein Posteingang-Button). */
+  const inboxPackageExpertMenu: ReactNode = null
 
   const inboxPanelProps = {
     ...inboxFeedRead,
@@ -165,7 +140,13 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
     sending: attachmentBar.sending,
     onAcceptPendingHandshake: inboxHandshakePanelActions.onAcceptPendingHandshake,
     onUseSenderAsPartnerFromInbox: inboxHandshakePanelActions.onUseSenderAsPartnerFromInbox,
-    onReplyToMessage: inboxHandshakePanelActions.onReplyToMessage,
+    /* 1:1-Kontaktchat: Empfänger steht fest → kein Antworten-Button. Übersicht „Alle“ behält ihn. */
+    onReplyToMessage:
+      inboxViewUi.inboxPartnerFiltersArmed &&
+      Boolean(inboxViewUi.inboxPartnerKey?.trim()) &&
+      !inboxViewUi.inboxConversationGroupId
+        ? undefined
+        : inboxHandshakePanelActions.onReplyToMessage,
     onDeleteIncomingHandshake: inboxHandshakePanelActions.onDeleteIncomingHandshake,
     onDeleteOutgoingHandshake: inboxHandshakePanelActions.onDeleteOutgoingHandshake,
     onResendOutgoingHandshake: inboxHandshakePanelActions.onResendOutgoingHandshake,
@@ -193,6 +174,8 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
     setInboxPartnerFiltersArmed: inboxViewUi.setInboxPartnerFiltersArmed,
     inboxWireFilter: inboxViewUi.inboxWireFilter,
     setInboxWireFilter: inboxViewUi.setInboxWireFilter,
+    inboxMediaFilter: inboxViewUi.inboxMediaFilter,
+    setInboxMediaFilter: inboxViewUi.setInboxMediaFilter,
     selectInboxPartnerForSend: inboxViewUi.selectInboxPartnerForSend,
     removeInboxPartnerFromQuickList: inboxViewUi.removeInboxPartnerFromQuickList,
     inboxVisibilityHint: inboxViewUi.inboxVisibilityHint,
@@ -256,7 +239,7 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
     showIotaExpertInboxActions: deps.showIotaExpertInboxActions,
     onInboxOverviewCategoryChange: inboxViewUi.setInboxOverviewCategory,
     pinnwandOverviewConfigured: deps.pinnwandOverviewConfigured,
-    showInboxPackageExpertMenu: deps.showInboxPackageExpertMenu,
+    showInboxPackageExpertMenu: false,
     inboxPackageExpertMenu,
     hidePartnerStrip: deps.hidePartnerStrip ?? false,
     hideOverviewChips: deps.hideOverviewChips ?? false,

@@ -32,6 +32,7 @@ import {
   Star,
   Trash2,
   UserPlus,
+  Volume2,
 } from 'lucide-react'
 import {
   inboxTransportIconKey,
@@ -71,6 +72,13 @@ import { useInboxBurnOnRead } from '@/frontend/hooks/use-inbox-burn-on-read'
 import { EinsatzInboxExplorerLink } from '@/frontend/components/einsatz-inbox-explorer-link'
 import { EinsatzInboxMessageBadges } from '@/frontend/components/einsatz-inbox-message-badges'
 import { useEinsatzInboxBadges } from '@/frontend/hooks/use-einsatz-inbox-badges'
+import {
+  formatInboxDayHeading,
+  inboxMessageDayKey,
+} from '@/frontend/lib/inbox-chat-layout-pref'
+import { inboxChatBubbleTransportClass } from '@/frontend/lib/inbox-chat-bubble-transport'
+import { canSpeakGermanText, speakOrStopGermanText } from '@/frontend/lib/speak-text-de'
+import { Fragment } from 'react'
 
 function isRowMeshLike(msg: Message): boolean {
   if (msg.source === 'mesh') return true
@@ -145,10 +153,16 @@ export type ChatViewInboxListProps = InboxFeedReadPort & {
   /** Badge-Klick → Listenfilter (nicht Sendemodus). */
   onApplyDirectionFilter?: (d: 'all' | 'in' | 'out') => void
   onApplyWireFilter?: (f: 'all' | 'encrypted' | 'plaintext') => void
+  /** Schlanke Messenger-Blasen (Default: Detail/Forensik). */
+  chatLayout?: boolean
+  /** Chat-Ansicht: Absendername (z. B. bei „Alle“). */
+  chatShowSenderName?: boolean
 }
 
 export function ChatViewInboxList(p: ChatViewInboxListProps) {
   const { burnOnReadEnabled } = useInboxBurnOnRead()
+  const chatLayout = p.chatLayout === true
+  const chatShowSenderName = p.chatShowSenderName === true
   const {
     loadError,
     inboxFromCache = false,
@@ -292,9 +306,12 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
     {cacheModeBanner}
     {loadErrorBanner}
     {visibilityHintBanner}
-    <ul className="space-y-3 p-3">
-      {inboxRows.map((row) =>
-        row.kind === 'meshInbound' ? (
+    <ul className={cn('p-3', chatLayout ? 'space-y-2' : 'space-y-3')}>
+      {(() => {
+        let lastChatDayKey = ''
+        return inboxRows.map((row) => {
+        if (row.kind === 'meshInbound') {
+          return (
           <li
             key={`mesh-in-${row.id}`}
             className="rounded-xl border border-dashed border-sky-500/35 bg-sky-500/[0.06] p-3 shadow-sm dark:bg-sky-950/20"
@@ -329,7 +346,10 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
               ) : null}
             </div>
           </li>
-        ) : row.kind === 'slide' ? (
+          )
+        }
+        if (row.kind === 'slide') {
+          return (
           <li
             key={`slide-${row.key}`}
             className="rounded-xl border border-border bg-card/80 p-4 shadow-sm transition-colors hover:bg-accent/30"
@@ -348,7 +368,115 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
             <SlideShowCrossfade frames={row.frames} />
             <p className="mt-2 text-[11px] text-muted-foreground">MORG_SLIDE_V1 · CSS-Überblendung</p>
           </li>
-        ) : (
+          )
+        }
+        {
+          const dayKey = inboxMessageDayKey(row.msg.timestamp)
+          const showDayHeading = chatLayout && dayKey !== lastChatDayKey
+          if (showDayHeading) lastChatDayKey = dayKey
+          const outgoingRowEarly = myAddress.trim() ? isMessageOutgoing(row.msg, myAddress) : false
+          const fromLabelEarly = contactDisplayLabel(contactDirectory, row.msg.from)
+          const senderLabel =
+            fromLabelEarly ||
+            (row.msg.from.startsWith('0x')
+              ? `${row.msg.from.slice(0, 8)}…${row.msg.from.slice(-4)}`
+              : row.msg.from)
+
+          if (chatLayout) {
+            return (
+              <Fragment key={row.msg.id}>
+                {showDayHeading ? (
+                  <li className="list-none py-2 text-center" aria-hidden={false}>
+                    <span className="inline-block rounded-full bg-muted/80 px-3 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                      {formatInboxDayHeading(row.msg.timestamp)}
+                    </span>
+                  </li>
+                ) : null}
+                <li
+                  id={`inbox-msg-${row.msg.id}`}
+                  className={cn(
+                    'flex list-none gap-2',
+                    outgoingRowEarly ? 'justify-end' : 'justify-start'
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'max-w-[min(100%,28rem)] rounded-2xl px-3 py-2 shadow-sm',
+                      inboxChatBubbleTransportClass(row.msg, outgoingRowEarly)
+                    )}
+                  >
+                    {chatShowSenderName && !outgoingRowEarly ? (
+                      <p className="mb-0.5 text-[11px] font-semibold text-primary">{senderLabel}</p>
+                    ) : null}
+                    <ChatMessageBody
+                      content={row.msg.content ?? ''}
+                      inboxMessages={messages}
+                      selfMessage={row.msg}
+                      onSarqNakWire={onSarqNakWire}
+                      hidePlainTextActions
+                    />
+                    <div className="mt-1 flex items-center justify-end gap-1">
+                      <time
+                        className="text-[10px] tabular-nums text-muted-foreground"
+                        dateTime={new Date(row.msg.timestamp).toISOString()}
+                      >
+                        {new Date(row.msg.timestamp).toLocaleTimeString('de-DE', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </time>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+                            aria-label="Aktionen für diese Nachricht"
+                          >
+                            <MoreHorizontal className="h-3.5 w-3.5" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              void navigator.clipboard.writeText(`${row.msg.content ?? ''}`).then(
+                                () => toast.message('Inhalt kopiert.'),
+                                () => toast.error('Kopieren fehlgeschlagen')
+                              )
+                            }}
+                          >
+                            <Copy className="mr-2 h-4 w-4" />
+                            Inhalt kopieren
+                          </DropdownMenuItem>
+                          {canSpeakGermanText() && `${row.msg.content ?? ''}`.trim() ? (
+                            <DropdownMenuItem
+                              onClick={() => speakOrStopGermanText(`${row.msg.content ?? ''}`)}
+                            >
+                              <Volume2 className="mr-2 h-4 w-4" />
+                              Vorlesen
+                            </DropdownMenuItem>
+                          ) : null}
+                          <DropdownMenuItem
+                            onClick={() => onHideInboxMessageLocal(row.msg.id)}
+                          >
+                            <MessageCircle className="mr-2 h-4 w-4 opacity-60" />
+                            Lokal ausblenden
+                          </DropdownMenuItem>
+                          {onReplyToMessage ? (
+                            <DropdownMenuItem onClick={() => onReplyToMessage(row.msg)}>
+                              <Reply className="mr-2 h-4 w-4" />
+                              Antworten
+                            </DropdownMenuItem>
+                          ) : null}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </li>
+              </Fragment>
+            )
+          }
+
+          return (
           <li
             key={row.msg.id}
             id={`inbox-msg-${row.msg.id}`}
@@ -376,6 +504,13 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                 !outgoingRow &&
                 row.msg.from.startsWith('0x') &&
                 row.msg.from.length >= 66
+              const meshLike = isRowMeshLike(row.msg)
+              const handoffParsed = parseHandoffZipWire(row.msg.content ?? '')
+              const hasMorgMedia = (row.msg.content ?? '').includes('[[MORG_')
+              const canEcdhMorgPkg =
+                row.msg.transports?.includes('internet') ||
+                row.msg.source === 'mailbox' ||
+                !row.msg.transports?.length
               return (
                 <>
             <div className="mb-3 flex flex-wrap items-start justify-between gap-3 border-b border-border/60 pb-3">
@@ -636,14 +771,16 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                       void navigator.clipboard.writeText(raw).then(
                         () => {
                           if (isPassphraseMessageWire(raw)) {
-                            toast.message('PWMSG-Wire kopiert — Optionen → Wire einfügen kann das lesen.')
+                            toast.message(
+                              'PWMSG kopiert — Optionen → PWMSG entschlüsseln (+ Passphrase) liest das.'
+                            )
                           } else if (isNftGateMessageWire(raw)) {
                             toast.message(
-                              'NFT-Gate-Wire kopiert — Entschlüsseln in der Nachrichten-Zeile (nicht Wire einfügen).'
+                              'NFT-Gate-Wire kopiert — Entschlüsseln in der Nachrichten-Zeile (nicht PWMSG entschlüsseln).'
                             )
                           } else if (row.msg.encrypted) {
                             toast.message(
-                              'Inhalt kopiert. ECDH/Envelope: Lesen braucht Handshake — Wire einfügen nur für PWMSG.'
+                              'Inhalt kopiert. ECDH/Envelope: Lesen braucht Handshake — PWMSG entschlüsseln nur für Passphrase-Wire.'
                             )
                           } else {
                             toast.message('Inhalt kopiert.')
@@ -652,7 +789,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                         () => toast.error('Kopieren fehlgeschlagen')
                       )
                     }}
-                    title="Rohinhalt der Zeile kopieren (bei PWMSG = Wire für „Wire einfügen“)"
+                    title="Rohinhalt der Zeile kopieren (bei PWMSG = Wire für „PWMSG entschlüsseln“)"
                   >
                     <Copy className="mr-2 h-4 w-4" />
                     {isPassphraseMessageWire(`${row.msg.content ?? ''}`)
@@ -661,6 +798,15 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                         ? 'NFT-Gate-Wire kopieren'
                         : 'Inhalt kopieren'}
                   </DropdownMenuItem>
+                  {canSpeakGermanText() && `${row.msg.content ?? ''}`.trim() ? (
+                    <DropdownMenuItem
+                      onClick={() => speakOrStopGermanText(`${row.msg.content ?? ''}`)}
+                      title="Browser-Vorlesen (de-DE)"
+                    >
+                      <Volume2 className="mr-2 h-4 w-4" />
+                      Vorlesen
+                    </DropdownMenuItem>
+                  ) : null}
                   <DropdownMenuItem
                     onClick={() => {
                       void (async () => {
@@ -716,40 +862,60 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     />
                     {protokollMarkedIds.has(row.msg.id) ? 'Protokoll-Markierung entfernen' : 'Für Protokoll markieren'}
                   </DropdownMenuItem>
-                  {onForwardMessage ? (
-                    <>
-                      <DropdownMenuItem onClick={() => onForwardMessage(row.msg, true)}>
-                        <Forward className="mr-2 h-4 w-4" />
-                        Weiterleiten (mit Absenderzeile)
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onForwardMessage(row.msg, false)}>
-                        <Forward className="mr-2 h-4 w-4" />
-                        Weiterleiten (ohne Absenderadresse)
-                      </DropdownMenuItem>
-                    </>
-                  ) : null}
-                  {isRowMeshLike(row.msg) ? (
-                    <>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          openR1CourierDialogFromPrefill(buildR1CourierPrefillFromMessage(row.msg, myAddress))
-                        }}
-                        title="R1-Kurier: Text und 0x-Adressen aus dieser Funk-Zeile vorfüllen (Signatur und Paket erzeugen im Dialog)."
-                      >
-                        <Package className="mr-2 h-4 w-4 opacity-80" />
-                        Paket teilen
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          openProtokollAnchorDialogFromPrefill({ messageIds: [row.msg.id], variant: 'hash' })
-                        }}
-                        title="Protokoll-Hash-Verankerung: nur diese Nachrichten-ID, Variante A (nur Hash)."
-                      >
-                        <Link2 className="mr-2 h-4 w-4 opacity-80" />
-                        Paket in den Tangle schreiben
-                      </DropdownMenuItem>
-                    </>
-                  ) : null}
+                  <DropdownMenuItem
+                    disabled={!onForwardMessage}
+                    title={
+                      onForwardMessage
+                        ? undefined
+                        : 'Weiterleiten hier nicht verfügbar.'
+                    }
+                    onClick={() => onForwardMessage?.(row.msg, true)}
+                  >
+                    <Forward className="mr-2 h-4 w-4" />
+                    Weiterleiten (mit Absenderzeile)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={!onForwardMessage}
+                    title={
+                      onForwardMessage
+                        ? undefined
+                        : 'Weiterleiten hier nicht verfügbar.'
+                    }
+                    onClick={() => onForwardMessage?.(row.msg, false)}
+                  >
+                    <Forward className="mr-2 h-4 w-4" />
+                    Weiterleiten (ohne Absenderadresse)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={!meshLike}
+                    title={
+                      meshLike
+                        ? 'R1-Kurier: Text und 0x-Adressen aus dieser Funk-Zeile vorfüllen (Signatur und Paket erzeugen im Dialog).'
+                        : 'Nur bei Funk-/Mesh-Zeilen.'
+                    }
+                    onClick={() => {
+                      if (!meshLike) return
+                      openR1CourierDialogFromPrefill(buildR1CourierPrefillFromMessage(row.msg, myAddress))
+                    }}
+                  >
+                    <Package className="mr-2 h-4 w-4 opacity-80" />
+                    Paket teilen
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={!meshLike}
+                    title={
+                      meshLike
+                        ? 'Protokoll-Hash-Verankerung: nur diese Nachrichten-ID, Variante A (nur Hash).'
+                        : 'Nur bei Funk-/Mesh-Zeilen.'
+                    }
+                    onClick={() => {
+                      if (!meshLike) return
+                      openProtokollAnchorDialogFromPrefill({ messageIds: [row.msg.id], variant: 'hash' })
+                    }}
+                  >
+                    <Link2 className="mr-2 h-4 w-4 opacity-80" />
+                    Paket in den Tangle schreiben
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => onHideInboxMessageLocal(row.msg.id)}
                     title="Nur in dieser App aus der Liste nehmen — Chain unverändert."
@@ -762,7 +928,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     title={
                       teamBroadcastPurgeHint(row.msg, myAddress) ??
                       (row.msg.chainPurgeable
-                        ? 'Burn: Mailbox-Objekt on-chain löschen (Storage-Rebate). Explorer behält die Send-TX.'
+                        ? 'Burn: nur Sender/Empfänger (Team: Original-Sender). TTL löscht nicht fremd. Explorer behält Send-TX.'
                         : 'Nur Mailbox-Objekte sind burnbar — Event-Pfad („Nur Wallet-Adresse“) nicht.')
                     }
                     onClick={() => {
@@ -778,42 +944,63 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     <Trash2 className="mr-2 h-4 w-4" />
                     Von Chain löschen (Burn)
                   </DropdownMenuItem>
-                  {parseHandoffZipWire(row.msg.content ?? '') ? (
-                    <DropdownMenuItem
-                      onClick={() => {
-                        const parsed = parseHandoffZipWire(row.msg.content ?? '')
-                        if (!parsed) return
-                        queueHandoffZipFromInbox(parsed.zipBytes, parsed.meta)
-                      }}
-                      title="Handoff-ZIP in Einstellungen → Handoff importieren übernehmen"
-                    >
-                      <Inbox className="mr-2 h-4 w-4" />
-                      Handoff importieren
-                    </DropdownMenuItem>
-                  ) : null}
-                  {(row.msg.content ?? '').includes('[[MORG_') ? (
-                    <DropdownMenuItem
-                      onClick={() => {
-                        void downloadMorgMediaFilesDirect([row.msg]).then((r) => {
-                          if (r.count === 0) {
-                            toast.message('Keine dekodierbaren Medien in dieser Nachricht.')
-                            return
-                          }
-                          toast.success(`${r.count} Datei(en) gespeichert.`)
-                        })
-                      }}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Medien speichern
-                    </DropdownMenuItem>
-                  ) : null}
-                  <DropdownMenuItem onClick={() => void exportEcdhMorgPkgForMessage(row.msg)}>
-                    <Lock className="mr-2 h-4 w-4" />
-                    Für Partner verschlüsseln (.morg-pkg)
+                  <DropdownMenuItem
+                    disabled={!handoffParsed}
+                    title={
+                      handoffParsed
+                        ? 'Handoff-ZIP in Einstellungen → Handoff importieren übernehmen'
+                        : 'Nur bei Handoff-ZIP-Wire in dieser Zeile.'
+                    }
+                    onClick={() => {
+                      if (!handoffParsed) return
+                      queueHandoffZipFromInbox(handoffParsed.zipBytes, handoffParsed.meta)
+                    }}
+                  >
+                    <Inbox className="mr-2 h-4 w-4" />
+                    Handoff importieren
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => downloadSneakernetPackage(row.msg)}>
+                  <DropdownMenuItem
+                    disabled={!hasMorgMedia}
+                    title={
+                      hasMorgMedia
+                        ? undefined
+                        : 'Keine MORG-Medien-Marker in dieser Zeile.'
+                    }
+                    onClick={() => {
+                      if (!hasMorgMedia) return
+                      void downloadMorgMediaFilesDirect([row.msg]).then((r) => {
+                        if (r.count === 0) {
+                          toast.message('Keine dekodierbaren Medien in dieser Nachricht.')
+                          return
+                        }
+                        toast.success(`${r.count} Datei(en) gespeichert.`)
+                      })
+                    }}
+                  >
                     <Download className="mr-2 h-4 w-4" />
-                    Klartext-JSON (ohne ECDH)
+                    Medien speichern
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={!canEcdhMorgPkg}
+                    title={
+                      canEcdhMorgPkg
+                        ? 'ECDH-.morg-pkg für Handshake-Partner (verschlüsselt). Nicht dasselbe wie Klartext-JSON.'
+                        : 'Nur bei Online-/Mailbox-Zeilen (nicht reine Funk-Zeilen).'
+                    }
+                    onClick={() => {
+                      if (!canEcdhMorgPkg) return
+                      void exportEcdhMorgPkgForMessage(row.msg)
+                    }}
+                  >
+                    <Lock className="mr-2 h-4 w-4" />
+                    Für Partner (.morg-pkg ECDH)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => downloadSneakernetPackage(row.msg)}
+                    title="Snapshot-JSON der Zeile (Inhalt + Absender/Zeit/Transports). Nicht ECDH. Zwischenablage = Inhalt kopieren."
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Als JSON-Datei…
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -828,8 +1015,8 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
             {burnOnReadEnabled && row.msg.chainPurgeable ? (
               <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-orange-500/35 bg-orange-500/10 px-3 py-2">
                 <span className="text-[11px] text-orange-950 dark:text-orange-100">
-                  Burnbar (Mailbox) — Burn löscht das Objekt on-chain. „Lokal ausblenden“ nur UI.
-                  {isMessageOutgoing(row.msg, myAddress) ? ' (Ausgang — du kannst trotzdem burnen.)' : ''}
+                  Burnbar — nur Sender/Empfänger (Team: Sender). „Lokal ausblenden“ nur UI.
+                  {isMessageOutgoing(row.msg, myAddress) ? ' (Ausgang — du darfst burnen.)' : ''}
                 </span>
                 <button
                   type="button"
@@ -851,8 +1038,10 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
               )
             })()}
           </li>
-        )
-      )}
+          )
+        }
+        })
+      })()}
     </ul>
       {loadMoreInbox && (inboxHasMore || messages.length > 0) ? (
         <div className="border-t border-border/70 p-3 flex justify-center">

@@ -103,7 +103,7 @@ export function ChatConversationMenuItems(p: ChatViewConversationMenuProps) {
             title={
               p.onRenewEncryptionKeys
                 ? p.renewEncryptionHint ??
-                  'Session-Epoch erhöhen (Forward Secrecy ab Rotation). Alte Nachrichten bleiben lesbar.'
+                  'Lokale Session-Epoch++ (Anzeige nur hier). Partner braucht neuen Handshake/Connect — sieht keine gemeinsame Epoch-Zahl. Alte Msgs bleiben lesbar; FS ab Rotation.'
                 : 'Nur bei 1:1 mit gültiger Partner-0x'
             }
             onSelect={() => void p.onRenewEncryptionKeys?.()}

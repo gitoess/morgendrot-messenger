@@ -51,6 +51,47 @@ describe('useChatViewInboxPanelProps', () => {
     expect(result.current.inboxPackageExpertMenu).toBeNull()
   })
 
+  it('blendet Antworten bei 1:1-Kontaktchat aus, behält sie bei Alle', () => {
+    const onReply = vi.fn()
+    const portsAlle = testPanelMessengerPorts()
+    const ports1to1 = testPanelMessengerPorts()
+    const messengerPortsAlle = {
+      ...portsAlle,
+      inboxHandshakePanelActions: {
+        ...portsAlle.inboxHandshakePanelActions,
+        onReplyToMessage: onReply,
+      },
+      inboxViewUi: {
+        ...portsAlle.inboxViewUi,
+        inboxPartnerFiltersArmed: false,
+        inboxPartnerKey: null,
+        inboxConversationGroupId: null,
+      },
+    }
+    const addr = `0x${'c'.repeat(64)}`
+    const messengerPorts1to1 = {
+      ...ports1to1,
+      inboxHandshakePanelActions: {
+        ...ports1to1.inboxHandshakePanelActions,
+        onReplyToMessage: onReply,
+      },
+      inboxViewUi: {
+        ...ports1to1.inboxViewUi,
+        inboxPartnerFiltersArmed: true,
+        inboxPartnerKey: addr,
+        inboxConversationGroupId: null,
+      },
+    }
+    const { result: alle } = renderHook(() =>
+      useChatViewInboxPanelProps(baseDeps({ messengerPorts: messengerPortsAlle }))
+    )
+    expect(alle.current.onReplyToMessage).toBe(onReply)
+    const { result: one } = renderHook(() =>
+      useChatViewInboxPanelProps(baseDeps({ messengerPorts: messengerPorts1to1 }))
+    )
+    expect(one.current.onReplyToMessage).toBeUndefined()
+  })
+
   it('onRefresh lädt Posteingang mit forceLive', () => {
     const loadMessages = vi.fn()
     const refreshContactDirectory = vi.fn()

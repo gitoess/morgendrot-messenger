@@ -1102,8 +1102,8 @@ module messaging::messaging { // Named address via Move.toml
         let key = TeamPlainBroadcastKey { sender: broadcast_sender, nonce };
         assert!(dof::exists_<TeamPlainBroadcastKey>(mailbox_uid, key), E_TEAM_BROADCAST_MISSING);
         let pref = dof::borrow<TeamPlainBroadcastKey, TeamPlainBroadcastEntry>(mailbox_uid, key);
-        let now = tx_context::epoch_timestamp_ms(ctx);
-        let allowed = by == pref.sender || now >= pref.expires_at_ms;
+        // Nur Original-Sender — kein Fremd-Burn nach TTL.
+        let allowed = by == pref.sender;
         assert!(allowed, E_NOT_OWNER);
         let p = dof::remove<TeamPlainBroadcastKey, TeamPlainBroadcastEntry>(mailbox_uid, key);
         let TeamPlainBroadcastEntry {
@@ -1117,7 +1117,7 @@ module messaging::messaging { // Named address via Move.toml
         object::delete(id);
     }
 
-    /// Purge Team-Broadcast (Rebate): Original-Sender jederzeit; nach TTL jeder.
+    /// Purge Team-Broadcast (Rebate): nur Original-Sender (TTL = Metadaten).
     public entry fun purge_team_plaintext_broadcast(
         mailbox: &mut Mailbox,
         broadcast_sender: address,
@@ -1218,8 +1218,8 @@ module messaging::messaging { // Named address via Move.toml
         let key = TeamEncBroadcastKey { sender: broadcast_sender, nonce };
         assert!(dof::exists_<TeamEncBroadcastKey>(mailbox_uid, key), E_TEAM_BROADCAST_MISSING);
         let pref = dof::borrow<TeamEncBroadcastKey, TeamEncBroadcastEntry>(mailbox_uid, key);
-        let now = tx_context::epoch_timestamp_ms(ctx);
-        let allowed = by == pref.sender || now >= pref.expires_at_ms;
+        // Nur Original-Sender — kein Fremd-Burn nach TTL.
+        let allowed = by == pref.sender;
         assert!(allowed, E_NOT_OWNER);
         let p = dof::remove<TeamEncBroadcastKey, TeamEncBroadcastEntry>(mailbox_uid, key);
         let TeamEncBroadcastEntry {
@@ -1236,7 +1236,7 @@ module messaging::messaging { // Named address via Move.toml
         object::delete(id);
     }
 
-    /// Purge verschlüsselter Team-Broadcast (Rebate): Original-Sender jederzeit; nach TTL jeder.
+    /// Purge verschlüsselter Team-Broadcast (Rebate): nur Original-Sender (TTL = Metadaten).
     public entry fun purge_team_encrypted_broadcast(
         mailbox: &mut Mailbox,
         broadcast_sender: address,
@@ -1300,8 +1300,8 @@ module messaging::messaging { // Named address via Move.toml
         let key = MsgKey { recipient, sender, nonce };
         assert!(dof::exists_<MsgKey>(mailbox_uid, key), E_MSG_MISSING);
         let mref = dof::borrow<MsgKey, Message>(mailbox_uid, key);
-        let now = tx_context::epoch_timestamp_ms(ctx);
-        let allowed = by == mref.sender || by == mref.recipient || now >= mref.expires_at_ms;
+        // TTL (expires_at_ms) bleibt Metadaten — Purge nur Sender oder Empfänger.
+        let allowed = by == mref.sender || by == mref.recipient;
         assert!(allowed, E_NOT_OWNER);
         let m = dof::remove<MsgKey, Message>(mailbox_uid, key);
         let Message {
@@ -1318,8 +1318,7 @@ module messaging::messaging { // Named address via Move.toml
         object::delete(id);
     }
 
-    /// Manual purge: sender or recipient can purge anytime.
-    /// Auto purge: anyone can purge after expiry.
+    /// Manual purge: nur Sender oder Empfänger (TTL bleibt Feld, kein Fremd-Purge).
     public entry fun purge_message(
         mailbox: &mut Mailbox,
         recipient: address,
@@ -1343,8 +1342,8 @@ module messaging::messaging { // Named address via Move.toml
         let key = PlainMsgKey { recipient, sender, nonce };
         assert!(dof::exists_<PlainMsgKey>(mailbox_uid, key), E_PLAIN_MSG_MISSING);
         let pref = dof::borrow<PlainMsgKey, PlaintextMailboxEntry>(mailbox_uid, key);
-        let now = tx_context::epoch_timestamp_ms(ctx);
-        let allowed = by == pref.sender || by == pref.recipient || now >= pref.expires_at_ms;
+        // TTL bleibt Metadaten — Purge nur Sender oder Empfänger.
+        let allowed = by == pref.sender || by == pref.recipient;
         assert!(allowed, E_NOT_OWNER);
         let p = dof::remove<PlainMsgKey, PlaintextMailboxEntry>(mailbox_uid, key);
         let PlaintextMailboxEntry {

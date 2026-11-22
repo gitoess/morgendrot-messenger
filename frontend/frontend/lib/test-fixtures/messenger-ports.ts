@@ -196,6 +196,8 @@ export function testMessengerPorts(over: {
       setInboxPartnerFiltersArmed: vi.fn(),
       inboxWireFilter: 'all',
       setInboxWireFilter: vi.fn(),
+      inboxMediaFilter: 'all',
+      setInboxMediaFilter: vi.fn(),
       selectInboxPartnerForSend: vi.fn(),
       selectInboxConversationAll: vi.fn(),
       selectInboxConversationPartner: vi.fn(),

@@ -44,12 +44,14 @@ import { LazyBossView, LazyConfigView } from '@/frontend/components/lazy/messeng
 import { EinsatzleitungView } from './views/einsatzleitung-view'
 import { SettingsView } from './views/settings-view'
 import { DashboardMessengerBossHeader } from '@/frontend/components/dashboard-messenger-boss-header'
+import { DashboardHeaderAddress } from '@/frontend/components/dashboard-header-address'
 import { TresorSessionBadge } from '@/frontend/components/chat-view-chat-header'
 import { DashboardMessengerBossHome } from '@/frontend/components/dashboard-messenger-boss-home'
 import { DashboardSharedDialogs } from '@/frontend/components/dashboard-shared-dialogs'
 import { messengerFeatures, featureTitle } from '@/frontend/components/dashboard-features-messenger'
 import { useMessengerFeatures } from '@/frontend/hooks/use-messenger-features'
 import { DashboardMyAddressPicker } from '@/frontend/components/dashboard-my-address-picker'
+import { getDirectChainFieldIdsFromLs } from '@/frontend/lib/direct-iota-chain-context'
 import { DashboardIotaTransferCard } from '@/frontend/components/dashboard-iota-transfer-card'
 import { DashboardIotaActivityCard } from '@/frontend/components/dashboard-iota-activity-card'
 import { MeshStatus } from './mesh-status'
@@ -92,6 +94,7 @@ import { CapacitorStandaloneBootstrap } from '@/frontend/components/capacitor-st
 import { InstallQrLandingBootstrap } from '@/frontend/components/install-qr-landing-bootstrap'
 import { MessengerDashboardOfflineHint } from '@/frontend/components/messenger-dashboard-offline-hint'
 import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/dashboard-basis-offline-hint'
+import { isStandaloneSoloPath } from '@/frontend/lib/standalone-onboarding'
 
 /** Morgendrot Messenger — schlanke Einsatz-App (eigenes Build). */
 export function MessengerDashboard() {
@@ -168,7 +171,17 @@ function MessengerDashboardBody({
   const vaultKeysReady = browserSignerReady
   const standaloneApkWithoutBasis = isStandaloneMessengerWithoutBasis()
   const standaloneWalletActive = standaloneApkWithoutBasis && !vaultSessionLocked && vaultKeysReady
-  const showHomeVaultBadge = s.backendReachable === true
+  /** Solo/APK ohne Basis: trotzdem Tresor-Badge (Unlock/weich) — nicht nur bei Node-API. */
+  const showHomeVaultBadge =
+    s.backendReachable === true || standaloneApkWithoutBasis || isStandaloneSoloPath()
+  /** Messenger-Chrome (nicht Boss): Adresse wie Boss-Header — Snapshot oder Direct-Chain Absender. */
+  const headerMyAddressFull = useMemo(() => {
+    const fromSnap = (s.apiSnapshot?.myAddressFull || '').trim()
+    if (/^0x[a-fA-F0-9]{64}$/i.test(fromSnap)) return fromSnap
+    if (typeof window === 'undefined') return fromSnap || null
+    const fromLs = (getDirectChainFieldIdsFromLs().senderAddress || '').trim()
+    return /^0x[a-fA-F0-9]{64}$/i.test(fromLs) ? fromLs : fromSnap || null
+  }, [s.apiSnapshot?.myAddressFull])
   const backendVaultUnlocked =
     s.apiSnapshot?.hasKeys === true && s.apiSnapshot?.locked !== true
 
@@ -371,7 +384,10 @@ function MessengerDashboardBody({
           'bg-background',
           isCapacitorNativePlatform() && s.activeView.type === 'chat'
             ? 'flex h-[100dvh] max-h-[100dvh] flex-col overflow-hidden'
-            : 'min-h-screen'
+            : isCapacitorNativePlatform()
+              ? // html.capacitor-native body = overflow:hidden → Home/Settings brauchen eigenen Scroll.
+                'h-[100dvh] max-h-[100dvh] overflow-y-auto overscroll-y-contain'
+              : 'min-h-screen'
         )}
       >
         {isEinsatzLeadHome ? (
@@ -554,7 +570,14 @@ function MessengerDashboardBody({
       </div>
       ) : (
     <DeploymentProfileBackdrop status={s.apiSnapshot} hideWatermark={isEinsatzLeadHome}>
-    <div className="min-h-screen bg-background/80">
+    <div
+      className={cn(
+        'bg-background/80',
+        isCapacitorNativePlatform()
+          ? 'h-[100dvh] max-h-[100dvh] overflow-y-auto overscroll-y-contain'
+          : 'min-h-screen'
+      )}
+    >
       {isEinsatzLeadHome ? (
         <DashboardMessengerBossHeader
           role={s.role}
@@ -598,6 +621,7 @@ function MessengerDashboardBody({
                   }
                 />
               </div>
+              <DashboardHeaderAddress address={headerMyAddressFull} />
               {!s.locked && s.backendReachable ? (
                 <div className="mt-2">
                   <DashboardMyAddressPicker apiSnapshot={s.apiSnapshot} onAfterSet={s.checkStatus} />
@@ -748,7 +772,9 @@ function MessengerDashboardBody({
             onOpenEinsatzleitung={s.openEinsatzleitungView}
           />
         ) : null}
-        {!s.locked && !isEinsatzLeadHome ? (
+        {/* Solo-APK: kein Wallet-Transfer/Aktivitäts-Block auf dem Home — wirkt wie Parallel-App zum Chat.
+            Überweisung bleibt unter Einstellungen / Boss-Home. */}
+        {!s.locked && !isEinsatzLeadHome && !standaloneApkWithoutBasis ? (
           <div className="mb-6 grid gap-4 sm:grid-cols-2">
             <DashboardIotaTransferCard
               myAddressFull={s.apiSnapshot?.myAddressFull}
@@ -762,6 +788,7 @@ function MessengerDashboardBody({
                 ...(s.apiSnapshot?.mailboxId ? [s.apiSnapshot.mailboxId] : []),
                 ...(s.apiSnapshot?.inboxUnionMailboxIds ?? []),
               ]}
+              primaryMailboxId={s.apiSnapshot?.mailboxId || undefined}
             />
             <DashboardIotaActivityCard />
           </div>
@@ -794,7 +821,7 @@ function MessengerDashboardBody({
               <p className="mt-1 text-muted-foreground">Wähle eine Funktion, um loszulegen</p>
             </div>
 
-            {/* Feature Cards */}
+            {/* Feature Cards — ein Einstieg „Nachrichten“ (öffnet Posteingang); kein zweiter CTA. */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {visibleFeatures.map((feature) => (
             <div

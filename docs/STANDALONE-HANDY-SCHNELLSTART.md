@@ -1,59 +1,60 @@
 # Standalone-Handy — Schnellstart (1 Gerät)
 
-**Ziel:** Morgendrot-Messenger **ohne PC-Server** auf dem Android-Handy — Handoff + Seed + Direct-IOTA-Chat.
+**Ziel:** Messenger **ohne Morgendrot-PC** auf Android — Direct-IOTA (Mobilfunk ok).
 
-**APK:** `frontend/android/app/build/outputs/apk/debug/app-debug.apk` (Build: `cd frontend && npm run apk:debug:build`)  
-**Vollständige Standalone-Doku:** [`docs/STANDALONE-APK.md`](STANDALONE-APK.md)
-
----
-
-## Boss (PC, einmal pro Helfer)
-
-1. Morgendrot Boss läuft (`npm run start:secrets` o. ä.)
-2. **Einsatzleitung → Neues Gerät provisionieren**
-3. Master-Passwort (Registry), Bezeichnung, Profil → **Generieren & Exportieren**
-4. Helfer erhält: **Handoff-ZIP** + **Seed-QR** (60 s) — Details: `docs/GERAET-PROVISIONIEREN-WIZARD.md`
+**APK:** `frontend/android/app/build/outputs/apk/debug/app-debug.apk`  
+**Build:** `cd frontend && npm run apk:debug:build`  
+**Abnahme:** [`STANDALONE-SMOKE-CHECKLIST.md`](STANDALONE-SMOKE-CHECKLIST.md) · Logbuch: [`TEST-RUN-LOGBOOK.md`](TEST-RUN-LOGBOOK.md)
 
 ---
 
-## Helfer (APK)
+## Welcher Einstieg?
 
-| Schritt | Aktion |
-|--------|--------|
-| 1 | APK installieren, App öffnen |
-| 2 | **Basis-URL leer lassen** (Einstellungen → ggf. Eintrag löschen) |
-| 3 | **Einstellungen → Handoff importieren** → Boss-ZIP |
-| 4 | **Handoff übernehmen — weiter mit Mnemonic** (nicht „Import bestätigen“) |
-| 5 | Dialog **Seed einrichten?** → **QR scannen** (oder Mnemonic tippen) |
-| 6 | Optional: App-Passwort (8+ Zeichen) für späteres Entsperren |
-| 7 | **Nachrichten** → Chat → senden/empfangen (Sendepfad **Direkt-RPC**) |
-
-**Dauer Ziel:** ~2 Minuten nach ZIP auf dem Gerät.
+| Pfad | Wann | Handoff-ZIP? |
+|------|------|----------------|
+| **Solo (empfohlen für „wie Messenger“)** | Privat / IOTA-Messenger-Nähe | **Nein** — Seed + Lab-Testnet (RPC/Package/Mailbox) |
+| **Einsatz-Helfer** | Boss provisioniert | **Ja** — ZIP → Lokal vormerken → Seed |
+| **Boss auf APK** | Einsatzleitung auf dem Handy | Nein (eigenes Boss-Profil) |
 
 ---
 
-## Prüfen ob Standalone aktiv ist
+## Solo — Schrittfolge (4b ohne ZIP)
 
-- Dashboard: Karte „Schritt 2: Wallet aktivieren“ verschwindet nach Seed
-- Status: Hinweis „Standalone-APK aktiv — Direkt-RPC“
-- Einstellungen → System-Identität: Package-ID und Mailbox gefüllt
-- **Kein** „Ungültige API-Antwort“ beim Handoff
+1. APK installieren, App öffnen  
+2. **Basis-URL leer** (Einstellungen prüfen)  
+3. **Bevorzugt:** Tresor → **Neues Profil** → Solo/Privat + Seed + Passwort (≥8)  
+   - Drei-Karten-Erststart (`Boss` / `Einsatz` / `Solo`) kann auf dem Gerät **ausgegraut** sein — **nicht blockieren**; bypass über Neues Profil. Nach Tests UX fixen / für IOTA-Messenger weglassen (`docs/IOTA-MESSENGER-EDITION-V1.md`).  
+4. Karte **Netzwerk / Solo-Wizard** (falls sichtbar) → **Testnet-Vorlage laden** → Speichern  
+   - Sonst Puls/Einstellungen: RPC + Package-ID + Mailbox-ID (Lab-Defaults)  
+5. **Testnet-Gas** (Faucet) für die Wallet-Adresse — ohne Gas Send oft ohne Digest  
+6. App kalt neu starten → entsperren  
+7. **Nachrichten** → Online, Klartext → senden; Kopf **Direkt-RPC**
 
 ---
+
+## Einsatz-Helfer (nur wenn Boss-ZIP)
+
+1. APK, Basis-URL leer  
+2. Erststart → **Einsatz** *oder* Einstellungen → Handoff  
+3. ZIP → **Lokal vormerken (ohne Basis)** — nicht „Import bestätigen“  
+4. Seed (QR vom Boss oder tippen)  
+5. Nachrichten / Direkt-RPC  
+
+Details Boss-Export: `docs/GERAET-PROVISIONIEREN-WIZARD.md`
+
+---
+
+## Prüfen
+
+- Solo: Wizard weg nach Speichern; Absender-Adresse sichtbar  
+- Kein Dauerfehler „Basis/API“ bei leerer Basis-URL  
+- Chat-Kopf beim Send: **Direkt-RPC**, nicht „über Relay“
 
 ## Häufige Fehler
 
 | Symptom | Lösung |
 |---------|--------|
-| „Ungültige API-Antwort“ beim Import | **Handoff übernehmen**, nicht „Import bestätigen“; Basis-URL leer |
-| Kein Entsperren-Dialog | Handoff zuerst; dann Seed-Dialog (nicht alter Tresor-Dialog) |
-| Package-ID leer | Handoff erneut importieren; App neu starten |
-| Senden schlägt fehl | Seed eingerichtet? Fullnode im Handoff? Puls/Drain = an (automatisch nach Handoff) |
-| Boss-PC nötig? | **Nein** für Chat nach Setup — nur für Provisionierung |
-
----
-
-## Tests & Abnahme
-
-- Checkliste: `docs/STANDALONE-SMOKE-CHECKLIST.md`
-- Logbuch: `docs/TEST-RUN-LOGBOOK.md`
+| Keine Erststart-Karte | Alte App-Daten: App-Info → Speicher löschen, neu öffnen |
+| Send ohne Feedback / hängt | Testnet-Gas (Faucet); RPC erreichbar (Mobilfunk) |
+| „Ungültige API-Antwort“ (Einsatz) | Lokal vormerken, nicht Import bestätigen; Basis leer |
+| Package/Mailbox leer (Solo) | Testnet-Vorlage laden + Speichern |

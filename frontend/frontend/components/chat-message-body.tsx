@@ -206,9 +206,6 @@ function NftGateMessageBody(p: {
           >
             {busy ? 'Prüfe…' : hidden ? 'Mit NFT-Besitz anzeigen' : 'Mit NFT-Besitz entschlüsseln'}
           </button>
-          <button type="button" className="underline text-muted-foreground" onClick={p.onCopyRaw}>
-            {p.copiedRaw ? 'Wire kopiert' : 'Wire kopieren'}
-          </button>
         </div>
       )}
     </div>
@@ -510,9 +507,6 @@ function PassphraseMessageBody(p: {
               </code>
             ) : null}
             {vaultForgetButton}
-            <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={p.onCopyRaw}>
-              {p.copiedRaw ? 'Kopiert' : 'Wire kopieren'}
-            </button>
           </div>
           {keycards.length > 0 ? (
             <div className="flex flex-wrap items-center gap-2 pt-1">
@@ -571,16 +565,13 @@ function PassphraseMessageBody(p: {
               Wieder anzeigen
             </button>
             {vaultForgetButton}
-            <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={p.onCopyRaw}>
-              {p.copiedRaw ? 'Kopiert' : 'Wire kopieren'}
-            </button>
           </div>
         </>
       ) : (
         <>
           <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
             Passphrase nötig — ohne Key nur Ciphertext. Nach dem Entschlüsseln: kopieren, verbergen, Vault,
-            optional NFT-Schlüsselkarte.
+            optional NFT-Schlüsselkarte. Wire: Nachrichten-⋯ → PWMSG-Wire kopieren.
           </p>
           {keycardGateHint ? (
             <div className="space-y-1">
@@ -613,9 +604,6 @@ function PassphraseMessageBody(p: {
               className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-50"
             >
               {busy ? '…' : 'Entschlüsseln'}
-            </button>
-            <button type="button" className="text-xs font-medium text-primary hover:underline" onClick={p.onCopyRaw}>
-              {p.copiedRaw ? 'Kopiert' : 'Wire kopieren'}
             </button>
           </div>
         </>
@@ -1034,6 +1022,7 @@ export function ChatMessageBody({
   inboxMessages = [],
   selfMessage,
   onSarqNakWire,
+  hidePlainTextActions = false,
 }: {
   content: string
   /** Für LoRa Luma/Chroma-Zusammenführung (gleiche Inbox). */
@@ -1042,6 +1031,8 @@ export function ChatMessageBody({
   selfMessage?: Message
   /** Optional: S-ARQ NAK über Meshtastic (`MORG_NAK_V1`). */
   onSarqNakWire?: (wire: string) => void | Promise<void>
+  /** Chat-Blasen: kein „Text kopieren“ / „Vorlesen“ unter dem Text (⋯-Menü). */
+  hidePlainTextActions?: boolean
 }) {
   const raw = String(content ?? '')
   /** Anzeige: einmal voll normalisiert. Parser bekommen `raw` und probieren mehrere Varianten (JSON-Hülle, Slice ab `[[`, …). */
@@ -1174,12 +1165,15 @@ export function ChatMessageBody({
               Bild speichern
             </button>
           ) : null}
+          {!hidePlainTextActions && parsedImg.caption?.trim() ? (
+            <TextToSpeechButton text={parsedImg.caption.trim()} />
+          ) : null}
           <button
             type="button"
             onClick={() => void copyRaw()}
             className="rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs font-medium text-primary hover:underline"
           >
-            {copied === 'raw' ? 'Kopiert' : 'Wire kopieren'}
+            {copied === 'raw' ? 'Kopiert' : hidePlainTextActions ? 'Wire kopieren' : 'Text kopieren'}
           </button>
         </div>
       </div>
@@ -1197,13 +1191,18 @@ export function ChatMessageBody({
         {parsedAudio.caption ? (
           <p className="whitespace-pre-wrap break-words text-sm text-foreground">{parsedAudio.caption}</p>
         ) : null}
-        <button
-          type="button"
-          onClick={() => void copyRaw()}
-          className="text-xs font-medium text-primary hover:underline"
-        >
-          {copied === 'raw' ? 'Kopiert' : 'Wire kopieren'}
-        </button>
+        <div className="flex flex-wrap gap-3">
+          {!hidePlainTextActions && parsedAudio.caption?.trim() ? (
+            <TextToSpeechButton text={parsedAudio.caption.trim()} />
+          ) : null}
+          <button
+            type="button"
+            onClick={() => void copyRaw()}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            {copied === 'raw' ? 'Kopiert' : hidePlainTextActions ? 'Wire kopieren' : 'Text kopieren'}
+          </button>
+        </div>
       </div>
     )
   }
@@ -1231,27 +1230,29 @@ export function ChatMessageBody({
           >
             Datei speichern…
           </button>
-          <TextToSpeechButton text={speakText} />
+          {!hidePlainTextActions ? <TextToSpeechButton text={speakText} /> : null}
         </div>
         {parsedFile.caption ? (
           <p className="whitespace-pre-wrap break-words text-sm text-foreground">{parsedFile.caption}</p>
         ) : null}
-        <div className="flex flex-wrap gap-3 border-t border-border/60 pt-2">
-          <button
-            type="button"
-            onClick={() => void copyRaw()}
-            className="text-xs font-medium text-primary hover:underline"
-          >
-            {copied === 'raw' ? 'Kopiert' : 'Wire kopieren'}
-          </button>
-          <button
-            type="button"
-            onClick={() => void copyPlainTxt()}
-            className="text-xs font-medium text-primary hover:underline"
-          >
-            {copied === 'plain' ? 'Kopiert' : 'Inhalt kopieren'}
-          </button>
-        </div>
+        {!hidePlainTextActions ? (
+          <div className="flex flex-wrap gap-3 border-t border-border/60 pt-2">
+            <button
+              type="button"
+              onClick={() => void copyRaw()}
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              {copied === 'raw' ? 'Kopiert' : 'Text kopieren'}
+            </button>
+            <button
+              type="button"
+              onClick={() => void copyPlainTxt()}
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              {copied === 'plain' ? 'Kopiert' : 'Inhalt kopieren'}
+            </button>
+          </div>
+        ) : null}
       </div>
     )
   }
@@ -1267,23 +1268,25 @@ export function ChatMessageBody({
         {parsedTxt.caption ? (
           <p className="whitespace-pre-wrap break-words text-sm text-foreground">{parsedTxt.caption}</p>
         ) : null}
-        <div className="flex flex-wrap gap-3 border-t border-border/60 pt-2">
-          <TextToSpeechButton text={speakText} />
-          <button
-            type="button"
-            onClick={() => void copyRaw()}
-            className="text-xs font-medium text-primary hover:underline"
-          >
-            {copied === 'raw' ? 'Kopiert' : 'Wire kopieren'}
-          </button>
-          <button
-            type="button"
-            onClick={() => void copyPlainTxt()}
-            className="text-xs font-medium text-primary hover:underline"
-          >
-            {copied === 'plain' ? 'Kopiert' : 'Klartext kopieren'}
-          </button>
-        </div>
+        {!hidePlainTextActions ? (
+          <div className="flex flex-wrap gap-3 border-t border-border/60 pt-2">
+            <TextToSpeechButton text={speakText} />
+            <button
+              type="button"
+              onClick={() => void copyRaw()}
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              {copied === 'raw' ? 'Kopiert' : 'Text kopieren'}
+            </button>
+            <button
+              type="button"
+              onClick={() => void copyPlainTxt()}
+              className="text-xs font-medium text-primary hover:underline"
+            >
+              {copied === 'plain' ? 'Kopiert' : 'Klartext kopieren'}
+            </button>
+          </div>
+        ) : null}
       </div>
     )
   }
@@ -1324,14 +1327,20 @@ export function ChatMessageBody({
   const hasSarqSegMarker =
     raw.includes('MORG_SEG_V1:') || wire.includes('[[MORG_SEG_V1:')
   return (
-    <div className="space-y-2 rounded-lg border border-border/80 bg-muted/15 p-3">
-      {hasLoraMarker ? (
+    <div
+      className={
+        hidePlainTextActions
+          ? 'space-y-1'
+          : 'space-y-2 rounded-lg border border-border/80 bg-muted/15 p-3'
+      }
+    >
+      {!hidePlainTextActions && hasLoraMarker ? (
         <p className="text-xs text-amber-700 dark:text-amber-300/90">
           LoRa-Bild-Wire erkannt, Dekodierung fehlgeschlagen — Länge/Base64/Ende{' '}
           <span className="font-mono">]]</span> prüfen oder Nachricht unvollständig.
         </p>
       ) : null}
-      {hasCompactImgMarker ? (
+      {!hidePlainTextActions && hasCompactImgMarker ? (
         <p className="text-xs text-amber-700 dark:text-amber-300/90">
           {hasCompactImgPrefix ? (
             <>
@@ -1346,13 +1355,17 @@ export function ChatMessageBody({
           )}
         </p>
       ) : null}
-      {hasSarqSegMarker ? (
+      {!hidePlainTextActions && hasSarqSegMarker ? (
         <p className="text-xs text-amber-700 dark:text-amber-300/90">
           S-ARQ-Segment-Wire erkannt, aber nicht dekodierbar — Prüfung auf vollständiges <span className="font-mono">]]</span>
           , CRC und Länge. Sonst erscheint die S-ARQ-Kachel nur auf der <strong>Leit-Zeile</strong> der Session im Posteingang.
         </p>
       ) : null}
-      {!hasCompactImgMarker && !hasLoraMarker && !hasSarqSegMarker && looksLikeWire ? (
+      {!hidePlainTextActions &&
+      !hasCompactImgMarker &&
+      !hasLoraMarker &&
+      !hasSarqSegMarker &&
+      looksLikeWire ? (
         <p className="text-xs text-amber-700 dark:text-amber-300/90">
           Inhalt wirkt wie Roh-Wire oder Base64 – kein bekannter Marker (Bild/Text/Audio). Online-Bild:{' '}
           <span className="font-mono">[[MORG_COMPACT_IMG_V1:</span> … Funk LoRa:{' '}
@@ -1361,16 +1374,19 @@ export function ChatMessageBody({
         </p>
       ) : null}
       <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">{wire}</p>
-      <div className="flex flex-wrap gap-2">
-        {!looksLikeWire ? <TextToSpeechButton text={wire} /> : null}
-        <button
-          type="button"
-          onClick={() => void copyRaw()}
-          className="text-xs font-medium text-primary hover:underline"
-        >
-          {copied === 'raw' ? 'Kopiert' : 'Text kopieren'}
-        </button>
-      </div>
+      {!hidePlainTextActions ? (
+        <div className="flex flex-wrap gap-2">
+          {/* Vorlesen auch bei Wire-ähnlichem Text — Nutzer entscheidet; Button fehlt sonst bei langen Zeilen. */}
+          {wire.trim() ? <TextToSpeechButton text={wire} /> : null}
+          <button
+            type="button"
+            onClick={() => void copyRaw()}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            {copied === 'raw' ? 'Kopiert' : 'Text kopieren'}
+          </button>
+        </div>
+      ) : null}
     </div>
   )
 }

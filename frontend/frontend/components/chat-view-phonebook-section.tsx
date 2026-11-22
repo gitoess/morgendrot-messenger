@@ -37,6 +37,8 @@ import {
   recordContactLastContacted,
   toggleContactFavorite,
   writeContactNote,
+  writeContactPhone,
+  readContactPhones,
 } from '@/frontend/lib/contact-phonebook-meta-store'
 import {
   canManageTeamRoster,
@@ -191,6 +193,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
           }
           recordContactLastContacted(storageKey)
           writeContactNote(storageKey, values.note)
+          writeContactPhone(storageKey, values.phone)
           bumpMeta()
           refreshContactDirectory()
           const okMsg = r.message || 'Kontakt gespeichert.'
@@ -291,6 +294,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
               ...entry,
               label: entry.label ?? '',
               note: readContactNotes()[address] ?? '',
+              phone: readContactPhones()[address] ?? '',
               meshNodeId: entry.meshNodeId ?? '',
               telegramChatId: entry.telegramChatId ?? (address.startsWith('tg:') ? address.slice(3) : ''),
               roleTagsCsv: formatContactRoleTagsCsv(entry.roleTags),

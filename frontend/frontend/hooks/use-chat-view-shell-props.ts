@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import type { ChatViewChatHeaderProps } from '@/frontend/components/chat-view-chat-header'
 import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
 import type { OfflineStatusSnapshot } from '@/frontend/hooks/use-offline-status'
@@ -79,12 +79,19 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
     ]
   )
 
+  const refreshStatusAndInbox = useCallback(() => {
+    void connectionStatusRead.refreshApiStatus()
+    void import('@/frontend/lib/messenger-inbox-force-refresh').then((m) =>
+      m.requestMessengerInboxForceRefresh()
+    )
+  }, [connectionStatusRead.refreshApiStatus])
+
   const chatHeaderProps: ChatViewChatHeaderProps = useMemo(
     () => ({
       isPrivate: shellRouting.isPrivate,
       encrypted: sendTransportChoice.encrypted,
       apiStatus: connectionStatusRead.apiStatus,
-      onRefreshStatus: connectionStatusRead.refreshApiStatus,
+      onRefreshStatus: refreshStatusAndInbox,
       basisUnreachable: connectionStatusRead.basisUnreachable ?? false,
       statusCacheAgeMinutes: connectionStatusRead.statusCacheAgeMinutes,
       statusPollAttempted: connectionStatusRead.statusPollAttempted,
@@ -113,6 +120,7 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
       sendTransportChoice.encrypted,
       sendPathProps,
       inboxViewUi.inboxOverviewUnreadCounts?.lagebild,
+      refreshStatusAndInbox,
     ]
   )
 
@@ -120,10 +128,10 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
     () => ({
       pending: offlineMailboxQueueRead.pending,
       errorHint: offlineMailboxQueueRead.errorHint,
-      onManualRefresh: connectionStatusRead.refreshApiStatus,
+      onManualRefresh: refreshStatusAndInbox,
       alwaysVisible: true as const,
     }),
-    [offlineMailboxQueueRead.pending, offlineMailboxQueueRead.errorHint, connectionStatusRead.refreshApiStatus]
+    [offlineMailboxQueueRead.pending, offlineMailboxQueueRead.errorHint, refreshStatusAndInbox]
   )
 
   const packageIdBannerProps = useMemo(

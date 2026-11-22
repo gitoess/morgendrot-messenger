@@ -57,16 +57,13 @@ export function ChatViewMorgPkgImportsSheet(p: ChatViewMorgPkgImportsSheetProps)
             <Package className="h-5 w-5 text-primary" aria-hidden />
             Paket-Archiv
           </SheetTitle>
-          <SheetDescription>
-            Importierte .morg-pkg — Vorschau hier, Bilder und Texte per „Öffnen“ bzw. „Speichern“ als Datei (nicht
-            Composer).
+          <SheetDescription className="sr-only">
+            Importierte .morg-pkg nach Entschlüsselung (Browser-Session, nicht Tresor).
           </SheetDescription>
         </SheetHeader>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 space-y-4">
           {records.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Noch keine Pakete. Unter Posteingang → <strong className="text-foreground">Datei-Paket</strong> → Import.
-            </p>
+            <p className="text-sm text-muted-foreground">Noch keine Pakete.</p>
           ) : (
             records.map((rec) => {
               const senderLabel =

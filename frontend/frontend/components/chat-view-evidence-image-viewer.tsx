@@ -5,8 +5,11 @@
  * Posteingang-COMPACT_IMG ist ein anderer Kanal — erscheint hier nicht.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { ImageIcon, Loader2, RefreshCw } from 'lucide-react'
+import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
+import { readContactFavorites } from '@/frontend/lib/contact-phonebook-meta-store'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -19,7 +22,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { decryptEvidenceImageBytes } from '@/frontend/lib/evidence-image-crypto'
 import { mintEvidenceImageNft } from '@/frontend/lib/evidence-image-mint'
-import { sha256HexOfBytes } from '@/frontend/lib/sha256-bytes'
 import {
   burnEvidenceImageNft,
   transferEvidenceImageNft,
@@ -29,12 +31,10 @@ import {
   nftVaultTransferHint,
 } from '@/frontend/lib/nft-vault-handoff'
 import {
-  getNftSpendPolicy,
-  mintModeAttrs,
   nftSpendPolicyBadgeParts,
   syncNftSpendPolicyFromAttrs,
-  upsertNftSpendPolicy,
 } from '@/frontend/lib/nft-spend-policy-local-store'
+import { nftRoleBadgeLabels } from '@/frontend/lib/nft-role-badges'
 import {
   nftVaultHandoffToQrDataUrl,
   preferOfflineHandoffText,
@@ -91,9 +91,12 @@ import {
   type InboxWireImageRow,
 } from '@/frontend/lib/evidence-wire-inbox-images'
 import {
+  scanMailboxMessageObjectById,
   scanMailboxPlaintextForAddress,
   type MailboxPlainScanRow,
 } from '@/frontend/lib/evidence-mailbox-plain-scan'
+import { decryptPastedPassphraseWire } from '@/frontend/lib/wire-paste-import'
+import { isPassphraseMessageWire } from '@/frontend/lib/passphrase-message-crypto'
 import { getDirectMailboxChainSnapshot } from '@/frontend/lib/direct-iota-chain-context'
 import {
   getDefaultEvidencePassphrase,
@@ -106,12 +109,10 @@ import {
   listNftKeycards,
   lookupPassphraseForNftKeycard,
   normalizeNftKeycardSlotId,
-  removeNftKeycardSlot,
   unbindObjectFromNftKeycard,
   unbindWireFromNftKeycard,
   upsertNftKeycardSlot,
 } from '@/frontend/lib/nft-keycard-local-store'
-import { unpackNftKeycardDescriptionMarker } from '@/frontend/lib/nft-keycard-description-marker'
 import { checkNftKeycardOwnedBySigner } from '@/frontend/lib/nft-keycard-ownership'
 import {
   recordNftActivity,
@@ -172,18 +173,22 @@ function revokeAll(urls: string[]) {
 }
 
 const ALL_EVIDENCE_MODES: { id: Mode; label: string }[] = [
-  { id: 'wire', label: 'Wire' },
-  { id: 'mailbox', label: 'Klartext' },
-  { id: 'owner', label: 'Galerie' },
-  { id: 'object', label: 'Object-ID' },
+  /** Kompaktbilder (MORG_COMPACT_IMG) aus geladenem Posteingang — kein E2EE-Scanner. */
+  { id: 'wire', label: 'Posteingang-Bilder' },
+  { id: 'mailbox', label: 'Chain-Text' },
+  /** Intern: eigene Galerie — UI-Button „Eigene NFT anzeigen“, kein Such-Tab. */
+  { id: 'owner', label: 'Eigene NFT anzeigen' },
+  { id: 'object', label: 'NFT Suche' },
   { id: 'mint', label: 'Minten' },
-  { id: 'guthaben', label: 'Guthaben' },
-  { id: 'zeitkapsel', label: 'Zeitkapsel (Leserecht)' },
+  /** Wie Hauptmenü „Gesichert hinter NFT“ — anlegen + verwalten, nicht nur Erstellen. */
+  { id: 'guthaben', label: 'NFT gesichert' },
+  /** NFT zeitlich verleihen (Escrow / Zurückholen). Leserecht = Composer „NFT-Leserecht“. */
+  { id: 'zeitkapsel', label: 'Verleihen / Zurückholen' },
 ]
 
 /** Nur anschauen / suchen / laden — keine Mint-/Spend-Aktion. */
 const BROWSE_MODE_IDS: readonly Mode[] = ['wire', 'mailbox', 'owner', 'object']
-/** Aktives On-Chain-Handeln (Mint, Vault, Lease). */
+/** Aktives On-Chain-Handeln (Mint, Vault, Leihe). */
 const ACT_MODE_IDS: readonly Mode[] = ['mint', 'guthaben', 'zeitkapsel']
 
 /** Hauptmenü-Wallet: Galerie + getrennte Karten-Werkzeuge. */
@@ -192,13 +197,15 @@ export const NFT_WALLET_MODES: Mode[] = ['owner', 'object', 'mint', 'guthaben', 
 export function ChatViewEvidenceImageViewerButton(p?: {
   triggerClassName?: string
   triggerLabel?: string
+  /** Kein sichtbarer Trigger — Öffnen nur per openNonce (z. B. Optionen → Wire/Klartext). */
+  hideTrigger?: boolean
   /** Start-Tab beim Öffnen. */
   defaultMode?: Mode
   /** Beim Öffnen sofort eigene Wallet-NFTs laden (Besitzer-Tab). */
   autoLoadOwnOnOpen?: boolean
   /**
-   * Erlaubte Tabs. Default: alle (Posteingang On-Chain).
-   * Hauptmenü: `NFT_WALLET_MODES` (Besitzer / Object-ID / Minten).
+   * Erlaubte Tabs. Default: alle (Legacy).
+   * Posteingang Optionen: `['wire','mailbox']`. Hauptmenü-Wallet: `NFT_WALLET_MODES`.
    */
   allowedModes?: readonly Mode[]
   /** Erhöhen → Dialog öffnen (nutzt defaultMode). */
@@ -229,6 +236,18 @@ export function ChatViewEvidenceImageViewerButton(p?: {
       !p.allowedModes.includes('wire') &&
       !p.allowedModes.includes('mailbox')
   )
+  const wireKlartextOnly =
+    allowed.length > 0 &&
+    allowed.every((m) => m.id === 'wire' || m.id === 'mailbox')
+  const onlyWireBrowse = wireKlartextOnly && allowed.length === 1 && allowed[0]?.id === 'wire'
+  const onlyMailboxBrowse = wireKlartextOnly && allowed.length === 1 && allowed[0]?.id === 'mailbox'
+  const browseDialogTitle = onlyWireBrowse
+    ? 'Posteingang-Bilder'
+    : onlyMailboxBrowse
+      ? 'Chain-Text'
+      : wireKlartextOnly
+        ? 'Bilder & Klartext'
+        : null
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<Mode>(() => {
     const want = p?.defaultMode || (nftWalletUi ? 'owner' : 'object')
@@ -259,7 +278,6 @@ export function ChatViewEvidenceImageViewerButton(p?: {
   const [mintDesc, setMintDesc] = useState('')
   const [mintClassification, setMintClassification] = useState('evidence')
   const [mintContentType, setMintContentType] = useState('image/jpeg')
-  const [mintHashPreview, setMintHashPreview] = useState('')
   const [mintLocalPreviewUrl, setMintLocalPreviewUrl] = useState<string | null>(null)
   const [mintAttrs, setMintAttrs] = useState<EvidenceAttrPair[]>([])
   const [mintEncrypt, setMintEncrypt] = useState(true)
@@ -272,26 +290,53 @@ export function ChatViewEvidenceImageViewerButton(p?: {
   /** P2: Mint-Passphrase an Schlüsselkarte/Slot */
   const [mintKeycardOid, setMintKeycardOid] = useState('')
   const [mintKeycardSlot, setMintKeycardSlot] = useState('img')
-  /** Zweites Enc-NFT minten und an Partner senden (gleiche Passphrase — Komfort-Paar). */
-  const [mintPairTo, setMintPairTo] = useState('')
-  /** Optional: nach erstem Spend Capability entziehen (+ Burn). */
-  const [mintOneTimeUse, setMintOneTimeUse] = useState(false)
-  /** Optional: Offline-Index (QR/Mesh) vorbereiten. */
-  const [mintOfflineHandoff, setMintOfflineHandoff] = useState(false)
   /** Nach Mint: dieses NFT selbst als Schlüsselkarte speichern (Passphrase → Vault). */
   const [mintRememberAsKeycard, setMintRememberAsKeycard] = useState(true)
   const [lastMintObjectId, setLastMintObjectId] = useState('')
   const [gallerySlotId, setGallerySlotId] = useState('default')
-  const [galleryNewSlotId, setGalleryNewSlotId] = useState('img')
   const [keycardTick, setKeycardTick] = useState(0)
   /** Empfänger für ImageNFT-Transfer (Galerie). */
   const [transferToByOid, setTransferToByOid] = useState<Record<string, string>>({})
+  /** Passphrase pro NFT (mehrere PWs) — Entsperren nicht nur über globales Feld. */
+  const [unlockPassByOid, setUnlockPassByOid] = useState<Record<string, string>>({})
+  /** Lokaler Anzeigename/Notiz pro NFT (Schlüsselkarte.label). */
+  const [galleryLocalNoteByOid, setGalleryLocalNoteByOid] = useState<Record<string, string>>({})
+  const [lightbox, setLightbox] = useState<{ url: string; name: string } | null>(null)
+  /** Verhindert: Klick „Vollbild zu“ fällt durch und schließt den NFT-Dialog. */
+  const lightboxClickGuardRef = useRef(false)
+  const lightboxGuardTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [manualBindOid, setManualBindOid] = useState('')
+  const { directory: contactDirectory } = useContactDirectory()
+  const recipientSelectOptions = useMemo(() => {
+    const fav = readContactFavorites()
+    const byAddr = new Map<string, { address: string; label: string; favorite: boolean }>()
+    for (const [addr, entry] of Object.entries(contactDirectory)) {
+      const a = (addr || '').trim()
+      if (!/^0x[a-fA-F0-9]{64}$/i.test(a)) continue
+      const key = a.toLowerCase()
+      byAddr.set(key, {
+        address: a,
+        label: (entry?.label || '').trim() || `${a.slice(0, 10)}…`,
+        favorite: fav.has(key),
+      })
+    }
+    return Array.from(byAddr.values()).sort((a, b) => {
+      if (a.favorite !== b.favorite) return a.favorite ? -1 : 1
+      return a.label.localeCompare(b.label, 'de')
+    })
+  }, [contactDirectory])
   const [wireCandidates, setWireCandidates] = useState<InboxWireImageCandidate[]>([])
   const [wireRows, setWireRows] = useState<InboxWireImageRow[]>([])
   const [wireOffset, setWireOffset] = useState(0)
   const [mailboxIdInput, setMailboxIdInput] = useState('')
   const [mailboxAddrInput, setMailboxAddrInput] = useState('')
+  /** Chain-Text: Mailbox+Adresse vs. einzelnes Nachrichten-Objekt. */
+  const [mailboxScanKind, setMailboxScanKind] = useState<'mailbox-addr' | 'object'>('mailbox-addr')
+  const [mailboxObjectIdInput, setMailboxObjectIdInput] = useState('')
+  const [mailboxPwPassphrase, setMailboxPwPassphrase] = useState('')
+  const [mailboxPwPlainByKey, setMailboxPwPlainByKey] = useState<Record<string, string>>({})
+  const showZeitkapselReclaim =
+    allowed.some((m) => m.id === 'zeitkapsel') && !wireKlartextOnly
   const [mailboxPlainRows, setMailboxPlainRows] = useState<MailboxPlainScanRow[]>([])
   const [leaseCounts, setLeaseCounts] = useState({ open: 0, ready: 0 })
   const [globalRefreshing, setGlobalRefreshing] = useState(false)
@@ -328,7 +373,6 @@ export function ChatViewEvidenceImageViewerButton(p?: {
     setMintDigest('')
     setMintFile(null)
     setMintContentType('image/jpeg')
-    setMintHashPreview('')
     setMintAttrs([])
     setWireCandidates([])
     setWireRows([])
@@ -336,6 +380,10 @@ export function ChatViewEvidenceImageViewerButton(p?: {
     setMailboxPlainRows([])
     setMailboxIdInput('')
     setMailboxAddrInput('')
+    setMailboxScanKind('mailbox-addr')
+    setMailboxObjectIdInput('')
+    setMailboxPwPassphrase('')
+    setMailboxPwPlainByKey({})
   }, [clearSinglePreview, clearOwnerGallery])
 
   useEffect(() => {
@@ -349,7 +397,6 @@ export function ChatViewEvidenceImageViewerButton(p?: {
 
   useEffect(() => {
     if (!mintFile) {
-      setMintHashPreview('')
       setMintLocalPreviewUrl((prev) => {
         revokeIfObjectUrl(prev)
         return null
@@ -363,15 +410,6 @@ export function ChatViewEvidenceImageViewerButton(p?: {
       revokeIfObjectUrl(prev)
       return localUrl
     })
-    let cancelled = false
-    void (async () => {
-      const buf = new Uint8Array(await mintFile.arrayBuffer())
-      const hex = await sha256HexOfBytes(buf)
-      if (!cancelled) setMintHashPreview(hex)
-    })()
-    return () => {
-      cancelled = true
-    }
   }, [mintFile])
 
   const showDecrypted = useCallback(
@@ -436,19 +474,8 @@ export function ChatViewEvidenceImageViewerButton(p?: {
     }
   }, [pendingCipher, passphrase, pendingMatch, pendingName, pendingObjectId, showDecrypted])
 
-  const onLoadObject = useCallback(async () => {
-    const id = query.trim()
-    if (!isPlausibleIotaObjectId(id)) {
-      setError('Object-ID: 0x + 64 Hex.')
-      return
-    }
-    setBusy(true)
-    setError('')
-    setInfo('')
-    clearSinglePreview()
-    clearOwnerGallery()
-    try {
-      const r = await loadEvidenceImageFromObjectId(id)
+  const applyLoadedEvidenceObject = useCallback(
+    async (r: Awaited<ReturnType<typeof loadEvidenceImageFromObjectId>>) => {
       if (!r.ok) {
         if (r.needsPassphrase && r.ciphertext) {
           const remembered = lookupEvidencePassphrase({ objectId: r.objectId })
@@ -467,7 +494,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                 objectId: r.objectId,
               })
               setInfo('Mit lokal gemerkter Passphrase entschlüsselt.')
-              return
+              return true
             } catch {
               /* falsche lokale Passphrase → manuell */
             }
@@ -478,10 +505,9 @@ export function ChatViewEvidenceImageViewerButton(p?: {
           setPendingObjectId(r.objectId)
           setError('')
           setInfo('MORGIMGE1-Ciphertext — Passphrase vom Ersteller eingeben.')
-          return
+          return true
         }
-        setError(r.error)
-        return
+        return false
       }
       const descMeta = metaFromDescription(r.description)
       if (r.source === 'url' && r.displayUrl) {
@@ -496,11 +522,11 @@ export function ChatViewEvidenceImageViewerButton(p?: {
         setInfo(
           'URL-/IPFS-NFT (kein image_data). Vorschau über Bild-Gateway (Pinata); „Im Browser“ öffnet inbrowser.link. RPC-Netz muss zum Objekt passen (z. B. Testnet).'
         )
-        return
+        return true
       }
       if (!r.parsed) {
         setError('Objekt ohne Bilddaten und ohne URL.')
-        return
+        return true
       }
       showDecrypted(r.parsed.bytes, r.parsed.mime, {
         match: r.match,
@@ -514,10 +540,10 @@ export function ChatViewEvidenceImageViewerButton(p?: {
       if (r.parsed.encryptedFlag) {
         setInfo('Move-Flag encrypted=true, Bytes Klartext (Contract verschlüsselt nicht).')
       }
-    } finally {
-      setBusy(false)
-    }
-  }, [query, clearSinglePreview, clearOwnerGallery, showDecrypted, showExternalUrl])
+      return true
+    },
+    [showDecrypted, showExternalUrl]
+  )
 
   const onLoadOwnerPage = useCallback(
     async (opts?: { append?: boolean; cursor?: string | null; ownerOverride?: string }) => {
@@ -619,27 +645,16 @@ export function ChatViewEvidenceImageViewerButton(p?: {
           }
         }
         const totalShown = (opts?.append ? ownerItems.length : 0) + mapped.length
-        const urlN = mapped.filter((x) => x.source === 'url').length
-        const embN = mapped.filter((x) => x.source === 'embedded' || x.parsed).length
-        const lockedN = mapped.filter((x) => x.needsPassphrase).length
         setInfo(
-          `${mapped.length} Bild-NFT(s)` +
-            ` (Klartext/eingebettet ${embN}, URL/IPFS ${urlN}, verschlüsselt ${lockedN})` +
-            ` · gesamt ${opts?.append ? totalShown : mapped.length}` +
-            (unlocked ? ` · ${unlocked} auto-entschlüsselt (lokal gemerkt / Geräte-Standard)` : '') +
-            `. Filter: ImageNFT + SimpleNFT.` +
-            (receivedN > 0 ? `\n${receivedN} neu empfangen → Aktivität + Purse-Index wiederhergestellt.` : '') +
-            (r.rpcUrl ? ` RPC: ${r.rpcUrl}` : '') +
-            (r.networkNote ? `\n${r.networkNote}` : '') +
-            (lockedN
-              ? `\n${lockedN} noch gesperrt — Passphrase oben eingeben → „Alle entsperren & merken“.`
-              : '') +
-            (r.hasNextPage ? ' Weitere Seiten möglich.' : '')
+          `${opts?.append ? totalShown : mapped.length} NFT(s)` +
+            (unlocked ? ` · ${unlocked} auto-entsperrt` : '') +
+            (receivedN > 0 ? ` · ${receivedN} neu` : '') +
+            (r.hasNextPage ? ' · mehr ladbar' : '')
         )
         if (mapped.length === 0 && !opts?.append) {
           setError(
             (r.networkNote ? `${r.networkNote}\n` : '') +
-              'Keine passenden NFTs. Object-ID-Tab für andere Packages — oder RPC auf Testnet stellen (SimpleNFT-Demo).'
+              'Keine passenden NFTs. NFT Suche mit Object-ID für andere Packages — oder RPC auf Testnet stellen (SimpleNFT-Demo).'
           )
         } else if (r.networkNote && mapped.length > 0) {
           setError('')
@@ -650,6 +665,36 @@ export function ChatViewEvidenceImageViewerButton(p?: {
     },
     [query, ownerAddress, ownerItems.length, clearSinglePreview, clearOwnerGallery]
   )
+
+  /** Object-ID und Wallet-Adresse sind beide 0x+64 Hex — zuerst NFT, sonst Galerie. */
+  const onSearchNftOrWallet = useCallback(async () => {
+    const id = query.trim()
+    if (!isPlausibleIotaObjectId(id)) {
+      setError('Walletadresse oder Object-ID: 0x + 64 Hex.')
+      return
+    }
+    setBusy(true)
+    setError('')
+    setInfo('')
+    clearSinglePreview()
+    clearOwnerGallery()
+    let asNft = false
+    try {
+      const r = await loadEvidenceImageFromObjectId(id)
+      asNft = await applyLoadedEvidenceObject(r)
+    } finally {
+      if (asNft) setBusy(false)
+    }
+    if (asNft) return
+    setInfo('Kein ImageNFT unter dieser ID — lade als Wallet-Galerie…')
+    await onLoadOwnerPage({ append: false, ownerOverride: id })
+  }, [
+    query,
+    clearSinglePreview,
+    clearOwnerGallery,
+    applyLoadedEvidenceObject,
+    onLoadOwnerPage,
+  ])
 
   const onLoadWire = useCallback(
     async (opts?: { append?: boolean }) => {
@@ -704,10 +749,6 @@ export function ChatViewEvidenceImageViewerButton(p?: {
     setMintDigest('')
     try {
       const buf = new Uint8Array(await mintFile.arrayBuffer())
-      const modeAttrs = mintModeAttrs({
-        oneTimeUse: mintOneTimeUse,
-        offlineHandoff: mintOfflineHandoff,
-      })
       let r: Awaited<ReturnType<typeof mintEvidenceImageNft>> | null = null
       let okCount = 0
       for (let i = 0; i < count; i++) {
@@ -720,7 +761,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
           name,
           description: mintDesc,
           classification: mintClassification,
-          attrs: [...mintAttrs, ...modeAttrs],
+          attrs: mintAttrs,
           encrypt: mintEncrypt,
           ...(mintEncrypt && mintKeycardOid
             ? {
@@ -764,14 +805,6 @@ export function ChatViewEvidenceImageViewerButton(p?: {
         if (okCount === 0) return
         setInfo(`${okCount} von ${count} gemintet — siehe Fehler oben.`)
         return
-      }
-      if (r.objectId && (mintOneTimeUse || mintOfflineHandoff)) {
-        upsertNftSpendPolicy({
-          nftObjectId: r.objectId,
-          oneTimeUse: mintOneTimeUse,
-          burnAfterSpend: mintOneTimeUse,
-          offlineHandoff: mintOfflineHandoff,
-        })
       }
       if (r.passphrase) {
         rememberEvidencePassphrase({
@@ -848,53 +881,14 @@ export function ChatViewEvidenceImageViewerButton(p?: {
           : ''
       const oidNote = r.objectId ? ` Object-ID: ${r.objectId.slice(0, 12)}…` : ''
       const batchNote = okCount > 1 ? ` Serie: ${okCount} NFTs.` : ''
-      let pairNote = ''
-      const pairTo = mintPairTo.trim()
-      if (count > 1 && pairTo) {
-        pairNote = ' Paar-Mint nur bei Anzahl 1 — übersprungen.'
-      } else if (mintEncrypt && r.passphrase && pairTo && isPlausibleIotaObjectId(pairTo)) {
-        const r2 = await mintEvidenceImageNft({
-          plainBytes: buf,
-          contentType: mintContentType.trim() || mintFile.type || 'image/png',
-          name: `${mintName} (Partner)`,
-          description: mintDesc,
-          classification: mintClassification,
-          attrs: mintAttrs,
-          encrypt: true,
-          passphrase: r.passphrase,
-        })
-        if (r2.ok && r2.objectId) {
-          recordNftActivity({
-            kind: 'mint',
-            objectId: r2.objectId,
-            digest: r2.digest,
-            label: `${mintName.trim() || 'NFT'} (Partner)`,
-          })
-          const sent = await transferEvidenceImageNft({
-            objectId: r2.objectId,
-            recipientAddress: pairTo,
-          })
-          pairNote = sent.ok
-            ? ` Paar: 2. NFT an ${pairTo.slice(0, 10)}… gesendet (gleiche Passphrase — Komfort, kein starkes Gate).`
-            : ` Paar: 2. Mint ok, Transfer fehlgeschlagen: ${sent.error}`
-        } else if (!r2.ok) {
-          pairNote = ` Paar-Mint fehlgeschlagen: ${r2.error}`
-        }
-      } else if (mintEncrypt && pairTo && !isPlausibleIotaObjectId(pairTo)) {
-        pairNote = ' Paar: Partner-Adresse ungültig (0x + 64 Hex) — übersprungen.'
-      }
-      const modeNote =
-        mintOneTimeUse || mintOfflineHandoff
-          ? ` Modi:${mintOneTimeUse ? ' One-Time' : ''}${mintOfflineHandoff ? ' Offline-Index' : ''} (Attrs on-chain).`
-          : ''
       if (r.passphrase) {
         setSharePassphrase(r.passphrase)
         setInfo(
-          `Mint OK (${r.onChainBytes} B on-chain).${batchNote}${resizeNote}${oidNote}${modeNote}${keycardNote}${pairNote} Passphrase unten kopieren und separat teilen — für dich auf diesem Gerät im Vault gemerkt.`
+          `Mint OK (${r.onChainBytes} B on-chain).${batchNote}${resizeNote}${oidNote}${keycardNote} Passphrase unten kopieren und separat teilen — für dich auf diesem Gerät im Vault gemerkt.`
         )
       } else {
         setInfo(
-          `Mint OK (Klartext on-chain, ${r.onChainBytes} B).${batchNote}${resizeNote}${oidNote}${modeNote} Digest: ${r.digest}`
+          `Mint OK (Klartext on-chain, ${r.onChainBytes} B).${batchNote}${resizeNote}${oidNote} Digest: ${r.digest}`
         )
       }
     } finally {
@@ -911,10 +905,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
     mintEncrypt,
     mintKeycardOid,
     mintKeycardSlot,
-    mintOneTimeUse,
-    mintOfflineHandoff,
     mintRememberAsKeycard,
-    mintPairTo,
     onLoadOwnerPage,
     showDecrypted,
   ])
@@ -924,42 +915,55 @@ export function ChatViewEvidenceImageViewerButton(p?: {
     setError('')
     setInfo('')
     setMailboxPlainRows([])
+    setMailboxPwPlainByKey({})
     clearSinglePreview()
     clearOwnerGallery()
     try {
       const snap = getDirectMailboxChainSnapshot()
-      const r = await scanMailboxPlaintextForAddress({
-        mailboxObjectId: mailboxIdInput.trim() || snap?.mailboxId,
-        packageId: snap?.packageId,
-        address: mailboxAddrInput.trim() || getDirectIotaSessionSignerAddress() || '',
-      })
+      const r =
+        mailboxScanKind === 'object'
+          ? await scanMailboxMessageObjectById({ objectId: mailboxObjectIdInput })
+          : await scanMailboxPlaintextForAddress({
+              mailboxObjectId: mailboxIdInput.trim() || snap?.mailboxId,
+              packageId: snap?.packageId,
+              address: mailboxAddrInput.trim() || getDirectIotaSessionSignerAddress() || '',
+            })
       if (!r.ok) {
         setError(r.error)
         return
       }
       setMailboxPlainRows(r.rows)
+      const plainN = r.rows.filter((x) => !x.encrypted).length
+      const encN = r.encryptedDfCount || r.rows.filter((x) => x.encrypted).length
       if (r.rows.length) {
         setInfo(
-          `${r.rows.length} Klartext · DF ${r.dfCount} · Events ${r.eventCount}` +
+          `${plainN} Klartext · ${encN} Enc · DF ${r.dfCount} · Events ${r.eventCount}` +
             (r.mailboxObjectId.startsWith('0x') ? ` · MB ${r.mailboxObjectId.slice(0, 10)}…` : '') +
             (r.hint ? `\n${r.hint}` : '')
         )
       } else {
-        setError(r.hint || 'Kein Klartext gefunden.')
+        setError(r.hint || 'Nichts gefunden.')
         setInfo('')
       }
     } finally {
       setBusy(false)
     }
-  }, [mailboxIdInput, mailboxAddrInput, clearSinglePreview, clearOwnerGallery])
+  }, [
+    mailboxScanKind,
+    mailboxObjectIdInput,
+    mailboxIdInput,
+    mailboxAddrInput,
+    clearSinglePreview,
+    clearOwnerGallery,
+  ])
 
   const onPrimary = useCallback(() => {
-    if (mode === 'object') void onLoadObject()
+    if (mode === 'object') void onSearchNftOrWallet()
     else if (mode === 'owner') void onLoadOwnerPage({ append: false })
     else if (mode === 'wire') void onLoadWire({ append: false })
     else if (mode === 'mailbox') void onScanMailboxPlain()
     else void onMint()
-  }, [mode, onLoadObject, onLoadOwnerPage, onLoadWire, onScanMailboxPlain, onMint])
+  }, [mode, onSearchNftOrWallet, onLoadOwnerPage, onLoadWire, onScanMailboxPlain, onMint])
 
   useEffect(() => {
     const syncLeases = () => {
@@ -993,7 +997,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
         const addr = (ownerAddress || query || getDirectIotaSessionSignerAddress() || '').trim()
         if (addr) await onLoadOwnerPage({ append: false, ownerOverride: addr })
       } else if (mode === 'object' && query.trim()) {
-        await onLoadObject()
+        await onSearchNftOrWallet()
       } else if (mode === 'wire') {
         await onLoadWire({ append: false })
       } else if (mode === 'mailbox') {
@@ -1001,7 +1005,24 @@ export function ChatViewEvidenceImageViewerButton(p?: {
       } else if (mode === 'guthaben' || mode === 'zeitkapsel') {
         const addr = getDirectIotaSessionSignerAddress()
         if (addr) {
-          setInfo('Vault-/Lease-Index aktualisiert. Galerie optional über „Eigene NFT“.')
+          try {
+            const { syncDiscoveredNftTimeLeasesIntoLocalIndex } = await import(
+              '@/frontend/lib/nft-time-lease-discover-onchain'
+            )
+            const lr = await syncDiscoveredNftTimeLeasesIntoLocalIndex()
+            setLeaseCounts(countOpenNftTimeLeases())
+            if (lr.ok) {
+              setInfo(
+                lr.found > 0
+                  ? `Vault-/Lease-Index: ${lr.active} offene Leihe(n) von Chain.`
+                  : 'Vault-/Lease-Index aktualisiert. Galerie optional über „Eigene NFT“.'
+              )
+            } else {
+              setInfo('Vault-Index aktualisiert. Lease-Scan: ' + lr.error)
+            }
+          } catch {
+            setInfo('Vault-/Lease-Index aktualisiert. Galerie optional über „Eigene NFT“.')
+          }
         }
       }
       setInfo((prev) => prev || 'Aktualisiert.')
@@ -1013,7 +1034,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
     ownerAddress,
     query,
     onLoadOwnerPage,
-    onLoadObject,
+    onSearchNftOrWallet,
     onLoadWire,
     onScanMailboxPlain,
   ])
@@ -1025,8 +1046,10 @@ export function ChatViewEvidenceImageViewerButton(p?: {
       setError('Kein Session-Signer — Tresor entsperren.')
       return
     }
-    /** Erneuter Klick bei bereits geladener eigener Galerie → ausblenden. */
-    if (ownerAddress && addr.toLowerCase() === ownerAddress.toLowerCase()) {
+    const alreadyOwn =
+      Boolean(ownerAddress) && addr.toLowerCase() === ownerAddress.toLowerCase()
+    /** Nur im Galerie-Tab ausblenden — nicht, wenn Guthaben/Zeitkapsel die Galerie still geladen hat. */
+    if (mode === 'owner' && alreadyOwn) {
       clearOwnerGallery()
       clearSinglePreview()
       setError('')
@@ -1034,13 +1057,24 @@ export function ChatViewEvidenceImageViewerButton(p?: {
       return
     }
     setMode('owner')
-    setQuery(addr)
     setError('')
     setInfo('')
     setMailboxPlainRows([])
     setWireRows([])
+    if (alreadyOwn && ownerItems.length > 0) {
+      setQuery(addr)
+      return
+    }
+    setQuery(addr)
     void onLoadOwnerPage({ append: false, ownerOverride: addr })
-  }, [onLoadOwnerPage, ownerAddress, clearOwnerGallery, clearSinglePreview])
+  }, [
+    mode,
+    onLoadOwnerPage,
+    ownerAddress,
+    ownerItems.length,
+    clearOwnerGallery,
+    clearSinglePreview,
+  ])
 
   useEffect(() => {
     if (!p?.openNonce || p.openNonce < 1) return
@@ -1075,7 +1109,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
       setOpen(true)
       p?.onOpenChange?.(true)
       setError('')
-      setInfo(`Zeitkapsel: NFT ${oid.slice(0, 10)}… vorausgewählt — Leihe starten.`)
+      setInfo(`Verleihen: NFT ${oid.slice(0, 10)}… vorausgewählt — Leihe starten.`)
     }
     window.addEventListener(OPEN_ZEITKAPSEL_LEASE_EVENT, onOpenLease)
     return () => window.removeEventListener(OPEN_ZEITKAPSEL_LEASE_EVENT, onOpenLease)
@@ -1090,13 +1124,48 @@ export function ChatViewEvidenceImageViewerButton(p?: {
     void onLoadOwnerPage({ append: false, ownerOverride: me })
   }, [mode, ownerItems.length, busy, onLoadOwnerPage])
 
+  const dismissLightbox = useCallback(() => {
+    lightboxClickGuardRef.current = true
+    if (lightboxGuardTimerRef.current) clearTimeout(lightboxGuardTimerRef.current)
+    setLightbox(null)
+    lightboxGuardTimerRef.current = setTimeout(() => {
+      lightboxClickGuardRef.current = false
+      lightboxGuardTimerRef.current = null
+    }, 400)
+  }, [])
+
+  /** Escape schließt nur Vollbild — nicht den NFT-Dialog (sonst Flackern). */
+  useEffect(() => {
+    if (!lightbox) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      dismissLightbox()
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [lightbox, dismissLightbox])
+
+  useEffect(() => {
+    return () => {
+      if (lightboxGuardTimerRef.current) clearTimeout(lightboxGuardTimerRef.current)
+    }
+  }, [])
+
   return (
+    <>
     <Dialog
       open={open}
       onOpenChange={(v) => {
+        if (!v && (lightbox || lightboxClickGuardRef.current)) {
+          dismissLightbox()
+          return
+        }
         setOpen(v)
         p?.onOpenChange?.(v)
         if (!v) {
+          setLightbox(null)
           /** Kein resetAll während Close-Animation (Flackern). Cleanup erst lange nach Exit. */
           if (closeResetTimerRef.current) clearTimeout(closeResetTimerRef.current)
           closeResetTimerRef.current = setTimeout(() => {
@@ -1126,34 +1195,49 @@ export function ChatViewEvidenceImageViewerButton(p?: {
       }}
     >
       {/* Kein DialogTrigger: kontrolliertes open + Trigger toggelt sonst beim X neu auf (Flackern). */}
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className={
-          p?.triggerClassName ||
-          'w-full justify-start rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent'
-        }
-        onClick={() => {
-          setOpen(true)
-          p?.onOpenChange?.(true)
-        }}
-      >
-        <ImageIcon className="mr-2 h-4 w-4 shrink-0" />
-        {p?.triggerLabel ?? 'On-Chain Bild / NFT'}
-      </Button>
+      {p?.hideTrigger ? null : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={
+            p?.triggerClassName ||
+            'w-full justify-start rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent'
+          }
+          onClick={() => {
+            setOpen(true)
+            p?.onOpenChange?.(true)
+          }}
+        >
+          <ImageIcon className="mr-2 h-4 w-4 shrink-0" />
+          {p?.triggerLabel ?? (browseDialogTitle || 'On-Chain Bild / NFT')}
+        </Button>
+      )}
       <DialogContent
         showCloseButton={false}
         className="flex max-h-[90vh] max-w-lg flex-col overflow-hidden p-0 sm:max-w-lg"
       >
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border/60 px-6 pb-3 pt-6">
           <DialogHeader className="flex-1 text-left">
-            <DialogTitle>{nftWalletUi ? 'NFT & Schlüsselkarte' : 'On-Chain / NFT'}</DialogTitle>
-            <DialogDescription>
+            <DialogTitle>
               {nftWalletUi
-                ? `Oben nur ansehen (Galerie / Object-ID) · unten handeln (Minten / Guthaben / Zeitkapsel). Cap ${Math.round(EVIDENCE_IMAGE_MAX_RAW_BYTES / 1024)} KB.`
-                : `Zwei Bereiche: Schauen/suchen (Wire, Klartext, Galerie) vs. Handeln (Minten, Guthaben, Zeitkapsel). Cap ${Math.round(EVIDENCE_IMAGE_MAX_RAW_BYTES / 1024)} KB.`}
-            </DialogDescription>
+                ? 'NFT & Schlüsselkarte'
+                : browseDialogTitle || 'On-Chain / NFT'}
+            </DialogTitle>
+            {onlyWireBrowse ? (
+              <DialogDescription className="sr-only">Posteingang-Bilder</DialogDescription>
+            ) : onlyMailboxBrowse ? (
+              <DialogDescription className="sr-only">Chain-Text</DialogDescription>
+            ) : wireKlartextOnly ? (
+              <DialogDescription className="sr-only">Bilder und Klartext</DialogDescription>
+            ) : !nftWalletUi ? (
+              <DialogDescription className="sr-only">On-Chain / NFT</DialogDescription>
+            ) : (
+              <DialogDescription className="sr-only">
+                Galerie per Wallet-Adresse oder einzelnes NFT per Object-ID; darunter Minten, Guthaben,
+                Verleihen.
+              </DialogDescription>
+            )}
           </DialogHeader>
           <Button
             type="button"
@@ -1174,53 +1258,65 @@ export function ChatViewEvidenceImageViewerButton(p?: {
             Schließen
           </Button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6">
-        <div className="sticky top-0 z-10 -mx-1 flex flex-wrap items-center gap-2 border-b border-border/60 bg-background/95 px-1 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-8 text-[11px]"
-            disabled={busy || globalRefreshing}
-            title="Aktuellen Bereich + Purse-Summen + Lease-Index neu laden"
-            onClick={() => void onRefreshEverything()}
-          >
-            <RefreshCw
-              className={`mr-1.5 h-3.5 w-3.5 ${globalRefreshing || busy ? 'animate-spin' : ''}`}
-              aria-hidden
-            />
-            Aktualisieren
-          </Button>
-          {leaseCounts.open > 0 ? (
+        <div className="flex min-h-0 flex-1 flex-col px-6 pb-6">
+        <div className="shrink-0 space-y-2 border-b border-border/60 bg-background pb-2 pt-1">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               size="sm"
-              variant={mode === 'zeitkapsel' ? 'default' : 'secondary'}
+              variant="outline"
               className="h-8 text-[11px]"
-              title="Offene Verleihungen — Reclaim im Zeitkapsel-Tab"
-              onClick={() => {
-                setMode('zeitkapsel')
-                setError('')
-                setInfo(
-                  leaseCounts.ready > 0
-                    ? `${leaseCounts.ready} Reclaim(s) bereit — oben in der Liste.`
-                    : `${leaseCounts.open} offene Leihe(n) — Countdown abwarten oder Borrower „Früh zurück“.`
-                )
-              }}
+              disabled={busy || globalRefreshing}
+              title="Aktuellen Bereich + Purse-Summen + Lease-Index neu laden"
+              onClick={() => void onRefreshEverything()}
             >
-              Reclaim{leaseCounts.ready > 0 ? ` (${leaseCounts.ready})` : ` · ${leaseCounts.open}`}
+              <RefreshCw
+                className={`mr-1.5 h-3.5 w-3.5 ${globalRefreshing || busy ? 'animate-spin' : ''}`}
+                aria-hidden
+              />
+              Aktualisieren
             </Button>
-          ) : null}
-        </div>
-        <div className="space-y-3">
+            {showZeitkapselReclaim ? (
+              <Button
+                type="button"
+                size="sm"
+                variant={mode === 'zeitkapsel' ? 'default' : 'outline'}
+                className="h-8 min-w-[7.5rem] text-[11px]"
+                disabled={leaseCounts.open === 0}
+                title={
+                  leaseCounts.open === 0
+                    ? 'Keine offene Leihe'
+                    : 'Offene Verleihungen — Zurückholen unter Verleihen'
+                }
+                onClick={() => {
+                  setMode('zeitkapsel')
+                  setError('')
+                  setInfo(
+                    leaseCounts.ready > 0
+                      ? `${leaseCounts.ready} bereit zum Zurückholen — Liste oben unter Verleihen.`
+                      : `${leaseCounts.open} offene Leihe(n) — Countdown abwarten oder Entleiher gibt vorzeitig zurück.`
+                  )
+                }}
+              >
+                {leaseCounts.open === 0
+                  ? 'Zurückholen'
+                  : leaseCounts.ready > 0
+                    ? `Zurückholen (${leaseCounts.ready})`
+                    : `Zurückholen · ${leaseCounts.open}`}
+              </Button>
+            ) : null}
+          </div>
           {(() => {
             const switchMode = (id: Mode) => {
               setMode(id)
               setError('')
               setInfo('')
               clearSinglePreview()
-              /* Galerie behalten, wenn man zu Guthaben/Zeitkapsel wechselt (Auswahlhilfe). */
-              if (id !== 'guthaben' && id !== 'zeitkapsel') {
+              /**
+               * Galerie behalten beim Wechsel innerhalb Wallet-Tabs (sonst springt der Dialog,
+               * weil der Inhalt schrumpft). Nur Wire/Klartext leeren die Galerie.
+               */
+              if (id === 'wire' || id === 'mailbox') {
                 clearOwnerGallery()
               }
               setWireRows([])
@@ -1231,39 +1327,66 @@ export function ChatViewEvidenceImageViewerButton(p?: {
             const browseTabs = allowed.filter((m) => BROWSE_MODE_IDS.includes(m.id))
             const actTabs = allowed.filter((m) => ACT_MODE_IDS.includes(m.id))
             const showGroups = browseTabs.length > 0 && actTabs.length > 0
-            const renderTabs = (tabs: typeof allowed) => (
-              <div className="flex flex-wrap gap-2">
-                {tabs.map(({ id, label }) => (
+            const renderTabs = (tabs: typeof allowed, opts?: { ownFirst?: boolean }) => (
+              <div className="flex min-h-9 flex-wrap items-center gap-2">
+                {opts?.ownFirst && tabs.some((t) => t.id === 'owner') ? (
                   <Button
-                    key={id}
                     type="button"
                     size="sm"
-                    variant={mode === id ? 'default' : 'outline'}
-                    onClick={() => switchMode(id)}
+                    className="h-8"
+                    variant={mode === 'owner' ? 'default' : 'outline'}
+                    disabled={busy}
+                    title="Eigene NFT laden / anzeigen"
+                    onClick={() => void loadOwnWalletGallery()}
                   >
-                    {label}
+                    {busy && mode === 'owner' ? (
+                      <>
+                        <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        Laden…
+                      </>
+                    ) : (
+                      'Eigene NFT anzeigen'
+                    )}
                   </Button>
-                ))}
+                ) : null}
+                {tabs
+                  .filter((t) => !(opts?.ownFirst && t.id === 'owner'))
+                  .map(({ id, label }) => (
+                    <Button
+                      key={id}
+                      type="button"
+                      size="sm"
+                      className="h-8"
+                      variant={mode === id ? 'default' : 'outline'}
+                      onClick={() => switchMode(id)}
+                    >
+                      {label}
+                    </Button>
+                  ))}
               </div>
             )
             if (!showGroups) {
-              return renderTabs(allowed)
+              return renderTabs(allowed, { ownFirst: true })
             }
             return (
               <div className="space-y-2">
                 <div
                   className={`space-y-1 rounded-md p-2 ${
-                    BROWSE_MODE_IDS.includes(mode) ? 'bg-muted/40 ring-1 ring-border/60' : 'opacity-90'
+                    BROWSE_MODE_IDS.includes(mode)
+                      ? 'bg-muted/40 ring-1 ring-border/60'
+                      : 'opacity-90'
                   }`}
                 >
                   <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                     1 · Schauen / suchen
                   </p>
-                  {renderTabs(browseTabs)}
+                  {renderTabs(browseTabs, { ownFirst: true })}
                 </div>
                 <div
                   className={`space-y-1 rounded-md border-t border-border/50 p-2 pt-2 ${
-                    ACT_MODE_IDS.includes(mode) ? 'bg-muted/40 ring-1 ring-border/60' : 'opacity-90'
+                    ACT_MODE_IDS.includes(mode)
+                      ? 'bg-muted/40 ring-1 ring-border/60'
+                      : 'opacity-90'
                   }`}
                 >
                   <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -1274,7 +1397,9 @@ export function ChatViewEvidenceImageViewerButton(p?: {
               </div>
             )
           })()}
+        </div>
 
+        <div className="min-h-[min(52vh,28rem)] flex-1 overflow-y-auto pt-3">
           {mode === 'guthaben' || mode === 'zeitkapsel' ? (
             <NftCardToolsSection
               tool={mode}
@@ -1282,16 +1407,17 @@ export function ChatViewEvidenceImageViewerButton(p?: {
               preferredObjectId={leasePreferredOid || p?.preferredObjectId}
               extraOptions={ownerItems.map((it) => ({
                 objectId: it.objectId,
-                label: `${it.name || 'NFT'} · ${it.objectId.slice(0, 10)}…`,
+                label: it.name || 'NFT',
                 previewUrl: it.previewUrl,
               }))}
             />
           ) : mode === 'wire' ? (
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">Nur schauen</span> — MORG_COMPACT_IMG aus dem{' '}
-                <strong className="text-foreground">aktuell geladenen</strong> Posteingang. Kein Mint, keine
-                Schlüsselkarte hier. Nicht über fremde Adresse abrufbar.
+                <span className="font-medium text-foreground">Kompaktbilder</span> aus dem{' '}
+                <strong className="text-foreground">aktuell geladenen</strong> Posteingang (MORG_COMPACT_IMG).
+                Kein E2EE-Entschlüsseln, kein Mint — nur Anzeigen. Filter „Verschlüsselt“ in der Liste ist etwas
+                anderes.
               </p>
               <Button type="button" onClick={onPrimary} disabled={busy}>
                 {busy ? (
@@ -1300,73 +1426,105 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                     Laden…
                   </>
                 ) : (
-                  `Wire-Bilder laden (max. ${EVIDENCE_IMAGE_OWNER_PAGE_SIZE})`
+                  `Bilder laden (max. ${EVIDENCE_IMAGE_OWNER_PAGE_SIZE})`
                 )}
               </Button>
             </div>
           ) : mode === 'mailbox' ? (
             <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">Nur suchen/anschauen</span> — scannt{' '}
-                <strong className="text-foreground">Mailbox-DFs</strong> und{' '}
-                <strong className="text-foreground">Chain-Events</strong> (Klartext). Default-Sendepfad „Event“ legt
-                oft nur Events an — ohne „Anker/Mailbox“ keine PlainMsgKey-DFs. Kein E2EE, kein Mint.
-              </p>
-              <div className="space-y-1.5">
-                <Label htmlFor="mb-scan-id">MAILBOX_ID (optional, für DFs)</Label>
-                <Input
-                  id="mb-scan-id"
-                  value={mailboxIdInput}
-                  onChange={(e) => setMailboxIdInput(e.target.value)}
-                  placeholder="leer = Snapshot; leer+ohne Snapshot = nur Events"
-                  spellCheck={false}
-                />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={mailboxScanKind === 'mailbox-addr' ? 'default' : 'outline'}
+                  className="h-8"
+                  onClick={() => setMailboxScanKind('mailbox-addr')}
+                >
+                  Mailbox / Adresse
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={mailboxScanKind === 'object' ? 'default' : 'outline'}
+                  className="h-8"
+                  onClick={() => setMailboxScanKind('object')}
+                >
+                  Object-ID
+                </Button>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="mb-scan-addr">Adresse Sender/Empfänger (optional)</Label>
-                <Input
-                  id="mb-scan-addr"
-                  value={mailboxAddrInput}
-                  onChange={(e) => setMailboxAddrInput(e.target.value)}
-                  placeholder="leer = eigene Session, sonst 0x…"
-                  spellCheck={false}
-                />
-              </div>
+              {mailboxScanKind === 'mailbox-addr' ? (
+                <>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="mb-scan-id">Mailbox</Label>
+                    <Input
+                      id="mb-scan-id"
+                      value={mailboxIdInput}
+                      onChange={(e) => setMailboxIdInput(e.target.value)}
+                      placeholder="0x… Mailbox (leer = Snapshot)"
+                      spellCheck={false}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="mb-scan-addr">Adresse</Label>
+                    <Input
+                      id="mb-scan-addr"
+                      value={mailboxAddrInput}
+                      onChange={(e) => setMailboxAddrInput(e.target.value)}
+                      placeholder="0x… (leer = eigene Session)"
+                      spellCheck={false}
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label htmlFor="mb-scan-oid">Object-ID</Label>
+                  <Input
+                    id="mb-scan-oid"
+                    value={mailboxObjectIdInput}
+                    onChange={(e) => setMailboxObjectIdInput(e.target.value)}
+                    placeholder="0x… PlainMsgKey / MsgKey"
+                    spellCheck={false}
+                  />
+                </div>
+              )}
               <Button type="button" onClick={() => void onScanMailboxPlain()} disabled={busy}>
                 {busy ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Scannen…
                   </>
+                ) : mailboxScanKind === 'object' ? (
+                  'Objekt laden'
                 ) : (
-                  'Klartext scannen'
+                  'Scannen'
                 )}
               </Button>
+              <div className="space-y-1.5">
+                <Label htmlFor="mb-scan-pw">Passphrase (nur PWMSG)</Label>
+                <Input
+                  id="mb-scan-pw"
+                  type="password"
+                  value={mailboxPwPassphrase}
+                  onChange={(e) => setMailboxPwPassphrase(e.target.value)}
+                  placeholder="wenn Wire MORG_PWMSG_V1 ist"
+                  autoComplete="off"
+                />
+              </div>
             </div>
+          ) : mode === 'owner' ? (
+            ownerAddress ? (
+              <p className="text-[10px] text-muted-foreground break-all">
+                Angezeigt für: {ownerAddress}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Oben „Eigene NFT anzeigen“ — oder unter NFT Suche eine Walletadresse / Object-ID laden.
+              </p>
+            )
           ) : mode !== 'mint' ? (
             <>
-              {mode === 'owner' ? (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={() => void loadOwnWalletGallery()}
-                >
-                  {busy ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Laden…
-                    </>
-                  ) : ownerAddress &&
-                    getDirectIotaSessionSignerAddress()?.toLowerCase() === ownerAddress.toLowerCase() ? (
-                    'Eigene NFT ausblenden'
-                  ) : (
-                    'Eigene NFT anzeigen'
-                  )}
-                </Button>
-              ) : null}
               <div className="space-y-1.5">
-                <Label htmlFor="evidence-query">{mode === 'object' ? 'Object-ID' : 'Besitzer-Adresse'}</Label>
+                <Label htmlFor="evidence-query">Walletadresse oder Object-ID</Label>
                 <Input
                   id="evidence-query"
                   value={query}
@@ -1378,6 +1536,40 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                     if (e.key === 'Enter' && !busy) onPrimary()
                   }}
                 />
+                {(() => {
+                  const hit = recipientSelectOptions.find(
+                    (o) => o.address.toLowerCase() === query.trim().toLowerCase()
+                  )
+                  return hit ? (
+                    <p className="text-[10px] text-muted-foreground">Kontakt: {hit.label}</p>
+                  ) : null
+                })()}
+                {recipientSelectOptions.length > 0 ? (
+                  <details className="rounded-md border border-border/70 bg-muted/10 px-2 py-1.5">
+                    <summary className="cursor-pointer text-[11px] font-medium text-foreground">
+                      Aus Telefonbuch wählen
+                    </summary>
+                    <ul className="mt-1.5 max-h-40 space-y-0.5 overflow-y-auto">
+                      {recipientSelectOptions.map((o) => (
+                        <li key={o.address}>
+                          <button
+                            type="button"
+                            className="w-full rounded px-2 py-1.5 text-left text-[11px] hover:bg-muted"
+                            onClick={() => setQuery(o.address)}
+                          >
+                            <span className="font-medium text-foreground">
+                              {o.favorite ? '★ ' : ''}
+                              {o.label}
+                            </span>
+                            <span className="mt-0.5 block truncate font-mono text-[9px] text-muted-foreground">
+                              {o.address}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
               </div>
               <Button type="button" onClick={onPrimary} disabled={busy || !query.trim()}>
                 {busy ? (
@@ -1385,28 +1577,30 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Laden…
                   </>
-                ) : mode === 'object' ? (
-                  'Bild laden'
                 ) : (
-                  `Adresse laden (max. ${EVIDENCE_IMAGE_OWNER_PAGE_SIZE})`
+                  'Suchen / laden'
                 )}
               </Button>
-              {mode === 'owner' && ownerAddress ? (
+              {ownerAddress ? (
                 <p className="text-[10px] text-muted-foreground break-all">
-                  Angezeigt für: {ownerAddress}
+                  Galerie für: {ownerAddress}
                 </p>
               ) : null}
             </>
           ) : (
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label htmlFor="mint-file">Bilddatei</Label>
+                <Label htmlFor="mint-file">Bild (PNG / JPEG / WebP)</Label>
                 <Input
                   id="mint-file"
                   type="file"
                   accept="image/png,image/jpeg,image/webp"
                   onChange={(e) => setMintFile(e.target.files?.[0] ?? null)}
                 />
+                <p className="text-[10px] text-muted-foreground">
+                  Große Dateien werden vor dem Mint automatisch verkleinert (Ziel ~12 KB, hart max. ~98 KB
+                  on-chain).
+                </p>
                 {mintLocalPreviewUrl ? (
                   <img
                     src={mintLocalPreviewUrl}
@@ -1439,9 +1633,6 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                     setMintCount(Number.isFinite(n) ? Math.max(1, Math.min(100, n)) : 1)
                   }}
                 />
-                <p className="text-[11px] text-muted-foreground">
-                  Mehrere On-Chain-Objekte mit demselben Bild (Namen #1…#n). Gas × Anzahl; Serie nacheinander.
-                </p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="mint-desc">Beschreibung</Label>
@@ -1475,17 +1666,8 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                   placeholder="image/jpeg"
                 />
               </div>
-              <p className="text-[10px] text-muted-foreground break-all">
-                Timestamp: automatisch beim Mint · Hash (SHA-256 der Datei)
-                {mintHashPreview ? `: ${mintHashPreview.slice(0, 16)}…` : mintFile ? ': …' : ': nach Dateiwahl'}
-              </p>
-
               <div className="space-y-2 rounded-md border border-border p-3">
                 <p className="text-sm font-medium">Zusätzliche Attribute (max. {EVIDENCE_ATTR_MAX_PAIRS})</p>
-                <p className="text-[10px] text-amber-800 dark:text-amber-200">
-                  Zusätzliche Attribute sind öffentlich on-chain sichtbar. Ohne Move-Redeploy landen sie im
-                  description-Block [morg-attrs] (keine echten Dynamic Fields am aktuellen Package).
-                </p>
                 {mintAttrs.map((row, i) => (
                   <div key={i} className="flex gap-2 items-center">
                     <Input
@@ -1529,13 +1711,13 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                 </Button>
               </div>
 
-              <label className="flex items-center gap-2 text-sm">
+              <label className="flex items-center gap-2 text-sm text-foreground">
                 <input
                   type="checkbox"
                   checked={mintEncrypt}
                   onChange={(e) => setMintEncrypt(e.target.checked)}
                 />
-                On-chain verschlüsseln (Passphrase nach Mint anzeigen)
+                Bild on-chain verschlüsseln
               </label>
               <label className="flex items-start gap-2 text-[11px] text-foreground">
                 <input
@@ -1547,48 +1729,10 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                 <span>
                   Als Schlüsselkarte merken
                   {mintEncrypt
-                    ? ' (Enc-Passphrase + Object-ID)'
-                    : ' (Object-ID für Zeitkapsel/Composer — Enc optional)'}
+                    ? ' (Passphrase + Object-ID lokal)'
+                    : ' (Object-ID für Zeitkapsel/Composer)'}
                 </span>
               </label>
-              <details className="rounded-md border border-border/60 bg-muted/10 px-2.5 py-2">
-                <summary className="cursor-pointer text-[11px] font-medium text-foreground">
-                  Optionen
-                </summary>
-                <div className="mt-2 space-y-2">
-                  <label className="flex items-start gap-2 text-[11px] text-foreground">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5"
-                      checked={mintOneTimeUse}
-                      onChange={(e) => setMintOneTimeUse(e.target.checked)}
-                    />
-                    <span>One-Time — nach erstem Spend ungültig</span>
-                  </label>
-                  <label className="flex items-start gap-2 text-[11px] text-foreground">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5"
-                      checked={mintOfflineHandoff}
-                      onChange={(e) => setMintOfflineHandoff(e.target.checked)}
-                    />
-                    <span>Offline-Weitergabe (Index-Bundle beim Senden)</span>
-                  </label>
-                  {mintEncrypt ? (
-                    <div className="space-y-1.5">
-                      <p className="text-[11px] font-medium text-foreground">Partner-Paar</p>
-                      <Input
-                        className="font-mono text-[11px]"
-                        value={mintPairTo}
-                        onChange={(e) => setMintPairTo(e.target.value)}
-                        placeholder="Partner 0x… (leer = kein Paar)"
-                        spellCheck={false}
-                        autoComplete="off"
-                      />
-                    </div>
-                  ) : null}
-                </div>
-              </details>
               {mintEncrypt && listNftKeycards().length > 0 ? (
                 <div className="space-y-1.5 text-xs">
                   <p className="font-medium text-foreground">Passphrase an Schlüsselkarte-Slot (optional)</p>
@@ -1674,11 +1818,11 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                             writePassphraseNftStrongGateEnabled(true)
                             writeZeitkapselLastNftObjectId(lastMintObjectId)
                             setInfo(
-                              'NFT für Zeitkapsel übernommen — Composer: Zeitkapsel an, Object-ID ist gesetzt. Galerie: Tab „Eigene“ + Laden.'
+                              'NFT für NFT-Leserecht übernommen — Composer: Modus an, Object-ID gesetzt. Galerie: Tab „Eigene“ + Laden.'
                             )
                           }}
                         >
-                          Für Zeitkapsel übernehmen
+                          Für NFT-Leserecht übernehmen
                         </Button>
                         <Button
                           type="button"
@@ -1761,7 +1905,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                             setInfo('')
                           }}
                         >
-                          Weiter zu Tab Guthaben
+                          Weiter zu NFT gesichert
                         </Button>
                       </div>
                     </div>
@@ -1785,7 +1929,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
             </div>
           )}
 
-          {(pendingCipher || ownerItems.some((x) => x.needsPassphrase)) &&
+          {pendingCipher &&
           mode !== 'mint' &&
           mode !== 'guthaben' &&
           mode !== 'zeitkapsel' ? (
@@ -1799,71 +1943,9 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                 autoComplete="off"
                 placeholder={getDefaultEvidencePassphrase() ? 'Geräte-Standard vorhanden — oder neu eingeben' : 'mind. 8 Zeichen'}
               />
-              {pendingCipher ? (
-                <Button type="button" size="sm" disabled={busy} onClick={() => void onDecryptPending()}>
-                  Entschlüsseln
-                </Button>
-              ) : (
-                <>
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={busy || passphrase.trim().length < 8}
-                    onClick={() => {
-                      void (async () => {
-                        const pass = passphrase.trim()
-                        if (pass.length < 8) return
-                        setBusy(true)
-                        setError('')
-                        let n = 0
-                        try {
-                          rememberEvidencePassphrase({ passphrase: pass })
-                          const next = []
-                          for (const it of ownerItems) {
-                            if (!it.needsPassphrase || !it.ciphertext) {
-                              next.push(it)
-                              continue
-                            }
-                            try {
-                              const dec = await decryptEvidenceImageBytes(it.ciphertext, pass)
-                              n++
-                              rememberEvidencePassphrase({
-                                objectId: it.objectId,
-                                passphrase: pass,
-                              })
-                              next.push({
-                                ...it,
-                                needsPassphrase: false,
-                                error: undefined,
-                                ciphertext: undefined,
-                                rememberedPass: pass,
-                                previewUrl: evidenceImageBytesToObjectUrl(dec.bytes, dec.contentType),
-                              })
-                            } catch {
-                              next.push(it)
-                            }
-                          }
-                          setOwnerItems(next)
-                          setSharePassphrase(pass)
-                          setInfo(
-                            n
-                              ? `${n} NFT(s) entschlüsselt und Passphrase lokal gemerkt (pro Object-ID + Geräte-Standard).`
-                              : 'Keine Einträge mit dieser Passphrase entschlüsselbar.'
-                          )
-                        } finally {
-                          setBusy(false)
-                        }
-                      })()
-                    }}
-                  >
-                    Alle entsperren & merken
-                  </Button>
-                  <p className="text-[10px] text-muted-foreground">
-                    Eigene Mints: Passphrase wird beim Minten lokal gespeichert und beim Galerie-Laden auto-versucht.
-                    Vault-Lock löscht ImageNFT-Merker nicht — nur Einsatz-Ende.
-                  </p>
-                </>
-              )}
+              <Button type="button" size="sm" disabled={busy} onClick={() => void onDecryptPending()}>
+                Entschlüsseln
+              </Button>
             </div>
           ) : null}
 
@@ -1886,7 +1968,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
           {error ? <p className="text-sm text-destructive whitespace-pre-wrap">{error}</p> : null}
 
           {/* Nur Galerie: sonst wirkt der Block in Wire/Klartext/Minten wie eine weitere Aktion. */}
-          {listNftKeycards().length > 0 && mode === 'owner' ? (
+          {listNftKeycards().length > 0 && (mode === 'owner' || mode === 'object') ? (
             <details className="rounded-md border border-border/70 bg-muted/15 p-2.5">
               <summary className="cursor-pointer text-xs font-medium text-foreground">
                 Optional · Lokal ImageNFT an Schlüsselkarte merken
@@ -2080,398 +2162,117 @@ export function ChatViewEvidenceImageViewerButton(p?: {
             </div>
           ) : null}
 
-          {mode === 'owner' && (ownerItems.length > 0 || ownerHasNext) ? (
+          {(mode === 'owner' || mode === 'object') && (ownerItems.length > 0 || ownerHasNext) ? (
             <div className="space-y-3">
               {ownerItems.length > 0 ? (
-                <ul className="space-y-3">
+                <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {ownerItems.map((it) => {
                     const storedPass =
                       it.rememberedPass ||
                       lookupEvidencePassphrase({ objectId: it.objectId, allowDefault: false }) ||
                       ''
+                    const displayName =
+                      (
+                        galleryLocalNoteByOid[it.objectId] ||
+                        getNftKeycard(it.objectId)?.label ||
+                        it.name ||
+                        ''
+                      ).trim() ||
+                      (it.source === 'url' ? 'URL-NFT' : 'ImageNFT')
+                    const badges = [
+                      ...nftRoleBadgeLabels(it.objectId),
+                      ...nftSpendPolicyBadgeParts(it.objectId, it.attrs),
+                    ]
                     return (
-                    <li key={it.objectId} className="space-y-1 rounded-md border border-border p-2">
-                      <p className="text-xs break-all text-muted-foreground">
-                        {it.name || (it.source === 'url' ? 'URL-NFT' : 'ImageNFT')}
-                        {it.classification ? ` · ${it.classification}` : ''}
-                      </p>
-                      <p className="font-mono text-[10px] break-all text-muted-foreground">{it.objectId}</p>
-                      {(() => {
-                        const badges = nftSpendPolicyBadgeParts(it.objectId, it.attrs)
-                        if (!badges.length) return null
-                        return (
-                          <p className="text-[10px] text-sky-100/90">
-                            {badges.join(' · ')}
-                          </p>
-                        )
-                      })()}
-                      {it.attrs && it.attrs.length > 0 ? (
-                        <p className="text-[10px] text-muted-foreground">
-                          {it.attrs.map((a) => `${a.key}=${a.value}`).join(' · ')}
-                        </p>
-                      ) : null}
-                      {(() => {
-                        const kh = unpackNftKeycardDescriptionMarker(it.description || '')
-                        if (!kh) return null
-                        return (
-                          <p className="text-[10px] text-muted-foreground break-all">
-                            Schlüsselkarte-Hinweis on-chain: {kh.cardObjectId.slice(0, 12)}… · Slot{' '}
-                            {kh.slotId}
-                          </p>
-                        )
-                      })()}
-                      <MessengerNftInfoPanel
-                        objectId={it.objectId}
-                        name={it.name}
-                        showInfoButton
-                        variant="compact"
-                        className="w-full"
-                      />
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-[11px]"
-                          onClick={() => void copyTextSafe(it.objectId)}
-                        >
-                          Object-ID kopieren
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="secondary"
-                          className="h-7 text-[11px]"
-                          disabled={busy}
-                          onClick={() => {
-                            writeZeitkapselLastNftObjectId(it.objectId)
-                            setLeasePreferredOid(it.objectId)
-                            setGalleryLeaseOid((cur) =>
-                              cur === it.objectId.toLowerCase() ? null : it.objectId.toLowerCase()
-                            )
-                          }}
-                        >
-                          {galleryLeaseOid === it.objectId.toLowerCase()
-                            ? 'Leihe ausblenden'
-                            : 'Verleihen…'}
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-[11px]"
-                          disabled={busy}
-                          onClick={() => {
-                            writeZeitkapselLastNftObjectId(it.objectId)
-                            setLeasePreferredOid(it.objectId)
-                            setMode('zeitkapsel')
-                            setInfo(
-                              `Zeitkapsel: ${it.name || it.objectId.slice(0, 10) + '…'} gewählt — Empfänger + Dauer.`
-                            )
-                          }}
-                        >
-                          Im Zeitkapsel-Tab
-                        </Button>
-                        <a
-                          href={explorerObjectUrlFromId(it.objectId)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex h-7 items-center rounded-md border border-border px-2 text-[11px] text-primary hover:bg-muted"
-                        >
-                          Explorer
-                        </a>
-                        {it.source !== 'url' ? (
-                          <div className="flex w-full flex-col gap-1.5">
-                            {(() => {
-                              const pack = buildNftVaultHandoffFromLocal(it.objectId)
-                              const kind =
-                                pack?.kind ||
-                                getNftKeycard(it.objectId)?.boundVault?.kind ||
-                                null
-                              if (!pack && !kind) return null
-                              return (
-                                <div className="w-full space-y-1 rounded border border-amber-800/30 bg-amber-950/15 px-2 py-1.5">
-                                  <p className="text-[10px] text-amber-100/90">{nftVaultTransferHint(kind)}</p>
-                                  {pack ? (
-                                    <p className="text-[10px] text-muted-foreground">
-                                      Beim „NFT senden“: NFT+Vault automatisch in die Zwischenablage (Chat/Mesh
-                                      einfügen). Extra-Kopieren nur Notfall.
-                                    </p>
-                                  ) : null}
-                                </div>
-                              )
-                            })()}
-                            <div className="flex w-full flex-wrap items-center gap-2">
-                            <Input
-                              className="h-7 min-w-[12rem] flex-1 font-mono text-[10px]"
-                              value={transferToByOid[it.objectId] || ''}
-                              onChange={(e) =>
-                                setTransferToByOid((m) => ({ ...m, [it.objectId]: e.target.value }))
-                              }
-                              placeholder="Empfänger 0x… (NFT senden)"
-                              autoComplete="off"
-                              spellCheck={false}
-                            />
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="h-7 text-[11px]"
-                              disabled={busy}
-                              onClick={() => {
-                                void (async () => {
-                                  const to = (transferToByOid[it.objectId] || '').trim()
-                                  if (!/^0x[a-fA-F0-9]{64}$/i.test(to)) {
-                                    setError('Empfänger: volle 0x…-Adresse (64 Hex).')
-                                    return
-                                  }
-                                  const pack = buildNftVaultHandoffFromLocal(it.objectId)
-                                  const extra = pack
-                                    ? `\n\nGesichertes Guthaben (${pack.kind}): Index (NFT+Vault) wird mitkopiert — in Chat/Mesh an Empfänger einfügen. Lokal wird der Index hier entfernt.`
-                                    : ''
-                                  if (
-                                    !window.confirm(
-                                      `ImageNFT an ${to.slice(0, 12)}… senden? Besitz wechselt on-chain.${extra}`
-                                    )
-                                  ) {
-                                    return
-                                  }
-                                  setBusy(true)
-                                  setError('')
-                                  try {
-                                    let handoffNote = ''
-                                    if (pack) {
-                                      const { bundle, compact } = preferOfflineHandoffText(pack)
-                                      const copied = await copyTextSafe(bundle)
-                                      try {
-                                        const url = await nftVaultHandoffToQrDataUrl(compact)
-                                        window.open(url, '_blank', 'noopener,noreferrer')
-                                      } catch {
-                                        /* QR optional */
-                                      }
-                                      handoffNote = copied.ok
-                                        ? ' Index (NFT+Vault) in Zwischenablage + QR-Tab — an Empfänger in Chat/Mesh einfügen.'
-                                        : ` Index-Text manuell:\n${bundle}`
-                                    }
-                                    const r = await transferEvidenceImageNft({
-                                      objectId: it.objectId,
-                                      recipientAddress: to,
-                                    })
-                                    if (!r.ok) {
-                                      setError(r.error)
-                                      return
-                                    }
-                                    setOwnerItems((prev) => prev.filter((x) => x.objectId !== it.objectId))
-                                    setInfo(
-                                      `NFT gesendet · TX ${r.digest.slice(0, 16)}…${handoffNote}`
-                                    )
-                                  } finally {
-                                    setBusy(false)
-                                  }
-                                })()
-                              }}
-                            >
-                              NFT senden
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="h-7 text-[11px] text-destructive"
-                              disabled={busy}
-                              onClick={() => {
-                                void (async () => {
-                                  if (
-                                    !window.confirm(
-                                      'ImageNFT unwiderruflich vernichten (burn)? Storage-Rebate kommt zurück. Lokale Merker weg.'
-                                    )
-                                  ) {
-                                    return
-                                  }
-                                  setBusy(true)
-                                  setError('')
-                                  try {
-                                    const r = await burnEvidenceImageNft({ objectId: it.objectId })
-                                    if (!r.ok) {
-                                      setError(r.error)
-                                      return
-                                    }
-                                    setOwnerItems((prev) => prev.filter((x) => x.objectId !== it.objectId))
-                                    setInfo(`NFT vernichtet · TX ${r.digest.slice(0, 16)}…`)
-                                  } finally {
-                                    setBusy(false)
-                                  }
-                                })()
-                              }}
-                            >
-                              Vernichten
-                            </Button>
-                            </div>
-                          </div>
-                        ) : null}
-                        {storedPass ? (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-[11px]"
-                            onClick={() => {
-                              setSharePassphrase(storedPass)
-                              void navigator.clipboard.writeText(storedPass)
-                            }}
-                          >
-                            Passphrase kopieren (teilen)
-                          </Button>
-                        ) : null}
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-[11px]"
-                          disabled={busy}
-                          title="Passphrase lokal an diese Object-ID als Schlüsselkarte binden (Vault)"
-                          onClick={() => {
-                            void (async () => {
-                              const pass =
-                                (storedPass || passphrase.trim() || getDefaultEvidencePassphrase() || '').trim()
-                              if (pass.length < 8) {
-                                setError(
-                                  'Schlüsselkarte: Passphrase oben eingeben (≥8) oder NFT zuerst entsperren.'
-                                )
-                                return
-                              }
-                              setBusy(true)
-                              setError('')
-                              try {
-                                const me = getDirectIotaSessionSignerAddress()
-                                if (me) {
-                                  const own = await checkNftKeycardOwnedBySigner(it.objectId, me)
-                                  if (own.ok && !own.owned) {
-                                    setError(
-                                      'Schlüsselkarte: dieses NFT gehört nicht zur aktuellen Signer-Adresse — trotzdem lokal speichern? Abbruch. Besitz prüfen oder anderes Gerät.'
-                                    )
-                                    return
-                                  }
-                                  if (!own.ok) {
-                                    setInfo(`Besitz-Check: ${own.error} — speichere lokal ohne Chain-Check.`)
-                                  }
-                                }
-                                const slotId = normalizeNftKeycardSlotId(
-                                  getNftKeycard(it.objectId)
-                                    ? galleryNewSlotId.trim() || gallerySlotId
-                                    : gallerySlotId
-                                )
-                                const r = upsertNftKeycardSlot({
-                                  objectId: it.objectId,
-                                  label: it.name || undefined,
-                                  slotId,
-                                  passphrase: pass,
-                                  note: it.source === 'url' ? 'URL-NFT' : 'ImageNFT',
-                                })
-                                if (!r.ok) {
-                                  setError(r.error)
-                                  return
-                                }
-                                rememberEvidencePassphrase({ objectId: it.objectId, passphrase: pass })
-                                setGallerySlotId(slotId)
-                                setKeycardTick((n) => n + 1)
-                                setInfo(
-                                  `Schlüsselkarte Slot „${slotId}“ gemerkt (${it.objectId.slice(0, 12)}…) — für dich auf diesem Gerät im Vault.`
-                                )
-                              } finally {
-                                setBusy(false)
-                              }
-                            })()
-                          }}
-                        >
-                          {getNftKeycard(it.objectId) ? 'Slot speichern / aktualisieren' : 'Als Schlüsselkarte merken'}
-                        </Button>
-                        {getNftKeycard(it.objectId) ? (
-                          <div className="flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
-                            <span>Slots:</span>
-                            {(getNftKeycard(it.objectId)?.slots || []).map((s) => (
-                              <button
-                                key={`${it.objectId}-${s.id}-${keycardTick}`}
-                                type="button"
-                                className={
-                                  gallerySlotId === s.id
-                                    ? 'rounded border border-foreground/40 px-1.5 py-0.5 text-foreground'
-                                    : 'rounded border border-border px-1.5 py-0.5 hover:bg-muted'
-                                }
-                                onClick={() => {
-                                  setGallerySlotId(s.id)
-                                  setGalleryNewSlotId(s.id)
-                                }}
-                              >
-                                {s.id}
-                                {s.note ? ` (${s.note})` : ''}
-                              </button>
-                            ))}
-                            <Input
-                              className="h-7 w-24 font-mono text-[10px]"
-                              value={galleryNewSlotId}
-                              onChange={(e) => setGalleryNewSlotId(e.target.value)}
-                              placeholder="neuer Slot"
-                            />
-                            {(getNftKeycard(it.objectId)?.slots.length || 0) > 1 ? (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 px-2 text-[10px]"
-                                disabled={busy}
-                                onClick={() => {
-                                  const r = removeNftKeycardSlot({
-                                    objectId: it.objectId,
-                                    slotId: gallerySlotId,
-                                  })
-                                  if (!r.ok) {
-                                    setError(r.error)
-                                    return
-                                  }
-                                  const left = getNftKeycard(it.objectId)?.slots[0]?.id || 'default'
-                                  setGallerySlotId(left)
-                                  setKeycardTick((n) => n + 1)
-                                  setInfo(`Slot „${gallerySlotId}“ entfernt.`)
-                                }}
-                              >
-                                Slot entfernen
-                              </Button>
-                            ) : null}
-                          </div>
-                        ) : (
-                          <Input
-                            className="h-7 max-w-[10rem] font-mono text-[10px]"
-                            value={gallerySlotId}
-                            onChange={(e) => setGallerySlotId(e.target.value)}
-                            placeholder="Slot-ID (default)"
+                    <li key={it.objectId} className="rounded-md border border-border p-2">
+                      <div className="flex gap-2">
+                        {it.previewUrl ? (
+                          <img
+                            src={it.previewUrl}
+                            alt=""
+                            className="h-14 w-14 shrink-0 rounded border border-border object-cover bg-muted/20"
                           />
+                        ) : (
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded border border-dashed border-border text-[9px] text-muted-foreground">
+                            {it.needsPassphrase ? 'PW' : '—'}
+                          </div>
                         )}
-                      </div>
-                      {storedPass ? (
-                        <p className="text-[10px] text-muted-foreground">
-                          Teilen: Object-ID + Passphrase separat (nicht on-chain). Empfänger: Object-ID-Tab → laden →
-                          Passphrase.
-                        </p>
-                      ) : it.needsPassphrase ? (
-                        <p className="text-[10px] text-muted-foreground">
-                          Keine lokale Passphrase — nach Entsperren hier zum Teilen verfügbar.
-                        </p>
-                      ) : null}
-                      {it.needsPassphrase ? (
-                        <div className="space-y-1">
-                          <p className="text-xs text-amber-800 dark:text-amber-200">
-                            Verschlüsselt — kein Bild bis Passphrase (oben „Alle entsperren & merken“).
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                          <p className="truncate text-sm font-medium text-foreground" title={displayName}>
+                            {displayName}
                           </p>
+                          {it.classification ? (
+                            <p className="text-[10px] text-muted-foreground">{it.classification}</p>
+                          ) : null}
+                          <p className="truncate font-mono text-[10px] text-muted-foreground" title={it.objectId}>
+                            {it.objectId.slice(0, 10)}…{it.objectId.slice(-6)}
+                          </p>
+                          {badges.length ? (
+                            <p className="text-[10px] text-sky-100/90">{badges.join(' · ')}</p>
+                          ) : null}
+                        </div>
+                        <MessengerNftInfoPanel
+                          objectId={it.objectId}
+                          name={displayName}
+                          classification={it.classification}
+                          attrsText={
+                            it.attrs?.length
+                              ? it.attrs.map((a) => `${a.key}=${a.value}`).join(' · ')
+                              : undefined
+                          }
+                          contentHash={it.parsed?.hash || undefined}
+                          variant="button"
+                          className="shrink-0"
+                        />
+                      </div>
+
+                      {it.previewUrl ? (
+                        <details className="mt-1.5">
+                          <summary className="cursor-pointer text-[10px] text-foreground">
+                            Bild groß
+                          </summary>
+                          <button
+                            type="button"
+                            className="mt-1 block w-full"
+                            title="Vollbild"
+                            onClick={() => setLightbox({ url: it.previewUrl!, name: displayName })}
+                          >
+                            <img
+                              src={it.previewUrl}
+                              alt={displayName}
+                              className="max-h-48 w-full rounded border border-border object-contain bg-muted/20"
+                            />
+                          </button>
+                          <p className="mt-0.5 text-[10px] text-muted-foreground">Tippen → Vollbild</p>
+                        </details>
+                      ) : null}
+
+                      {it.needsPassphrase ? (
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                          <Input
+                            type="password"
+                            className="h-8 min-w-[8rem] flex-1 text-[11px]"
+                            value={unlockPassByOid[it.objectId] ?? ''}
+                            onChange={(e) =>
+                              setUnlockPassByOid((m) => ({ ...m, [it.objectId]: e.target.value }))
+                            }
+                            placeholder="Passphrase (≥8)"
+                            autoComplete="off"
+                          />
                           <Button
                             type="button"
                             size="sm"
-                            variant="outline"
-                            disabled={busy || passphrase.trim().length < 8 || !it.ciphertext}
+                            variant="secondary"
+                            className="h-8 text-[11px]"
+                            disabled={
+                              busy ||
+                              !it.ciphertext ||
+                              (unlockPassByOid[it.objectId] || passphrase).trim().length < 8
+                            }
                             onClick={() => {
                               void (async () => {
                                 if (!it.ciphertext) return
-                                const pass = passphrase.trim()
+                                const pass = (unlockPassByOid[it.objectId] || passphrase).trim()
                                 setBusy(true)
                                 setError('')
                                 try {
@@ -2496,6 +2297,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                                     )
                                   )
                                   setSharePassphrase(pass)
+                                  setPassphrase(pass)
                                 } catch (e) {
                                   setError(e instanceof Error ? e.message : String(e))
                                 } finally {
@@ -2504,28 +2306,331 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                               })()
                             }}
                           >
-                            Nur dieses NFT entsperren & merken
+                            Entsperren
                           </Button>
                         </div>
                       ) : null}
                       {it.error && !it.needsPassphrase ? (
-                        <p className="text-xs text-destructive">{it.error}</p>
+                        <p className="mt-1 text-xs text-destructive">{it.error}</p>
                       ) : null}
-                      {galleryLeaseOid === it.objectId.toLowerCase() ? (
-                        <div className="rounded-md border border-amber-800/30 bg-amber-950/10 px-2 py-2">
-                          <p className="mb-1.5 text-[11px] font-medium text-foreground">
-                            Verleihen (Zeitkapsel)
-                          </p>
-                          <NftTimeLeasePanel nftObjectId={it.objectId} disabled={busy} />
+
+                      {it.source !== 'url' ? (
+                        <details className="mt-1.5">
+                          <summary className="cursor-pointer text-[11px] font-medium text-foreground">
+                            Senden
+                          </summary>
+                          <div className="mt-2 space-y-1.5 rounded-md border border-primary/30 bg-primary/5 p-2">
+                            <Input
+                              className="h-8 w-full font-mono text-[11px]"
+                              value={transferToByOid[it.objectId] || ''}
+                              onChange={(e) =>
+                                setTransferToByOid((m) => ({ ...m, [it.objectId]: e.target.value }))
+                              }
+                              placeholder="Empfänger 0x…"
+                              autoComplete="off"
+                              spellCheck={false}
+                            />
+                            {(() => {
+                              const to = (transferToByOid[it.objectId] || '').trim()
+                              const hit = recipientSelectOptions.find(
+                                (o) => o.address.toLowerCase() === to.toLowerCase()
+                              )
+                              return hit ? (
+                                <p className="text-[10px] text-muted-foreground">Kontakt: {hit.label}</p>
+                              ) : null
+                            })()}
+                            {recipientSelectOptions.length > 0 ? (
+                              <details className="rounded border border-border/50 bg-background/40 px-2 py-1">
+                                <summary className="cursor-pointer text-[10px] font-medium text-foreground">
+                                  Aus Telefonbuch
+                                </summary>
+                                <ul className="mt-1 max-h-32 space-y-0.5 overflow-y-auto">
+                                  {recipientSelectOptions.map((o) => (
+                                    <li key={o.address}>
+                                      <button
+                                        type="button"
+                                        className="w-full rounded px-1.5 py-1 text-left text-[11px] hover:bg-muted"
+                                        onClick={() =>
+                                          setTransferToByOid((m) => ({
+                                            ...m,
+                                            [it.objectId]: o.address,
+                                          }))
+                                        }
+                                      >
+                                        {o.favorite ? '★ ' : ''}
+                                        {o.label}
+                                      </button>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </details>
+                            ) : null}
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="h-8 w-full text-[11px]"
+                              disabled={busy}
+                              onClick={() => {
+                                void (async () => {
+                                  const to = (transferToByOid[it.objectId] || '').trim()
+                                  if (!/^0x[a-fA-F0-9]{64}$/i.test(to)) {
+                                    setError('Empfänger: volle 0x…-Adresse (64 Hex) oder Telefonbuch.')
+                                    return
+                                  }
+                                  const pack = buildNftVaultHandoffFromLocal(it.objectId)
+                                  const extra = pack
+                                    ? `\n\nGesichertes Guthaben (${pack.kind}): Index (NFT+Vault) wird mitkopiert.`
+                                    : ''
+                                  if (
+                                    !window.confirm(
+                                      `ImageNFT an ${to.slice(0, 12)}… senden? Besitz wechselt on-chain.${extra}`
+                                    )
+                                  ) {
+                                    return
+                                  }
+                                  setBusy(true)
+                                  setError('')
+                                  try {
+                                    let handoffNote = ''
+                                    if (pack) {
+                                      const { bundle, compact } = preferOfflineHandoffText(pack)
+                                      const copied = await copyTextSafe(bundle)
+                                      try {
+                                        const url = await nftVaultHandoffToQrDataUrl(compact)
+                                        window.open(url, '_blank', 'noopener,noreferrer')
+                                      } catch {
+                                        /* QR optional */
+                                      }
+                                      handoffNote = copied.ok
+                                        ? ' Index in Zwischenablage.'
+                                        : ` Index:\n${bundle}`
+                                    }
+                                    const r = await transferEvidenceImageNft({
+                                      objectId: it.objectId,
+                                      recipientAddress: to,
+                                    })
+                                    if (!r.ok) {
+                                      setError(r.error)
+                                      return
+                                    }
+                                    setOwnerItems((prev) => prev.filter((x) => x.objectId !== it.objectId))
+                                    setInfo(`NFT gesendet · TX ${r.digest.slice(0, 16)}…${handoffNote}`)
+                                  } finally {
+                                    setBusy(false)
+                                  }
+                                })()
+                              }}
+                            >
+                              Senden
+                            </Button>
+                          </div>
+                        </details>
+                      ) : null}
+
+                      <details className="mt-1.5">
+                        <summary className="cursor-pointer text-[11px] font-medium text-foreground">
+                          Mehr…
+                        </summary>
+                        <div className="mt-2 space-y-2">
+                          <div className="flex flex-wrap gap-1.5">
+                            {it.previewUrl ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-[11px]"
+                                onClick={() => {
+                                  const a = document.createElement('a')
+                                  a.href = it.previewUrl!
+                                  a.download = `${(displayName || 'nft').replace(/[^\w\-]+/g, '_').slice(0, 48)}.png`
+                                  a.click()
+                                }}
+                              >
+                                Bild speichern
+                              </Button>
+                            ) : null}
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              className="h-7 text-[11px]"
+                              disabled={busy}
+                              onClick={() => {
+                                writeZeitkapselLastNftObjectId(it.objectId)
+                                setLeasePreferredOid(it.objectId)
+                                setMode('guthaben')
+                                setInfo(`NFT gesichert: ${displayName} gewählt.`)
+                              }}
+                            >
+                              NFT gesichert…
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-[11px]"
+                              disabled={busy}
+                              onClick={() => {
+                                writeZeitkapselLastNftObjectId(it.objectId)
+                                setLeasePreferredOid(it.objectId)
+                                setGalleryLeaseOid((cur) =>
+                                  cur === it.objectId.toLowerCase() ? null : it.objectId.toLowerCase()
+                                )
+                              }}
+                            >
+                              {galleryLeaseOid === it.objectId.toLowerCase()
+                                ? 'Leihe ausblenden'
+                                : 'Verleihen…'}
+                            </Button>
+                            {storedPass ? (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-[11px]"
+                                onClick={() => {
+                                  setSharePassphrase(storedPass)
+                                  void navigator.clipboard.writeText(storedPass)
+                                }}
+                              >
+                                Passphrase kopieren
+                              </Button>
+                            ) : null}
+                          </div>
+
+                          <div className="space-y-1.5 rounded border border-border/60 bg-muted/10 p-2">
+                            <Label className="text-[10px] text-muted-foreground">
+                              Lokaler Name / Notiz (nur Gerät)
+                            </Label>
+                            <Input
+                              className="h-7 text-[11px]"
+                              value={
+                                galleryLocalNoteByOid[it.objectId] ??
+                                getNftKeycard(it.objectId)?.label ??
+                                it.name ??
+                                ''
+                              }
+                              onChange={(e) =>
+                                setGalleryLocalNoteByOid((m) => ({
+                                  ...m,
+                                  [it.objectId]: e.target.value,
+                                }))
+                              }
+                              placeholder="z. B. Einsatzfoto Tor"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-[11px]"
+                              disabled={busy}
+                              title="Speichert Passphrase + Object-ID lokal für Zeitkapsel/Guthaben/PWMSG — kein Chain-Lock"
+                              onClick={() => {
+                                void (async () => {
+                                  const pass =
+                                    (storedPass || passphrase.trim() || getDefaultEvidencePassphrase() || '').trim()
+                                  if (pass.length < 8) {
+                                    setError(
+                                      'Schlüsselkarte: zuerst entsperren oder Passphrase (≥8) am Eintrag eingeben.'
+                                    )
+                                    return
+                                  }
+                                  setBusy(true)
+                                  setError('')
+                                  try {
+                                    const me = getDirectIotaSessionSignerAddress()
+                                    if (me) {
+                                      const own = await checkNftKeycardOwnedBySigner(it.objectId, me)
+                                      if (own.ok && !own.owned) {
+                                        setError(
+                                          'Schlüsselkarte: NFT gehört nicht zur aktuellen Signer-Adresse — Abbruch.'
+                                        )
+                                        return
+                                      }
+                                    }
+                                    const localLabel = (
+                                      galleryLocalNoteByOid[it.objectId] ??
+                                      getNftKeycard(it.objectId)?.label ??
+                                      it.name ??
+                                      ''
+                                    ).trim()
+                                    const r = upsertNftKeycardSlot({
+                                      objectId: it.objectId,
+                                      label: localLabel || undefined,
+                                      slotId: 'default',
+                                      passphrase: pass,
+                                      note: it.source === 'url' ? 'URL-NFT' : 'ImageNFT',
+                                    })
+                                    if (!r.ok) {
+                                      setError(r.error)
+                                      return
+                                    }
+                                    rememberEvidencePassphrase({ objectId: it.objectId, passphrase: pass })
+                                    setKeycardTick((n) => n + 1)
+                                    setInfo(
+                                      `Als Schlüsselkarte gemerkt${localLabel ? ` („${localLabel}“)` : ''} — lokal für Zeitkapsel/Guthaben.`
+                                    )
+                                  } finally {
+                                    setBusy(false)
+                                  }
+                                })()
+                              }}
+                            >
+                              {getNftKeycard(it.objectId)
+                                ? 'Schlüsselkarte aktualisieren'
+                                : 'Als Schlüsselkarte merken'}
+                            </Button>
+                            <p className="text-[10px] text-muted-foreground">
+                              Merkt Passphrase + ID lokal (Zeitkapsel/Guthaben). Entsperren allein reicht zum Anschauen.
+                            </p>
+                          </div>
+
+                          {it.source !== 'url' ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-[11px] text-destructive"
+                              disabled={busy}
+                              onClick={() => {
+                                void (async () => {
+                                  if (
+                                    !window.confirm(
+                                      'ImageNFT unwiderruflich vernichten (burn)? Storage-Rebate kommt zurück.'
+                                    )
+                                  ) {
+                                    return
+                                  }
+                                  setBusy(true)
+                                  setError('')
+                                  try {
+                                    const r = await burnEvidenceImageNft({ objectId: it.objectId })
+                                    if (!r.ok) {
+                                      setError(r.error)
+                                      return
+                                    }
+                                    setOwnerItems((prev) => prev.filter((x) => x.objectId !== it.objectId))
+                                    setInfo(`NFT vernichtet · TX ${r.digest.slice(0, 16)}…`)
+                                  } finally {
+                                    setBusy(false)
+                                  }
+                                })()
+                              }}
+                            >
+                              Vernichten
+                            </Button>
+                          ) : null}
+
+                          {galleryLeaseOid === it.objectId.toLowerCase() ? (
+                            <div className="rounded-md border border-amber-800/30 bg-amber-950/10 px-2 py-2">
+                              <p className="mb-1.5 text-[11px] font-medium text-foreground">
+                                Verleihen
+                              </p>
+                              <NftTimeLeasePanel nftObjectId={it.objectId} disabled={busy} />
+                            </div>
+                          ) : null}
                         </div>
-                      ) : null}
-                      {it.previewUrl ? (
-                        <img
-                          src={it.previewUrl}
-                          alt={it.name || it.objectId}
-                          className="max-h-48 w-full object-contain bg-muted/20"
-                        />
-                      ) : null}
+                      </details>
                     </li>
                     )
                   })}
@@ -2581,24 +2686,122 @@ export function ChatViewEvidenceImageViewerButton(p?: {
 
           {mailboxPlainRows.length > 0 ? (
             <ul className="space-y-2">
-              {mailboxPlainRows.map((row, i) => (
+              {mailboxPlainRows.map((row, i) => {
+                const rowKey = `${row.source}-${row.nonce}-${row.ts ?? 0}-${i}`
+                const pwWire = !row.encrypted && isPassphraseMessageWire(row.text)
+                const decrypted = mailboxPwPlainByKey[rowKey]
+                return (
                 <li
-                  key={`${row.source}-${row.nonce}-${row.ts ?? 0}-${row.sender}-${row.recipient}-${i}-${row.text.slice(0, 24)}`}
+                  key={`${rowKey}-${row.sender}-${row.recipient}`}
                   className="rounded-md border border-border p-2 text-xs"
                 >
                   <p className="text-muted-foreground break-all">
-                    {row.source === 'event' ? 'Event' : 'Mailbox-DF'} ·{' '}
+                    {row.source === 'event'
+                      ? 'Event'
+                      : row.source === 'object'
+                        ? 'Object'
+                        : row.encrypted
+                          ? 'MsgKey'
+                          : 'Mailbox-DF'}
+                    {row.encrypted ? ' · Enc' : pwWire ? ' · PWMSG' : ''} ·{' '}
                     {row.ts ? new Date(row.ts).toLocaleString('de-DE') : '—'} · {row.sender.slice(0, 10)}… →{' '}
                     {row.recipient.slice(0, 10)}…
+                    {row.objectId ? ` · ${row.objectId.slice(0, 12)}…` : ''}
                   </p>
-                  <p className="mt-1 whitespace-pre-wrap text-foreground">{row.text}</p>
+                  <p
+                    className={
+                      row.encrypted
+                        ? 'mt-1 whitespace-pre-wrap text-amber-800 dark:text-amber-200'
+                        : 'mt-1 whitespace-pre-wrap text-foreground'
+                    }
+                  >
+                    {decrypted ?? row.text}
+                  </p>
+                  {pwWire && !decrypted ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="mt-2 h-7 text-[11px]"
+                      disabled={busy || !mailboxPwPassphrase.trim()}
+                      onClick={() => {
+                        void (async () => {
+                          setBusy(true)
+                          setError('')
+                          try {
+                            const r = await decryptPastedPassphraseWire(
+                              row.text,
+                              mailboxPwPassphrase
+                            )
+                            if (!r.ok) {
+                              setError(r.error)
+                              return
+                            }
+                            setMailboxPwPlainByKey((prev) => ({ ...prev, [rowKey]: r.plain }))
+                          } finally {
+                            setBusy(false)
+                          }
+                        })()
+                      }}
+                    >
+                      Mit Passphrase entschlüsseln
+                    </Button>
+                  ) : null}
                 </li>
-              ))}
+                )
+              })}
             </ul>
           ) : null}
         </div>
         </div>
       </DialogContent>
     </Dialog>
+
+    {typeof document !== 'undefined' && lightbox
+      ? createPortal(
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={lightbox.name || 'NFT-Bild'}
+            className="fixed inset-0 z-[10050] flex items-center justify-center bg-black/95 p-3"
+            onPointerDownCapture={() => {
+              lightboxClickGuardRef.current = true
+              if (lightboxGuardTimerRef.current) clearTimeout(lightboxGuardTimerRef.current)
+              lightboxGuardTimerRef.current = setTimeout(() => {
+                lightboxClickGuardRef.current = false
+                lightboxGuardTimerRef.current = null
+              }, 400)
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              dismissLightbox()
+            }}
+          >
+            <button
+              type="button"
+              className="absolute right-3 top-3 z-[10051] rounded-md border border-white/30 bg-black/60 px-3 py-1.5 text-sm text-white hover:bg-black/80"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                dismissLightbox()
+              }}
+            >
+              Schließen
+            </button>
+            <img
+              src={lightbox.url}
+              alt={lightbox.name}
+              className="max-h-[100vh] max-w-[100vw] object-contain"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>,
+          document.body
+        )
+      : null}
+    </>
   )
 }

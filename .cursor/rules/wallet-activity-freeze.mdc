@@ -1,0 +1,11 @@
+---
+description: Wallet und IOTA-Aktivität nicht mehr ändern ohne explizite User-Absprache
+alwaysApply: true
+---
+
+# Freeze: Wallet / IOTA-Aktivität (2026-11-20)
+
+User-Entscheidung: **IOTA-Wallet und IOTA-Aktivität sind gut so.**
+
+- **Nicht** anfassen (Labels, Filter, Saldo, Sendepfade Frei/NFT gesichert, Empfangen-QR, Aktivitätsliste), es sei denn der User spricht ausdrücklich darüber.
+- NFT-Dialog / Verleihen / Nachrichten dürfen weiter — Wallet-Karte und Aktivität bleiben stabil.

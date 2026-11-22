@@ -25,7 +25,10 @@ export type ChatViewWirePasteImportDialogProps = {
   hideTrigger?: boolean
 }
 
-/** Posteingang: Wire aus Zwischenablage einfügen und lokal entschlüsseln (PWMSG). */
+/**
+ * PWMSG entschlüsseln: Passphrase-Wire aus Zwischenablage + Passphrase → Klartext lokal.
+ * Kein Explorer-Scan; landet nicht automatisch im Posteingang des Empfängers.
+ */
 export function ChatViewWirePasteImportDialog(p: ChatViewWirePasteImportDialogProps = {}) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
   const open = p.open ?? uncontrolledOpen
@@ -57,7 +60,7 @@ export function ChatViewWirePasteImportDialog(p: ChatViewWirePasteImportDialogPr
       const kind = classifyPastedWire(wire)
       if (kind !== 'passphrase-msg') {
         setError(
-          'Unbekanntes Wire. Hier nur MORG_PWMSG_V1 (Passphrase). NFT-Gate in der Nachrichten-Zeile entsperren; ECDH braucht Handshake/Connect.'
+          'Unbekanntes Wire. Hier nur MORG_PWMSG_V1 (Passphrase). NFT-Gate in der Nachrichten-Zeile; ECDH braucht Handshake/Connect.'
         )
         return
       }
@@ -79,24 +82,24 @@ export function ChatViewWirePasteImportDialog(p: ChatViewWirePasteImportDialogPr
           <button
             type="button"
             className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
-            title="Kopiertes Wire (MORG_PWMSG) einfügen und mit Passphrase lokal lesen."
+            title="Kopiertes PWMSG-Wire + Passphrase → Klartext lokal lesen."
           >
             <ClipboardPaste className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-            Wire einfügen
+            PWMSG entschlüsseln
           </button>
         </DialogTrigger>
       )}
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Wire einfügen</DialogTitle>
+          <DialogTitle>PWMSG entschlüsseln</DialogTitle>
           <DialogDescription>
-            Roh-Wire aus „Wire kopieren“ (Passphrase-Nachricht). Lokal entschlüsseln — nicht
-            Einsatzbericht-JSON und nicht NFT-Gate (das bleibt in der Zeile).
+            Passphrase-Wire (`MORG_PWMSG_V1`) + Passphrase out-of-band → Klartext lokal. Nicht ECDH, nicht
+            NFT-Gate. Schreibt nichts in den Posteingang. Hash: Optionen → Hash &amp; Prüfen.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-muted-foreground">Wire</span>
+            <span className="text-xs font-medium text-muted-foreground">Wire (MORG_PWMSG_V1)</span>
             <textarea
               value={wire}
               onChange={(e) => setWire(e.target.value)}
@@ -120,7 +123,7 @@ export function ChatViewWirePasteImportDialog(p: ChatViewWirePasteImportDialogPr
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
           {plain != null ? (
             <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
-              <p className="text-[11px] font-medium text-muted-foreground">Klartext</p>
+              <p className="text-[11px] font-medium text-muted-foreground">Klartext (nur hier, lokal)</p>
               <p className="whitespace-pre-wrap break-words text-sm text-foreground">{plain}</p>
               <Button
                 type="button"

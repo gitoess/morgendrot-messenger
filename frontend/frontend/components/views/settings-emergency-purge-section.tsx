@@ -248,7 +248,7 @@ export function SettingsEmergencyPurgeSection() {
       </div>
       <p className="text-[11px] leading-relaxed text-muted-foreground">
         <span className="font-medium text-foreground">Nur Medien?</span> Gibt es nicht als eigenen Schalter —
-        Bilder stecken in Nachrichten bzw. als NFT (Posteingang → On-Chain / NFT → dort brennen). Einzelne
+        Bilder stecken in Nachrichten bzw. als NFT (Hauptmenü → Wallet / Nachrichten → Optionen → Wire). Einzelne
         Chat-Nachrichten on-chain: Posteingang → Auswahl → Burn.
       </p>
       {!confirmPurge ? (

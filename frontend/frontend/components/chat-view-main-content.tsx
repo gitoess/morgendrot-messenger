@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { isCapacitorNativePlatform } from '@/frontend/lib/capacitor-platform'
+import { OPEN_MESSENGER_INBOX_EVENT } from '@/frontend/hooks/use-chat-view-pending-handshakes'
 import {
   ChatViewMobileBottomNav,
   type ChatViewMobileTab,
@@ -71,13 +72,22 @@ import { ChatViewTelegramAlarmThreadBanner } from '@/frontend/components/chat-vi
 import type { InboxSearchMessageHit } from '@/frontend/lib/inbox-unified-search'
 import type { ChatViewCoreState } from '@/frontend/hooks/use-chat-view-core'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
-import { applyPhonebookContactToComposer } from '@/frontend/lib/apply-phonebook-contact'
+import {
+  applyPhonebookContactToComposer,
+  parsePhonebookContact,
+} from '@/frontend/lib/apply-phonebook-contact'
 import { lookupContactEntry } from '@/frontend/lib/contact-display'
 import {
   collectContactsForSendPath,
   formatAllRecipientsForSendPath,
   inboxPartnerKeyForContact,
+  toggleComposerTelegramRecipient,
 } from '@/frontend/lib/contact-send-path'
+import {
+  parseComposerIotaRecipientAddresses,
+  toggleComposerIotaRecipientAddress,
+} from '@/frontend/lib/composer-recipient-fields'
+import { parseTelegramRecipientChatIds } from '@/frontend/lib/telegram-notify-pref'
 import { resolveActiveSendPath } from '@/frontend/lib/messenger-channel-send-path'
 import {
   conversationMenuChainToolsVisible,
@@ -223,10 +233,18 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const [telegramAlarmSelected, setTelegramAlarmSelected] = useState(false)
   const [messengerSearchQuery, setMessengerSearchQuery] = useState('')
   const isNativeMobile = isCapacitorNativePlatform()
-  const [mobileTab, setMobileTab] = useState<ChatViewMobileTab>('chats')
+  /** APK: Posteingang zuerst — PC zeigt Inbox in der Hauptspalte; Chats-Tab allein wirkte „leer“. */
+  const [mobileTab, setMobileTab] = useState<ChatViewMobileTab>('inbox')
   useEffect(() => {
     if (phonebookOpen) refreshContactDirectory()
   }, [phonebookOpen, refreshContactDirectory])
+
+  useEffect(() => {
+    if (!isNativeMobile) return
+    const onOpenInbox = () => setMobileTab('inbox')
+    window.addEventListener(OPEN_MESSENGER_INBOX_EVENT, onOpenInbox)
+    return () => window.removeEventListener(OPEN_MESSENGER_INBOX_EVENT, onOpenInbox)
+  }, [isNativeMobile])
 
   useEffect(() => {
     if (phonebookNavRequest != null && phonebookNavRequest > 0) setPhonebookOpen(true)
@@ -518,6 +536,32 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setRecipient('')
   }, [selectInboxConversationAll, setPartner, setRecipient])
 
+  /** Sidebar „Adresse…“ neben Direktchats — leeres Empfängerfeld, Fokus Composer. */
+  const handleWriteUnknownAddress = useCallback(() => {
+    setTelegramAlarmSelected(false)
+    if (
+      (channelMode === 'pinnwand' || channelMode === 'notes' || channelMode === 'group') &&
+      onChannelModeChange
+    ) {
+      onChannelModeChange('private')
+    }
+    selectInboxConversationAll()
+    setPartner('')
+    setRecipient('')
+    toast.message('0x-Adresse eingeben', {
+      description: 'Empfängerfeld unten — ohne Telefonbuch-Eintrag.',
+    })
+    window.requestAnimationFrame(() => {
+      document.getElementById('chat-composer-iota-recipient')?.focus()
+    })
+  }, [
+    channelMode,
+    onChannelModeChange,
+    selectInboxConversationAll,
+    setPartner,
+    setRecipient,
+  ])
+
   const { encryptedPartnerPanelProps } = useChatViewEncryptedPartnerPanelProps({
     messengerPorts: panelMessengerPorts,
     activeGroupMemberAddresses: activeGroup?.memberAddresses,
@@ -667,6 +711,65 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setComposerDelivery('chain')
     setForcedTransport('internet')
   }, [onChannelModeChange, setComposerDelivery, setForcedTransport])
+
+  const recipientComposerKeys = useMemo(() => {
+    const keys = new Set<string>()
+    if (activeSendPath === 'telegram') {
+      const tgIds = new Set(parseTelegramRecipientChatIds(recipient))
+      for (const [storageKey, entry] of Object.entries(directory)) {
+        const c = parsePhonebookContact(storageKey, entry)
+        if (c.telegramChatId && tgIds.has(c.telegramChatId)) {
+          keys.add(storageKey.trim().toLowerCase())
+        }
+      }
+      return keys
+    }
+    for (const a of parseComposerIotaRecipientAddresses(recipient, partner, false)) {
+      keys.add(a)
+    }
+    return keys
+  }, [activeSendPath, recipient, partner, directory])
+
+  const handleToggleRecipientContact = useCallback(
+    (address: string) => {
+      const entry = lookupContactEntry(directory, address) ?? { label: address }
+      const c = parsePhonebookContact(address, entry)
+      if (activeSendPath === 'telegram') {
+        if (!c.telegramChatId) {
+          toast.message('Kein Telegram-Chat-ID für diesen Kontakt.')
+          return
+        }
+        const r = toggleComposerTelegramRecipient(recipient, c.telegramChatId)
+        setRecipient(r.recipient)
+        toast.success(
+          r.added
+            ? `Telegram-Empfänger hinzugefügt (${r.count})`
+            : `Telegram-Empfänger entfernt (${r.count})`
+        )
+        return
+      }
+      if (activeSendPath !== 'internet') {
+        toast.message('Mehrere Empfänger: Sendepfad IOTA oder Telegram wählen.')
+        return
+      }
+      if (!c.iotaAddress) {
+        toast.message('Keine IOTA-Adresse für diesen Kontakt.')
+        return
+      }
+      const r = toggleComposerIotaRecipientAddress(recipient, c.iotaAddress)
+      setRecipient(r.recipient)
+      if (r.count > 0) {
+        const first = parseComposerIotaRecipientAddresses(r.recipient, '', false)[0]
+        if (first) setPartner(first)
+      }
+      toast.success(
+        r.added
+          ? `IOTA-Empfänger hinzugefügt (${r.count}) — Verschlüsselt braucht Handshake je Adresse`
+          : `IOTA-Empfänger entfernt (${r.count})`
+      )
+    },
+    [activeSendPath, directory, recipient, setRecipient, setPartner]
+  )
 
   const handleSelectSidebarAll = useCallback(() => {
     setTelegramAlarmSelected(false)
@@ -1300,9 +1403,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       activeSendPath={activeSendPath}
       iotaPathFocus={iotaPathFocus}
       onSelectAll={handleSelectSidebarAll}
+      onWriteUnknownAddress={() => {
+        handleWriteUnknownAddress()
+        setMobileTab('chats')
+      }}
       onSelectSelf={handleSelectSidebarSelf}
       activeSelfSelected={activeSelfSelected}
       onSelectContact={handleMobileSelectContact}
+      onToggleRecipientContact={handleToggleRecipientContact}
+      recipientComposerKeys={recipientComposerKeys}
       onSelectGroup={handleMobileSelectGroup}
       onSelectTelegramAlarmGroup={() => {
         void handleSelectSidebarTelegramAlarm()
@@ -1378,9 +1487,12 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           activeSendPath={activeSendPath}
       iotaPathFocus={iotaPathFocus}
           onSelectAll={handleSelectSidebarAll}
+          onWriteUnknownAddress={handleWriteUnknownAddress}
           onSelectSelf={handleSelectSidebarSelf}
           activeSelfSelected={activeSelfSelected}
           onSelectContact={handleSelectSidebarContact}
+          onToggleRecipientContact={handleToggleRecipientContact}
+          recipientComposerKeys={recipientComposerKeys}
           onSelectGroup={handleSelectSidebarGroup}
           onSelectTelegramAlarmGroup={handleSelectSidebarTelegramAlarm}
           onOpenGroupSettings={openGroupSettings}
@@ -1392,7 +1504,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         packageId: apiStatus?.packageId,
         onOpenIotaSettings: onOpenSettings,
       }}
-          {...pinnwandSidebarProps}
+      {...pinnwandSidebarProps}
           {...sidebarHandshakeProps}
         />
       ) : null}
@@ -1652,9 +1764,12 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                 activeSendPath={activeSendPath}
                 iotaPathFocus={iotaPathFocus}
                 onSelectAll={handleSelectSidebarAll}
+                onWriteUnknownAddress={handleWriteUnknownAddress}
                 onSelectSelf={handleSelectSidebarSelf}
                 activeSelfSelected={activeSelfSelected}
                 onSelectContact={handleSelectSidebarContact}
+                onToggleRecipientContact={handleToggleRecipientContact}
+                recipientComposerKeys={recipientComposerKeys}
                 onSelectGroup={handleSelectSidebarGroup}
                 onSelectTelegramAlarmGroup={handleSelectSidebarTelegramAlarm}
                 onOpenGroupSettings={openGroupSettings}

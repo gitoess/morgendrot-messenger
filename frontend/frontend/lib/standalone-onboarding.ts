@@ -25,6 +25,7 @@ import {
   startOnboarding,
 } from '@/frontend/lib/onboarding-progress-store'
 import { ensureBossRoleOnServer } from '@/frontend/lib/onboarding-boss-bootstrap'
+import { writeMessagingPersistenceModeToStorage } from '@/frontend/lib/messaging-persistence-mode'
 
 export const STANDALONE_ONBOARDING_PATH_LS_KEY = 'morgendrot.standaloneOnboardingPath.v1'
 
@@ -138,6 +139,7 @@ export function beginStandaloneSoloOnboarding(): void {
   saveLocalHandoffAppliedSnapshot(snapshot)
   applyStandaloneDirectIotaDefaults()
   syncLocalHandoffSnapshotToChainContext(snapshot)
+  writeMessagingPersistenceModeToStorage('mailbox')
 }
 
 /** Einsatzleitung (Boss bei 0): Profil lokal — Wizard optional unter Einstellungen / Einrichtungs-Karte. */

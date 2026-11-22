@@ -96,3 +96,55 @@
   background: var(--bubble-self);
   border-color: color-mix(in oklab, var(--path-online) 25%, var(--border));
 }
+
+/* Chat-Ansicht: Blasen = dieselben --path-* wie Sendepfad-Buttons */
+.chat-bubble-path {
+  color: var(--foreground);
+}
+.chat-bubble-path--in {
+  border-width: 1px;
+  border-style: solid;
+}
+.chat-bubble-path--online {
+  background: color-mix(in oklab, var(--path-online) 22%, transparent);
+  border-color: color-mix(in oklab, var(--path-online) 40%, transparent);
+}
+.chat-bubble-path--online.chat-bubble-path--out {
+  background: color-mix(in oklab, var(--path-online) 34%, transparent);
+}
+.chat-bubble-path--mesh {
+  background: color-mix(in oklab, var(--path-mesh) 22%, transparent);
+  border-color: color-mix(in oklab, var(--path-mesh) 40%, transparent);
+}
+.chat-bubble-path--mesh.chat-bubble-path--out {
+  background: color-mix(in oklab, var(--path-mesh) 34%, transparent);
+}
+.chat-bubble-path--telegram {
+  background: color-mix(in oklab, var(--path-telegram) 22%, transparent);
+  border-color: color-mix(in oklab, var(--path-telegram) 42%, transparent);
+}
+.chat-bubble-path--telegram.chat-bubble-path--out {
+  background: color-mix(in oklab, var(--path-telegram) 36%, transparent);
+}
+.chat-bubble-path--adhoc {
+  background: color-mix(in oklab, var(--path-adhoc) 22%, transparent);
+  border-color: color-mix(in oklab, var(--path-adhoc) 40%, transparent);
+}
+.chat-bubble-path--adhoc.chat-bubble-path--out {
+  background: color-mix(in oklab, var(--path-adhoc) 34%, transparent);
+}
+.chat-bubble-path--iota {
+  background: color-mix(in oklab, var(--path-iota) 22%, transparent);
+  border-color: color-mix(in oklab, var(--path-iota) 40%, transparent);
+}
+.chat-bubble-path--iota.chat-bubble-path--out {
+  background: color-mix(in oklab, var(--path-iota) 34%, transparent);
+}
+.chat-bubble-path--default {
+  background: var(--card);
+  border-color: var(--border);
+}
+.chat-bubble-path--default.chat-bubble-path--out {
+  background: color-mix(in oklab, var(--primary) 16%, transparent);
+  border-color: transparent;
+}

@@ -346,6 +346,7 @@ export function ProjektDashboard() {
                 ...(s.apiSnapshot?.mailboxId ? [s.apiSnapshot.mailboxId] : []),
                 ...(s.apiSnapshot?.inboxUnionMailboxIds ?? []),
               ]}
+              primaryMailboxId={s.apiSnapshot?.mailboxId || undefined}
             />
           </div>
         ) : null}
