@@ -30,7 +30,7 @@
 
 1. **Fokus jetzt:** **PC-Messenger fertig ziehen**. **Nicht jetzt:** Handy-Abnahme, Funk-Feld, physisches 2. Gerät, Helfer/Boss.  
 2. **Erledigt (PC):** Settings/TG/G2–G4; Posteingang-UX; fail-closed; product-identity; Mailbox/Handshake-Klarheit; Desk-Smoke 87/87; `SIGNER=sdk`.  
-3. **Als Nächstes (nur PC):** Stage‑2 Direct-IOTA Browser — Kurzprotokoll **`docs/PC-STAGE2-DIRECT-IOTA-SMOKE.md`** (Klartext+Enc Self/Zwei-Wallet); PC-UX-Rest; Vitest/Merge. **Kein** APK-/Funk-Zwang.  
+3. **Als Nächstes (nur PC):** Stage‑2 Enc A↔B nach B-Profil (`npm run dm:b`); weitere PC-UX bei Touch. **Ist:** Klartext/Enc Self + A→B Klartext + Inbox-DOM-Drossel + API-only-Check. **Kein** APK-/Funk-Zwang.  
 4. **Danach:** Phase 2 Handy → Phase 3 Funk → Phase 4 physisches 2. Gerät.  
 5. **Wallet/IOTA-Aktivität:** Freeze. **Gestrichen:** WhatsApp/Paywall.  
 6. **Merge-Ritual** nach sinnvollem Paket.

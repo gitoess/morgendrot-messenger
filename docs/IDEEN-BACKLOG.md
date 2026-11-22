@@ -14,6 +14,13 @@ Kurznotizen für spätere Phasen — **kein** Implementierungsversprechen.
 
 ---
 
+## Posteingang-Virtualisierung (DOM-Last)
+
+**Ist 2026-11-22:** Reset-Fenster Web 80 (war 500) + kein Auto-Append; PWMSG-Formular lazy („Passphrase eingeben“).  
+**Später:** Listen-Virtualizer / Windowing wenn „Weitere laden“ + Zeilen-Actions noch zu schwer — **kein** Big-Bang parallel zu Messenger-Kern.
+
+---
+
 ## Context-Help / „Zauberstab“-Inspector
 
 **Idee:** Toggle → Klicks abfangen → Popover aus `data-help` + Handbuch-Strings.  

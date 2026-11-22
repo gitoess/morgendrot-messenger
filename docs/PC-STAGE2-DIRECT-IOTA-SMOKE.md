@@ -25,9 +25,11 @@ Voraussetzungen: `npm run dm` (oder `dev`), Tresor offen, Puls **IOTA-Sendeweg =
 | 1 | Klartext an **eigene** Adresse (kurzer eindeutiger Text) | Erfolg **oder** klare Fehlertext (Gas/Flags); Chat-Kopf **Direkt-RPC** / Hybrid wie Ist | |
 | 2 | Posteingang: Nachricht sichtbar (API und/oder Direkt-RPC) | Inhalt erkennbar; kein stilles Verschwinden | |
 | 3 | Enc **an** + Handshake vorhanden → verschl. Self-Send | Erfolg oder verständlicher Hinweis; kein Klartext-Leak in UI als „verschlüsselt“ | |
-| 4 | Optional **Zwei-Wallet:** Tab/Profil B = andere Adresse; Handshake → Enc A→B | Beide Seiten konsistent; kein Phase‑4-Anspruch | |
+| 4 | Optional **Zwei-Wallet:** `npm run dm:b` → http://localhost:3344/ neues Profil (Vault `.morgendrot-vault-b`); Handshake → Enc A→B | Beide Seiten konsistent; **kein** Phase‑4-Anspruch | |
 | 5 | Puls → **Nur Morgendrot-API** | Klartext geht **nicht** still per RPC | |
 | 6 | Nach Test: Session-Signer in Puls **löschen** | Kein Mnemonic in Support-Screenshots | |
+
+**Zwei-Wallet Hinweis:** Instanz B = eigene Adresse/Gas. Ohne zweites Vault nur A→B-Senden (Adresse B) = Teil-PASS; Empfang Enc braucht B entsperrt.
 
 **Nicht abhaken hier:** Basis aus + Outbox-Drain (steht in Langform § 2.4), Path‑4 Funk-Bild, APK.
 

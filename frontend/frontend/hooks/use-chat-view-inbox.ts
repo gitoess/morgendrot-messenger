@@ -99,14 +99,18 @@ function mergeFetchedInboxPageIntoState(
 }
 
 const PAGE_SIZE = 50
-/** Erster Load / Aktualisieren: großes Fenster; Append: 50er-Chunks. */
-const RESET_PAGE_SIZE_WEB = 500
-const RESET_PAGE_SIZE_NATIVE = 200
+/**
+ * Erster Load / Aktualisieren — bewusst klein.
+ * 2026-11-22: Web 500 + 3× Auto-Append → ~650 Zeilen × viele Controls (~5k) → UI/A11y-Last.
+ * Mehr per „Weitere laden“; kein Big-Bang-Virtualizer.
+ */
+const RESET_PAGE_SIZE_WEB = 80
+const RESET_PAGE_SIZE_NATIVE = 80
 function resetPageSize(): number {
   return isCapacitorNativePlatform() ? RESET_PAGE_SIZE_NATIVE : RESET_PAGE_SIZE_WEB
 }
-/** Auto-Append nach Reset bei hasMore — wie Boss-Inbox-stabil (788330f), nicht aufblasen. */
-const AUTO_APPEND_ROUNDS_ON_RESET = 3
+/** Auto-Append nach Reset bei hasMore — aus (DOM-Stabilität); Nutzer lädt nach. */
+const AUTO_APPEND_ROUNDS_ON_RESET = 0
 /** Auto-Poll (Status-Tick): klein — volle Union nur bei Aktualisieren. */
 const POLL_PAGE_SIZE = 80
 

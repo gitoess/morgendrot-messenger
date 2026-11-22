@@ -9,6 +9,7 @@
     "test:unit:watch": "vitest",
     "dev": "next dev --webpack --port 3341 --hostname 0.0.0.0",
     "dev:messenger": "set NEXT_PUBLIC_MORG_PRODUCT=messenger&& next dev --webpack --port 3341 --hostname 0.0.0.0",
+    "dev:messenger:b": "set NEXT_PUBLIC_MORG_PRODUCT=messenger&& set NEXT_DIST_DIR=.next-b&& next dev --webpack --port 3344 --hostname 0.0.0.0",
     "dev:localhost": "next dev --webpack --port 3341 --hostname 127.0.0.1",
     "dev:messenger:localhost": "set NEXT_PUBLIC_MORG_PRODUCT=messenger&& next dev --webpack --port 3341 --hostname 127.0.0.1",
     "dev:lan": "npm run dev",

@@ -21,6 +21,9 @@ data/
 dist/
 .next
 frontend/.next
+frontend/.next-b
+.next-b
+.morgendrot-vault-b
 *.log
 logs/
 tmp/
