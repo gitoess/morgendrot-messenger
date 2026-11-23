@@ -103,6 +103,7 @@ import {
   parseDashboardUrlDeeplink,
   stripDashboardUrlDeeplinkSearch,
 } from '@/frontend/lib/dashboard-url-deeplink'
+import { decideVaultUiLockFromStatusPoll } from '@/frontend/lib/vault-status-poll-lock'
 import { setPrivacySoftLocked } from '@/frontend/lib/privacy-soft-lock'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { readContactFavorites } from '@/frontend/lib/contact-phonebook-meta-store'
@@ -205,7 +206,15 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       }
 
       if (messengerVaultUiShouldStayLocked(res, browserReady)) {
-        setLocked(true)
+        const d = decideVaultUiLockFromStatusPoll({
+          stayLockedHint: true,
+          apiLocked: res.locked === true,
+          sessionWasStable: sessionUnlockedStableRef.current,
+          streak: lockPollStreakRef.current,
+        })
+        lockPollStreakRef.current = d.nextStreak
+        if (d.clearStable) sessionUnlockedStableRef.current = false
+        if (d.lockUi) setLocked(true)
         return
       }
 
