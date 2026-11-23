@@ -681,7 +681,8 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
       }
       if (!d) throw new Error('Meshtastic nicht verbunden')
       const normalizedChannelIndex = normalizeMeshtasticChannelIndex(channelIndex)
-      const sendPacketFn = d.sendPacket as unknown as (
+      /** Nicht als freistehende Fn — SDK nutzt `this.log`. */
+      const sendPacketFn = d.sendPacket.bind(d) as unknown as (
         payload: Uint8Array,
         port: Protobuf.Portnums.PortNum,
         dest?: number | 'broadcast',
@@ -724,7 +725,8 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
       let lastErr: unknown
       for (let attempt = 0; attempt <= MESH_TEXT_RETRY_BACKOFF_MS.length; attempt++) {
         try {
-          const sendTextFn = d.sendText as unknown as (
+          /** Nicht als freistehende Fn — SDK nutzt `this.log` (sonst: reading 'log' of undefined). */
+          const sendTextFn = d.sendText.bind(d) as unknown as (
             payload: string,
             dest?: number | 'broadcast',
             channel?: number
