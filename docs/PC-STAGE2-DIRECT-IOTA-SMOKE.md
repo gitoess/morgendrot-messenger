@@ -10,8 +10,8 @@
 
 ## 0. Automatisiert (Pflicht vor manuell)
 
-- [ ] Root: `npm run test:h15-direct-submit` **grün**
-- [ ] Root: `npm run smoke:standalone-desk` **grün** (Desk-Prep; ersetzt kein Browser-§1)
+- [x] Root: `npm run test:h15-direct-submit` **grün** (2026-11-23, 88/88)
+- [x] Root: `npm run smoke:standalone-desk` **grün** (Desk-Prep; ersetzt kein Browser-§1)
 - Ergebniszeile → `docs/TEST-RUN-LOGBOOK.md`
 
 ---
