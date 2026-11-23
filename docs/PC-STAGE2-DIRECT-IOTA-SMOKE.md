@@ -26,9 +26,9 @@ Voraussetzungen: `npm run dm` (oder `dev`), Tresor offen, Puls **IOTA-Sendeweg =
 | 2 | Posteingang: Nachricht sichtbar (API und/oder Direkt-RPC) | Inhalt erkennbar; kein stilles Verschwinden | **PASS** (mit §1 / Enc) |
 | 3 | Enc **an** + Handshake vorhanden → verschl. Self-Send | Erfolg oder verständlicher Hinweis; kein Klartext-Leak in UI als „verschlüsselt“ | **PASS** 2026-11-22 Enc Self `FfbGxHYU…` |
 | 4 | Optional **Zwei-Wallet:** `npm run dm:b` → http://localhost:3344/ … Handshake → Enc A↔B | Beide Seiten konsistent; **kein** Phase‑4-Anspruch | **PASS** 2026-11-22 + **2026-11-23** User-Inbox `5jqrFnMS…` / `6LcSJTx6…` |
-| 4b | Optional **Peering-QR** statt Tippen (`mp` / Kontakt-QR mit `e`) A↔B | Pub landet, Enc möglich; Vitest `peering-qr` / `install-qr` | **Vitest OK**; Live-QR optional nachziehen |
-| 5 | Puls → **Nur Morgendrot-API** | Klartext geht **nicht** still per RPC | **Vitest PASS** (CI). Manuell optional: Puls → Relay → Send → Fehlertext |
-| 6 | Nach Test: Session-Signer in Puls **löschen** | Kein Mnemonic in Support-Screenshots | **User-Ritual** (kein Automations-Zwang) |
+| 4b | Optional **Peering-QR** statt Tippen (`mp` / Kontakt-QR mit `e`) A↔B | Pub landet, Enc möglich; Vitest `peering-qr` / `install-qr` | **PASS (Vitest)** 2026-11-23 in H.15 88/88. Live-Scan UI = Rest-Ritual bei Touch |
+| 5 | Puls → **Nur Morgendrot-API** | Klartext geht **nicht** still per RPC | **PASS** Vitest `trySubmit…relay` → Fehler „Nur Morgendrot-API“ (88/88). Live 2026-11-22 Relay-Mailbox `BniNWGBqZzGp…` (API-Pfad, kein stiller Direkt-RPC) |
+| 6 | Nach Test: Session-Signer in Puls **löschen** | Kein Mnemonic in Support-Screenshots | **User-Ritual** (Support/Screenshot) — nicht abnahmeblockierend |
 
 **Zwei-Wallet Hinweis:** Instanz B = eigene Adresse/Gas (`VAULT_FILE=.morgendrot-vault-b`, `PARTNER_ADDRESS_FILE=.morgendrot-partner-b`). Ohne getrenntes Partner-File überschreibt B-Handshake `.morgendrot-partner` mit A → A `/connect` ohne Args → Self-Peer. `/connect` „Bereits verbunden“ gilt nur für denselben Peer; `/cancel-connect` leert peerMap. Empfang Enc braucht B entsperrt.
 
@@ -44,6 +44,7 @@ Voraussetzungen: `npm run dm` (oder `dev`), Tresor offen, Puls **IOTA-Sendeweg =
 |----------|--------|
 | §0 + §1.1–1.3 PASS | PC Stage‑2 Kern ok → weiter PC-UX-Rest / Vitest bei Touch |
 | §1.4 PASS | E2EE-Surrogat ok — **trotzdem** Phase 4 später mit echtem 2. Gerät |
+| **2026-11-23** §0 + §1.1–1.5 + §4b Vitest | **PC Stage‑2 geschlossen** → Phase 2 Handy (`docs/STANDALONE-SMOKE-CHECKLIST.md` 4b–4d) |
 | Fail reproduzierbar | Fix in kleiner Scheibe + Retest; **kein** Big-Bang |
 
 Siehe Stabilitätsregel: `.cursor/rules/pc-phase-stability.mdc`.

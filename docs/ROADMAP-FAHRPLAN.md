@@ -28,11 +28,11 @@
 
 **Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
-1. **Fokus jetzt:** **PC-Messenger fertig ziehen**. **Nicht jetzt:** Handy-Abnahme, Funk-Feld, physisches 2. Gerät, Helfer/Boss.  
-2. **Erledigt (PC):** Settings/TG/G2–G4; Posteingang-UX; fail-closed; product-identity; Mailbox/Handshake-Klarheit; Desk-Smoke **88/88**; `SIGNER=sdk`; Connect/Annehmen/Enc A↔B (#15–#18, Retest 2026-11-23); Vault-Hint (#19); Vault-PW Tab+Idle (#20); Prefer-vault (#21); Deeplink (#22); Hygiene H.2/H.8 (#23); H.16 PC (#24); hasKeys-Flap (#25). Stage‑2 §0 + §1.1–1.4 **PASS**.  
-3. **Als Nächstes (nur PC):** kleine UX/Vitest bei Touch; optional Stage‑2 §1.5 manuell / §4b Live-QR; Puls Signer löschen (§1.6) als Ritual. **Kein** APK-/Funk-Zwang.  
-4. **Danach:** Phase 2 Handy → Phase 3 Funk → Phase 4 physisches 2. Gerät.  
-5. **Wallet/IOTA-Aktivität:** Freeze. **Gestrichen:** WhatsApp/Paywall.  
+1. **Fokus jetzt:** **Phase 2 Handy (1 Gerät)** — Standalone **4b–4d**. Gate: USB-Gerät + frische Debug-APK. Desk-Prep **88/88** + `smoke:standalone-desk` **OK** (2026-11-23).  
+2. **Erledigt (PC / Phase 1):** Messenger-Kern, Settings/TG/G2–G4, Posteingang, fail-closed, product-identity, Mailbox/Handshake, Vault-UX (#19–#22), Hygiene (#23–#25), Enc A↔B, **Stage‑2 §0 + §1.1–1.5 + §4b Vitest geschlossen** (#26 + Catch-up).  
+3. **PC-Rest (nicht blockierend):** Live-QR-Scan §4b UI, Puls Signer löschen §1.6, Rituale T1/T3/T11/T17/T53 bei Touch.  
+4. **Danach:** Phase 3 Funk → Phase 4 physisches 2. Gerät. **Nicht parallel:** Helfer/Boss/WhatsApp/Paywall.  
+5. **Wallet/IOTA-Aktivität:** Freeze.  
 6. **Merge-Ritual** nach sinnvollem Paket.
 
 ### Jetzt machen (IOTA-Messenger — User-Durchgang 2026-11-22)
@@ -46,7 +46,7 @@
 | **H.8** | Dienst vs. privat (Doku) | Zwei Installationen merken; kein Soft-Switch-Bau |
 | **H.10** (Teil) | Ehrliche Claims / schlanke Härtung | Kein „Regierungs-Niveau“-Theater |
 | **H.13 / H.14** | Schlankheit / Hardening | Nur bei Bedarf mit Messenger-Scheibe |
-| **H.15** | Direct-IOTA / Desk-Smoke | **Ist PC:** Desk 88/88 + Stage‑2 Enc A↔B. Handy 4b–4d **Phase 2** |
+| **H.15** | Direct-IOTA / Desk-Smoke | **PC Stage‑2 zu** (2026-11-23). **Jetzt:** Handy 4b–4d (Gerät + frische APK) |
 | **H.16** (Teil) | Telefonbuch + QR | **Ist PC:** Telefonbuch/Kontakt-QR/`mp` Peering (#Vitest). Boss-LAN = später |
 | **H.20** | Signer `sdk` | **Ist:** `.env.example` Default `sdk` (2026-11-22) |
 | **H.21** (Teil) | Empfänger-Auswahl Ist | Kurier-Umschlag → später |
