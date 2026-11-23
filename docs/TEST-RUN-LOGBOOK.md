@@ -21,6 +21,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-11-23** | PC (Windows), **PC-Paket #20–#23** | Vault F5/Idle (#20), Prefer-vault (#21), Deeplink (#22), Hygiene H.2/H.8/Handbuch (#23). Desk 88/88; `check:pwa-desk:full` OK. H.16 PC = Telefonbuch/QR Ist (Boss-LAN später). | **PASS (PC-Scheiben)** |
 | **2026-11-23** | PC (Windows), **H.2 full + Hygiene** | `check:pwa-desk` + `:full` OK. DEV-START: kein Doppel-Start. H.8: dm:b ≠ Dienst/Privat. Stage‑2 §1.5 Vitest+manuell. Roadmap-Kopf #20–#22. | **PASS (H.2 Desk)** |
 | **2026-11-23** | PC (Windows), **URL-Deeplink Chat** | `/?t=inbox-messages` öffnet nach Unlock den Chat (Query strip). Vitest deeplink. | **CODE** — PR |
 | **2026-11-23** | PC (Windows), **#20/#21 merge + Desk** | `#20` Vault-PW Tab+Idle; `#21` Unlock Prefer-vault. Desk H.15 **88/88**. | **PASS (Merge+Desk)** |

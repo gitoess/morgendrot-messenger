@@ -47,7 +47,7 @@
 | **H.10** (Teil) | Ehrliche Claims / schlanke Härtung | Kein „Regierungs-Niveau“-Theater |
 | **H.13 / H.14** | Schlankheit / Hardening | Nur bei Bedarf mit Messenger-Scheibe |
 | **H.15** | Direct-IOTA / Desk-Smoke | **PC jetzt**; Handy 4b–4d **nach** PC-Phase |
-| **H.16** (Teil) | Telefonbuch + QR | **ohne** Boss-LAN / Helfer-Onboarding als Fokus |
+| **H.16** (Teil) | Telefonbuch + QR | **Ist PC:** Telefonbuch/Kontakt-QR/`mp` Peering (#Vitest). Boss-LAN = später |
 | **H.20** | Signer `sdk` | **Ist:** `.env.example` Default `sdk` (2026-11-22) |
 | **H.21** (Teil) | Empfänger-Auswahl Ist | Kurier-Umschlag → später |
 | **H.22** | Mailbox-Klarheit | **Ist 2026-11-22** Copy/Labels/Handbuch |

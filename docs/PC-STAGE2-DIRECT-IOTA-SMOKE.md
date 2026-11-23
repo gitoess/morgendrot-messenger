@@ -26,6 +26,7 @@ Voraussetzungen: `npm run dm` (oder `dev`), Tresor offen, Puls **IOTA-Sendeweg =
 | 2 | Posteingang: Nachricht sichtbar (API und/oder Direkt-RPC) | Inhalt erkennbar; kein stilles Verschwinden | |
 | 3 | Enc **an** + Handshake vorhanden → verschl. Self-Send | Erfolg oder verständlicher Hinweis; kein Klartext-Leak in UI als „verschlüsselt“ | |
 | 4 | Optional **Zwei-Wallet:** `npm run dm:b` → http://localhost:3344/ neues Profil (Vault `.morgendrot-vault-b`); Handshake → Enc A→B | Beide Seiten konsistent; **kein** Phase‑4-Anspruch | **PASS** 2026-11-22 (`J8RW6iX4…` / Retest `ETT8mK9E…`) |
+| 4b | Optional **Peering-QR** statt Tippen (`mp` / Kontakt-QR mit `e`) A↔B | Pub landet, Enc möglich; Vitest `peering-qr` / `install-qr` | |
 | 5 | Puls → **Nur Morgendrot-API** | Klartext geht **nicht** still per RPC | **Vitest:** `direct-iota-plain-submit` / Enc/Handshake `relayBlockedMessage` (CI). Manuell: Puls-Schalter + ein Send-Versuch → Fehlertext „Nur Morgendrot-API“ |
 | 6 | Nach Test: Session-Signer in Puls **löschen** | Kein Mnemonic in Support-Screenshots | |
 
