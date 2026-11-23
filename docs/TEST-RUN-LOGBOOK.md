@@ -21,7 +21,8 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
-| **2026-11-23** | PC (Windows), **#20 merge + Desk + Unlock-Default** | `#20` auf `main`. Desk H.15 **88/88**. Follow-up: Unlock-Dialog Race `create` trotz `hasLocal` → Prefer-vault (User-Wahl create bleibt). | **PASS (Desk)** · Unlock-Fix PR |
+| **2026-11-23** | PC (Windows), **URL-Deeplink Chat** | `/?t=inbox-messages` öffnet nach Unlock den Chat (Query strip). Vitest deeplink. | **CODE** — PR |
+| **2026-11-23** | PC (Windows), **#20/#21 merge + Desk** | `#20` Vault-PW Tab+Idle; `#21` Unlock Prefer-vault. Desk H.15 **88/88**. | **PASS (Merge+Desk)** |
 | **2026-11-22** | PC (Windows), **Vault-PW Tab + Idle-Pref** | F5: Browser-PW Tab-Persist; API bleibt offen ohne Prozess-Neustart. Idle-Auto-Lock Pref Default aus (Einstellungen → Tresor). 2. Terminal (B) nach `dm:b`-Start gesperrt bis Unlock — eigener Prozess. | **CODE** — Vitest vault-password-session + idle-pref |
 | **2026-11-22** | PC (Windows), **B offen + Enc Roundtrip** | A↔B Enc live (`A8opBC8u…` / `Ezc9u4yA…`). B-UI: Badge „Tresor: Passwort“ trotz API offen → Hint-Copy ehrlich (Browser-Sitzung ≠ API-Lock). | **PASS (Enc)** · Hint-Fix PR |
 | **2026-11-22** | PC (Windows), **Post-merge Enc + Group-Annehmen** | Nach #15–#17: Enc A→B Tx `ETT8mK9E…` / `F8jsd7xD…` B entschlüsselt. Group-Panel: Annehmen nur wenn Peer offen (wie Partner-Panel). | **PASS (Enc+UX)** |
