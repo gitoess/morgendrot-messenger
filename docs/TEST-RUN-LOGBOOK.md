@@ -21,7 +21,8 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
-| **2026-11-23** | PC (Windows), **Stage‑2 Checkliste Catch-up** | §1.1–1.4 abgehakt (Logbuch-Belege); §1.5 Vitest; §4b Vitest/optional Live; Roadmap H.15 PC Ist. | **DOCS** — PR |
+| **2026-11-23** | PC (Windows), **Phase 1 zu** | Stage‑2 §1.5/§4b Vitest; H.15 **88/88**; `smoke:standalone-desk` OK. Roadmap → Phase 2. **Kein** `adb` Gerät; APK-Rebuild vor 4b. | **PASS (PC)** — Phase 2 Gate = Gerät |
+| **2026-11-23** | PC (Windows), **Stage‑2 Checkliste Catch-up** | §1.1–1.4 abgehakt (Logbuch-Belege); §1.5 Vitest; §4b Vitest/optional Live; Roadmap H.15 PC Ist. | **DOCS** — PR #26 gemerged |
 | **2026-11-23** | PC (Windows), **Enc A↔B live** | B entsperrt (`morg-b-local8`). Enc A→B `5jqrFnMS…` / B→A `6LcSJTx6…` — User Posteingang beide Seiten lesbar. | **PASS (S2 Enc)** |
 | **2026-11-23** | PC (Windows), **hasKeys-Flap Lock** | UI sperrte bei transientem `hasKeys=false` trotz API offen. Fix: Streak-2 vor Dialog; API `locked=true` weiter sofort. | **CODE** — PR |
 | **2026-11-23** | PC (Windows), **PC-Paket #20–#23** | Vault F5/Idle (#20), Prefer-vault (#21), Deeplink (#22), Hygiene H.2/H.8/Handbuch (#23). Desk 88/88; `check:pwa-desk:full` OK. H.16 PC = Telefonbuch/QR Ist (Boss-LAN später). | **PASS (PC-Scheiben)** |

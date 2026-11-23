@@ -40,13 +40,14 @@
 
 ## 0. Schreibtisch (Blocker — vor dem Handy)
 
-- [ ] `cd frontend` → **`npm run test:h15-direct-submit`** grün (Stand Repo; **2026-11-17:** **87** Tests).
-- [ ] **Oder Root:** **`npm run smoke:standalone-desk`** (führt H.15-Tests + druckt §0/§A–C Hinweise; warnt bei **veralteter** Debug-APK >14 Tage).
+- [x] `cd frontend` → **`npm run test:h15-direct-submit`** grün (**2026-11-23:** **88**/88).
+- [x] Root: **`npm run smoke:standalone-desk`** grün (**2026-11-23**).
 - [ ] Optional Root: **`npm run test:smoke`**.
-- [ ] APK **frisch** bauen: **`npm run apk:debug:build`** → `frontend/android/app/build/outputs/apk/debug/app-debug.apk` (altes Artefakt reicht nicht).
+- [ ] APK **frisch** bauen: `cd frontend` → **`npm run apk:debug:build`** → `app-debug.apk` (Artefakt >14 Tage nicht als Abnahme; vor Geräterunde neu).
+- [ ] **Gerät per `adb devices`:** mind. 1 authorized. **2026-11-23:** keines angeschlossen → 4b–4d wartet.
 - [ ] **Nur wenn Einsatz-Pfad:** Handoff-ZIP(s). **Solo-4b:** ZIP **nicht** nötig (RPC/Package/Mailbox manuell oder Lab-Defaults).
 
-**Ergebnis:** nur bei grün → Gerätetest starten.
+**Ergebnis:** Desk grün + Gerät + frische APK → Gerätetest starten. PC Stage‑2 ist **nicht** der Handy-Ersatz (`docs/PC-STAGE2-DIRECT-IOTA-SMOKE.md` geschlossen 2026-11-23).
 
 ---
 
