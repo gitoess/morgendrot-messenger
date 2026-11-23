@@ -21,7 +21,8 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
-| **2026-11-23** | PC, **Funk sendText this-Bind** | Crash `reading 'log'` beim Funk-Senden: `MeshDevice.sendText`/`sendPacket` unbound. Fix: `.bind(d)`. Hint: Sendepfad ≠ Listenfilter. | **CODE** — PR |
+| **2026-11-23** | PC, **Sendepfad→Inbox wieder** | 2026-11-22 „immer all“ rückgängig: Funk/IOTA/Telegram filtern die Liste wieder. Quelle-Chips waren im UI aus (`showChannelSection=false`). | **CODE** — PR |
+| **2026-11-23** | PC, **Funk sendText this-Bind** | Crash `reading 'log'` beim Funk-Senden: `MeshDevice.sendText`/`sendPacket` unbound. Fix: `.bind(d)`. | **CODE** — PR #31 |
 | **2026-11-23** | Docs/Config, **Edition-Freeze-Scheibe 1** | Kern drin/raus in Roadmap + Spec; `ENABLE_AUTO_EXECUTE` Default aus bei `MESSENGER_EDITION=iota-messenger`; Funk = Morgendrot, nicht Edition. | **DOCS+CFG** — PR |
 | **2026-11-23** | Samsung SM_A202F (`R58N4202NVL`), **Phase 2 Standalone 4b–4d** | Frische APK; CDP-Smoke: **4b PASS** (Klartext Tx `8jzDhWZwktpw…`), **4c+4d PASS** (Enc Self + Inbox; ECDH via `__morgSmoke` + Peer-Map-LS). 4e/4f N/A. Fixes: Peer-Map-Cache, Smoke-Hook, Status-Parse. | **PASS (4b–4d)** |
 | **2026-11-23** | PC (Windows), **Phase‑2 Prep APK** | `apk:debug:build` BUILD SUCCESSFUL; `app-debug.apk` frisch. `adb devices` leer → Install/4b wartet auf Handy. | **PREP** — Gate = USB-Gerät |
