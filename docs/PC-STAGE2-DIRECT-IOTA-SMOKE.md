@@ -32,6 +32,8 @@ Voraussetzungen: `npm run dm` (oder `dev`), Tresor offen, Puls **IOTA-Sendeweg =
 
 **Zwei-Wallet Hinweis:** Instanz B = eigene Adresse/Gas (`VAULT_FILE=.morgendrot-vault-b`, `PARTNER_ADDRESS_FILE=.morgendrot-partner-b`). Ohne getrenntes Partner-File überschreibt B-Handshake `.morgendrot-partner` mit A → A `/connect` ohne Args → Self-Peer. `/connect` „Bereits verbunden“ gilt nur für denselben Peer; `/cancel-connect` leert peerMap. Empfang Enc braucht B entsperrt.
 
+**B-Passwort vergessen?** `.morgendrot-vault-b` existiert schon — **kein** neuer Seed nötig, wenn du das Passwort noch hast (**Tresor öffnen**). Unbekanntes PW: auf B **Neu anlegen** (oder Seed importieren) → **neue** Testnet-Adresse (alte B-Adresse/Coins nur mit altem Seed erreichbar). Für Enc-Smoke auf Testnet ist Neu-Anlage ok.
+
 **Nicht abhaken hier:** Basis aus + Outbox-Drain (steht in Langform § 2.4), Path‑4 Funk-Bild, APK.
 
 ---
