@@ -1148,7 +1148,11 @@ export const CFG = {
     /** Befehl "hole letzten N" / "/fetch N" erlauben. Default true. */
     ENABLE_FETCH_COMMAND: envBool('ENABLE_FETCH_COMMAND', true),
     /** Auto-Befehle: false = empfangene Befehle nur anzeigen, nicht ausführen (Kill-Switch). Lock: "open" nicht ausführen. Default true. */
-    ENABLE_AUTO_EXECUTE: envBool('ENABLE_AUTO_EXECUTE', true),
+    /** iota-messenger-Edition: Default aus (Freeze 2026-11-23). Sonst historisch true. */
+    ENABLE_AUTO_EXECUTE: envBool(
+        'ENABLE_AUTO_EXECUTE',
+        (process.env.MESSENGER_EDITION || '').trim().toLowerCase() !== 'iota-messenger',
+    ),
     /** Nur diese Adressen dürfen Auto-Befehle auslösen (kommagetrennt). Leer = keine Zusatz-Whitelist. Bei ROLE=arbeiter: falls leer, wird aus BOSS_ADDRESS+KOMMANDANT_ADDRESSES abgeleitet. */
     AUTHORIZED_SENDERS: (process.env.AUTHORIZED_SENDERS || '').split(',').map((s) => s.trim()).filter(Boolean),
     /** Max. Betrag (in IOTA) pro Auto-Befehl "sende X coins" (zukünftig). Leer = kein Limit. */
@@ -1384,10 +1388,11 @@ export const CFG = {
     /**
      * Zwei Messenger-Produkte aus einem Code: standalone = Plug-and-Play (Boss-Export, Entwickler);
      * sales = Kunden-Bundle (Fokus Schatten-Seed / Sweep, SIGNER=sdk empfohlen). sales erzwingt Messenger-UI.
-     * Env: MESSENGER_EDITION=standalone | sales
+     * Env: MESSENGER_EDITION=standalone | sales | iota-messenger
      */
-    MESSENGER_EDITION: ((): 'standalone' | 'sales' => {
+    MESSENGER_EDITION: ((): 'standalone' | 'sales' | 'iota-messenger' => {
         const e = (process.env.MESSENGER_EDITION || 'standalone').trim().toLowerCase();
+        if (e === 'iota-messenger') return 'iota-messenger';
         return e === 'sales' ? 'sales' : 'standalone';
     })(),
     /**
@@ -1396,7 +1401,7 @@ export const CFG = {
      */
     UI_VARIANT: (() => {
         const edition = (process.env.MESSENGER_EDITION || 'standalone').trim().toLowerCase();
-        if (edition === 'sales') return 'messenger';
+        if (edition === 'sales' || edition === 'iota-messenger') return 'messenger';
         const v = (process.env.UI_VARIANT || 'full').trim().toLowerCase();
         return v === 'messenger' ? 'messenger' : 'full';
     })(),
@@ -1407,7 +1412,7 @@ export const CFG = {
         const r = (process.env.ROLE || 'messenger').trim().toLowerCase();
         if (r === 'boss' || r === 'kommandant' || r === 'arbeiter') return 'einsatz';
         const edition = (process.env.MESSENGER_EDITION || 'standalone').trim().toLowerCase();
-        if (edition === 'sales') return 'consumer';
+        if (edition === 'sales' || edition === 'iota-messenger') return 'consumer';
         const v = (process.env.UI_VARIANT || 'full').trim().toLowerCase();
         if (v === 'messenger') return 'consumer';
         return 'einsatz';

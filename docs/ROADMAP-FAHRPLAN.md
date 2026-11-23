@@ -28,11 +28,11 @@
 
 **Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
-1. **Fokus jetzt:** Phase‑2 Rest — manuelle Gegenprobe am Gerät ok; optional **Edition-Freeze-Scheibe** (Merkliste nach 4b–4d). Danach Phase 3 Funk.  
-2. **Erledigt Phase 1 (PC):** Messenger-Kern, Vault-UX, Enc A↔B, Stage‑2 geschlossen (#26–#28).  
-3. **Erledigt Phase 2 Kern:** Standalone **4b–4d PASS** 2026-11-23 (`R58N4202NVL`, CDP). 4e/4f = Phase 4.  
-4. **Danach:** Phase 3 Funk → Phase 4 physisches 2. Gerät. **Nicht parallel:** `.exe`-Big-Bang, Helfer/Boss/WhatsApp/Paywall.  
-5. **Wallet/IOTA-Aktivität:** Freeze.  
+1. **Fokus jetzt:** **Phase 3 Funk** — PC-first Klartext (`docs/LORA-PC-FIRST-SMOKE.md`). Gate: mind. **1 Heltec** (Web-BT); Empfang-Beweis ideal **2. Meshtastic-Knoten** (2. Heltec oder offizielle Meshtastic-App).  
+2. **Erledigt Phase 1 (PC):** Messenger-Kern, Vault-UX, Enc A↔B, Stage‑2 (#26–#28).  
+3. **Erledigt Phase 2 Kern:** Standalone **4b–4d PASS** 2026-11-23. **Edition-Freeze-Scheibe** 2026-11-23 (Merkliste). 4e/4f = Phase 4.  
+4. **Danach:** Phase 4 physisches 2. Messenger-Gerät. **Nicht parallel:** `.exe`-Big-Bang, Helfer/Boss/WhatsApp/Paywall.  
+5. **Wallet/IOTA-Aktivität:** Freeze. **IOTA-Messenger:** Funk absichtlich **raus** (Overlay `hideFunk`) — Funk = Morgendrot-Voll.  
 6. **Merge-Ritual** nach sinnvollem Paket.
 
 ### Jetzt machen (IOTA-Messenger — User-Durchgang 2026-11-22)
@@ -3042,12 +3042,22 @@ Nicht umsetzen. Bei späterem Bedarf neu spezifizieren (nur Ciphertext-Hash, nie
 **Zweck:** Dinge sammeln, die der **schlanke IOTA-Messenger** nicht braucht. Overlay-Ist: `tools/iota-messenger/overlays/product-identity.ts`.
 
 **Wann festlegen (verbindlich — nicht früher Big-Bang):**
-1. **Jetzt / laufend:** nur **merken** + harte No-Gos (WhatsApp/Paywall gestrichen; Auto-Execute aus; Overlay-Flags bei Touch). Kein Editions-Workshop parallel zu Enc/Handy-Smoke.
-2. **Nach Phase 2 (Handy 4b–4d PASS):** erste **Freeze-Scheibe** — Kern „drin“ = Vault, Klartext/Enc, Peering, Wallet-Send/Empfangen (Freeze-Regel beachten); Kern „raus“ = Merkliste unten + Spec `IOTA-MESSENGER-EDITION-V1.md`.
-3. **Vor Vertrieb / öffentlichem ZIP-exe / Store-Claim:** **Endabnahme** der Merkliste (Label, Claims, Default-Env) — sonst bleibt es Morgendrot mit ausgeblendeten Kacheln.
-4. **Nicht warten bis Phase 4:** physisches 2. Gerät ändert Peering-Feld, nicht die Produktgrenze Einsatz vs. Solo-Chat.
+1. Laufend: merken + harte No-Gos (WhatsApp/Paywall gestrichen; Overlay-Flags).
+2. **Freeze-Scheibe 2026-11-23 (nach 4b–4d PASS):** Kern fest — siehe Tabelle *Freeze*.
+3. **Vor Vertrieb / öffentlichem ZIP-exe / Store-Claim:** **Endabnahme** (Labels, Claims, Default-Env).
+4. **Nicht warten bis Phase 4** für die Produktgrenze Einsatz vs. Solo-Chat.
 
-**Noch keine Endabnahme** — bis Schritt 2/3 weiter nur merken.
+#### Freeze 2026-11-23 (IOTA-Messenger — erste Scheibe)
+
+| Drin (Kern) | Raus (verbindlich für Edition) |
+|-------------|-------------------------------|
+| Vault unlock / lokal `SIGNER=sdk` | Boss / Helfer / Handoff / Einsatzleitung / Einsatz beenden |
+| Klartext + Enc (ECDH) Mailbox, Peering-QR | SOS, Funk/Meshtastic-UI, Mesh-Status |
+| Gruppen lokal (pairwise), IOTA senden/empfangen | Telegram-Bot / Alarmgruppe als Kern |
+| Direkt-RPC Default, Testnet/Mainnet | Auto-Execute / Coin-Fernsteuerung / Lock-Fernsteuerung |
+| Wallet Empfangen/Senden (Wallet-Karte **nicht** umbauen — Freeze-Regel) | Seal/Key-Broker (P4b), Package & Move-Upgrade-Boss-UI |
+
+**Ist-Technik:** Overlay `tools/iota-messenger/overlays/product-identity.ts` + `frontend/.../product-identity.ts`. Env-Preset: `ENABLE_AUTO_EXECUTE=false` bei `MESSENGER_EDITION=iota-messenger`. Spec: `IOTA-MESSENGER-EDITION-V1.md`.
 
 #### IOTA-Messenger braucht **nicht** (Merkliste)
 

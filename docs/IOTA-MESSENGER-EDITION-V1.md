@@ -1,9 +1,9 @@
 # IOTA Messenger — Minimal-Spec (ohne Boss / Helfer / Handoff)
 
-**Stand:** 2026-07-10  
-**Status:** Phase 1 — **eigenständiges Projekt** auf dem Desktop (`iota-messenger/`), strikt getrennt von Morgendrot  
+**Stand:** 2026-11-23  
+**Status:** **Freeze-Scheibe 1** (nach Handy 4b–4d) — Kern drin/raus in Roadmap-Merkliste; Endabnahme erst vor Vertrieb. Eigenständiges Desktop-Projekt (`iota-messenger/`) bleibt getrennt von Morgendrot-Voll.  
 **Zielgruppe:** Nutzer, die **nur** über IOTA chatten und Token senden wollen — **ohne** Einsatz-Organisation  
-**Nicht-Ziel:** Offizieller IOTA-Foundation-Messenger, Signal-Ersatz, Behörden-Zertifizierung, Boss-Werkstatt, Handoff-ZIP-Provisioning
+**Nicht-Ziel:** Offizieller IOTA-Foundation-Messenger, Signal-Ersatz, Behörden-Zertifizierung, Boss-Werkstatt, Handoff-ZIP-Provisioning, **Funk/Meshtastic** (bleibt Morgendrot)
 
 ---
 
