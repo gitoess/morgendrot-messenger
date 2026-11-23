@@ -29,8 +29,8 @@
 **Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
 1. **Fokus jetzt:** **PC-Messenger fertig ziehen**. **Nicht jetzt:** Handy-Abnahme, Funk-Feld, physisches 2. Gerät, Helfer/Boss.  
-2. **Erledigt (PC):** Settings/TG/G2–G4; Posteingang-UX; fail-closed; product-identity; Mailbox/Handshake-Klarheit; Desk-Smoke **88/88**; `SIGNER=sdk`; Connect/Annehmen/Enc A↔B (#15–#18); Vault-Hint ehrlich (#19); Vault-PW Tab+Idle (#20); Unlock Prefer-vault (#21); URL-Deeplink Chat (#22).  
-3. **Als Nächstes (nur PC):** Rest-UX / Vitest bei Touch; H.2 Desk-Checks ritualisieren; Stage‑2 §1.5 Relay = Vitest + manueller Puls-Check. **Kein** APK-/Funk-Zwang.  
+2. **Erledigt (PC):** Settings/TG/G2–G4; Posteingang-UX; fail-closed; product-identity; Mailbox/Handshake-Klarheit; Desk-Smoke **88/88**; `SIGNER=sdk`; Connect/Annehmen/Enc A↔B (#15–#18, Retest 2026-11-23); Vault-Hint (#19); Vault-PW Tab+Idle (#20); Prefer-vault (#21); Deeplink (#22); Hygiene H.2/H.8 (#23); H.16 PC (#24); hasKeys-Flap (#25). Stage‑2 §0 + §1.1–1.4 **PASS**.  
+3. **Als Nächstes (nur PC):** kleine UX/Vitest bei Touch; optional Stage‑2 §1.5 manuell / §4b Live-QR; Puls Signer löschen (§1.6) als Ritual. **Kein** APK-/Funk-Zwang.  
 4. **Danach:** Phase 2 Handy → Phase 3 Funk → Phase 4 physisches 2. Gerät.  
 5. **Wallet/IOTA-Aktivität:** Freeze. **Gestrichen:** WhatsApp/Paywall.  
 6. **Merge-Ritual** nach sinnvollem Paket.
@@ -46,7 +46,7 @@
 | **H.8** | Dienst vs. privat (Doku) | Zwei Installationen merken; kein Soft-Switch-Bau |
 | **H.10** (Teil) | Ehrliche Claims / schlanke Härtung | Kein „Regierungs-Niveau“-Theater |
 | **H.13 / H.14** | Schlankheit / Hardening | Nur bei Bedarf mit Messenger-Scheibe |
-| **H.15** | Direct-IOTA / Desk-Smoke | **PC jetzt**; Handy 4b–4d **nach** PC-Phase |
+| **H.15** | Direct-IOTA / Desk-Smoke | **Ist PC:** Desk 88/88 + Stage‑2 Enc A↔B. Handy 4b–4d **Phase 2** |
 | **H.16** (Teil) | Telefonbuch + QR | **Ist PC:** Telefonbuch/Kontakt-QR/`mp` Peering (#Vitest). Boss-LAN = später |
 | **H.20** | Signer `sdk` | **Ist:** `.env.example` Default `sdk` (2026-11-22) |
 | **H.21** (Teil) | Empfänger-Auswahl Ist | Kurier-Umschlag → später |
