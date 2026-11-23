@@ -14,6 +14,7 @@
 | URL | **`http://127.0.0.1:3341`** oder **`http://localhost:3341`** — sicherer Kontext für Web Bluetooth. **`http://0.0.0.0:3341`** ist oft **ungünstig** (siehe UI-Fehlertext beim Connect). |
 | Dev-Server | Root **`npm run dev`** → Next **3341**, API **3342**. |
 | Heltec | Meshtastic-Firmware, mit **offizieller Meshtastic-App** (Handy) mindestens einmal **Kanal / Region** gesetzt; Gerät per USB-Strom versorgen, Antenne sitzt. |
+| **Hardware-Minimum** | **1 Radio (Heltec)** reicht zum Koppeln + Klartext-**Senden** (PC Web-BT). **Empfang beweisen** → **2. Meshtastic-Knoten** (2. Heltec **oder** Handy mit offizieller Meshtastic-App auf demselben Kanal). Das ist **kein** zweites Morgendrot-Messenger-Gerät (Phase 4). |
 
 ---
 
