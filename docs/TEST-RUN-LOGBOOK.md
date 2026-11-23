@@ -21,6 +21,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-11-23** | PC + 2× Heltec V3, **Funk live USB** | CLI: `mrgs` COM4 ↔ `c0cc` COM7 DM + Broadcast `LIVE-* 110905` **PASS**. Morgendrot-UI: Funk-Filter OK („163 geladen, keine sichtbar“); Web-BT/USB-Picker noch manuell (Port-Konflikt Meshtastic-Web). | **PASS (Radio)** · UI-Send offen |
 | **2026-11-23** | PC, **Sendepfad→Inbox wieder** | 2026-11-22 „immer all“ rückgängig: Funk/IOTA/Telegram filtern die Liste wieder. Quelle-Chips waren im UI aus (`showChannelSection=false`). | **CODE** — PR |
 | **2026-11-23** | PC, **Funk sendText this-Bind** | Crash `reading 'log'` beim Funk-Senden: `MeshDevice.sendText`/`sendPacket` unbound. Fix: `.bind(d)`. | **CODE** — PR #31 |
 | **2026-11-23** | Docs/Config, **Edition-Freeze-Scheibe 1** | Kern drin/raus in Roadmap + Spec; `ENABLE_AUTO_EXECUTE` Default aus bei `MESSENGER_EDITION=iota-messenger`; Funk = Morgendrot, nicht Edition. | **DOCS+CFG** — PR |
