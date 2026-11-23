@@ -9,16 +9,16 @@ import {
 } from '@/frontend/lib/send-path-inbox-source-filter'
 
 describe('inboxSourceFilterForSendPath', () => {
-  it('filtert die Liste nie mehr nach Sendepfad (immer all)', () => {
+  it('Online = all; Funk/Telegram/IOTA = jeweilige Quelle', () => {
     expect(
       inboxSourceFilterForSendPath({ activeSendPath: 'internet', iotaPathFocus: false })
     ).toBe('all')
     expect(
       inboxSourceFilterForSendPath({ activeSendPath: 'internet', iotaPathFocus: true })
-    ).toBe('all')
-    expect(inboxSourceFilterForSendPath({ activeSendPath: 'mesh' })).toBe('all')
-    expect(inboxSourceFilterForSendPath({ activeSendPath: 'telegram' })).toBe('all')
-    expect(inboxSourceFilterForSendPath({ activeSendPath: 'adhoc' })).toBe('all')
+    ).toBe('iota')
+    expect(inboxSourceFilterForSendPath({ activeSendPath: 'mesh' })).toBe('funk')
+    expect(inboxSourceFilterForSendPath({ activeSendPath: 'telegram' })).toBe('telegram')
+    expect(inboxSourceFilterForSendPath({ activeSendPath: 'adhoc' })).toBe('funk')
   })
 })
 
@@ -73,23 +73,23 @@ describe('inboxToolbarToolsForSendPath / conversationMenuChainToolsVisible', () 
     expect(conversationMenuChainToolsVisible({ activeSendPath: 'internet' })).toBe(true)
   })
 
-  it('IOTA: Chain-Tools + Kanal-Filter (Liste entkoppelt)', () => {
+  it('IOTA: Chain-Tools, kein Extra-Kanal-Toggle (Sendepfad filtert)', () => {
     const t = inboxToolbarToolsForSendPath({ activeSendPath: 'internet', iotaPathFocus: true })
     expect(t.showWirePaste).toBe(true)
     expect(t.showPakete).toBe(true)
-    expect(t.showKanalFilterToggle).toBe(true)
+    expect(t.showKanalFilterToggle).toBe(false)
     expect(conversationMenuChainToolsVisible({ activeSendPath: 'internet', iotaPathFocus: true })).toBe(
       true
     )
   })
 
-  it('Funk/Telegram: Pakete+Verlauf+Kanal-Filter, kein Wire/On-Chain/Burn', () => {
+  it('Funk/Telegram: Pakete+Verlauf, kein Wire/On-Chain/Burn/Kanal-Toggle', () => {
     for (const activeSendPath of ['mesh', 'telegram'] as const) {
       const t = inboxToolbarToolsForSendPath({ activeSendPath })
       expect(t.showWirePaste).toBe(false)
       expect(t.showPakete).toBe(true)
       expect(t.showOnChainNft).toBe(false)
-      expect(t.showKanalFilterToggle).toBe(true)
+      expect(t.showKanalFilterToggle).toBe(false)
       expect(t.showDecryptExport).toBe(true)
       expect(t.showNachrichtenverlauf).toBe(true)
       expect(conversationMenuChainToolsVisible({ activeSendPath })).toBe(false)

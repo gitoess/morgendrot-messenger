@@ -15,7 +15,7 @@
 | Bereich | Inhalt |
 |---------|--------|
 | **App-Header** (Boss/Messenger) | **Tresor**, **Aktualisieren** (Status + Posteingang + Kontakte), Handbuch, Einstellungen — **nicht** in der Posteingang-Leiste. In **Nachrichten** / **Einsatzleitung**: nur das **Gegenstück** als Schalter. In **Einstellungen**: Titel + Sprünge zu Nachrichten und Einsatzleitung |
-| **Chat-Kopf** | Sendepfad (**Alle** / Funk / **IOTA** / Telegram) steuert **Senden** (nicht die Posteingangs-Liste), **Ton/Stumm**, **SOS**. Liste filtern: Filter/Kanal. Mit Sidebar: **kein** großer Kanal-/Posteingang-Titel |
+| **Chat-Kopf** | Sendepfad (**Alle** / Funk / **IOTA** / Telegram) steuert **Senden** und blendet die Posteingangs-Liste auf die Quelle (Funk→nur Funk, IOTA→Chain, Telegram→TG; Online/Alle→alles). Zusätzlich Toolbar-Filter (Eingang/Ausgang, Verschl./Klartext). **Ton/Stumm**, **SOS**. |
 | **Seitenleiste** (Desktop) | **Chats** gleiche Höhe wie Posteingang (`min(70vh,44rem)`), scrollt |
 | **Posteingang** (rechts) | Nachrichten + Toolbar; **Auswahl** = gebündelte Zeilen-Aktionen |
 | **Composer** | **Volle Breite unter beiden Spalten** (eigene Leiste, kein Overlap): `[+]` = Datei, Kamera, STT, Telefonbuch, **An Adresse senden**, **Sprachnachricht**, **Passphrase-Schutz**, **NFT-Leserecht**; Text; Senden. Empfänger-Wallet bei aktivem Chat ausgeblendet |

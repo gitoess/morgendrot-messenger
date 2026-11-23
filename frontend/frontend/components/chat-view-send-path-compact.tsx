@@ -200,10 +200,7 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
         className
       )}
     >
-      <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Sendepfad</p>
-      <p className="mb-2 text-[10px] leading-snug text-muted-foreground/90">
-        Nur wohin gesendet wird — die Liste filterst du mit Filter/Kanal (nicht hier).
-      </p>
+      <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Sendepfad</p>
       <div
         className={cn(
           gridLayout
