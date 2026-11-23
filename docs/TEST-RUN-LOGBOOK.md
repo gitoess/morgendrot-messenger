@@ -21,6 +21,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-11-23** | Samsung SM_A202F (`R58N4202NVL`), **Phase 2 Standalone 4b–4d** | Frische APK; CDP-Smoke: **4b PASS** (Klartext Tx `8jzDhWZwktpw…`), **4c+4d PASS** (Enc Self + Inbox; ECDH via `__morgSmoke` + Peer-Map-LS). 4e/4f N/A. Fixes: Peer-Map-Cache, Smoke-Hook, Status-Parse. | **PASS (4b–4d)** |
 | **2026-11-23** | PC (Windows), **Phase‑2 Prep APK** | `apk:debug:build` BUILD SUCCESSFUL; `app-debug.apk` frisch. `adb devices` leer → Install/4b wartet auf Handy. | **PREP** — Gate = USB-Gerät |
 | **2026-11-23** | PC (Windows), **Phase 1 zu** | Stage‑2 §1.5/§4b Vitest; H.15 **88/88**; `smoke:standalone-desk` OK. Roadmap → Phase 2. | **PASS (PC)** — #27 |
 | **2026-11-23** | PC (Windows), **Stage‑2 Checkliste Catch-up** | §1.1–1.4 abgehakt (Logbuch-Belege); §1.5 Vitest; §4b Vitest/optional Live; Roadmap H.15 PC Ist. | **DOCS** — PR #26 gemerged |

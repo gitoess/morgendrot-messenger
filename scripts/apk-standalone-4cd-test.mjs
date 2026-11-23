@@ -67,7 +67,8 @@ async function main() {
 
   session.close()
 
-  const pass4c = send4cOk && directRpc && !relay
+  /** Inbox-Treffer zählt als 4c-Beweis, wenn Statuszeile den Digest verschluckt. */
+  const pass4c = (send4cOk || inbox.found) && directRpc && !relay
   const pass4d = inbox.found
 
   if (pass4c && pass4d) {

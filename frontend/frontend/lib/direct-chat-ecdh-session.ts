@@ -26,10 +26,9 @@ function normalizeAddr(a: string): string {
 }
 
 function readPeerMap(): Record<string, string> {
-  if (peerMapCache) return peerMapCache
+  /** Immer aus LS lesen — sonst bleiben CDP-/Vault-Schreibungen hinter peerMapCache unsichtbar. */
   if (typeof window === 'undefined') {
-    peerMapCache = {}
-    return peerMapCache
+    return peerMapCache ?? {}
   }
   try {
     const raw = window.localStorage.getItem(LS_PEER_PUB)?.trim()
