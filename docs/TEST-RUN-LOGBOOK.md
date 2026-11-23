@@ -21,6 +21,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-11-23** | PC (Windows), **H.2 full + Hygiene** | `check:pwa-desk` + `:full` OK. DEV-START: kein Doppel-Start. H.8: dm:b ≠ Dienst/Privat. Stage‑2 §1.5 Vitest+manuell. Roadmap-Kopf #20–#22. | **PASS (H.2 Desk)** |
 | **2026-11-23** | PC (Windows), **URL-Deeplink Chat** | `/?t=inbox-messages` öffnet nach Unlock den Chat (Query strip). Vitest deeplink. | **CODE** — PR |
 | **2026-11-23** | PC (Windows), **#20/#21 merge + Desk** | `#20` Vault-PW Tab+Idle; `#21` Unlock Prefer-vault. Desk H.15 **88/88**. | **PASS (Merge+Desk)** |
 | **2026-11-22** | PC (Windows), **Vault-PW Tab + Idle-Pref** | F5: Browser-PW Tab-Persist; API bleibt offen ohne Prozess-Neustart. Idle-Auto-Lock Pref Default aus (Einstellungen → Tresor). 2. Terminal (B) nach `dm:b`-Start gesperrt bis Unlock — eigener Prozess. | **CODE** — Vitest vault-password-session + idle-pref |

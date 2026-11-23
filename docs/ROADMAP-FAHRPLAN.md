@@ -29,8 +29,8 @@
 **Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
 1. **Fokus jetzt:** **PC-Messenger fertig ziehen**. **Nicht jetzt:** Handy-Abnahme, Funk-Feld, physisches 2. Gerät, Helfer/Boss.  
-2. **Erledigt (PC):** Settings/TG/G2–G4; Posteingang-UX; fail-closed; product-identity; Mailbox/Handshake-Klarheit; Desk-Smoke 87/87; `SIGNER=sdk`.  
-3. **Als Nächstes (nur PC):** PC-UX-Rest / kleine Fixes bei Touch (`ds` inkl. 3345 gemerged). **Ist:** Klartext/Enc Self + A↔B Klartext/Enc (PR #15) + Annehmen-Banner-Fix + Inbox-DOM-Drossel + Desk 88/88. **Kein** APK-/Funk-Zwang.  
+2. **Erledigt (PC):** Settings/TG/G2–G4; Posteingang-UX; fail-closed; product-identity; Mailbox/Handshake-Klarheit; Desk-Smoke **88/88**; `SIGNER=sdk`; Connect/Annehmen/Enc A↔B (#15–#18); Vault-Hint ehrlich (#19); Vault-PW Tab+Idle (#20); Unlock Prefer-vault (#21); URL-Deeplink Chat (#22).  
+3. **Als Nächstes (nur PC):** Rest-UX / Vitest bei Touch; H.2 Desk-Checks ritualisieren; Stage‑2 §1.5 Relay = Vitest + manueller Puls-Check. **Kein** APK-/Funk-Zwang.  
 4. **Danach:** Phase 2 Handy → Phase 3 Funk → Phase 4 physisches 2. Gerät.  
 5. **Wallet/IOTA-Aktivität:** Freeze. **Gestrichen:** WhatsApp/Paywall.  
 6. **Merge-Ritual** nach sinnvollem Paket.
@@ -39,9 +39,9 @@
 
 | ID | Thema | Notiz |
 |----|--------|--------|
-| **H.0** (Teil) | Unlock / Lite / PWA-Realität | Ohne Einsatz-„Antworten“/Handoff-Story als Pflicht |
+| **H.0** (Teil) | Unlock / Lite / PWA-Realität | **Ist 2026-11-23:** Tab-PW + Idle-Pref (#20); Prefer-vault (#21); Deeplink Chat (#22). Ohne Einsatz-Handoff-Pflicht |
 | **H.1 / H.1a / H.1b** | Qualität bei Touch | Kein Big-Bang-Refactor; Vitest/ESLint bei Messenger-Scheiben |
-| **H.2** | PWA-Checks + Status/Fehler | **ohne** Kabel-Bridge |
+| **H.2** | PWA-Checks + Status/Fehler | **Ist Desk:** `check:pwa-desk` + `:full` 2026-11-23 OK; L1–L5 Gerät = Phase 2 |
 | **H.4 / H.5** | Merge-Check / Git-Hygiene | Bei jedem Lieferpaket |
 | **H.8** | Dienst vs. privat (Doku) | Zwei Installationen merken; kein Soft-Switch-Bau |
 | **H.10** (Teil) | Ehrliche Claims / schlanke Härtung | Kein „Regierungs-Niveau“-Theater |
