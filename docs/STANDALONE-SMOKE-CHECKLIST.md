@@ -44,7 +44,7 @@
 - [x] Root: **`npm run smoke:standalone-desk`** grün (**2026-11-23**).
 - [ ] Optional Root: **`npm run test:smoke`**.
 - [x] APK **frisch** gebaut **2026-11-23** (`npm run apk:debug:build` → `app-debug.apk`, BUILD SUCCESSFUL). Artefakt >14 Tage nicht als Abnahme.
-- [ ] **Gerät per `adb devices`:** mind. 1 authorized. **2026-11-23:** keines angeschlossen → 4b–4d wartet auf USB.
+- [x] **Gerät per `adb devices`:** `R58N4202NVL` (SM_A202F) authorized **2026-11-23**; 4b–4d CDP **PASS**.
 - [ ] **Nur wenn Einsatz-Pfad:** Handoff-ZIP(s). **Solo-4b:** ZIP **nicht** nötig (RPC/Package/Mailbox manuell oder Lab-Defaults).
 
 **Ergebnis:** Desk grün + Gerät + frische APK → Gerätetest starten. PC Stage‑2 ist **nicht** der Handy-Ersatz (`docs/PC-STAGE2-DIRECT-IOTA-SMOKE.md` geschlossen 2026-11-23).

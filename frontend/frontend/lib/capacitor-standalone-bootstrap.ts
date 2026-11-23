@@ -21,7 +21,10 @@ import {
   setIotaSubmitMode,
 } from '@/frontend/lib/direct-iota-plain-submit'
 import { setDirectChainOptimisticFlagsEnabled } from '@/frontend/lib/direct-iota-chain-context'
-import { restoreDirectChatEcdhPrivateFromLocalStorage } from '@/frontend/lib/direct-chat-ecdh-session'
+import {
+  restoreDirectChatEcdhPrivateFromLocalStorage,
+  setDirectChatEcdhPeerPubBase64,
+} from '@/frontend/lib/direct-chat-ecdh-session'
 import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
 import {
   getDirectIotaSessionSigner,
@@ -86,6 +89,15 @@ export function bootstrapCapacitorStandaloneSession(): void {
   }
 
   void restoreDirectChatEcdhPrivateFromLocalStorage()
+
+  /** CDP-/Smoke-Hook (nur Capacitor): JWK aus LS in RAM + Peer-Pub mit Cache-Write. */
+  ;(window as unknown as { __morgSmoke?: {
+    restoreEcdh: () => ReturnType<typeof restoreDirectChatEcdhPrivateFromLocalStorage>
+    setPeerPub: (addr: string, b64: string) => ReturnType<typeof setDirectChatEcdhPeerPubBase64>
+  } }).__morgSmoke = {
+    restoreEcdh: () => restoreDirectChatEcdhPrivateFromLocalStorage(),
+    setPeerPub: (addr, b64) => setDirectChatEcdhPeerPubBase64(addr, b64),
+  }
 
   try {
     // Standalone-APK: immer Mailbox — Event ist flüchtig und erscheint nicht in Boss-/PC-Inbox.

@@ -28,10 +28,10 @@
 
 **Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
-1. **Fokus jetzt:** **Phase 2 Handy (1 Gerät)** — Standalone **4b–4d**. Gate: USB-Gerät + frische Debug-APK. Desk-Prep **88/88** + `smoke:standalone-desk` **OK** (2026-11-23).  
-2. **Erledigt (PC / Phase 1):** Messenger-Kern, Settings/TG/G2–G4, Posteingang, fail-closed, product-identity, Mailbox/Handshake, Vault-UX (#19–#22), Hygiene (#23–#25), Enc A↔B, **Stage‑2 §0 + §1.1–1.5 + §4b Vitest geschlossen** (#26 + Catch-up).  
-3. **PC-Rest (nicht blockierend):** Live-QR-Scan §4b UI, Puls Signer löschen §1.6, Rituale T1/T3/T11/T17/T53 bei Touch.  
-4. **Danach:** Phase 3 Funk → Phase 4 physisches 2. Gerät. **Nicht parallel:** Helfer/Boss/WhatsApp/Paywall.  
+1. **Fokus jetzt:** Phase‑2 Rest — manuelle Gegenprobe am Gerät ok; optional **Edition-Freeze-Scheibe** (Merkliste nach 4b–4d). Danach Phase 3 Funk.  
+2. **Erledigt Phase 1 (PC):** Messenger-Kern, Vault-UX, Enc A↔B, Stage‑2 geschlossen (#26–#28).  
+3. **Erledigt Phase 2 Kern:** Standalone **4b–4d PASS** 2026-11-23 (`R58N4202NVL`, CDP). 4e/4f = Phase 4.  
+4. **Danach:** Phase 3 Funk → Phase 4 physisches 2. Gerät. **Nicht parallel:** `.exe`-Big-Bang, Helfer/Boss/WhatsApp/Paywall.  
 5. **Wallet/IOTA-Aktivität:** Freeze.  
 6. **Merge-Ritual** nach sinnvollem Paket.
 
@@ -3037,9 +3037,17 @@ Nicht umsetzen. Bei späterem Bedarf neu spezifizieren (nur Ciphertext-Hash, nie
 
 **Nicht** parallel zu Session C / Zeitkapsel-Feldtest starten.
 
-### Merkliste Produkt-Split: Morgendrot vs IOTA-Messenger (lebendig — Entscheidung am Schluss)
+### Merkliste Produkt-Split: Morgendrot vs IOTA-Messenger (lebendig)
 
-**Zweck:** Dinge sammeln, die der **schlanke IOTA-Messenger** nicht braucht. Overlay-Ist: `tools/iota-messenger/overlays/product-identity.ts`. **Noch keine finale Abnahme** — nur merken.
+**Zweck:** Dinge sammeln, die der **schlanke IOTA-Messenger** nicht braucht. Overlay-Ist: `tools/iota-messenger/overlays/product-identity.ts`.
+
+**Wann festlegen (verbindlich — nicht früher Big-Bang):**
+1. **Jetzt / laufend:** nur **merken** + harte No-Gos (WhatsApp/Paywall gestrichen; Auto-Execute aus; Overlay-Flags bei Touch). Kein Editions-Workshop parallel zu Enc/Handy-Smoke.
+2. **Nach Phase 2 (Handy 4b–4d PASS):** erste **Freeze-Scheibe** — Kern „drin“ = Vault, Klartext/Enc, Peering, Wallet-Send/Empfangen (Freeze-Regel beachten); Kern „raus“ = Merkliste unten + Spec `IOTA-MESSENGER-EDITION-V1.md`.
+3. **Vor Vertrieb / öffentlichem ZIP-exe / Store-Claim:** **Endabnahme** der Merkliste (Label, Claims, Default-Env) — sonst bleibt es Morgendrot mit ausgeblendeten Kacheln.
+4. **Nicht warten bis Phase 4:** physisches 2. Gerät ändert Peering-Feld, nicht die Produktgrenze Einsatz vs. Solo-Chat.
+
+**Noch keine Endabnahme** — bis Schritt 2/3 weiter nur merken.
 
 #### IOTA-Messenger braucht **nicht** (Merkliste)
 

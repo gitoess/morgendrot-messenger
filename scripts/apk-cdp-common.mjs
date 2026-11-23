@@ -639,6 +639,7 @@ export async function ensureChatEcdhForSelf(session, myAddr) {
       const map = JSON.parse(localStorage.getItem(LS_PEER) || '{}');
       let jwkJson = localStorage.getItem(LS_JWK) || '';
       let b64 = map[addr] || localStorage.getItem(LS_OWN) || '';
+      let via = 'peer-map';
       if (!jwkJson || !b64) {
         const pair = await crypto.subtle.generateKey(
           { name: 'ECDH', namedCurve: 'P-256' },
@@ -651,16 +652,37 @@ export async function ensureChatEcdhForSelf(session, myAddr) {
         jwkJson = JSON.stringify(jwk);
         localStorage.setItem(LS_JWK, jwkJson);
         localStorage.setItem(LS_OWN, b64);
-        map[addr] = b64;
-        localStorage.setItem(LS_PEER, JSON.stringify(map));
+        via = 'generated';
       }
-      return { ok: true, jwkJson, via: map[addr] ? 'peer-map' : 'generated' };
+      map[addr] = b64;
+      localStorage.setItem(LS_PEER, JSON.stringify(map));
+
+      const smoke = window.__morgSmoke;
+      if (smoke?.restoreEcdh && smoke?.setPeerPub) {
+        const restored = await smoke.restoreEcdh();
+        const peer = smoke.setPeerPub(addr, b64);
+        return {
+          ok: Boolean(restored?.ok) && Boolean(peer?.ok !== false),
+          jwkJson,
+          via,
+          hook: restored?.ok ? 'restore+peer' : 'hook-fail',
+          hookErr: restored?.error || peer?.error || '',
+        };
+      }
+
+      return { ok: true, jwkJson, via, hook: 'missing' };
     })()`,
     true
   )
-  const pulse = await applyEcdhJwkViaPulse(session, r?.jwkJson || '')
-  console.log('   ECDH Puls:', pulse?.ok ? 'JWK aktiv' : 'nur LS')
-  return { ...r, pulseOk: pulse?.ok }
+  if (r?.hook === 'missing' || r?.hook === 'hook-fail') {
+    const pulse = await applyEcdhJwkViaPulse(session, r?.jwkJson || '')
+    console.log('   ECDH Hook:', r?.hook || 'n/a', pulse?.ok ? '+ Puls OK' : '+ Puls fail')
+    return { ...r, pulseOk: Boolean(pulse?.ok) }
+  }
+  console.log('   ECDH Hook:', r?.hook || 'ok', 'via', r?.via || '?')
+  await armRecipient(session, myAddr)
+  await sleep(400)
+  return { ...r, pulseOk: true }
 }
 
 async function applyEcdhJwkViaPulse(session, jwkJson) {
@@ -869,12 +891,17 @@ export async function sendComposerMessage(session, { encrypted, message, myAddr,
     bodyHint = await session.evaluate(
       `(() => {
         const t = document.body?.innerText || '';
-        const line = t.split(/\\n/).find((l) => /gesendet|digest|fehl|gas|rejected|error|verschl/i.test(l));
+        const line = t.split(/\\n/).find((l) => {
+          const s = l.trim();
+          if (!s || /^(Klartext|Verschlüsselt|Unverschlüsselt)$/i.test(s)) return false;
+          return /gesendet|digest|txblock|fehlgeschlagen|error|gas|rejected|insufficient/i.test(s);
+        });
         return (line || '').trim().slice(0, 240);
       })()`
     )
-    if (/erfolg|gesendet|digest|txblock|0x[a-f0-9]{16}/i.test(lastStatus + ' ' + bodyHint)) break
-    if (/fehl|error|gas|insufficient|rejected/i.test(lastStatus + ' ' + bodyHint)) break
+    const blob = `${lastStatus} ${bodyHint}`
+    if (/erfolg|gesendet|digest|txblock|0x[a-f0-9]{16}/i.test(blob)) break
+    if (/fehlgeschlagen|error|insufficient|rejected/i.test(blob) && !/gesendet/i.test(blob)) break
   }
   return { lastStatus, bodyHint }
 }
