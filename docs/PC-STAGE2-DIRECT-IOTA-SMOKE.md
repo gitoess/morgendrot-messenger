@@ -10,8 +10,8 @@
 
 ## 0. Automatisiert (Pflicht vor manuell)
 
-- [ ] Root: `npm run test:h15-direct-submit` **grün**
-- [ ] Root: `npm run smoke:standalone-desk` **grün** (Desk-Prep; ersetzt kein Browser-§1)
+- [x] Root: `npm run test:h15-direct-submit` **grün** (2026-11-23, 88/88)
+- [x] Root: `npm run smoke:standalone-desk` **grün** (Desk-Prep; ersetzt kein Browser-§1)
 - Ergebniszeile → `docs/TEST-RUN-LOGBOOK.md`
 
 ---
@@ -26,7 +26,7 @@ Voraussetzungen: `npm run dm` (oder `dev`), Tresor offen, Puls **IOTA-Sendeweg =
 | 2 | Posteingang: Nachricht sichtbar (API und/oder Direkt-RPC) | Inhalt erkennbar; kein stilles Verschwinden | |
 | 3 | Enc **an** + Handshake vorhanden → verschl. Self-Send | Erfolg oder verständlicher Hinweis; kein Klartext-Leak in UI als „verschlüsselt“ | |
 | 4 | Optional **Zwei-Wallet:** `npm run dm:b` → http://localhost:3344/ neues Profil (Vault `.morgendrot-vault-b`); Handshake → Enc A→B | Beide Seiten konsistent; **kein** Phase‑4-Anspruch | **PASS** 2026-11-22 (`J8RW6iX4…` / Retest `ETT8mK9E…`) |
-| 5 | Puls → **Nur Morgendrot-API** | Klartext geht **nicht** still per RPC | |
+| 5 | Puls → **Nur Morgendrot-API** | Klartext geht **nicht** still per RPC | **Vitest:** `direct-iota-plain-submit` / Enc/Handshake `relayBlockedMessage` (CI). Manuell: Puls-Schalter + ein Send-Versuch → Fehlertext „Nur Morgendrot-API“ |
 | 6 | Nach Test: Session-Signer in Puls **löschen** | Kein Mnemonic in Support-Screenshots | |
 
 **Zwei-Wallet Hinweis:** Instanz B = eigene Adresse/Gas (`VAULT_FILE=.morgendrot-vault-b`, `PARTNER_ADDRESS_FILE=.morgendrot-partner-b`). Ohne getrenntes Partner-File überschreibt B-Handshake `.morgendrot-partner` mit A → A `/connect` ohne Args → Self-Peer. `/connect` „Bereits verbunden“ gilt nur für denselben Peer; `/cancel-connect` leert peerMap. Empfang Enc braucht B entsperrt.

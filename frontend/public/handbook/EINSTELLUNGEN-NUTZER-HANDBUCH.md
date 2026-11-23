@@ -1,6 +1,6 @@
 # Einstellungen — Kurzhandbuch
 
-**Stand:** 2026-11-13 · Eine Seite, Ist-UI. Keine Spez, keine Geschichte.
+**Stand:** 2026-11-23 · Eine Seite, Ist-UI. Keine Spez, keine Geschichte.
 
 ---
 
@@ -83,7 +83,7 @@ Team-Postfächer: **Meine Mailboxen**. Helfer sehen den Block nicht.
 
 | Block | Kurz | Ort |
 |-------|------|-----|
-| Passwort ändern | Vault-Datei neu verschlüsseln; „Tresor sperren“ = Keys aus RAM | **Sicherheit** |
+| Passwort ändern | Vault-Datei neu verschlüsseln; „Sitzung beenden“ = Keys aus RAM (wie Abmelden). **Auto-Sperren nach Abwesenheit** = optional, Default aus. F5 sperrt den API-Tresor nicht | **Sicherheit** / Tresor |
 | Backup | Lokal / Chain sichern & laden | **Sicherheit** |
 | Meine Mailboxen | Privat/Team-Postfächer ≠ Deploy-Mailbox unter „Wo senden?“ | **IOTA** |
 | Schatten → Main | Einmal-Sweep temporäre Adresse → Main | **Sicherheit** |

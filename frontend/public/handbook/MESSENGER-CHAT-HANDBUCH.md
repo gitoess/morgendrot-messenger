@@ -2,7 +2,7 @@
 
 **Zweck:** Ausführliche Hinweise, die früher direkt in der Chat-UI standen — hier gebündelt für Nachlesen (PWA-Handbuch, offline nach erstem Abruf möglich).
 
-**Stand:** 2026-11-17 — Settings-Kurzblatt: `EINSTELLUNGEN-NUTZER-HANDBUCH.md` (Ton/Stumm/TG-Klingel). Chat-UI: Sidebar | Posteingang (kurz), Composer volle Breite darunter; Sendepfad Alle/IOTA/Funk/Telegram; Aktualisieren im App-Header neben Tresor.
+**Stand:** 2026-11-23 — Settings-Kurzblatt: `EINSTELLUNGEN-NUTZER-HANDBUCH.md` (Ton/Stumm/TG-Klingel). Chat-UI: Sidebar | Posteingang (kurz), Composer volle Breite darunter; Sendepfad Alle/IOTA/Funk/Telegram; Aktualisieren im App-Header neben Tresor.
 
 **Verwandt:** `docs/PWA-HANDBUCH-OFFLINE.md`, `docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`, `docs/MESSENGER-CAPABILITIES-OVERVIEW.md`, `docs/GRUPPENCHAT-ZIELBILD.md`, `docs/EXPORT-ASSISTENT-REFERENZ.md`.  
 **Privacy / Vault / NFT-Schlüsselkarte (alle Ist-Funktionen + 1-Gerät-Test):** → **`docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`**.  
@@ -27,7 +27,7 @@
 | **Auswahl** | Gebündelt: Kopieren, Protokoll, Weiterleiten, JSON, Hashes, Ausblenden, **Burn**. Nicht: Antworten, Telefonbuch, Handoff, Mesh-Paket |
 | **Browser** | Zurück/Vor navigiert Dashboard-Ansichten (`morgView`) |
 
-**Dashboard:** Kachel **Nachrichten** öffnet den Chat. **Telefonbuch** zusätzlich über `[+]` im Composer, Sidebar oder Kontakt-Detail.
+**Dashboard:** Kachel **Nachrichten** öffnet den Chat. Shortcut-URL nach Unlock: `/?t=inbox-messages` (Query verschwindet). **F5** sperrt den API-Tresor nicht (solange der Node-Prozess läuft); Browser-Vault-PW bleibt im Tab — **Abmelden** / **Sitzung beenden** sperren bewusst. Optional Idle unter Einstellungen → Tresor. **Telefonbuch** zusätzlich über `[+]` im Composer, Sidebar oder Kontakt-Detail.
 
 ### Ton, Stumm, Telegram-Klingel — nicht verwechseln
 

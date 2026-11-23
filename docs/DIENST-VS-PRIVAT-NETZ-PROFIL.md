@@ -5,6 +5,8 @@
 
 **§ H.8 / Reihenfolge:** In **`docs/ROADMAP-FAHRPLAN.md`** § **C.0b** (Phase-A-Rand) steht **§ H.8** **direkt nach** **§ H.2** (PWA-/Status-Checks) — **nur Doku**, kein Implementierungszwang vor Phase-B-Kern. Praxisleine: **`TESTING.md`** (Smoke, *Qualitätsritual vor Merge*) und **`docs/PWA-MANUAL-CHECKS.md`** (Install, Offline-Shell, Handbuch); **keine** vorausgesetzte In-App-Profilwahl Testnet/Mainnet (siehe § 5 unten).
 
+**Nicht verwechseln:** `npm run dm:b` (zweite PC-Instanz, Vault-B, Enc-Surrogat Stage‑2) ist **kein** Dienst/Privat-Profilwechsel — gleiche Testnet-Kette, zweites Wallet. Dienst vs. privat = getrennte `.env`/Ordner (Mainnet vs. Testnet), siehe § 2–3.
+
 ---
 
 ## 1. Szenario: sinnvoll, aber klar abgrenzen

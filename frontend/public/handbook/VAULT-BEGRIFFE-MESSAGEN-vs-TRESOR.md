@@ -127,7 +127,7 @@ Unter „Tresor/Privacy“ laufen **drei** Mechanismen — nicht drei Passwörte
 |---------|---------|---------|
 | **A · API-Tresor** | `apiStatus.locked` | Backend-Messaging-Keys / Signer; Hard-Lock → Unlock-Dialog |
 | **B · Privacy Soft-Lock** | Badge „Privacy: gesperrt“ | Secrets + Browser-Signer weg; **Chat bleibt lesbar**; Senden aus |
-| **C · Vault-Password-Session** | RAM-Passwort für Browser-Sidecars | AES-GCM-`localStorage`-Sidecars (Passphrasen, Team-Keys, Keycards, NFT-Index, Ratchet) |
+| **C · Vault-Password-Session** | RAM + Tab-`sessionStorage` (F5 ok; Tab zu / Abmelden → weg) | AES-GCM-`localStorage`-Sidecars (Passphrasen, Team-Keys, Keycards, NFT-Index, Ratchet) |
 
 **Policy (kurz):** Secrets und Merken nur bei C; Schreiben bei Soft/Hard gesperrt; **Frei-/Gesichert-Saldo und NFT-Galerie** bleiben sichtbar (on-chain/öffentlich). Einstellungen browsen offen; Exports/Emergency/Keys nur entsperrt oder maskiert. **Kein zweiter Passwort-Tresor.**
 
@@ -149,4 +149,6 @@ Details Nutzer: `docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md` §1.
 
 ---
 
-*Stand: 2026-11-12 — §9 Seed/PW-SPOF; Abgleich vault-local / Soft-Lock / Sidecar.*
+**Nachtrag 2026-11-22 (Schicht C / F5 + Idle):** Vault-Passwort-Session überlebt **Reload im selben Tab** (`sessionStorage`); **Abmelden** / Soft-Lock leert sie. **F5 sperrt den API-Tresor nicht** (solange der Node-Prozess läuft). **API-Prozess-Neustart** (`npm run dm`) braucht weiterhin Unlock. Optional: Einstellungen → Tresor → **Auto-Sperren nach Abwesenheit** (Default **aus**).
+
+*Stand: 2026-11-22 — §9 Seed/PW-SPOF; Schicht C Tab-Persist; Soft-Lock / Sidecar.*

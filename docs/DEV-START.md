@@ -64,6 +64,8 @@ Code: `frontend/frontend/lib/messenger-role-capabilities.ts` → `canAccessEinsa
 
 **Dev wieder stoppen (Ports 3341–3345 freigeben, inkl. `dm:b` API 3345):** **`npm run dev:stop`** oder **`npm run ds`** im Repo-Root — sinnvoll vor einem erneuten Start, wenn `EADDRINUSE` oder „Website nicht erreichbar“ nach einem abgebrochenen Lauf auftritt. Im laufenden Terminal reicht **Strg+C**.
 
+**Nicht parallel zweimal starten:** Läuft `dm` / `dev:messenger` schon (Ports **3341/3342** belegt), schließt ein zweites `npm run dev:messenger` oft sofort — `concurrently --kill-others-on-fail` + **`EADDRINUSE`**. Dann **nicht** nochmal starten: laufende Instanz nutzen **oder** zuerst **`npm run ds`**, dann **ein** Start. Agent und eigenes Terminal sollen **nicht** gleichzeitig denselben Stack öffnen.
+
 - **Backend (API):** http://127.0.0.1:3342  
 - **Next.js-UI:** http://127.0.0.1:3341  
 - **Lite-UI / Boss-Werkstatt (Alpine + Tailwind):** http://127.0.0.1:3342/ – wird vom API-Server aus dem Ordner `ui/` ausgeliefert. Kein separates `npm install` für `ui/` nötig.
