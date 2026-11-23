@@ -99,6 +99,10 @@ import { unlockLocalSecretVaults } from '@/frontend/lib/local-secret-vaults'
 import { hydrateVaultPasswordSessionFromTab } from '@/frontend/lib/vault-password-session'
 import { readVaultIdleLockMinutes } from '@/frontend/lib/vault-idle-lock-pref'
 import { preferUnlockModeWhenLocalVaultExists } from '@/frontend/lib/vault-unlock-mode-prefer'
+import {
+  parseDashboardUrlDeeplink,
+  stripDashboardUrlDeeplinkSearch,
+} from '@/frontend/lib/dashboard-url-deeplink'
 import { setPrivacySoftLocked } from '@/frontend/lib/privacy-soft-lock'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { readContactFavorites } from '@/frontend/lib/contact-phonebook-meta-store'
@@ -716,6 +720,39 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [navigateTo, options.restoreFeatures])
+
+  /** `/?t=inbox-messages` → Chat (nach Unlock); Query weg, kein Loop. */
+  useEffect(() => {
+    if (locked || backendReachable !== true) return
+    if (typeof window === 'undefined') return
+    if (restoredDashboardViewRef.current) return
+    const link = parseDashboardUrlDeeplink(window.location.search)
+    if (!link) return
+    restoredDashboardViewRef.current = true
+    if (link === 'chat') {
+      navigateTo({ type: 'chat', variant: 'private-chat' }, { replace: true })
+      window.setTimeout(() => {
+        try {
+          window.dispatchEvent(new CustomEvent(OPEN_MESSENGER_INBOX_EVENT))
+        } catch {
+          /* ignore */
+        }
+      }, 0)
+    }
+    try {
+      const next =
+        window.location.pathname +
+        stripDashboardUrlDeeplinkSearch(window.location.search) +
+        window.location.hash
+      window.history.replaceState(
+        { morgView: { type: 'chat', variant: 'private-chat' }, channel: 'private' },
+        '',
+        next
+      )
+    } catch {
+      /* ignore */
+    }
+  }, [locked, backendReachable, navigateTo])
 
   useEffect(() => {
     if (locked || backendReachable !== true) return
