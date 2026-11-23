@@ -98,6 +98,7 @@ import { wipeLocalPassphraseStoresOnLock } from '@/frontend/lib/privacy-lock-wip
 import { unlockLocalSecretVaults } from '@/frontend/lib/local-secret-vaults'
 import { hydrateVaultPasswordSessionFromTab } from '@/frontend/lib/vault-password-session'
 import { readVaultIdleLockMinutes } from '@/frontend/lib/vault-idle-lock-pref'
+import { preferUnlockModeWhenLocalVaultExists } from '@/frontend/lib/vault-unlock-mode-prefer'
 import { setPrivacySoftLocked } from '@/frontend/lib/privacy-soft-lock'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { readContactFavorites } from '@/frontend/lib/contact-phonebook-meta-store'
@@ -170,6 +171,8 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   const prevLockedRef = useRef(false)
   const vaultHasLocalRef = useRef(false)
   const signerIsSdkRef = useRef(false)
+  /** User hat im Dialog bewusst „Neu anlegen“ gewählt — Race-Korrektur nicht überschreiben. */
+  const unlockModeUserChoseCreateRef = useRef(false)
   const restoredDashboardViewRef = useRef(false)
   /** Hält Entsperr-Dialog offen, bis Keys in der Sitzung sind (Poll setzt sonst locked=false). */
   const vaultUnlockRequestedRef = useRef(false)
@@ -232,6 +235,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     if (locked && !prev) {
       void wipeLocalPassphraseStoresOnLock()
       restoredDashboardViewRef.current = false
+      unlockModeUserChoseCreateRef.current = false
       setUnlockError('')
       setSignerImport('')
       setSignerImportConfirm('')
@@ -266,6 +270,17 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       setShowSignerImportOpen(false)
     }
   }, [apiSnapshot?.signer, unlockMode, locked])
+
+  /** Race: locked=true vor Status-Poll → fälschlich create; sobald hasLocal bekannt → vault. */
+  useEffect(() => {
+    const next = preferUnlockModeWhenLocalVaultExists({
+      locked,
+      hasLocalVault: apiSnapshot?.vaultStatus?.hasLocal === true || vaultHasLocalRef.current,
+      unlockMode,
+      userChoseCreate: unlockModeUserChoseCreateRef.current,
+    })
+    if (next) setUnlockMode(next)
+  }, [locked, unlockMode, apiSnapshot?.vaultStatus?.hasLocal])
 
   useEffect(() => {
     setShowAllTiles(readShowAllTilesPref())
@@ -1328,6 +1343,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
 
 
   const onUnlockModeChange = useCallback((m: DashboardUnlockMode) => {
+    unlockModeUserChoseCreateRef.current = m === 'create'
     setUnlockMode(m)
     setUnlockError('')
     setPasswordConfirm('')
