@@ -765,8 +765,9 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
         throw new Error(mode === 'usb' ? 'Web-Serial-Transport nicht verfügbar.' : 'Web-Bluetooth-Transport nicht verfügbar.')
       }
       let transport: unknown
+      const usbFactory = mode === 'usb' ? (transportFactory as UsbTransportFactory) : null
       try {
-        if (silent && mode === 'usb' && typeof transportFactory.createFromPort === 'function') {
+        if (silent && usbFactory && typeof usbFactory.createFromPort === 'function') {
           const serial = (
             navigator as Navigator & {
               serial?: { getPorts: () => Promise<unknown[]> }
@@ -776,7 +777,7 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
           if (!ports.length) {
             throw new Error('USB: kein freigegebener Port für stillen Reconnect — bitte erneut „USB verbinden“.')
           }
-          transport = await transportFactory.createFromPort(ports[0]!)
+          transport = await usbFactory.createFromPort(ports[0]!)
         } else {
           transport = await transportFactory.create()
         }
@@ -784,7 +785,7 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
         if (mode === 'usb' && isWebSerialAlreadyOpenError(openErr)) {
           await releaseGrantedWebSerialPorts()
           await new Promise((r) => setTimeout(r, 120))
-          if (silent && typeof (transportFactory as UsbTransportFactory).createFromPort === 'function') {
+          if (silent && usbFactory && typeof usbFactory.createFromPort === 'function') {
             const serial = (
               navigator as Navigator & {
                 serial?: { getPorts: () => Promise<unknown[]> }
@@ -792,7 +793,7 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
             ).serial
             const ports = serial?.getPorts ? await serial.getPorts() : []
             if (!ports.length) throw openErr
-            transport = await (transportFactory as UsbTransportFactory).createFromPort!(ports[0]!)
+            transport = await usbFactory.createFromPort(ports[0]!)
           } else {
             transport = await transportFactory.create()
           }

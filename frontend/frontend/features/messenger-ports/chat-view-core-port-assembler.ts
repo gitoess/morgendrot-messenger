@@ -351,8 +351,9 @@ export type ChatViewMeshDeviceSlice = {
   sendMeshText: (
     text: string,
     destination?: number | 'broadcast',
-    channelIndex?: number
-  ) => Promise<number>
+    channelIndex?: number,
+    opts?: { wantAck?: boolean; isCancelled?: () => boolean; queueConfirm?: boolean }
+  ) => Promise<unknown>
   ensureConnected?: () => Promise<boolean>
 }
 

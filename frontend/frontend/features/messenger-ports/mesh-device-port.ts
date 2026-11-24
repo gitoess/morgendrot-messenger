@@ -25,8 +25,9 @@ export type MeshDevicePort = {
   readonly sendMeshText: (
     text: string,
     destination?: number | 'broadcast',
-    channelIndex?: number
-  ) => Promise<number>
+    channelIndex?: number,
+    opts?: { wantAck?: boolean; isCancelled?: () => boolean; queueConfirm?: boolean }
+  ) => Promise<unknown>
   /** Optional: stiller Reconnect (USB getPorts / BLE sticky). */
   readonly ensureConnected?: () => Promise<boolean>
 }
