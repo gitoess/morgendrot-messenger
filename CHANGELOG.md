@@ -6,6 +6,12 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+### Funk / H.25a (2026-11-24)
+
+- **LoRa-Bild Schreibtisch STABIL:** Live-RX-Fortschritt ohne Tab-Wechsel, Nur-Lücken-Repair, Cap ≤ 3,6 KB, Gap 580 ms, fused Speichern, Inbox-Kollaps; Encode/Tempo eingefroren (~1:30–1:45). Anker `lora-h25a-stable-anchor.mdc`, Smoke `docs/LORA-PC-FIRST-SMOKE.md` §5.
+- **Funk USB/BT:** Stall ohne Paket-ID = Fehler; Port-Besitz; Nodes/Kanäle; Console-Noise-Filter.
+- **Doku:** Roadmap-Arbeitsstand Phase‑3 Desk-Kern erledigt; Handbuch + TESTING + Logbuch nachgezogen.
+
 ### Privacy / NFT (2026-11-08)
 
 - **Guthaben / Purse-Ablauf:** Wallet **Frei:** \| **Purse Guthaben:** gleicher Stil; Auszahlen über Tab Guthaben; Digest + Vault-ID im Index/`boundVault` + Tresor-Sidecar; **Übergabe-Paket** bei NFT-Transfer (Bearer zeigt Betrag erst nach Import); Guarded-Hinweis: Coins bleiben bei der Wallet. Live-Balance; Aktivität; Tabs Galerie/Guthaben/Zeitkapsel getrennt.

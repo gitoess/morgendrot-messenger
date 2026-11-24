@@ -22,6 +22,7 @@
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
 | **2026-11-24** | PC, **H.25a STABIL einfrieren** | Cap **3,6 KB** / Gap **580** / ~1:30–1:45 belassen (kein 1‑min-Ziel). Encode+Tempo Freeze. Live-Progress, fused Save, Inbox-Kollaps. Doku/Roadmap/Smoke/TESTING nachgezogen. | **STABIL** — Merge-Paket |
+| **2026-11-24** | PC, **smoke:standalone-desk** | Root Ritual nach H.25a-Paket — **92 PASS** (H.15 Direct inkl.). | **PASS (Desk)** |
 | **2026-11-23** | PC, **H.25a STABIL-Anker** | User: schöner Lauf nach Nur-Lücken-Repair (kein Blind-Voll). Anker Rule + Smoke § STABIL. | **LIVE OK** — Baseline |
 | **2026-11-23** | PC, **H.25a Console-Flut + Airtime-Cap** | Next „Error received for packet …: undefined“ (44+ issues): outermost `console.error`-Filter + `MeshtasticDevNoiseGuard`. Encode Cap **4,2→2,2 KB**, Suche klein→groß. Vitest Filter/Policy. Live RF erneut. | **CODE** — Smoke/Roadmap/TESTING |
 | **2026-11-23** | PC, **H.25a UX Bilder über Funk** | Checkbox ohne Datei = „nichts passiert“. Fix: CTA „Bild wählen…“ sichtbar + File-Picker beim Einschalten; Path4-Checkbox ohne Expert-Gate. Vitest send-panel + ingest-pick + `test:h25a-lora-image` **PASS**. Live RF-Bild weiter manuell. | **CODE** — Roadmap Zeile 7 |

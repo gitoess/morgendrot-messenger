@@ -28,13 +28,13 @@
 
 **Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
-1. **Fokus jetzt:** **Phase 3 Funk — Rest klein** nach **H.25a Schreibtisch STABIL** (2026-11-24). Encode/Tempo **einfrieren** (`lora-h25a-stable-anchor.mdc`, `docs/LORA-PC-FIRST-SMOKE.md` §5). Outdoor-Feld später.  
+1. **Fokus jetzt:** **Phase 3 Desk zu** (H.25a STABIL 2026-11-24). Ohne neue Hardware wenig Code-Pflicht — nur kleine Klartext-/Copy-Scheiben bei Bedarf. Encode/Tempo **Freeze**.  
 2. **Erledigt Phase 1 (PC):** Messenger-Kern, Vault-UX, Enc A↔B, Stage‑2 (#26–#28).  
 3. **Erledigt Phase 2 Kern:** Standalone **4b–4d PASS** 2026-11-23. **Edition-Freeze-Scheibe** 2026-11-23 (Merkliste). 4e/4f = Phase 4.  
 4. **Erledigt Phase 3 Desk-Kern:** USB/BT-Klartext + Stall-ehrlich (#31–#33); **H.25a** Bild PC↔PC STABIL (Live-Progress, Nur-Lücken, Cap 3,6 KB, Gap 580, ~1:30–1:45).  
-5. **Danach:** Phase 3 Outdoor / Distanz nur bei Bedarf; dann Phase 4 physisches 2. Gerät. **Nicht parallel:** `.exe`-Big-Bang, Helfer/Boss/WhatsApp/Paywall, Cap/Gap-Experimente.  
+5. **Nächste echte Schritte (brauchen Gerät/Entscheidung):** (a) optional Outdoor/LongFast, (b) **Phase 4** physisches 2. Gerät / 4e–4f. **Nicht parallel:** `.exe`-Big-Bang, Helfer/Boss/WhatsApp/Paywall, Cap/Gap-Experimente.  
 6. **Wallet/IOTA-Aktivität:** Freeze. **IOTA-Messenger:** Funk absichtlich **raus** (Overlay `hideFunk`) — Funk = Morgendrot-Voll.  
-7. **Merge-Ritual** nach sinnvollem Paket.
+7. **Merge-Ritual** nach sinnvollem Paket (PR #34).
 
 ### Jetzt machen (IOTA-Messenger — User-Durchgang 2026-11-22)
 
@@ -47,7 +47,7 @@
 | **H.8** | Dienst vs. privat (Doku) | Zwei Installationen merken; kein Soft-Switch-Bau |
 | **H.10** (Teil) | Ehrliche Claims / schlanke Härtung | Kein „Regierungs-Niveau“-Theater |
 | **H.13 / H.14** | Schlankheit / Hardening | Nur bei Bedarf mit Messenger-Scheibe |
-| **H.15** | Direct-IOTA / Desk-Smoke | **PC Stage‑2 zu** (2026-11-23). **Jetzt:** Handy 4b–4d (Gerät + frische APK) |
+| **H.15** | Direct-IOTA / Desk-Smoke | **PC Stage‑2 zu**; **4b–4d PASS** (2026-11-23). **4e/4f** = Phase 4 |
 | **H.16** (Teil) | Telefonbuch + QR | **Ist PC:** Telefonbuch/Kontakt-QR/`mp` Peering (#Vitest). Boss-LAN = später |
 | **H.20** | Signer `sdk` | **Ist:** `.env.example` Default `sdk` (2026-11-22) |
 | **H.21** (Teil) | Empfänger-Auswahl Ist | Kurier-Umschlag → später |
