@@ -59,6 +59,7 @@ import { messengerFeatures, featureTitle } from '@/frontend/components/dashboard
 import { useMessengerFeatures } from '@/frontend/hooks/use-messenger-features'
 import { DashboardMyAddressPicker } from '@/frontend/components/dashboard-my-address-picker'
 import { getDirectChainFieldIdsFromLs } from '@/frontend/lib/direct-iota-chain-context'
+import { getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { DashboardIotaTransferCard } from '@/frontend/components/dashboard-iota-transfer-card'
 import { DashboardIotaActivityCard } from '@/frontend/components/dashboard-iota-activity-card'
 import { MeshStatus } from './mesh-status'
@@ -189,8 +190,21 @@ function MessengerDashboardBody({
   /** Solo/APK ohne Basis: trotzdem Tresor-Badge (Unlock/weich) — nicht nur bei Node-API. */
   const showHomeVaultBadge =
     s.backendReachable === true || standaloneApkWithoutBasis || isStandaloneSoloPath()
-  /** Messenger-Chrome (nicht Boss): Adresse wie Boss-Header — Snapshot oder Direct-Chain Absender. */
+  /**
+   * Header-Adresse = Backend `MY_ADDRESS` (gleicher Dev-Server → gleiche Adresse in allen Tabs).
+   * Mit `localStorage morgendrot.dualWalletDev=1` + Session-Signer: Tab-Wallet anzeigen.
+   */
   const headerMyAddressFull = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        if (window.localStorage.getItem('morgendrot.dualWalletDev') === '1') {
+          const browser = (getDirectIotaSessionSignerAddress()?.trim() || '').trim()
+          if (/^0x[a-fA-F0-9]{64}$/i.test(browser)) return browser
+        }
+      } catch {
+        /* ignore */
+      }
+    }
     const fromSnap = (s.apiSnapshot?.myAddressFull || '').trim()
     if (/^0x[a-fA-F0-9]{64}$/i.test(fromSnap)) return fromSnap
     if (typeof window === 'undefined') return fromSnap || null

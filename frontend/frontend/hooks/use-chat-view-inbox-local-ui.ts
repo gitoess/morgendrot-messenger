@@ -399,11 +399,18 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
 
   const partnerFilteredMessages = useMemo(() => {
     let rows = displayMessages
-    /** Sendepfad zuerst — Chip-Filter können nicht „alles“ wiederherstellen. */
+    /**
+     * Sendepfad zuerst. Wenn der Pfad (z. B. Funk) alles ausblendet, soft-fallback:
+     * sonst wirkt der Posteingang „weg“ (Quelle-Chips sind aus, kein Weg zu „Alle“).
+     */
     if (sendPathInboxSourceFilter !== 'all') {
-      rows = rows.filter((m) =>
+      const pathRows = rows.filter((m) =>
         messageMatchesInboxSourceFilter(m, sendPathInboxSourceFilter, sourceFilterCtx)
       )
+      if (pathRows.length > 0 || rows.length === 0) {
+        rows = pathRows
+      }
+      /** else: geladene Nicht-Pfad-Zeilen behalten — Hinweis unten erklärt Soft-Fallback. */
     }
     if (inboxPartnerFiltersArmed) {
       if (inboxConversationGroupId) {
@@ -963,7 +970,38 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     const inboxMessages = messages.filter(
       (m) => !m.id.startsWith('morg-pkg-')
     )
-    if (inboxMessages.length === 0) return null
+
+    /** Funk/Telegram/IOTA-Pfad ohne passende Zeilen, aber andere geladen → Soft-Fallback aktiv. */
+    if (
+      sendPathInboxSourceFilter !== 'all' &&
+      inboxMessages.length > 0 &&
+      filteredDisplayMessages.length > 0
+    ) {
+      const pathOnly = inboxMessages.filter((m) =>
+        messageMatchesInboxSourceFilter(m, sendPathInboxSourceFilter, sourceFilterCtx)
+      )
+      if (pathOnly.length === 0) {
+        const pathLabel =
+          sendPathInboxSourceFilter === 'funk'
+            ? 'Funk'
+            : sendPathInboxSourceFilter === 'telegram'
+              ? 'Telegram'
+              : sendPathInboxSourceFilter === 'iota'
+                ? 'IOTA'
+                : sendPathInboxSourceFilter
+        if (sendPathInboxSourceFilter === 'funk') {
+          return `Sendepfad ${pathLabel}: noch keine Mesh-Zeilen — zeige alle geladenen. Heltec in Morgendrot per Bluetooth verbinden, dann erscheinen Funk-Nachrichten hier.`
+        }
+        return `Sendepfad ${pathLabel}: keine passenden Zeilen — zeige alle geladenen.`
+      }
+    }
+
+    if (inboxMessages.length === 0) {
+      if (sendPathInboxSourceFilter === 'funk') {
+        return 'Posteingang Funk: noch leer. Heltec in dieser App per Bluetooth verbinden (nicht nur Meshtastic-App) — oder Sendepfad „Online“, um Chain-Nachrichten zu sehen.'
+      }
+      return null
+    }
     if (filteredDisplayMessages.length > 0) return null
 
     const hiddenLocal = inboxMessages.filter((m) => hiddenInboxIds.has(m.id)).length
@@ -1006,6 +1044,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     inboxMediaFilter,
     inboxSourceFilter,
     sendPathInboxSourceFilter,
+    sourceFilterCtx,
   ])
 
   /** Transport/Partner blockieren Mailbox — zurücksetzen. */

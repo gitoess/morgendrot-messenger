@@ -11,6 +11,7 @@ import { normalizeMessengerWireContent } from '@/frontend/lib/compact-image-wire
 import { parseLoraProgressiveMessage } from '@/frontend/lib/lora-progressive-image-client'
 import { parseMorgSegV1Message } from '@/frontend/lib/lora-sarq-parser'
 import { path4ImageInitInboxGroupKey } from '@/frontend/lib/path4-image-transfer'
+import { isMorgendrotMeshNakWire } from '@/frontend/lib/mesh-control-wire'
 
 export type MeshInboundEntry = {
   hint: string | null
@@ -32,14 +33,24 @@ export type ChatInboxRow =
       fromAddr?: string
     }
 
-/** Eine sichtbare Inbox-Zeile pro S-ARQ-Session (`MORG_SEG_V1`: Absender + msgId + phase + n). */
+/** Eine sichtbare Inbox-Zeile pro Funk-Bild (`MORG_SEG_V1`: Absender + msgId, Luma+Chroma). */
 export function morgSarqSegInboxGroupKey(m: Message): string | null {
   const initKey = path4ImageInitInboxGroupKey(m)
   if (initKey) return initKey
   const p = parseMorgSegV1Message(normalizeMessengerWireContent(m.content ?? ''))
   if (!p) return null
   const f = (m.from ?? '').trim().toLowerCase()
-  return `${f}:${p.msgId}:${p.phase}:${p.n}`
+  if (!f) return null
+  return `${f}:${p.msgId}`
+}
+
+/**
+ * React-`key` / DOM-id: S-ARQ-Session stabil halten.
+ * Sonst remountet jedes neue Segment die Bubble → Fortschritt erst nach Tab-Wechsel,
+ * NAK-Zähler/JPEG-State weg, Freeze nach Idle-NAKs.
+ */
+export function inboxMessageRowStableKey(m: Message): string {
+  return morgSarqSegInboxGroupKey(m) ?? m.id
 }
 
 export function buildChatInboxRows(
@@ -76,8 +87,18 @@ export function buildChatInboxRows(
   for (const m of messages) {
     if (hidden.has(m.id)) continue
     if (hideSarqSeg.has(m.id)) continue
+    /** NAK/ACK nie als eigene Zeile (auch Altbestand in RAM). */
+    if (isMorgendrotMeshNakWire(m.content ?? '')) continue
     const pl = parseLoraProgressiveMessage(m.content ?? '')
     if (pl?.kind === 'chroma' && lumaKeys.has(`${m.from}:${pl.msgId}`)) continue
+    /**
+     * Unparsebare MORG_SEG_V1 (CRC/Müll) trotzdem nicht als Klartext-Spam zeigen —
+     * nur wenn kein Session-Leader existiert (dann eine Zeile über Sink/Fehler-UI).
+     */
+    const raw = normalizeMessengerWireContent(m.content ?? '')
+    if (raw.includes('MORG_SEG_V1') && !parseMorgSegV1Message(raw) && !morgSarqSegInboxGroupKey(m)) {
+      continue
+    }
     rows.push({ kind: 'msg', msg: m, sortTs: m.timestamp })
   }
   rows.sort((a, b) => b.sortTs - a.sortTs)

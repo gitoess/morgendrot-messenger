@@ -15,7 +15,8 @@ export type ChatViewComposerPlusMenuProps = {
   onPickCamera: () => void
   onStt?: () => void
   showStt?: boolean
-  extraItems?: ReactNode
+  /** Statisch oder `(close) => …` — close schließt das +-Menü (nach Checkbox/Bildwahl). */
+  extraItems?: ReactNode | ((close: () => void) => ReactNode)
   className?: string
 }
 
@@ -64,12 +65,16 @@ export function ChatViewComposerPlusMenu(p: ChatViewComposerPlusMenuProps) {
         className="w-64 p-2"
         align="start"
         side="top"
+        onInteractOutside={() => close()}
         onClick={(e) => {
           const el = e.target as HTMLElement | null
           if (!el) return
-          /** Checkboxen (Funk) und Emoji-Trigger offen lassen (verschachteltes Popover); sonst schließen. */
-          if (el.closest('input[type="checkbox"]')) return
+          /** Emoji-Untermenü offen lassen; Checkboxen schließen nach Toggle (kein „Kleben“). */
           if (el.closest('[data-testid="chat-composer-emoji-trigger"]')) return
+          if (el.closest('input[type="checkbox"]') || el.closest('label')) {
+            window.setTimeout(close, 0)
+            return
+          }
           if (el.closest('button, [role="button"], [data-emoji]')) close()
         }}
       >
@@ -102,7 +107,7 @@ export function ChatViewComposerPlusMenu(p: ChatViewComposerPlusMenuProps) {
             }}
           />
         ) : null}
-        {p.extraItems}
+        {typeof p.extraItems === 'function' ? p.extraItems(close) : p.extraItems}
       </PopoverContent>
     </Popover>
   )

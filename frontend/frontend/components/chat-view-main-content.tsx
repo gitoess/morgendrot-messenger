@@ -1471,7 +1471,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         <ChatViewTransportCard {...transportCardProps} />
       ) : null}
 
-      {showPartnerSetupPanel ? <ChatViewSetupPanel {...setupPanelProps} /> : null}
+      {showPartnerSetupPanel ? (
+        /** shrink-0 + max-h sitzen im Panel — Spalte 70vh behält Platz für Posteingang. */
+        <ChatViewSetupPanel {...setupPanelProps} />
+      ) : null}
 
       {contactAliasDialog.open ? <ContactAddAliasDialog {...contactAliasDialog} /> : null}
 

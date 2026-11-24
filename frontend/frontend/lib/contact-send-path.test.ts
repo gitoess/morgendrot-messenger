@@ -44,6 +44,20 @@ describe('contact-send-path', () => {
     expect(formatted.partner).toBe(alice)
   })
 
+  it('Funk „Alle“ bleibt Broadcast (kein Node-Ziel)', () => {
+    const directory = {
+      [bob]: { label: 'Bob', meshNodeId: '!abc' },
+    }
+    const contacts = collectContactsForSendPath({
+      directory,
+      partnerOptions: [],
+      path: 'mesh',
+    })
+    const formatted = formatAllRecipientsForSendPath(contacts, 'mesh')
+    expect(formatted.meshPlaintextToNodeEnabled).toBe(false)
+    expect(formatted.meshPlaintextNodeId).toBe('')
+  })
+
   it('toggleComposerTelegramRecipient schaltet tg:-Ziele um', () => {
     const add = toggleComposerTelegramRecipient('', '111')
     expect(add.recipient).toBe('tg:111')

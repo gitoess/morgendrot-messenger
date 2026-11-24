@@ -1,9 +1,10 @@
 /**
  * Sendepfad → Posteingangs-Quellenfilter.
  *
- * Online = alles; Funk / IOTA / Telegram = nur der jeweilige Kanal.
- * (2026-11-22 kurz auf „immer all“ gestellt — ohne sichtbare Quelle-Chips unbrauchbar;
- * 2026-11-23 wieder Sendepfad-Trennung, User-Erwartung.)
+ * Online = alles; Funk / IOTA / Telegram = bevorzugter Kanal.
+ * (2026-11-22 kurz auf „immer all“; 2026-11-23 wieder Sendepfad-Trennung.
+ * Soft-Fallback in `use-chat-view-inbox-local-ui`: wenn der Pfad 0 Treffer hat,
+ * bleiben andere geladene Zeilen sichtbar — sonst wirkt Posteingang „weg“.)
  */
 
 import type { ActiveSendPath } from '@/frontend/lib/messenger-channel-send-path'

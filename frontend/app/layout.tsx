@@ -6,6 +6,7 @@ import { PwaServiceWorkerRegister } from '@/components/pwa-service-worker-regist
 import { AppToaster } from '@/components/app-toaster'
 import { I18nProvider } from '@/frontend/components/i18n-provider'
 import { MessengerAppearanceBootstrap } from '@/frontend/components/messenger-appearance-bootstrap'
+import { MeshtasticDevNoiseGuard } from '@/frontend/components/meshtastic-dev-noise-guard'
 import { CANONICAL_LOOPBACK_REDIRECT_INLINE_SCRIPT } from '@/frontend/lib/canonical-loopback-host'
 import './globals.css'
 
@@ -75,6 +76,7 @@ export default function RootLayout({
           <MessengerAppearanceBootstrap />
           <PwaServiceWorkerRegister />
           <ChunkLoadRecovery />
+          <MeshtasticDevNoiseGuard />
           <AppToaster />
           {children}
         </I18nProvider>

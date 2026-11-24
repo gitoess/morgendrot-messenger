@@ -65,17 +65,18 @@ export const LORA_PROGRESSIVE_LUMA_JPEG_MAX_BYTES = 4096
 export const LORA_PROGRESSIVE_CHROMA_JPEG_MAX_BYTES = 2560
 
 /**
- * Meshtastic `sendText` / LongFast: Firmware meldet oft „Message longer than 512 bytes“.
- * Gesamte UTF-8-Länge **einer** Textnachricht (ein LUMA- bzw. ein CHROMA-Wire) muss darunter bleiben.
+ * Meshtastic `sendText`: ToRadio-Protobuf ≤ 512 B (`@meshtastic/core`); Data-Payload ≤ 233 B.
+ * Text-Budget **200** UTF-8 (Client-Parity). Gesamte Wire-Zeichenkette muss darunter bleiben.
  */
-export const MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES = 500
+export const MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES = 200
 
 /**
  * § H.25a Flüchtig (LoRa): LUMA+CHROMA als Roh-JPEG, Übertragung per `MORG_SEG_V1` (Chunking).
- * Kein Meshtastic-Einzelwire-Limit — nur Gesamtgröße + Segmentanzahl (Frontend max. 32/Phase).
+ * Cap = Encoder- und Segment-Budget (≤32 Segmente × ~90 Rohbyte/Phase); Abgleich `packages/.../lora-fluent-limits.ts`.
  */
-export const FLUENT_LORA_JPEG_PAIR_TOTAL_MAX_BYTES = 12_000
+/** Qualität 2026-11-24: ~3,6 KB Paar (Richtung 2× Auflösung); TX Gap/NAK unverändert. */
+export const FLUENT_LORA_JPEG_PAIR_TOTAL_MAX_BYTES = 3600
 
-export const FLUENT_LORA_LUMA_JPEG_MAX_BYTES = 9000
+export const FLUENT_LORA_LUMA_JPEG_MAX_BYTES = 2800
 
-export const FLUENT_LORA_CHROMA_JPEG_MAX_BYTES = 4500
+export const FLUENT_LORA_CHROMA_JPEG_MAX_BYTES = 1000

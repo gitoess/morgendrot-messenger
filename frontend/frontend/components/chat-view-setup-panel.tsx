@@ -5,9 +5,22 @@
  * Partner/Handshake/Package-ID liegen in `ChatViewEncryptedPartnerPanel` bzw. Transport-Karte.
  */
 
+import { useMemo, useState } from 'react'
 import { saveContactEntry } from '@/frontend/lib/api'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import { MESHTASTIC_WEB_DEVICE_SETTINGS_URL } from '@/frontend/lib/chat-view-messenger-transport'
+import {
+  meshtasticRadioChannelLabel,
+  type MeshtasticRadioChannel,
+} from '@/frontend/lib/meshtastic-radio-channels'
+import {
+  meshtasticVisibleNodeLabel,
+  type MeshtasticVisibleNode,
+} from '@/frontend/lib/meshtastic-visible-nodes'
+import {
+  filterMeshtasticRadioChannels,
+  filterMeshtasticVisibleNodes,
+} from '@/frontend/lib/meshtastic-mesh-cache'
 
 export type ChatViewSetupPanelMeshtastic = {
   bleSupported: boolean
@@ -19,6 +32,16 @@ export type ChatViewSetupPanelMeshtastic = {
   lastRxDebug?: string | null
   /** z. B. `onMessagePacket, onMeshPacket` — wenn leer/fehlend, Events nicht am Transport. */
   meshRxSubscriptions?: string | null
+  visibleNodes?: readonly MeshtasticVisibleNode[]
+  radioChannels?: readonly MeshtasticRadioChannel[]
+  /** Node anklicken → Composer Node-Ziel (optional). */
+  onPickVisibleNode?: (nodeId: string) => void
+  /** Kanal anklicken → Composer Kanalindex setzen. */
+  onPickRadioChannel?: (index: number) => void
+  /** Aktuell gewählter Kanalindex (Hervorhebung). */
+  selectedChannelIndex?: number
+  /** WantConfig erneut — Nodes/Kanäle vom Radio. */
+  refreshMeshDirectory?: () => Promise<void>
   connect: () => Promise<void>
   connectBluetooth: () => Promise<void>
   connectUsb: () => Promise<void>
@@ -54,75 +77,214 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
     setMeshSyncMsg,
   } = p
 
+  const [nodeQuery, setNodeQuery] = useState('')
+  const [channelQuery, setChannelQuery] = useState('')
+  const [directoryBusy, setDirectoryBusy] = useState(false)
+
+  const filteredNodes = useMemo(
+    () => filterMeshtasticVisibleNodes(meshtastic.visibleNodes ?? [], nodeQuery),
+    [meshtastic.visibleNodes, nodeQuery]
+  )
+  const filteredChannels = useMemo(
+    () => filterMeshtasticRadioChannels(meshtastic.radioChannels ?? [], channelQuery),
+    [meshtastic.radioChannels, channelQuery]
+  )
+
   const showLora = forcedTransport === 'mesh'
   const showAdhoc = forcedTransport === 'adhoc'
   if (!showLora && !showAdhoc) return null
 
   return (
-    <div id="chat-partner-setup-panel" className="rounded-xl border border-border bg-card p-4 scroll-mt-4">
-      <h3 className="mb-4 text-lg font-semibold text-foreground">Funk & Geräte</h3>
+    <div
+      id="chat-partner-setup-panel"
+      className="shrink-0 max-h-[min(32vh,18rem)] scroll-mt-4 overflow-y-auto overscroll-contain rounded-xl border border-border bg-card p-4"
+    >
+      <h3 className="mb-3 text-base font-semibold text-foreground">Funk & Geräte</h3>
 
       {showLora ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {!meshtastic.bleSupported && !meshtastic.serialSupported ? (
-            <span className="text-xs text-amber-600 dark:text-amber-400">
-              Web Bluetooth/Serial nicht verfügbar (Browser/OS).
-            </span>
-          ) : meshtastic.connected ? (
-            <>
-              <span className="text-xs text-emerald-600 dark:text-emerald-400">Meshtastic verbunden</span>
-              <button
-                type="button"
-                onClick={() => meshtastic.disconnect()}
-                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent"
-              >
-                Trennen
-              </button>
-              <a
-                href={MESHTASTIC_WEB_DEVICE_SETTINGS_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
-              >
-                Meshtastic einrichten
-              </a>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                disabled={meshtastic.connecting || !meshtastic.bleSupported}
-                onClick={() => void meshtastic.connectBluetooth()}
-                className="rounded-lg bg-muted px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
-              >
-                {meshtastic.connecting && meshtastic.transportKind === 'bluetooth'
-                  ? 'Verbinde…'
-                  : 'Bluetooth verbinden'}
-              </button>
-              <button
-                type="button"
-                disabled={meshtastic.connecting || !meshtastic.serialSupported}
-                onClick={() => void meshtastic.connectUsb()}
-                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
-              >
-                {meshtastic.connecting && meshtastic.transportKind === 'usb'
-                  ? 'USB verbindet…'
-                  : 'USB verbinden'}
-              </button>
-              <a
-                href={MESHTASTIC_WEB_DEVICE_SETTINGS_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
-              >
-                Meshtastic einrichten
-              </a>
-            </>
-          )}
-          {meshtastic.error ? (
-            <p className="w-full whitespace-pre-wrap break-words text-xs text-red-500 dark:text-red-400">
-              {meshtastic.error}
-            </p>
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {!meshtastic.bleSupported && !meshtastic.serialSupported ? (
+              <span className="text-xs text-amber-600 dark:text-amber-400">
+                Web Bluetooth/Serial nicht verfügbar (Browser/OS).
+              </span>
+            ) : meshtastic.connected ? (
+              <>
+                <span className="text-xs text-emerald-600 dark:text-emerald-400">Meshtastic verbunden</span>
+                <span className="text-[11px] text-muted-foreground">
+                  {meshtastic.transportKind === 'usb' ? 'USB (Web Serial)' : 'Bluetooth'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => meshtastic.disconnect()}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent"
+                >
+                  Trennen
+                </button>
+                <a
+                  href={MESHTASTIC_WEB_DEVICE_SETTINGS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
+                  title="Vorher hier trennen, wenn USB — sonst Port-Konflikt"
+                >
+                  Meshtastic einrichten
+                </a>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  disabled={meshtastic.connecting || !meshtastic.serialSupported}
+                  onClick={() => void meshtastic.connectUsb()}
+                  className="rounded-lg bg-muted px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+                  title="PC-Chat: USB, wenn Port frei (nicht parallel zu Meshtastic-App)"
+                >
+                  {meshtastic.connecting && meshtastic.transportKind === 'usb'
+                    ? 'USB verbindet…'
+                    : 'USB verbinden'}
+                </button>
+                <button
+                  type="button"
+                  disabled={meshtastic.connecting || !meshtastic.bleSupported}
+                  onClick={() => void meshtastic.connectBluetooth()}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+                  title="Parallel zur Meshtastic-App (USB): hier Bluetooth"
+                >
+                  {meshtastic.connecting && meshtastic.transportKind === 'bluetooth'
+                    ? 'Verbinde…'
+                    : 'Bluetooth verbinden'}
+                </button>
+                <a
+                  href={MESHTASTIC_WEB_DEVICE_SETTINGS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
+                >
+                  Meshtastic einrichten
+                </a>
+              </>
+            )}
+            {meshtastic.error ? (
+              <p className="w-full whitespace-pre-wrap break-words text-xs text-red-500 dark:text-red-400">
+                {meshtastic.error}
+              </p>
+            ) : null}
+          </div>
+          {meshtastic.connected ? (
+            <div className="mt-2 space-y-3 rounded-lg border border-border/60 bg-muted/15 p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  disabled={directoryBusy || !meshtastic.refreshMeshDirectory}
+                  onClick={() => {
+                    if (!meshtastic.refreshMeshDirectory) return
+                    setDirectoryBusy(true)
+                    void meshtastic
+                      .refreshMeshDirectory()
+                      .catch(() => {})
+                      .finally(() => setDirectoryBusy(false))
+                  }}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+                >
+                  {directoryBusy ? 'Lade Nodes/Kanäle…' : 'Nodes & Kanäle neu laden'}
+                </button>
+              </div>
+              <div>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Kanäle auf dem Radio
+                </p>
+                <input
+                  type="search"
+                  value={channelQuery}
+                  onChange={(e) => setChannelQuery(e.target.value)}
+                  placeholder="Kanal suchen (Name, Index, z. B. frei)…"
+                  className="mb-2 w-full rounded-lg border border-border bg-input px-3 py-1.5 text-xs"
+                />
+                {filteredChannels.length > 0 ? (
+                  <ul className="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto">
+                    {filteredChannels.map((c) => {
+                      const selected =
+                        meshtastic.selectedChannelIndex === c.index ||
+                        (meshtastic.selectedChannelIndex == null && c.index === 0 && c.role === 'primary')
+                      return (
+                        <li key={c.index}>
+                          {meshtastic.onPickRadioChannel && c.role !== 'disabled' ? (
+                            <button
+                              type="button"
+                              onClick={() => meshtastic.onPickRadioChannel?.(c.index)}
+                              className={
+                                selected
+                                  ? 'rounded-md border border-sky-500 bg-sky-500/15 px-2 py-1 text-[11px] font-mono'
+                                  : 'rounded-md border border-border bg-background px-2 py-1 text-[11px] font-mono hover:bg-accent'
+                              }
+                              title="Als Sende-Kanal im Composer setzen"
+                            >
+                              {meshtasticRadioChannelLabel(c)}
+                            </button>
+                          ) : (
+                            <span className="rounded-md border border-border px-2 py-1 text-[11px] font-mono text-muted-foreground">
+                              {meshtasticRadioChannelLabel(c)}
+                            </span>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">
+                    {(meshtastic.radioChannels?.length ?? 0) === 0
+                      ? 'Noch keine Kanal-Info — „Nodes & Kanäle neu laden“ oder in Meshtastic-App speichern.'
+                      : 'Keine Treffer für die Suche.'}
+                  </p>
+                )}
+              </div>
+              <div>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Sichtbare LoRa-Nodes
+                </p>
+                <input
+                  type="search"
+                  value={nodeQuery}
+                  onChange={(e) => setNodeQuery(e.target.value)}
+                  placeholder="Node suchen (Name, !hex)…"
+                  className="mb-2 w-full rounded-lg border border-border bg-input px-3 py-1.5 text-xs"
+                  aria-label="LoRa-Nodes suchen"
+                />
+                {filteredNodes.length > 0 ? (
+                  <ul className="flex max-h-36 flex-wrap gap-1.5 overflow-y-auto">
+                    {filteredNodes.map((n) => (
+                      <li key={n.nodeId}>
+                        {meshtastic.onPickVisibleNode ? (
+                          <button
+                            type="button"
+                            onClick={() => meshtastic.onPickVisibleNode?.(n.nodeId)}
+                            className="rounded-md border border-border bg-background px-2 py-1 text-[11px] hover:bg-accent"
+                            title="Als Funk-Empfänger im Composer setzen"
+                          >
+                            {meshtasticVisibleNodeLabel(n)}
+                          </button>
+                        ) : (
+                          <span className="rounded-md border border-border px-2 py-1 text-[11px] font-mono">
+                            {meshtasticVisibleNodeLabel(n)}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground">
+                    {(meshtastic.visibleNodes?.length ?? 0) === 0
+                      ? 'Keine fremden Nodes — neu laden, 2. Heltec an, gleicher Kanal/PSK.'
+                      : 'Keine Treffer für die Suche.'}
+                  </p>
+                )}
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  Nach Reload bleiben zuletzt gesehene Nodes lokal gespeichert. Dauerhaft: Telefonbuch → Meshtastic
+                  Node-ID.
+                </p>
+              </div>
+            </div>
           ) : null}
         </div>
       ) : null}

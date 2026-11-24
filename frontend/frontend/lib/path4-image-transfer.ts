@@ -68,9 +68,17 @@ export function parsePath4ImageInitMessage(content: string): ParsedPath4ImageIni
   }
 }
 
-/** Inbox-Kollaps: gleiche Session wie `MORG_SEG_V1`. */
-export function path4ImageSessionInboxKey(from: string, msgId: string, phase: Path4ImagePhase, n: number): string {
-  return `${from.trim().toLowerCase()}:${msgId.toLowerCase()}:${phase}:${n}`
+/**
+ * Inbox-Kollaps: **ein** Bildtransfer = Absender + msgId (Luma+Chroma zusammen).
+ * Früher phase+n → zwei Zeilen zu unterschiedlichen Zeiten („Doppelt“).
+ */
+export function path4ImageTransferInboxKey(from: string, msgId: string): string {
+  return `${from.trim().toLowerCase()}:${msgId.toLowerCase()}`
+}
+
+/** @deprecated Alias — phase/n ignoriert; gleiche Key-Semantik wie Transfer. */
+export function path4ImageSessionInboxKey(from: string, msgId: string, _phase?: Path4ImagePhase, _n?: number): string {
+  return path4ImageTransferInboxKey(from, msgId)
 }
 
 export function path4ImageInitInboxGroupKey(m: { from?: string; content?: string }): string | null {
@@ -78,5 +86,5 @@ export function path4ImageInitInboxGroupKey(m: { from?: string; content?: string
   if (!init) return null
   const f = (m.from ?? '').trim().toLowerCase()
   if (!f) return null
-  return path4ImageSessionInboxKey(f, init.msgId, init.phase, init.n)
+  return path4ImageTransferInboxKey(f, init.msgId)
 }

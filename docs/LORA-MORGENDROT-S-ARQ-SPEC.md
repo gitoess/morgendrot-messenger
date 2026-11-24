@@ -13,10 +13,10 @@
 Pro Meshtastic-Textnachricht gilt (Frontend, Abgleich mit Backend):
 
 \[
-L_{\max} := \texttt{MESHTASTIC\_LORA\_TEXT\_WIRE\_UTF8\_MAX\_BYTES} = 500
+L_{\max} := \texttt{MESHTASTIC\_LORA\_TEXT\_WIRE\_UTF8\_MAX\_BYTES} = 200
 \]
 
-Die **gesamte** UTF-8-Zeichenkette inkl. Marker, Metadaten, Base64 und ggf. Kanal-Signatur muss in \(L_{\max}\) passen — nicht „~700 Zeichen“.
+Die **gesamte** UTF-8-Zeichenkette inkl. Marker, Metadaten, Base64 und ggf. Kanal-Signatur muss in \(L_{\max}\) passen. Begründung: `@meshtastic/core` verwirft ToRadio-Protobufs **> 512** B; MeshPacket-Framing + `DATA_PAYLOAD_LEN` (233) erlauben keine 500-B-Texte.
 
 ### 1.2 Segmentgröße 512 Byte Roh + Base64
 
@@ -31,7 +31,7 @@ Für \(S = 512\): \(B(512) = 684\) Zeichen (ASCII = 684 UTF-8-Bytes nur für den
 Mit Header/Footer \(H\) (Marker, `msgId`, `seg`, `len`, `crc`, `]]`) gilt für **eine** Nachricht:
 
 \[
-\mathrm{UTF8\text{-}Bytes}(\text{Wire}) \approx H + B(S) \gg 500
+\mathrm{UTF8\text{-}Bytes}(\text{Wire}) \approx H + B(S) \gg 200
 \]
 
 **Folgerung:** 512-Byte-Rohsegmente in **einer** Meshtastic-Nachricht sind mit typischem Framing **unvereinbar**. Die Segmentgröße \(S\) muss **rückwärts** aus \(L_{\max}\) und \(H\) berechnet werden:
@@ -42,7 +42,7 @@ S_{\max} = \max\left\{ S \in \mathbb{N}_0 \;\middle|\; H + \left\lceil \frac{4S}
 
 wobei \(F\) Footer/Overhead (z. B. `crc=…`, `]]`) ist. Für reine ASCII-Payload gilt oft \(\mathrm{UTF8\text{-}Bytes} \approx \text{Zeichenzahl}\).
 
-**Ist-Wert (Default-Kopf):** Mit `DEFAULT_MORG_SEG_DIMS` (`msgId=deadbeef`, `phase=luma`, `seg=0`, `n=16`) liefert `computeMaxMorgSegV1RawPayloadBytes` / `MORG_SEG_V1_DEFAULT_MAX_RAW_BYTES` aktuell **321** Rohbyte pro Meshtastic-Nachricht bei \(L_{\max}=500\) (siehe Vitest in `lora-sarq-wire.test.ts`). Längere Dezimaldarstellungen in `seg`/`n` verkleinern \(S_{\max}\) geringfügig.
+**Ist-Wert (Default-Kopf):** Mit `DEFAULT_MORG_SEG_DIMS` (`msgId=deadbeef`, `phase=chroma`, `seg=31`, `n=32` — Worst-Case-Ziffern) liefert `computeMaxMorgSegV1RawPayloadBytes` / `MORG_SEG_V1_DEFAULT_MAX_RAW_BYTES` aktuell **93** Rohbyte pro Meshtastic-Nachricht bei \(L_{\max}=200\) (siehe Vitest in `lora-sarq-wire.test.ts`).
 
 ### 1.3 „Perfekt“ vs. JPEG-Realität
 
@@ -158,7 +158,7 @@ Parser-Reihenfolge in `ChatMessageBody`: `MORG_SEG_V1` früh abfangen → `MorgS
 
 ## 7. Implementierungs-Fahrplan (ohne Hype)
 
-1. **`S_max` messen** mit realem Header-String gegen `500` UTF-8.
+1. **`S_max` messen** mit realem Header-String gegen `200` UTF-8.
 2. **Server:** optional gleicher Encoder wie heute, Ausgabe **Roh-JPEG-Bytes** + Aufteilung in Segmente + `sha256` der Phase (oder Client splittet V1-Wire zurück-decodiert — ineffizient; besser API liefert Segmente).
 3. **Client senden:** Burst mit \(\Delta t\), NAK lesen, Retransmit nur `mask`.
 4. **Client empfangen:** Buffer + UI „\(k/N\) Segmente“, NAK senden (Button „Lücken anfordern“ vs. automatisch — politisch).
@@ -181,9 +181,9 @@ Goldtest: ASCII `"123456789"` → CRC `0x29B1`.
 | Idee | Urteil |
 |------|--------|
 | LUMA/CHROMA + S-ARQ | **Sinnvoll** als **zwei Phasen**, S-ARQ **innerhalb** jeder Phase |
-| 512 B/Segment in **einer** MTU | **Verworfen** unter \(L_{\max}=500\) |
+| 512 B/Segment in **einer** MTU | **Verworfen** unter \(L_{\max}=200\) |
 | `[[MORG_NAK\|ID\|3,7]]` | **Verbesserbar** → **hex Bitmaske** |
 | CRC16 0x1021 | **Standard** — **exakt** spezifizieren + Goldtests |
 | „Unscharf nach Teil-LUMA“ bei JPEG-Segmentierung | **Nur** mit passendem Bildformat/Encoder **garantierbar**; sonst nur **Fortschritt „Bytes da“** |
 
-Damit ist „Morgendrot S-ARQ“ **kein Ersatz** für die mathematische Realität der **500-Byte-Wire**, sondern eine **korrekt dimensionierte** Erweiterung derselben Infrastruktur.
+Damit ist „Morgendrot S-ARQ“ **kein Ersatz** für die mathematische Realität der **200-Byte-Wire**, sondern eine **korrekt dimensionierte** Erweiterung derselben Infrastruktur.

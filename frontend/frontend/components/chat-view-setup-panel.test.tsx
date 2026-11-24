@@ -50,9 +50,43 @@ describe('ChatViewSetupPanel (§ H.1b)', () => {
   })
 
   it('zeigt Funk & Geräte bei Meshtastic-Sendepfad', () => {
-    render(<ChatViewSetupPanel {...baseProps({ forcedTransport: 'mesh' })} />)
+    const { container } = render(<ChatViewSetupPanel {...baseProps({ forcedTransport: 'mesh' })} />)
     expect(screen.getByRole('heading', { name: /Funk & Geräte/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /USB verbinden/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Bluetooth verbinden/i })).toBeInTheDocument()
+    const panel = container.querySelector('#chat-partner-setup-panel')
+    expect(panel?.className).toMatch(/max-h-\[min\(32vh,18rem\)\]/)
+    expect(panel?.className).toMatch(/overflow-y-auto/)
+    expect(screen.queryByText(/Meshtastic-App oder client\.meshtastic/i)).toBeNull()
+  })
+
+  it('zeigt Nodes und Kanäle wenn verbunden', () => {
+    render(
+      <ChatViewSetupPanel
+        {...baseProps({
+          forcedTransport: 'mesh',
+          meshtastic: meshtastic({
+            connected: true,
+            visibleNodes: [
+              { nodeNum: 1, nodeId: '!1', longName: 'Heltec B', shortName: 'c0cc' },
+            ],
+            radioChannels: [
+              { index: 0, name: 'LongFast', role: 'primary', hasPsk: true },
+              { index: 1, name: 'Team', role: 'secondary', hasPsk: true },
+            ],
+            onPickVisibleNode: vi.fn(),
+            onPickRadioChannel: vi.fn(),
+            refreshMeshDirectory: vi.fn(async () => {}),
+          }),
+        })}
+      />
+    )
+    expect(screen.getByText(/Heltec B/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /1: Team/i })).toBeInTheDocument()
+    expect(screen.queryByText(/gleiche Region/i)).toBeNull()
+    expect(screen.queryByText(/Community-Kanäle/i)).toBeNull()
+    expect(screen.getByLabelText(/LoRa-Nodes suchen/i)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(/Kanal suchen/i)).toBeInTheDocument()
   })
 
   it('zeigt Meshtastic verbunden mit Trennen', () => {

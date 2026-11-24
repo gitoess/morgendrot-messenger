@@ -18,11 +18,53 @@ import { buildMorgSosAckV1Wire, tryParseMorgSosAckV1Plaintext } from '@/frontend
 import { sha256HexUtf8 } from '@/frontend/lib/sha256-hex-utf8'
 import { formatMeshtasticNodeIdFromNum } from '@/frontend/lib/meshtastic-node-id'
 import {
+  isMeshtasticOutboundSoftRoutingError,
+  meshtasticOutboundErrorCode,
   meshtasticThrownErrorIsRetryable,
+  normalizeMeshtasticOutboundFailure,
   throwIfMeshtasticRoutingFailed,
 } from '@/frontend/lib/meshtastic-routing-error'
+import {
+  assertMeshtasticOutboundConfirmed,
+  isMeshtasticOutboundConfirmed,
+  MESH_SEND_QUEUE_STALL_MS,
+  raceMeshtasticOutbound,
+} from '@/frontend/lib/meshtastic-outbound-race'
+import {
+  augmentWebSerialConnectError,
+  formatMeshtasticBleTransportError,
+  formatMeshtasticTransportLinkLostError,
+  isMeshtasticBleLinkLostError,
+  isMeshtasticTransportLinkLostError,
+  isWebSerialAlreadyOpenError,
+  releaseGrantedWebSerialPorts,
+} from '@/frontend/lib/meshtastic-transport-ownership'
+import { raceMeshtasticConfigureConnect } from '@/frontend/lib/meshtastic-configure-connect'
+import {
+  parseMeshtasticVisibleNode,
+  upsertMeshtasticVisibleNode,
+  type MeshtasticVisibleNode,
+} from '@/frontend/lib/meshtastic-visible-nodes'
+import {
+  MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES,
+  wireUtf8ByteLength,
+} from '@/frontend/lib/compact-image-wire'
+import {
+  parseMeshtasticRadioChannel,
+  upsertMeshtasticRadioChannel,
+  type MeshtasticRadioChannel,
+} from '@/frontend/lib/meshtastic-radio-channels'
+import {
+  loadCachedMeshtasticRadioChannels,
+  loadCachedMeshtasticVisibleNodes,
+  saveCachedMeshtasticRadioChannels,
+  saveCachedMeshtasticVisibleNodes,
+} from '@/frontend/lib/meshtastic-mesh-cache'
 import { tryDecodeMeshtasticCompressedTextPayload } from '@/frontend/lib/mesh-meshtastic-compressed-text'
 import { normalizeMeshtasticChannelIndex } from '@/frontend/lib/meshtastic-channel-index'
+import { installMeshtasticConsoleErrorFilter } from '@/frontend/lib/meshtastic-console-error-filter'
+
+installMeshtasticConsoleErrorFilter()
 
 const MESH_TEXT_RETRY_BACKOFF_MS = [600, 1800] as const
 
@@ -54,17 +96,8 @@ function meshPacketRxTimeMs(o: Record<string, unknown>): number {
   return Date.now()
 }
 
-/** Wenn `sendText`/`sendPacket` nie resolved (häufig Broadcast/Web-BLE), hängt die UI — Nachricht kann trotzdem raus sein. */
-const MESH_SEND_STALL_MS = 25_000
 const MIN_REASONABLE_MESH_TS_MS = Date.UTC(2020, 0, 1)
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1000
-
-async function raceMeshtasticOutbound<T>(promise: Promise<T>, stallFallback: T): Promise<T> {
-  return await Promise.race([
-    promise,
-    new Promise<T>((resolve) => setTimeout(() => resolve(stallFallback), MESH_SEND_STALL_MS)),
-  ])
-}
 
 function normalizeMeshRxTimestamp(ts: number): number {
   const now = Date.now()
@@ -170,34 +203,55 @@ function augmentWebBluetoothConnectError(err: unknown): string {
   return `${msg}\n\n${extra.join('\n\n')}`
 }
 
-/** BLE/Web-BT: Gerät sauber vom GATT trennen (verhindert „hängende“ Verbindungen beim erneuten Koppeln). */
+/** BLE/USB: Transport sauber schließen (verhindert „port is already open“ nach Relogin). */
 async function disconnectMeshDevice(device: MeshDevice | null): Promise<void> {
   if (!device) return
   const d = device as unknown as {
     disconnect?: () => void | Promise<void>
     close?: () => void | Promise<void>
-    transport?: { disconnect?: () => void | Promise<void>; close?: () => void | Promise<void> }
+    transport?: {
+      disconnect?: () => void | Promise<void>
+      close?: () => void | Promise<void>
+      connection?: { close?: () => Promise<void> }
+    }
   }
   try {
-    if (typeof d.disconnect === 'function') {
-      await Promise.resolve(d.disconnect())
-      return
-    }
-    if (typeof d.close === 'function') {
-      await Promise.resolve(d.close())
-      return
-    }
-    const t = d.transport
-    if (t) {
-      if (typeof t.disconnect === 'function') await Promise.resolve(t.disconnect())
-      else if (typeof t.close === 'function') await Promise.resolve(t.close())
-    }
+    if (typeof d.disconnect === 'function') await Promise.resolve(d.disconnect())
   } catch {
-    /* Verbindung schon weg — Zustand wird trotzdem zurückgesetzt */
+    /* ignore */
+  }
+  try {
+    if (typeof d.close === 'function') await Promise.resolve(d.close())
+  } catch {
+    /* ignore */
+  }
+  const t = d.transport
+  if (t) {
+    try {
+      if (typeof t.disconnect === 'function') await Promise.resolve(t.disconnect())
+    } catch {
+      /* ignore */
+    }
+    try {
+      if (typeof t.close === 'function') await Promise.resolve(t.close())
+    } catch {
+      /* ignore */
+    }
+    try {
+      if (t.connection && typeof t.connection.close === 'function') {
+        await Promise.resolve(t.connection.close())
+      }
+    } catch {
+      /* ignore */
+    }
   }
 }
 
-async function initializeMeshDevice(mesh: MeshDevice): Promise<void> {
+/**
+ * Transport starten. `configure()` (WantConfig/NodeDB) bewusst **nicht** hier —
+ * siehe `kickMeshtasticConfigureInBackground` (sonst hängt „USB verbinden“ an großen Meshes).
+ */
+async function startMeshDeviceTransport(mesh: MeshDevice): Promise<void> {
   const m = mesh as unknown as {
     connect?: () => Promise<unknown> | unknown
     start?: () => Promise<unknown> | unknown
@@ -215,6 +269,14 @@ async function initializeMeshDevice(mesh: MeshDevice): Promise<void> {
       // Nächste bekannte Init-Methode versuchen (SDK-Versionen unterscheiden sich).
     }
   }
+}
+
+/** WantConfig im Hintergrund — UI ist schon „verbunden“; Kanäle/Nodes trickle-in. */
+function kickMeshtasticConfigureInBackground(mesh: MeshDevice): void {
+  const m = mesh as unknown as { configure?: () => Promise<unknown> | unknown }
+  if (typeof m.configure !== 'function') return
+  const configure = () => Promise.resolve(m.configure!.call(m))
+  void raceMeshtasticConfigureConnect(configure).catch(() => undefined)
 }
 
 export type MeshtasticBleOptions = {
@@ -239,11 +301,26 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
   const [lastRxDebug, setLastRxDebug] = useState<string | null>(null)
   /** Welche `device.events.*`-Listener nach Verbindung wirklich gebunden sind (Setup-Panel). */
   const [meshRxSubscriptions, setMeshRxSubscriptions] = useState<string | null>(null)
+  const [visibleNodes, setVisibleNodes] = useState<MeshtasticVisibleNode[]>(() =>
+    loadCachedMeshtasticVisibleNodes()
+  )
+  const [radioChannels, setRadioChannels] = useState<MeshtasticRadioChannel[]>(() =>
+    loadCachedMeshtasticRadioChannels()
+  )
   const [transportKind, setTransportKind] = useState<MeshtasticTransportKind>('bluetooth')
+
+  useEffect(() => {
+    saveCachedMeshtasticVisibleNodes(visibleNodes)
+  }, [visibleNodes])
+  useEffect(() => {
+    saveCachedMeshtasticRadioChannels(radioChannels)
+  }, [radioChannels])
   const deviceRef = useRef<MeshDevice | null>(null)
   /** Nach manueller Verbindung: Verbindung im Hintergrund erhalten/reconnecten. */
   const stickyConnectRef = useRef(false)
   const reconnectBusyRef = useRef(false)
+  /** Web Serial tot, MeshDevice-Objekt noch da → ensureConnected muss neu öffnen. */
+  const linkSuspectRef = useRef(false)
 
   const dirRef = useRef(opts?.contactDirectory ?? {})
   const onMsgRef = useRef(opts?.onMeshChatMessage)
@@ -410,7 +487,10 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
     }
 
     const appendTextPacket = (fromNum: number, packetId: string, rxMs: number, textRaw: string) => {
-      if (selfNodeNumRef.current != null && (fromNum >>> 0) === selfNodeNumRef.current) {
+      const fromU = fromNum >>> 0
+      /** nodeNum 0 → `mesh:!0` — ungültig / Placeholder, nicht als Empfang zeigen. */
+      if (fromU === 0) return
+      if (selfNodeNumRef.current != null && fromU === selfNodeNumRef.current) {
         return
       }
       const outgoingId = packetId
@@ -423,16 +503,16 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
       }
       const ts = normalizeMeshRxTimestamp(rxMs)
       /** onMessagePacket + onMeshPacket feuern oft für dasselbe Paket — ein Emit pro (from, id, ts). */
-      if (markSeen(`mesh:emit:${fromNum}:${packetId}:${ts}`, ts)) return
+      if (markSeen(`mesh:emit:${fromU}:${packetId}:${ts}`, ts)) return
       // Manche Firmware/Bridges können packetId wiederverwenden; deshalb Content einbeziehen,
       // damit neue Texte nicht fälschlich als Duplikat verworfen werden.
-      const dedup = `txt:${fromNum}:${packetId}:${body}`
+      const dedup = `txt:${fromU}:${packetId}:${body}`
       if (markSeen(dedup, ts)) return
-      const fromMesh = formatMeshtasticNodeIdFromNum(fromNum)
+      const fromMesh = formatMeshtasticNodeIdFromNum(fromU)
       // Für eingehende Mesh-Textzeilen keine aggressive Cross-Source-Dedup erzwingen.
       // Sonst können legitime RX-Zeilen im Inbox-Merge untergehen.
       const dedupKey = undefined
-      const rowId = `mesh-txt-${fromNum}-${packetId}-${ts}`
+      const rowId = `mesh-txt-${fromU}-${packetId}-${ts}`
       onMsgRef.current?.({
         id: rowId,
         from: `mesh:${fromMesh}`,
@@ -442,7 +522,7 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
         source: 'mesh',
         transports: ['mesh'],
         dedupKey,
-        meshMeta: { kind: 'text', fromNodeNum: fromNum },
+        meshMeta: { kind: 'text', fromNodeNum: fromU },
       })
     }
 
@@ -530,31 +610,52 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
       }
       try {
         const unsub = ev.subscribe((payload: unknown) => {
-          if (payload && typeof payload === 'object') {
-            const p = payload as Record<string, unknown>
-            const fromHint =
-              parseMeshNodeNum(p.from) ??
-              parseMeshNodeNum(p.fromNum) ??
-              parseMeshNodeNum(p.fromNodeNum) ??
-              parseMeshNodeNum(p.fromId) ??
-              parseMeshNodeNum((p.packet as Record<string, unknown> | undefined)?.from) ??
-              null
-            noteRx(eventName, fromHint)
-            if (eventName === 'onMeshPacket') {
-              const pv = p.payloadVariant as { case?: unknown; value?: { portnum?: unknown } } | undefined
-              meshRxLog(eventName, {
-                fromHint,
-                pvCase: pv?.case,
-                portnum: pv && typeof pv.value === 'object' && pv.value ? (pv.value as { portnum?: unknown }).portnum : undefined,
-              })
+          try {
+            if (payload && typeof payload === 'object') {
+              const p = payload as Record<string, unknown>
+              const fromHint =
+                parseMeshNodeNum(p.from) ??
+                parseMeshNodeNum(p.fromNum) ??
+                parseMeshNodeNum(p.fromNodeNum) ??
+                parseMeshNodeNum(p.fromId) ??
+                parseMeshNodeNum((p.packet as Record<string, unknown> | undefined)?.from) ??
+                null
+              noteRx(eventName, fromHint)
+              if (eventName === 'onMeshPacket') {
+                const pv = p.payloadVariant as { case?: unknown; value?: { portnum?: unknown } } | undefined
+                meshRxLog(eventName, {
+                  fromHint,
+                  pvCase: pv?.case,
+                  portnum:
+                    pv && typeof pv.value === 'object' && pv.value
+                      ? (pv.value as { portnum?: unknown }).portnum
+                      : undefined,
+                })
+              } else {
+                meshRxLog(eventName, { fromHint })
+              }
             } else {
-              meshRxLog(eventName, { fromHint })
+              noteRx(eventName, null)
+              meshRxLog(eventName, payload)
             }
-          } else {
-            noteRx(eventName, null)
-            meshRxLog(eventName, payload)
+            cb(payload)
+          } catch (handlerErr) {
+            /** SDK/Handler darf kein Plain-Object → Next Runtime `[object Object]` werfen. */
+            meshRxLog(`${eventName} handler error`, {
+              msg:
+                handlerErr instanceof Error
+                  ? handlerErr.message
+                  : typeof handlerErr === 'object'
+                    ? (() => {
+                        try {
+                          return JSON.stringify(handlerErr)
+                        } catch {
+                          return 'object'
+                        }
+                      })()
+                    : String(handlerErr),
+            })
           }
-          cb(payload)
         })
         if (typeof unsub === 'function') {
           subscribed.push(eventName)
@@ -570,18 +671,66 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
     subscribeEvent('onMyNodeInfo', (payload: unknown) => {
       rememberSelfNode(payload)
     })
+    subscribeEvent('onNodeInfoPacket', (payload: unknown) => {
+      const node = parseMeshtasticVisibleNode(payload)
+      if (!node) return
+      if (selfNodeNumRef.current != null && node.nodeNum === selfNodeNumRef.current) return
+      setVisibleNodes((prev) => upsertMeshtasticVisibleNode(prev, node))
+    })
+    subscribeEvent('onChannelPacket', (payload: unknown) => {
+      const ch = parseMeshtasticRadioChannel(payload)
+      if (!ch) return
+      setRadioChannels((prev) => upsertMeshtasticRadioChannel(prev, ch))
+    })
     subscribeEvent('onMeshPacket', handleMeshPacketTextOnly)
     subscribeEvent('onQueueStatus', () => {})
-    subscribeEvent('onDeviceStatus', () => {})
+    subscribeEvent('onDeviceStatus', (status: unknown) => {
+      /** `@meshtastic/core` DeviceStatusEnum.DeviceDisconnected = 2 */
+      const code = typeof status === 'number' ? status : Number(status)
+      if (code === 2) {
+        /**
+         * USB: sticky behalten → stiller Reconnect (createFromPort).
+         * Früher sticky=false → „verbunden“-UI tot + kein Auto-Heal, „Nochmals senden“ scheitert.
+         * BLE: sticky aus (User-Geste nötig / Pairing).
+         */
+        if (transportKind !== 'usb') stickyConnectRef.current = false
+        else stickyConnectRef.current = true
+        linkSuspectRef.current = true
+        deviceRef.current = null
+        setDevice(null)
+        setError(
+          transportKind === 'usb'
+            ? 'USB-Verbindung zum Heltec getrennt — Reconnect …'
+            : formatMeshtasticBleTransportError(
+                new Error('GATT Server is disconnected. Cannot perform GATT operations.')
+              )
+        )
+      }
+    })
     subscribeEvent('onTelemetryPacket', () => {})
 
     setMeshRxSubscriptions(subscribed.length ? subscribed.join(', ') : '— keine Listener gebunden —')
 
     return () => {
-      for (const unsub of unsubs) unsub()
+      for (const unsub of unsubs) {
+        try {
+          unsub()
+        } catch {
+          /* SDK/Events nach disconnect oft schon disposed (reading 'inst') */
+        }
+      }
       setMeshRxSubscriptions(null)
     }
-  }, [device])
+  }, [device, transportKind])
+
+  const dropTransportSession = useCallback((reason: string) => {
+    stickyConnectRef.current = false
+    const current = deviceRef.current
+    deviceRef.current = null
+    setDevice(null)
+    setError(reason)
+    void disconnectMeshDevice(current)
+  }, [])
 
   const connectInternal = useCallback(async (silent: boolean, mode: MeshtasticTransportKind) => {
     if (reconnectBusyRef.current) return false
@@ -597,29 +746,87 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
         deviceRef.current = null
         setDevice(null)
       }
+      /** Ports nicht vorab freigeben — nur bei „already open“ (spart ~100–300 ms + Close-Latenz). */
       const [{ MeshDevice }, transportMod] = await Promise.all([
         import('@meshtastic/core'),
         mode === 'usb'
           ? import('@meshtastic/transport-web-serial')
           : import('@meshtastic/transport-web-bluetooth'),
       ])
+      type UsbTransportFactory = {
+        create: () => Promise<unknown>
+        createFromPort?: (port: unknown, baudRate?: number) => Promise<unknown>
+      }
       const transportFactory =
         mode === 'usb'
-          ? (transportMod as { TransportWebSerial?: { create: () => Promise<unknown> } }).TransportWebSerial
+          ? (transportMod as { TransportWebSerial?: UsbTransportFactory }).TransportWebSerial
           : (transportMod as { TransportWebBluetooth?: { create: () => Promise<unknown> } }).TransportWebBluetooth
       if (!transportFactory || typeof transportFactory.create !== 'function') {
         throw new Error(mode === 'usb' ? 'Web-Serial-Transport nicht verfügbar.' : 'Web-Bluetooth-Transport nicht verfügbar.')
       }
-      const transport = await transportFactory.create()
+      let transport: unknown
+      try {
+        if (silent && mode === 'usb' && typeof transportFactory.createFromPort === 'function') {
+          const serial = (
+            navigator as Navigator & {
+              serial?: { getPorts: () => Promise<unknown[]> }
+            }
+          ).serial
+          const ports = serial?.getPorts ? await serial.getPorts() : []
+          if (!ports.length) {
+            throw new Error('USB: kein freigegebener Port für stillen Reconnect — bitte erneut „USB verbinden“.')
+          }
+          transport = await transportFactory.createFromPort(ports[0]!)
+        } else {
+          transport = await transportFactory.create()
+        }
+      } catch (openErr) {
+        if (mode === 'usb' && isWebSerialAlreadyOpenError(openErr)) {
+          await releaseGrantedWebSerialPorts()
+          await new Promise((r) => setTimeout(r, 120))
+          if (silent && typeof (transportFactory as UsbTransportFactory).createFromPort === 'function') {
+            const serial = (
+              navigator as Navigator & {
+                serial?: { getPorts: () => Promise<unknown[]> }
+              }
+            ).serial
+            const ports = serial?.getPorts ? await serial.getPorts() : []
+            if (!ports.length) throw openErr
+            transport = await (transportFactory as UsbTransportFactory).createFromPort!(ports[0]!)
+          } else {
+            transport = await transportFactory.create()
+          }
+        } else {
+          throw openErr
+        }
+      }
       const mesh = new MeshDevice(transport as ConstructorParameters<typeof MeshDevice>[0])
-      await initializeMeshDevice(mesh)
+      await startMeshDeviceTransport(mesh)
       setDevice(mesh)
       setTransportKind(mode)
       setLastRxDebug(null)
+      /**
+       * WantConfig nach kurzem Delay — React-Effect bindet erst Events;
+       * UI ist schon „verbunden“, NodeDB/Kanäle trickle-in.
+       */
+      window.setTimeout(() => kickMeshtasticConfigureInBackground(mesh), 60)
+      linkSuspectRef.current = false
+      /** Nodes/Kanäle nicht leeren — Cache bleibt bis configure()/Packets aktualisieren. */
       return true
     } catch (e) {
+      /** Silent USB-Reconnect: sticky behalten (Nochmals senden / Mid-Send). Manuell: sticky aus. */
+      if (!silent || mode !== 'usb') stickyConnectRef.current = false
+      const friendly =
+        mode === 'usb'
+          ? augmentWebSerialConnectError(e)
+          : isMeshtasticBleLinkLostError(e)
+            ? formatMeshtasticBleTransportError(e)
+            : augmentWebBluetoothConnectError(e)
       if (!silent) {
-        setError(mode === 'usb' ? (e instanceof Error ? e.message : String(e)) : augmentWebBluetoothConnectError(e))
+        setError(friendly)
+      } else {
+        /** Silent Reconnect fehlgeschlagen — kein Endlos-Retry gegen toten Link. */
+        setError(friendly)
       }
       setDevice(null)
       deviceRef.current = null
@@ -651,22 +858,70 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
       const current = deviceRef.current
       deviceRef.current = null
       await disconnectMeshDevice(current)
+      await releaseGrantedWebSerialPorts()
       setDevice(null)
       setLastRxDebug(null)
       setError(null)
     })()
   }, [])
 
+  /** Relogin/Unmount: Port freigeben, sonst „already open“. */
+  useEffect(() => {
+    return () => {
+      stickyConnectRef.current = false
+      const current = deviceRef.current
+      deviceRef.current = null
+      void disconnectMeshDevice(current)
+        .catch(() => undefined)
+        .then(() => releaseGrantedWebSerialPorts())
+        .catch(() => undefined)
+    }
+  }, [])
+
+  /** WantConfig erneut: Channel- + NodeDB vom Radio nachladen. */
+  const refreshMeshDirectory = useCallback(async () => {
+    const d = deviceRef.current as unknown as { configure?: () => Promise<unknown> | unknown } | null
+    if (!d || typeof d.configure !== 'function') {
+      throw new Error('Meshtastic nicht verbunden — zuerst USB/Bluetooth verbinden.')
+    }
+    await Promise.resolve(d.configure.call(d))
+  }, [])
+
   useEffect(() => {
     if (!stickyConnectRef.current) return
     if (device) return
     if (connecting) return
+    /** USB: stiller Reconnect über getPorts/createFromPort (kein Picker). BLE wie bisher. */
+    const delay = transportKind === 'usb' ? 900 : 2500
     const t = setTimeout(() => {
-      // keep prior preferred transport for sticky reconnect
       void connectInternal(true, transportKind)
-    }, 2500)
+    }, delay)
     return () => clearTimeout(t)
   }, [device, connecting, connectInternal, transportKind])
+
+  const markTransportLinkLost = useCallback(
+    (err: unknown) => {
+      linkSuspectRef.current = true
+      stickyConnectRef.current = true
+      const current = deviceRef.current
+      deviceRef.current = null
+      setDevice(null)
+      const msg = formatMeshtasticTransportLinkLostError(err, transportKind)
+      setError(msg)
+      void disconnectMeshDevice(current)
+      return msg
+    },
+    [transportKind]
+  )
+
+  const ensureConnected = useCallback(async () => {
+    stickyConnectRef.current = true
+    if (deviceRef.current && !linkSuspectRef.current) return true
+    linkSuspectRef.current = false
+    const ok = await connectInternal(true, transportKind)
+    if (ok) linkSuspectRef.current = false
+    return ok
+  }, [connectInternal, transportKind])
 
   const sendBinaryV2 = useCallback(
     async (
@@ -675,7 +930,8 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
       channelIndex?: number
     ) => {
       let d = deviceRef.current
-      if (!d && stickyConnectRef.current) {
+      if ((!d || linkSuspectRef.current) && stickyConnectRef.current) {
+        linkSuspectRef.current = false
         await connectInternal(true, transportKind)
         d = deviceRef.current
       }
@@ -688,55 +944,93 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
         dest?: number | 'broadcast',
         channel?: number
       ) => Promise<Awaited<ReturnType<MeshDevice['sendPacket']>>>
-      const r = await raceMeshtasticOutbound(
-        normalizedChannelIndex == null
-          ? sendPacketFn(wire, Protobuf.Portnums.PortNum.PRIVATE_APP, destination)
-          : sendPacketFn(wire, Protobuf.Portnums.PortNum.PRIVATE_APP, destination, normalizedChannelIndex),
-        {} as Awaited<ReturnType<MeshDevice['sendPacket']>>
-      )
-      throwIfMeshtasticRoutingFailed(
-        r,
+      const ctx =
         normalizedChannelIndex == null
           ? 'Mesh v2 (PRIVATE_APP)'
           : `Mesh v2 (PRIVATE_APP, Kanal ${normalizedChannelIndex})`
-      )
-      return r
+      try {
+        const r = await raceMeshtasticOutbound(
+          normalizedChannelIndex == null
+            ? sendPacketFn(wire, Protobuf.Portnums.PortNum.PRIVATE_APP, destination)
+            : sendPacketFn(wire, Protobuf.Portnums.PortNum.PRIVATE_APP, destination, normalizedChannelIndex)
+        )
+        assertMeshtasticOutboundConfirmed(r, ctx)
+        throwIfMeshtasticRoutingFailed(r, ctx)
+        return r
+      } catch (e) {
+        if (isMeshtasticTransportLinkLostError(e)) {
+          throw new Error(markTransportLinkLost(e))
+        }
+        throw e
+      }
     },
-    [connectInternal, transportKind]
+    [connectInternal, transportKind, markTransportLinkLost]
   )
 
   const sendMeshText = useCallback(
     async (
       text: string,
       destination: number | 'broadcast' = 'broadcast',
-      channelIndex?: number
+      channelIndex?: number,
+      opts?: { wantAck?: boolean; isCancelled?: () => boolean; queueConfirm?: boolean }
     ) => {
       let d = deviceRef.current
-      if (!d && stickyConnectRef.current) {
+      if ((!d || linkSuspectRef.current) && stickyConnectRef.current) {
+        linkSuspectRef.current = false
         await connectInternal(true, transportKind)
         d = deviceRef.current
       }
       if (!d) throw new Error('Meshtastic nicht verbunden')
+      const textUtf8 = wireUtf8ByteLength(text)
+      if (textUtf8 > MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES) {
+        throw new Error(
+          `Meshtastic: Text ${textUtf8} B UTF-8 > Limit ${MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES} B ` +
+            `(ToRadio ≤ 512 inkl. Protobuf — SDK: „Message longer than 512 bytes“).`
+        )
+      }
       const normalizedChannelIndex = normalizeMeshtasticChannelIndex(channelIndex)
+      /** SDK: sendText(text, dest, wantAck?, channel?) — channel darf nicht als wantAck rutschen. */
+      const wantAck = opts?.wantAck !== false
+      const queueConfirm = opts?.queueConfirm === true || wantAck === false
+      const raceOpts = {
+        isCancelled: opts?.isCancelled,
+        cancelMessage: 'Übertragung abgebrochen.',
+        queueConfirm,
+      }
+      const stallMs = queueConfirm ? MESH_SEND_QUEUE_STALL_MS : undefined
       const ctx =
         normalizedChannelIndex == null
-          ? 'Meshtastic-Text (LongFast)'
-          : `Meshtastic-Text (LongFast, Kanal ${normalizedChannelIndex})`
+          ? 'Meshtastic-Text'
+          : `Meshtastic-Text (Kanal ${normalizedChannelIndex})`
+      /** Bild-Burst: max. 1 Versuch — Retries × Stall waren 30–75 s/Paket. */
+      const maxAttempt = queueConfirm ? 0 : MESH_TEXT_RETRY_BACKOFF_MS.length
       let lastErr: unknown
-      for (let attempt = 0; attempt <= MESH_TEXT_RETRY_BACKOFF_MS.length; attempt++) {
+      for (let attempt = 0; attempt <= maxAttempt; attempt++) {
+        if (opts?.isCancelled?.()) throw new Error('Übertragung abgebrochen.')
         try {
           /** Nicht als freistehende Fn — SDK nutzt `this.log` (sonst: reading 'log' of undefined). */
           const sendTextFn = d.sendText.bind(d) as unknown as (
             payload: string,
             dest?: number | 'broadcast',
+            wantAck?: boolean,
             channel?: number
           ) => Promise<Awaited<ReturnType<MeshDevice['sendText']>>>
-          const r = await raceMeshtasticOutbound(
+          const sendPromise =
             normalizedChannelIndex == null
-              ? sendTextFn(text, destination)
-              : sendTextFn(text, destination, normalizedChannelIndex),
-            {} as Awaited<ReturnType<MeshDevice['sendText']>>
-          )
+              ? sendTextFn(text, destination, wantAck)
+              : sendTextFn(text, destination, wantAck, normalizedChannelIndex)
+          /**
+           * Immer Catch am Roh-Promise — sonst: Stall/Soft schon „ok“, späteres
+           * SDK-`reject({id,error})` → Next `coerceError` → Runtime `[object Object]`.
+           */
+          void sendPromise.catch(() => undefined)
+          const r = await raceMeshtasticOutbound(sendPromise, stallMs, raceOpts)
+          if (!queueConfirm) {
+            assertMeshtasticOutboundConfirmed(r, ctx)
+          } else if (!isMeshtasticOutboundConfirmed(r)) {
+            /** Kein Packet-id vom SDK — trotzdem weiter (S-ARQ). */
+            return { id: 0, queued: true }
+          }
           if (r && typeof r === 'object') {
             const maybeId = (r as { id?: unknown }).id
             if (maybeId != null) {
@@ -749,20 +1043,74 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
                 recentOutgoingTextPacketIdsRef.current.delete(id)
               }, 45_000)
             }
+          } else if (typeof r === 'number' || typeof r === 'bigint' || typeof r === 'string') {
+            const id = String(r)
+            recentOutgoingTextPacketIdsRef.current.set(
+              id,
+              normalizeChatMessageContentForDisplay(text)
+            )
+            setTimeout(() => {
+              recentOutgoingTextPacketIdsRef.current.delete(id)
+            }, 45_000)
           }
-          throwIfMeshtasticRoutingFailed(r, ctx)
+          if (!queueConfirm) throwIfMeshtasticRoutingFailed(r, ctx)
           return r
         } catch (e) {
-          lastErr = e
+          if (opts?.isCancelled?.()) throw new Error('Übertragung abgebrochen.')
+          /** SDK loggt „Error received for packet …: undefined“ — oft TIMEOUT/MAX_RETRANSMIT. */
+          if (isMeshtasticOutboundSoftRoutingError(e)) {
+            const code = meshtasticOutboundErrorCode(e)
+            const id =
+              typeof e === 'object' && e && 'id' in e ? (e as { id?: unknown }).id : 0
+            return {
+              id: id ?? 0,
+              soft: true,
+              softRouting: true,
+              rateLimit: code === 38,
+              error: code ?? undefined,
+            }
+          }
+          const normalized = normalizeMeshtasticOutboundFailure(e, ctx)
+          lastErr = normalized
+          if (
+            isMeshtasticTransportLinkLostError(e) ||
+            isMeshtasticTransportLinkLostError(normalized)
+          ) {
+            /** Abbruch/Stop: kein Reconnect-Sturm (löst oft „device has been lost“-Overlay). */
+            if (opts?.isCancelled?.()) throw new Error('Übertragung abgebrochen.')
+            const msg = markTransportLinkLost(e)
+            if (transportKind === 'usb' && !queueConfirm) {
+              try {
+                await ensureConnected()
+                d = deviceRef.current
+                if (d && attempt < maxAttempt) {
+                  await new Promise((res) => setTimeout(res, MESH_TEXT_RETRY_BACKOFF_MS[attempt]))
+                  continue
+                }
+              } catch {
+                /* unten throw */
+              }
+            } else if (transportKind !== 'usb') {
+              dropTransportSession(msg)
+            }
+            throw new Error(msg)
+          }
+          /**
+           * Bild-Burst: nie Routing/Noise nach oben werfen (Next-Overlay + Abbruch).
+           * S-ARQ/NAK holt Fehlendes; Caller sieht „queued“.
+           */
+          if (queueConfirm) {
+            return { id: 0, queued: true, soft: true }
+          }
           const canRetry =
-            attempt < MESH_TEXT_RETRY_BACKOFF_MS.length && meshtasticThrownErrorIsRetryable(e)
-          if (!canRetry) throw e
+            attempt < maxAttempt && meshtasticThrownErrorIsRetryable(normalized)
+          if (!canRetry) throw normalized
           await new Promise((res) => setTimeout(res, MESH_TEXT_RETRY_BACKOFF_MS[attempt]))
         }
       }
-      throw lastErr
+      throw lastErr instanceof Error ? lastErr : normalizeMeshtasticOutboundFailure(lastErr, ctx)
     },
-    [connectInternal, transportKind]
+    [connectInternal, transportKind, dropTransportSession, markTransportLinkLost, ensureConnected]
   )
 
   return {
@@ -775,12 +1123,16 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
     error,
     lastRxDebug,
     meshRxSubscriptions,
+    visibleNodes,
+    radioChannels,
     device,
     connect,
     connectBluetooth,
     connectUsb,
     disconnect,
+    refreshMeshDirectory,
     sendBinaryV2,
     sendMeshText,
+    ensureConnected,
   }
 }

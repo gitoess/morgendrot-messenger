@@ -20,32 +20,43 @@ export async function scaleBitmapMaxDim(bmp: ImageBitmap, maxDim: number): Promi
   canvas.height = h
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Canvas 2D nicht verfügbar.')
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
   ctx.drawImage(bmp, 0, 0, w, h)
   return createImageBitmap(canvas)
 }
 
-function fitInsideSize(bmp: ImageBitmap, maxWidth: number): { w: number; h: number } {
-  if (bmp.width <= maxWidth) return { w: bmp.width, h: bmp.height }
-  const h = Math.max(1, Math.round((bmp.height * maxWidth) / bmp.width))
-  return { w: maxWidth, h }
+/**
+ * Längste Kante = `maxDim` (nicht nur Breite).
+ * Hochkant sonst 240×320 bei „Breite 240“ → Bytes sprengen Cap → Encoder fällt auf 120px.
+ */
+function fitInsideMaxDim(bmp: ImageBitmap, maxDim: number): { w: number; h: number } {
+  const scale = Math.min(1, maxDim / Math.max(bmp.width, bmp.height, 1))
+  return {
+    w: Math.max(1, Math.round(bmp.width * scale)),
+    h: Math.max(1, Math.round(bmp.height * scale)),
+  }
 }
 
 export async function encodeLumaJpegFromBitmap(
   bmp: ImageBitmap,
-  maxWidth: number,
+  maxDim: number,
   quality: number
 ): Promise<Uint8Array> {
-  const { w, h } = fitInsideSize(bmp, maxWidth)
+  const { w, h } = fitInsideMaxDim(bmp, maxDim)
   const canvas = document.createElement('canvas')
   canvas.width = w
   canvas.height = h
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Canvas 2D nicht verfügbar.')
-  ctx.filter = 'grayscale(100%)'
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
+  /** Kontrast leicht ↑ = wahrgenommene Schärfe; Encode als echtes GRAYSCALE-JPEG. */
+  ctx.filter = 'grayscale(100%) contrast(1.15)'
   ctx.drawImage(bmp, 0, 0, w, h)
   ctx.filter = 'none'
   const imageData = ctx.getImageData(0, 0, w, h)
-  return encodeImageDataToJpeg(imageData, quality)
+  return encodeImageDataToJpeg(imageData, quality, { grayscale: true })
 }
 
 export async function encodeChromaJpegFromBitmap(

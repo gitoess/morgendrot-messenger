@@ -159,6 +159,12 @@ export function useChatViewComposerTransportState(p: UseChatViewComposerTranspor
     }
   }, [])
 
+  useEffect(() => {
+    const onEnable = () => setMeshLoRaImagesEnabled(true)
+    window.addEventListener('morgendrot:mesh-lora-images-enable', onEnable)
+    return () => window.removeEventListener('morgendrot:mesh-lora-images-enable', onEnable)
+  }, [setMeshLoRaImagesEnabled])
+
   const [meshSelfArchiveAfterLoRa, setMeshSelfArchiveAfterLoRaState] = useState(() =>
     readMeshSelfArchiveAfterLoRaFromStorage()
   )

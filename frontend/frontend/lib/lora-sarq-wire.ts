@@ -88,13 +88,16 @@ export function computeMaxMorgSegV1RawPayloadBytes(
   return lo
 }
 
-/** Default-Kopf (typische Session); `computeMaxMorgSegV1RawPayloadBytes(DEFAULT_MORG_SEG_DIMS)`. */
+/**
+ * Konservativer Default-Kopf: längste übliche Header-Ziffern (`seg`/`n` zweistellig, `chroma`),
+ * damit `MORG_SEG_V1_DEFAULT_MAX_RAW_BYTES` nicht zu optimistisch für spätere Segmente ist.
+ */
 export const DEFAULT_MORG_SEG_DIMS: MorgSegV1HeaderDims = {
   msgId: 'deadbeef',
-  phase: 'luma',
-  seg: 0,
-  n: 16,
+  phase: 'chroma',
+  seg: 31,
+  n: 32,
 }
 
-/** Vorberechnet mit `DEFAULT_MORG_SEG_DIMS` und `MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES` (500). */
+/** Vorberechnet mit `DEFAULT_MORG_SEG_DIMS` und `MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES` (200). */
 export const MORG_SEG_V1_DEFAULT_MAX_RAW_BYTES = computeMaxMorgSegV1RawPayloadBytes(DEFAULT_MORG_SEG_DIMS)

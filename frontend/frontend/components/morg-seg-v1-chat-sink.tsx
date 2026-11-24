@@ -1,77 +1,41 @@
 'use client'
 
 /**
- * S-ARQ `MORG_SEG_V1`: kein Roh-Wire in der Sprechblase — Fortschritt, „Ghost“-Raster,
- * JPEG sobald eine Phase vollständig zusammengebaut ist (Luma zuerst, optional +Chroma).
+ * S-ARQ `MORG_SEG_V1`: Fortschritt + JPEG aus Live-Store (Mesh-Zeit),
+ * nicht abhängig von Inbox-Remount / Tab-Fokus.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { cn } from '@/lib/utils'
 import type { Message } from '@/frontend/lib/types'
 import {
   messageLooksLikePath4ImageTransferWire,
   parseMorgSegV1Message,
 } from '@/frontend/lib/lora-sarq-parser'
 import { parsePath4ImageInitMessage } from '@/frontend/lib/path4-image-transfer'
-import { useMorgSegReassembly } from '@/frontend/hooks/use-morg-seg-reassembly'
 import {
+  downloadUint8AsFile,
   fuseLoraProgressivePreferSharpBackend,
   revokeObjectUrlSafe,
   uint8ToObjectUrl,
 } from '@/frontend/lib/lora-progressive-image-client'
 import { normalizeMessengerWireContent } from '@/frontend/lib/compact-image-wire'
+import { SarqSegmentProgressGrid } from '@/frontend/components/sarq-segment-progress-grid'
+import {
+  getSarqLiveAssembled,
+  getSarqLivePhase,
+  maskToReceivedSet,
+  normalizeSarqPeerKey,
+  noteSarqSegFromMesh,
+  requestSarqLiveMissing,
+  seedSarqLiveFromInit,
+  setSarqLiveNakHandler,
+  subscribeSarqLiveAssembled,
+  subscribeSarqLiveProgress,
+  type SarqLivePhaseSnap,
+} from '@/frontend/lib/lora-sarq-live-progress'
 
-function collectSegIndices(
-  inboxMessages: readonly Message[],
-  fromLower: string,
-  msgId: string,
-  phase: 'luma' | 'chroma'
-): Set<number> {
-  const s = new Set<number>()
-  for (const m of inboxMessages) {
-    if ((m.from ?? '').trim().toLowerCase() !== fromLower) continue
-    const p = parseMorgSegV1Message(m.content ?? '')
-    if (p && p.msgId === msgId && p.phase === phase) s.add(p.seg)
-  }
-  return s
-}
-
-function SarqGhostGrid({
-  n,
-  received,
-  label,
-}: {
-  n: number
-  received: Set<number>
-  label: string
-}) {
-  const cols = Math.min(8, Math.max(1, n))
-  return (
-    <div className="space-y-1">
-      <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div
-        className="grid gap-1"
-        style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
-      >
-        {Array.from({ length: n }, (_, i) => {
-          const ok = received.has(i)
-          return (
-            <div
-              key={i}
-              className={cn(
-                'aspect-square min-h-[10px] max-h-8 rounded-sm border border-border/70',
-                ok
-                  ? 'bg-emerald-600/20 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.35)]'
-                  : 'bg-zinc-900/90 dark:bg-black/80 [background-image:repeating-linear-gradient(135deg,transparent,transparent_2px,rgba(255,255,255,0.04)_2px,rgba(255,255,255,0.04)_4px)]'
-              )}
-              title={ok ? `Segment ${i} (CRC ok)` : `Segment ${i} fehlt`}
-            />
-          )
-        })}
-      </div>
-    </div>
-  )
-}
+/** Überlebt Remount: INIT-NAK nur einmal pro Session. */
+const initNakDoneGlobal = new Set<string>()
 
 export type MorgSegV1ChatSinkProps = {
   raw: string
@@ -93,7 +57,7 @@ export function MorgSegV1ChatSink({
   const looks = useMemo(() => messageLooksLikePath4ImageTransferWire(raw), [raw])
   const anchor = useMemo(() => parseMorgSegV1Message(raw), [raw])
   const initAnchor = useMemo(() => parsePath4ImageInitMessage(raw), [raw])
-  const fromLower = useMemo(() => (selfMessage.from ?? '').trim().toLowerCase(), [selfMessage.from])
+  const fromLower = useMemo(() => normalizeSarqPeerKey(selfMessage.from ?? ''), [selfMessage.from])
   const msgId = anchor?.msgId ?? initAnchor?.msgId ?? ''
 
   const inboxSig = useMemo(() => {
@@ -102,97 +66,166 @@ export function MorgSegV1ChatSink({
     return `${n}|${tail}`
   }, [inboxMessages])
 
-  const lumaReceived = useMemo(
-    () => (msgId ? collectSegIndices(inboxMessages, fromLower, msgId, 'luma') : new Set<number>()),
-    [inboxMessages, fromLower, msgId, inboxSig]
-  )
-  const chromaReceived = useMemo(
-    () => (msgId ? collectSegIndices(inboxMessages, fromLower, msgId, 'chroma') : new Set<number>()),
-    [inboxMessages, fromLower, msgId, inboxSig]
-  )
+  const [liveTick, setLiveTick] = useState(0)
+  const [lumaJpeg, setLumaJpeg] = useState<Uint8Array | null>(null)
+  const [chromaJpeg, setChromaJpeg] = useState<Uint8Array | null>(null)
+  const [displayUrl, setDisplayUrl] = useState<string | null>(null)
+  const [lumaOnlyUrl, setLumaOnlyUrl] = useState<string | null>(null)
+  const [imgErr, setImgErr] = useState<string | null>(null)
 
   const nak = useCallback(
     (wire: string) => {
-      void Promise.resolve(onNakWire?.(wire))
+      void Promise.resolve(onNakWire?.(wire)).catch((e: unknown) => {
+        console.debug(
+          '[sarq-nak-ui]',
+          e instanceof Error ? e.message : typeof e === 'object' ? JSON.stringify(e) : String(e)
+        )
+      })
     },
     [onNakWire]
   )
 
-  const [lumaJpeg, setLumaJpeg] = useState<Uint8Array | null>(null)
-  const [chromaJpeg, setChromaJpeg] = useState<Uint8Array | null>(null)
-  const [displayUrl, setDisplayUrl] = useState<string | null>(null)
-  const [imgErr, setImgErr] = useState<string | null>(null)
-
-  const { ingestWire: ingestLuma, buffer: lumaBuffer, uiTick: lumaUiTick } = useMorgSegReassembly({
-    onNakWire: nak,
-    onAssembled: (u8) => setLumaJpeg(u8),
-  })
-  const { ingestWire: ingestChroma, buffer: chromaBuffer, uiTick: chromaUiTick } = useMorgSegReassembly({
-    onNakWire: nak,
-    onAssembled: (u8) => setChromaJpeg(u8),
-  })
-
+  /** Globaler NAK-Rückkanal + Live-Subscribe (auch wenn Inbox-React stockt). */
   useEffect(() => {
-    const ordered = [...inboxMessages].sort((a, b) => a.timestamp - b.timestamp)
-    if (!msgId) return
-    for (const m of ordered) {
-      if ((m.from ?? '').trim().toLowerCase() !== fromLower) continue
-      const p = parseMorgSegV1Message(m.content ?? '')
-      if (!p || p.msgId !== msgId) continue
-      if (p.phase === 'luma') ingestLuma(m.content ?? '')
-      else ingestChroma(m.content ?? '')
+    setSarqLiveNakHandler(nak)
+    const offProg = subscribeSarqLiveProgress(() => setLiveTick((x) => x + 1))
+    const offAsm = subscribeSarqLiveAssembled((meta) => {
+      if (normalizeSarqPeerKey(meta.fromLower) !== fromLower || meta.msgId !== msgId) return
+      if (meta.phase === 'luma') setLumaJpeg(meta.bytes)
+      else setChromaJpeg(meta.bytes)
+    })
+    return () => {
+      offProg()
+      offAsm()
+      /** Nicht nullen: anderer Sink / Orchestrator kann Handler halten. */
     }
-  }, [ingestChroma, ingestLuma, fromLower, inboxSig, msgId])
+  }, [nak, fromLower, msgId])
+
+  /** Inbox → Live-Store (Late-Join / Reload / verpasste Mesh-Hooks). */
+  useEffect(() => {
+    if (!msgId || !fromLower) return
+    const ordered = [...inboxMessages].sort((a, b) => a.timestamp - b.timestamp)
+    for (const m of ordered) {
+      if (normalizeSarqPeerKey(m.from ?? '') !== fromLower) continue
+      const init = parsePath4ImageInitMessage(m.content ?? '')
+      if (init && init.msgId === msgId) {
+        const ik = `${fromLower}:${init.msgId}:${init.phase}:${init.n}`
+        const first = !initNakDoneGlobal.has(ik)
+        if (first) initNakDoneGlobal.add(ik)
+        seedSarqLiveFromInit(fromLower, init.msgId, init.phase, init.n, { nakNow: first })
+      }
+      const p = parseMorgSegV1Message(m.content ?? '')
+      if (p && p.msgId === msgId) {
+        noteSarqSegFromMesh(m.from ?? fromLower, m.content ?? '', { deferIdle: true })
+      }
+    }
+  }, [fromLower, inboxSig, msgId])
+
+  /** Hydrate JPEG falls Assemble vor Sink-Mount. */
+  useEffect(() => {
+    if (!msgId || !fromLower) return
+    const l = getSarqLiveAssembled(fromLower, msgId, 'luma')
+    const c = getSarqLiveAssembled(fromLower, msgId, 'chroma')
+    if (l) setLumaJpeg(l)
+    if (c) setChromaJpeg(c)
+  }, [fromLower, msgId, liveTick])
 
   useEffect(() => {
     let alive = true
     setImgErr(null)
     setDisplayUrl(null)
+    setLumaOnlyUrl(null)
     if (!lumaJpeg || lumaJpeg.length === 0) return
-    let blobUrl: string | null = null
+    let lumaUrl: string | null = null
+    let fuseUrl: string | null = null
     void (async () => {
       try {
+        lumaUrl = uint8ToObjectUrl(lumaJpeg)
+        if (alive) setLumaOnlyUrl(lumaUrl)
         if (chromaJpeg && chromaJpeg.length > 0) {
-          const u = await fuseLoraProgressivePreferSharpBackend(lumaJpeg, chromaJpeg)
-          if (alive) setDisplayUrl(u)
-        } else {
-          blobUrl = uint8ToObjectUrl(lumaJpeg)
-          if (alive) setDisplayUrl(blobUrl)
+          try {
+            fuseUrl = await fuseLoraProgressivePreferSharpBackend(lumaJpeg, chromaJpeg)
+            if (alive) setDisplayUrl(fuseUrl)
+          } catch (fuseErr) {
+            if (alive) {
+              setDisplayUrl(lumaUrl)
+              setImgErr(
+                `Farbe fehlgeschlagen — S/W bleibt: ${
+                  fuseErr instanceof Error
+                    ? fuseErr.message
+                    : (() => {
+                        try {
+                          return JSON.stringify(fuseErr)
+                        } catch {
+                          return 'Fusionsfehler'
+                        }
+                      })()
+                }`
+              )
+            }
+          }
+        } else if (alive) {
+          setDisplayUrl(lumaUrl)
         }
       } catch (e) {
-        if (alive) setImgErr(e instanceof Error ? e.message : String(e))
+        if (alive) {
+          try {
+            if (!lumaUrl) lumaUrl = uint8ToObjectUrl(lumaJpeg)
+            setDisplayUrl(lumaUrl)
+            setLumaOnlyUrl(lumaUrl)
+          } catch {
+            /* ignore */
+          }
+          setImgErr(e instanceof Error ? e.message : String(e))
+        }
       }
     })()
     return () => {
       alive = false
-      if (blobUrl) revokeObjectUrlSafe(blobUrl)
+      if (fuseUrl) revokeObjectUrlSafe(fuseUrl)
+      if (lumaUrl) revokeObjectUrlSafe(lumaUrl)
     }
   }, [lumaJpeg, chromaJpeg])
 
-  const phaseNFromInbox = useCallback(
-    (phase: 'luma' | 'chroma') => {
-      for (const m of inboxMessages) {
-        const init = parsePath4ImageInitMessage(m.content ?? '')
-        if (init && init.msgId === msgId && init.phase === phase) return init.n
-        const p = parseMorgSegV1Message(m.content ?? '')
-        if (p && p.msgId === msgId && p.phase === phase) return p.n
-      }
-      return null
-    },
-    [inboxMessages, msgId, inboxSig]
-  )
+  const lumaSnap: SarqLivePhaseSnap | null = useMemo(() => {
+    if (!msgId || !fromLower) return null
+    return getSarqLivePhase(fromLower, msgId, 'luma')
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- liveTick = Store-Änderung
+  }, [fromLower, msgId, liveTick])
 
-  const lumaN = useMemo(() => {
-    const fromInbox = phaseNFromInbox('luma')
-    if (fromInbox != null) return fromInbox
-    return anchor?.phase === 'luma' ? anchor.n : initAnchor?.phase === 'luma' ? initAnchor.n : null
-  }, [anchor, initAnchor, phaseNFromInbox])
+  const chromaSnap: SarqLivePhaseSnap | null = useMemo(() => {
+    if (!msgId || !fromLower) return null
+    return getSarqLivePhase(fromLower, msgId, 'chroma')
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- liveTick
+  }, [fromLower, msgId, liveTick])
 
-  const chromaN = useMemo(() => {
-    const fromInbox = phaseNFromInbox('chroma')
-    if (fromInbox != null) return fromInbox
-    return anchor?.phase === 'chroma' ? anchor.n : initAnchor?.phase === 'chroma' ? initAnchor.n : null
-  }, [anchor, initAnchor, phaseNFromInbox])
+  const lumaN =
+    lumaSnap?.n ??
+    (anchor?.phase === 'luma' ? anchor.n : initAnchor?.phase === 'luma' ? initAnchor.n : null)
+  const chromaN =
+    chromaSnap?.n ??
+    (anchor?.phase === 'chroma' ? anchor.n : initAnchor?.phase === 'chroma' ? initAnchor.n : null)
+
+  const lumaReceived = useMemo(() => {
+    if (lumaSnap) return maskToReceivedSet(lumaSnap.receivedMask, lumaSnap.n)
+    return new Set<number>()
+  }, [lumaSnap])
+
+  const chromaReceived = useMemo(() => {
+    if (chromaSnap) return maskToReceivedSet(chromaSnap.receivedMask, chromaSnap.n)
+    return new Set<number>()
+  }, [chromaSnap])
+
+  const anyFrozen = Boolean(lumaSnap?.frozen || chromaSnap?.frozen)
+  const anyIncomplete =
+    (lumaSnap && !lumaSnap.assembled && lumaSnap.receivedCount < lumaSnap.n) ||
+    (chromaSnap && !chromaSnap.assembled && chromaSnap.receivedCount < chromaSnap.n)
+
+  const requestMissing = useCallback(() => {
+    if (!msgId || !fromLower) return
+    requestSarqLiveMissing(fromLower, msgId, 'luma')
+    requestSarqLiveMissing(fromLower, msgId, 'chroma')
+  }, [fromLower, msgId])
 
   if (!looks) {
     return <p className="text-xs text-muted-foreground">Kein MORG_SEG_V1-Wire.</p>
@@ -200,12 +233,19 @@ export function MorgSegV1ChatSink({
 
   if (!anchor && initAnchor) {
     const phaseLabel = initAnchor.phase === 'luma' ? 'Luma' : 'Chroma'
+    const snap = initAnchor.phase === 'luma' ? lumaSnap : chromaSnap
+    const received = snap ? maskToReceivedSet(snap.receivedMask, snap.n) : new Set<number>()
     return (
       <div className="space-y-2 rounded-lg border border-border/80 bg-muted/20 p-3">
         <p className="text-sm font-medium text-foreground">Bild wird zusammengesetzt… (Pfad 4)</p>
         <p className="text-xs text-muted-foreground">
           {phaseLabel}: {initAnchor.n} Segmente erwartet — warte auf Funkpakete.
         </p>
+        <SarqSegmentProgressGrid
+          n={initAnchor.n}
+          received={received}
+          label={`${phaseLabel}-Fortschritt`}
+        />
       </div>
     )
   }
@@ -245,51 +285,124 @@ export function MorgSegV1ChatSink({
       {imgErr ? <p className="text-xs text-amber-700 dark:text-amber-300">{imgErr}</p> : null}
 
       {displayUrl ? (
-        <div className="relative inline-block max-w-full">
-          {!chromaJpeg?.length ? (
-            <span
-              className="pointer-events-none absolute left-2 top-2 z-[1] rounded bg-amber-500/90 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-black shadow-sm"
-              title="Nur Luma-JPEG zusammengebaut; Chroma kann noch fehlen."
+        <div className="space-y-2">
+          <div className="relative inline-block max-w-full">
+            {!chromaJpeg?.length ? (
+              <span
+                className="pointer-events-none absolute left-2 top-2 z-[1] rounded bg-amber-500/90 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-black shadow-sm"
+                title="Nur Luma (S/W). Farbe kommt, sobald Chroma-Segmente vollständig sind."
+              >
+                S/W · Luma
+              </span>
+            ) : (
+              <span
+                className="pointer-events-none absolute left-2 top-2 z-[1] rounded bg-emerald-600/90 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm"
+                title="Luma + Chroma zusammengefügt."
+              >
+                Farbe
+              </span>
+            )}
+            <img
+              src={displayUrl}
+              alt="S-ARQ LoRa Bild"
+              className="max-h-96 max-w-full rounded-lg border border-border object-contain"
+              onError={() => setImgErr('JPEG-Anzeige fehlgeschlagen (Fragmente noch kein gültiges Bild).')}
+            />
+          </div>
+          {chromaJpeg?.length && lumaOnlyUrl ? (
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1">
+                <p className="text-[10px] text-muted-foreground">S/W behalten (Luma)</p>
+                <img
+                  src={lumaOnlyUrl}
+                  alt="S-ARQ Luma S/W"
+                  className="max-h-28 max-w-[7rem] rounded border border-border object-contain"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <button
+                  type="button"
+                  className="text-left text-[10px] font-medium text-primary hover:underline"
+                  onClick={() => downloadUint8AsFile(lumaJpeg!, `lora-${msgId || 'bild'}-sw.jpg`)}
+                >
+                  S/W speichern
+                </button>
+                <button
+                  type="button"
+                  className="text-left text-[10px] font-medium text-primary hover:underline"
+                  onClick={() => {
+                    if (!displayUrl) return
+                    const a = document.createElement('a')
+                    a.href = displayUrl
+                    a.download = `lora-${msgId || 'bild'}-farbe.jpg`
+                    a.rel = 'noopener'
+                    document.body.appendChild(a)
+                    a.click()
+                    a.remove()
+                  }}
+                >
+                  Farbe speichern
+                </button>
+              </div>
+            </div>
+          ) : lumaJpeg?.length ? (
+            <button
+              type="button"
+              className="text-[10px] font-medium text-primary hover:underline"
+              onClick={() => downloadUint8AsFile(lumaJpeg, `lora-${msgId || 'bild'}-sw.jpg`)}
             >
-              Luma
-            </span>
+              S/W speichern
+            </button>
           ) : null}
-          <img
-            src={displayUrl}
-            alt="S-ARQ LoRa Bild"
-            className="max-h-96 max-w-full rounded-lg border border-border object-contain"
-            onError={() => setImgErr('JPEG-Anzeige fehlgeschlagen (Fragmente noch kein gültiges Bild).')}
-          />
         </div>
       ) : (
         <p className="text-[11px] leading-snug text-muted-foreground">
-          <strong className="font-medium text-foreground">Bild wird zusammengesetzt…</strong> Raster: empfangene
-          Segmente (grün), fehlende (Platzhalter). JPEG erscheint, sobald Luma vollständig ist.
+          <strong className="font-medium text-foreground">Bild wird zusammengesetzt…</strong> Zuerst S/W (Luma),
+          danach Farbe (Chroma). Raster: empfangen = grün.
         </p>
       )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         {lumaN != null && lumaN > 0 ? (
-          <SarqGhostGrid n={lumaN} received={lumaReceived} label="Luma-Fortschritt" />
+          <SarqSegmentProgressGrid n={lumaN} received={lumaReceived} label="Luma-Fortschritt" />
         ) : null}
         {chromaN != null && chromaN > 0 ? (
-          <SarqGhostGrid n={chromaN} received={chromaReceived} label="Chroma-Fortschritt" />
+          <SarqSegmentProgressGrid n={chromaN} received={chromaReceived} label="Chroma-Fortschritt" />
+        ) : chromaSnap || chromaJpeg?.length ? (
+          <SarqSegmentProgressGrid
+            n={chromaSnap?.n ?? chromaN ?? 1}
+            received={chromaReceived}
+            label="Chroma-Fortschritt"
+          />
         ) : null}
       </div>
 
       <div
-        className="flex flex-wrap gap-2 border-t border-border/60 pt-2 text-[10px] text-muted-foreground"
-        data-sarq-ui={`${lumaUiTick}-${chromaUiTick}`}
+        className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-2 text-[10px] text-muted-foreground"
+        data-sarq-ui={`live-${liveTick}`}
       >
         <span title="Reassembly-Zustand (Luma)">
-          Luma-NAK-Runden: {lumaBuffer.getNakRoundsSent()}
-          {lumaBuffer.isSessionFrozen() ? ' · eingefroren' : ''}
+          Luma {lumaSnap?.receivedCount ?? lumaReceived.size}/{lumaN ?? '?'} · NAK {lumaSnap?.nakRounds ?? 0}
+          {lumaSnap?.frozen ? ' · eingefroren' : ''}
+          {lumaSnap?.assembled ? ' · fertig' : ''}
         </span>
         <span className="text-border">|</span>
         <span title="Reassembly-Zustand (Chroma)">
-          Chroma-NAK-Runden: {chromaBuffer.getNakRoundsSent()}
-          {chromaBuffer.isSessionFrozen() ? ' · eingefroren' : ''}
+          Chroma {chromaSnap?.receivedCount ?? chromaReceived.size}/{chromaN ?? '?'} · NAK{' '}
+          {chromaSnap?.nakRounds ?? 0}
+          {chromaSnap?.frozen ? ' · eingefroren' : ''}
+          {chromaSnap?.assembled ? ' · fertig' : ''}
         </span>
+        {anyFrozen || anyIncomplete ? (
+          <button
+            type="button"
+            className="rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-primary hover:bg-muted"
+            title="Fehlende Segmente erneut per NAK anfordern (hebt Freeze)"
+            onClick={requestMissing}
+          >
+            Lücken erneut anfordern
+          </button>
+        ) : null}
       </div>
 
       <button type="button" onClick={() => void copyRaw()} className="text-xs font-medium text-primary hover:underline">

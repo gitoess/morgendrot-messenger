@@ -8,6 +8,7 @@ import {
   segmentCountForJpeg,
 } from '@/frontend/features/send/lora-image-morg-seg-v1-policy'
 import { MORG_SEG_V1_DEFAULT_MAX_RAW_BYTES } from '@/frontend/lib/lora-sarq-wire'
+import { MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES, wireUtf8ByteLength } from '@/frontend/lib/compact-image-wire'
 import type { ChatAttachedLora } from '@/frontend/lib/chat-view-attached-types'
 import { uint8ArrayToBase64 } from '@/frontend/lib/emergency-binary-browser'
 
@@ -38,24 +39,30 @@ describe('segmentCountForJpeg', () => {
 })
 
 describe('planFluentLoraImage', () => {
-  it('accepts small image under 12 KB cap', () => {
+  it('accepts small image under pair cap', () => {
     const attached: ChatAttachedLora = {
-      lumaWire: miniJpegWire('luma', 'aabbccdd', 4000),
-      chromaWire: miniJpegWire('chroma', 'aabbccdd', 3000),
+      lumaWire: miniJpegWire('luma', 'aabbccdd', 1400),
+      chromaWire: miniJpegWire('chroma', 'aabbccdd', 600),
       messageId: 'aabbccdd',
-      lumaJpegBytes: 4000,
-      chromaJpegBytes: 3000,
+      lumaJpegBytes: 1400,
+      chromaJpegBytes: 600,
     }
     const r = planFluentLoraImage(attached)
     expect('luma' in r).toBe(true)
     if (!('luma' in r)) return
-    expect(r.totalBytes).toBe(7000)
+    expect(r.totalBytes).toBe(2000)
+    expect(r.totalBytes).toBeLessThanOrEqual(FLUENT_LORA_IMAGE_MAX_TOTAL_BYTES)
+    expect(FLUENT_LORA_IMAGE_MAX_TOTAL_BYTES).toBe(3600)
     expect(r.luma.n).toBeGreaterThan(0)
     expect(r.chroma.n).toBeGreaterThan(0)
     expect(r.luma.n + r.chroma.n).toBeLessThanOrEqual(FLUENT_LORA_MAX_SEGMENTS_PER_PHASE * 2)
+    for (const w of [...r.luma.wires, ...r.chroma.wires]) {
+      expect(w.length).toBeGreaterThan(20)
+      expect(wireUtf8ByteLength(w)).toBeLessThanOrEqual(MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES)
+    }
   })
 
-  it('rejects over 12 KB total', () => {
+  it('rejects over pair cap total', () => {
     const half = Math.floor(FLUENT_LORA_IMAGE_MAX_TOTAL_BYTES / 2) + 100
     const attached: ChatAttachedLora = {
       lumaWire: miniJpegWire('luma', '11223344', half),
@@ -67,6 +74,6 @@ describe('planFluentLoraImage', () => {
     const r = planFluentLoraImage(attached)
     expect('ok' in r && r.ok === false).toBe(true)
     if (!('ok' in r) || r.ok !== false) return
-    expect(r.message).toMatch(/12/)
+    expect(r.message).toMatch(/KB/)
   })
 })

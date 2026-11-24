@@ -208,6 +208,15 @@ export function useChatViewSendOrchestration(p: UseChatViewSendOrchestrationPara
     setStatus,
     setStatusMsg,
     onCompactIngestStart: clearSosVoicePrompt,
+    onEnsureMeshLoRaImagesEnabled: () => {
+      try {
+        window.localStorage.setItem('morgendrot.meshLoRaImagesEnabled', '1')
+      } catch {
+        /* ignore */
+      }
+      /** CustomEvent: Composer-State folgt LS (falls Listener; sonst forceMeshLoRaImages beim Send). */
+      window.dispatchEvent(new Event('morgendrot:mesh-lora-images-enable'))
+    },
   })
 
   const clearCompactAttachmentAndSos = useCallback(() => {

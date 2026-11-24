@@ -65,7 +65,7 @@ export function normalizeMessengerWireContent(s: string): string {
 
 /**
  * **IOTA / Online:** `MORG_COMPACT_IMG_V1` – ein Blob (Luma-WebP + Chroma-PNG), lokal via `encodeIotaCompactAutark` (Relay optional).
- * **Funk / LoRa:** `MORG_LUMA_V1` + `MORG_CHROMA_V1` (zwei JPEGs, hart ≤ 12 KB Summe) – Kodierung lokal via `ImageEncodePort` / `@morgendrot/core/image` (Relay optional).
+ * **Funk / LoRa:** `MORG_LUMA_V1` + `MORG_CHROMA_V1` (zwei JPEGs; Flüchtig/H.25a hart ≤ ~4,2 KB Summe, Versand als `MORG_SEG_V1`) – Kodierung lokal via `ImageEncodePort` / `@morgendrot/core/image` (Relay optional).
  *
  * Kompaktbild-Netto: `MEDIA_COMPACT_IMAGE_BLOB_MAX_BYTES` (Backend `MESSENGER_COMPACT_IMAGE_BLOB_MAX_BYTES`).
  * Audio: Online `MEDIA_IOTA_AUDIO_RAW_MAX_BYTES`, Funk `MEDIA_LORA_AUDIO_RAW_MAX_BYTES`.
@@ -88,10 +88,15 @@ export const COMPACT_FILE_TXT_SUFFIX = ']]'
 export const MESSAGING_WIRE_UTF8_MAX = 16_000
 
 /**
- * Meshtastic `sendText` / LongFast: Firmware meldet oft „Message longer than 512 bytes“.
+ * Max. UTF-8-Länge **einer** Meshtastic-Textnachricht (Nutztext / Wire).
+ *
+ * `@meshtastic/core` lehnt ab, wenn das serialisierte **ToRadio**-Protobuf **> 512** ist
+ * („Message longer than 512 bytes, it will not be sent!“). Protobuf-Framing + MeshPacket
+ * frisst Overhead — 500 B Text allein sprengt das. Zusätzlich gilt `DATA_PAYLOAD_LEN` = 233
+ * (Airtime-Payload). Wir halten **200** (Android-/Client-Parity, Puffer unter 233).
  * Muss mit Backend `MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES` übereinstimmen.
  */
-export const MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES = 500
+export const MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES = 200
 
 /** Opus/Ogg-Rohdaten für IOTA/Mailbox (`MORG_AUDIO_V1`). */
 export const MEDIA_IOTA_AUDIO_RAW_MAX_BYTES = 10_752

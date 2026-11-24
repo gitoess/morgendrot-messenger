@@ -1,7 +1,9 @@
 # Heltec: USB-Serial vs. Bluetooth (Transport, Code, Fahrplan)
 
 **Zweck:** Eure Diskussion **technisch schärfen** (was stimmt, was übertrieben ist, was der Code heute kann).  
-**Ist im Repo:** Messenger-Frontend nutzt **Web Bluetooth** + `@meshtastic/core` (`frontend/frontend/hooks/use-meshtastic-ble.ts`). **USB-Serial** für LoRa existiert am **PC** in **`lora-bridge`** (`serial-lora-driver.ts`, `serialport`, Baudrate aus Config) — **nicht** als Web-Serial-Pfad in der PWA.
+**Ist im Repo (2026-11):** Messenger-Frontend nutzt **Web Bluetooth und Web Serial** + `@meshtastic/core` (`frontend/frontend/hooks/use-meshtastic-ble.ts` — `connectBluetooth` / `connectUsb`). Zusätzlich am **PC:** **`lora-bridge`** Roh-Serial (`serial-lora-driver.ts`) — **anderer** Framing-Pfad, nicht Meshtastic-Protobuf.
+
+**Besitz / Parallelbetrieb:** Ein USB-COM-Port = **ein** Programm (Morgendrot **oder** Meshtastic-App/Web/CLI). Radio-Config bleibt in der Meshtastic-App; Chat-Session in Morgendrot. Parallel: Morgendrot per **Bluetooth**, Meshtastic-App per **USB** (oder zweites Heltec).
 
 **Verknüpft:** **`heltec/README.md`**, **`docs/MESHTASTIC-BUILDING-BLOCKS.md`**, **`docs/MODULAR-KERN-ADAPTER-INTEROP.md`**, **`docs/LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`**, **`meshtastic/PHASE-2-FIRMWARE-SPEC.md`**, **`docs/ROADMAP-FAHRPLAN.md`** § **H.3l**.
 
@@ -43,14 +45,14 @@
 
 ### 2.1 Wo läuft was?
 
-- **Heute:** Die **BLE-Anbindung** sitzt im **Frontend (Browser/PWA)** über **Web Bluetooth**, nicht „das Backend auf dem Handy“ im Sinne von Node.js auf dem Telefon.  
-- **Node/Morgendrot-API** läuft typischerweise auf **PC/Pi**; das **Handy** spricht per **HTTP** mit der API und per **Web Bluetooth** mit dem Heltec.
+- **Heute:** Die **BLE- und Web-Serial-Anbindung** sitzt im **Frontend (Browser/PWA)** über `navigator.bluetooth` / `navigator.serial` + `@meshtastic/core` — nicht „Backend auf dem Handy“.  
+- **Node/Morgendrot-API** läuft typischerweise auf **PC/Pi**; das **Handy** spricht per **HTTP** mit der API und per **Web Bluetooth** (oder, wo verfügbar, Web Serial/OTG) mit dem Heltec.
 
-Ein **Serial-Pfad** wäre also primär:
+Serial-Pfade:
 
-- **Variante A:** **Web Serial API** in der **PWA** (Chromium), **oder**  
-- **Variante B:** **Native** Android-Schicht (z. B. später Companion-App), **oder**  
-- **Variante C:** **PC + lora-bridge + Serial** (bereits vorhanden) — Handy nur als UI ohne direkten UART.
+- **Variante A (Ist PC):** **Web Serial** in der PWA → Meshtastic-Protobuf (Chat).  
+- **Variante B:** **Native** Android-Schicht (später Companion) — optional.  
+- **Variante C (Ist PC):** **`lora-bridge`** Roh-Serial — **nicht** mit Variante A vermischen.
 
 ### 2.2 Web Serial auf dem Smartphone
 
@@ -111,4 +113,8 @@ Wenn der Spike ohne Mini-Seite zu mühsam ist: kleine **statische** Seite unter 
 
 ---
 
-*Stand: 2026-03-28 — § 5 / Spike ergänzt (Fahrplan **§ H.3l**).*
+*Stand: 2026-11-23 — Web Serial Ist in der PWA + USB-Besitz-Hinweis; Spike § 5 unverändert (Fahrplan **§ H.3l**).*
+
+### Nachtrag: USB „Verbinden“ Latenz (2026-11-23)
+
+`MeshDevice.configure()` wartet auf volle WantConfig (Kanäle + NodeDB) — bei vielen Nodes oft **viele Sekunden**. Morgendrot setzt die Session deshalb **sofort** nach Transport-Open auf verbunden und startet WantConfig im Hintergrund (`raceMeshtasticConfigureConnect`, Budget ~2,5 s). Freigabe aller SerialPorts nur noch bei Fehler „already open“, nicht vor jedem Connect.

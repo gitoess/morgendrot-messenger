@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { setSarqLiveNakHandler } from '@/frontend/lib/lora-sarq-live-progress'
 import { toast } from 'sonner'
 import {
   assembleChatViewPanelMessengerPorts,
@@ -339,13 +340,31 @@ export function useChatViewPanelMessengerPorts(deps: UseChatViewPanelMessengerPo
         : 'broadcast'
       const dest = resolved === null ? 'broadcast' : resolved
       try {
-        await meshDevice.sendMeshText(wire, dest)
-      } catch {
-        /* NAK optional; Chat bleibt bedienbar */
+        /** wantAck aus — sonst Kollision mit Segment-Burst (~jedes 2. Paket weg) + Overlay. */
+        await meshDevice.sendMeshText(wire, dest, undefined, {
+          wantAck: false,
+          queueConfirm: true,
+        })
+      } catch (e) {
+        /* NAK optional — nie Plain-Object nach oben (Next [object Object]). */
+        if (typeof console !== 'undefined' && console.debug) {
+          console.debug(
+            '[sarq-nak]',
+            e instanceof Error ? e.message : typeof e === 'object' ? JSON.stringify(e) : String(e)
+          )
+        }
       }
     },
     [meshDevice, meshPlaintextNodeId, meshPlaintextToNodeEnabled]
   )
+
+  /** Live-Store Idle-NAKs auch ohne gemounteten Sink (Mesh-Zeit). */
+  useEffect(() => {
+    setSarqLiveNakHandler((wire) => {
+      void onSarqNakWire(wire)
+    })
+    return () => setSarqLiveNakHandler(null)
+  }, [onSarqNakWire])
 
   const panelMessengerPorts = useMemo(
     () =>

@@ -20,13 +20,14 @@ describe('path4-image-transfer (H.25a IMG_INIT)', () => {
     expect(p?.imageHashCrc16).toBeTypeOf('number')
   })
 
-  it('inbox group key', () => {
-    const raw = buildPath4ImageInitWire({ msgId: 'aabbccdd', phase: 'chroma', n: 4 })
-    const k = path4ImageInitInboxGroupKey({
-      from: '0x' + '11'.repeat(32),
-      content: raw,
-    })
-    expect(k).toContain('aabbccdd')
-    expect(k).toContain('chroma')
+  it('inbox group key kollabiert auf Absender+msgId (ohne Phase)', () => {
+    const from = '0x' + '11'.repeat(32)
+    const luma = buildPath4ImageInitWire({ msgId: 'aabbccdd', phase: 'luma', n: 4 })
+    const chroma = buildPath4ImageInitWire({ msgId: 'aabbccdd', phase: 'chroma', n: 4 })
+    const kL = path4ImageInitInboxGroupKey({ from, content: luma })
+    const kC = path4ImageInitInboxGroupKey({ from, content: chroma })
+    expect(kL).toContain('aabbccdd')
+    expect(kL).toBe(kC)
+    expect(kL).not.toMatch(/luma|chroma/)
   })
 })

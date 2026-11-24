@@ -190,14 +190,14 @@ export async function prepareImageForLoRa(originalBuffer: Buffer): Promise<LoRaP
 
 const LORA_ROBUST_DIMS = [480, 420, 360, 300, 240, 200, 160, 128, 104, 88] as const;
 
-const FLUENT_ROBUST_DIMS = [1280, 1024, 896, 768, 640, 560, 480, 400, 320, 256] as const;
+const FLUENT_ROBUST_DIMS = [640, 480, 320] as const;
 
 export type PrepareImageForLoRaFluentOpts = {
     maxTotalBytes?: number;
 };
 
 /**
- * **Flüchtig (LoRa) / § H.25a:** LUMA+CHROMA bis `maxTotalBytes` (Default 12 KB), **ohne** Monolith-Wire-Limit.
+ * **Flüchtig (LoRa) / § H.25a:** LUMA+CHROMA bis `maxTotalBytes` (Default ~2,5 KB), **ohne** Monolith-Wire-Limit.
  * Client segmentiert mit `MORG_SEG_V1`; Wires dürfen > 500 B UTF-8 sein.
  */
 export async function prepareImageForLoRaFluent(
@@ -217,16 +217,14 @@ export async function prepareImageForLoRaFluent(
         .toBuffer();
 
     const layouts: { w: number; h: number; blur: number }[] = [
-        { w: 64, h: 48, blur: 1.4 },
-        { w: 56, h: 42, blur: 1.2 },
+        { w: 56, h: 42, blur: 1.1 },
         { w: 48, h: 36, blur: 1.0 },
-        { w: 42, h: 32, blur: 0.9 },
         { w: 36, h: 28, blur: 0.85 },
-        { w: 32, h: 24, blur: 0.8 },
     ];
-    const lumaWidths = [640, 560, 480, 400, 360, 320, 280, 240, 200, 168, 144, 128] as const;
-    const lumaQs = [62, 58, 54, 50, 46, 42, 38, 34, 30, 28, 26, 24, 22, 20, 18];
-    const chromaQs = [42, 38, 36, 34, 32, 30, 28, 26, 24, 22, 20, 18];
+    /** Schnell-Raster — Abgleich `lora-fluent-encode-policy.ts`. */
+    const lumaWidths = [320, 280, 240, 200] as const;
+    const lumaQs = [42, 34, 28, 22];
+    const chromaQs = [36, 28, 22];
 
     for (const lumaW of lumaWidths) {
         const lumaSource = await sharp(normalized, { failOn: 'none' })

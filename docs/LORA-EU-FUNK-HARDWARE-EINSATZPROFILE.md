@@ -61,11 +61,17 @@
 
 ---
 
-## 6. Abgrenzung zum Messenger-Produkt
+## 6. Modem-Preset (kurz) — siehe Smoke-Doku
+
+Für **Schreibtisch / Bild-Burst**: **MediumFast** auf beiden Nodes. Für **Feld / Distanz**: **LongFast**. Detailtabelle und weitere LoRa-Parameter: **`docs/LORA-PC-FIRST-SMOKE.md`** § 2a.
+
+---
+
+## 7. Abgrenzung zum Messenger-Produkt
 
 - Morgendrot liefert **Software**, **Bridge-Konzepte** und **Doku** — **keine** Zertifizierung von **PA/LNA/Antennen-Kombinationen**.
 - **Lite-Messenger**, **Boss**, **Rettungskette**: siehe **`docs/UI-ROLLEN-WORKSPACES.md`**, **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`** — Funk verbessert **Erreichbarkeit im Team**, ersetzt aber **nicht** Leitstellenfunk.
 
 ---
 
-*Stand: 2026-03-28 — konsolidiert aus technischer Review; für Implementierung Phase B und Feldtests.*
+*Stand: 2026-11-23 — Modem-Preset-Hinweis; zuvor 2026-03-28 Review.*
