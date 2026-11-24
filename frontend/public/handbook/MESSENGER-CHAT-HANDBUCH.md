@@ -131,7 +131,7 @@ Laut [Meshtastic Channel Configuration](https://meshtastic.org/docs/configuratio
 
 **Gleich auf Sender und Empfänger:** Region, Modem-Preset, Kanalindex **und** PSK (Primary oft Default; deine Kanäle = Secondary mit gleichem PSK). Im Messenger: Funk & Geräte zeigt **Kanäle vom Radio** und **sichtbare Nodes** (Suchfeld + „Nodes & Kanäle neu laden“); Node antippen = direkt anschreiben. Nodes/Kanäle bleiben nach Reload lokal gecacht; nach Connect lädt `configure()` die Radio-NodeDB. Community-Kanäle („Freiraum“, „Kanal frei“ o. Ä.): nur in der Meshtastic-App als Secondary anlegen/teilen — erscheinen danach hier, kein globales Kanal-Verzeichnis. Dauerhaft: Telefonbuch → Meshtastic-Node-ID.
 
-**Bilder über Funk (H.25a, Desk STABIL):** Sendepfad **Funk**, Verschlüsselung **aus** → **+** → **Bilder über Funk…** → Bild wählen → **Senden**. Empfänger: zuerst S/W, dann Farbe; Fortschritt ohne Tab-Wechsel. Speichern = ein Farb-JPEG. Cap ≤ 3,6 KB; typisch ~1:30–1:45 am Schreibtisch. Audio über Funk gibt es nicht (nur Online/IOTA).
+**Bilder über Funk (H.25a, Desk STABIL):** Sendepfad **Funk**, Verschlüsselung **aus** → **+** → **Bilder über Funk…** → Bild wählen → **Senden**. Empfänger: zuerst S/W, dann Farbe; Fortschritt ohne Tab-Wechsel; **Klick aufs Bild → Vollbild/Zoom** (Mausrad oder +/−, Esc zu). Speichern = ein Farb-JPEG. Cap ≤ 3,6 KB; typisch ~1:30–1:45 am Schreibtisch. Audio über Funk gibt es nicht (nur Online/IOTA).
 
 #### LoRa „An alle“ — nicht Pinnwand
 

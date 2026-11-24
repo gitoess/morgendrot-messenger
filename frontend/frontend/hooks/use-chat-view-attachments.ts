@@ -92,7 +92,6 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
     setStatus('error')
     setStatusMsg('Gespeichertes Funk-Bild wiederhergestellt — „Nochmals senden“ füllt Lücken.')
     setTimeout(() => setStatus('idle'), 8_000)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur einmal beim Mount
   }, [])
 
   /** Draft mitschreiben, solange Anhang hängt (Abbruch / Reload). */

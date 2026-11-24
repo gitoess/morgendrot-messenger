@@ -109,7 +109,6 @@ export function useMorgSegReassembly(opts: UseMorgSegReassemblyOpts) {
     if (wire) onNakRef.current(wire)
     persistRx()
     if (buffer.needsIdleTimer()) armIdleTimer()
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- einmal beim Mount
   }, [])
 
   const ingestWire = useCallback(

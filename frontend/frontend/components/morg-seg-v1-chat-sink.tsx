@@ -19,6 +19,7 @@ import {
   uint8ToObjectUrl,
 } from '@/frontend/lib/lora-progressive-image-client'
 import { normalizeMessengerWireContent } from '@/frontend/lib/compact-image-wire'
+import { ChatImageWithLightbox } from '@/frontend/components/chat-image-lightbox'
 import { SarqSegmentProgressGrid } from '@/frontend/components/sarq-segment-progress-grid'
 import {
   getSarqLiveAssembled,
@@ -190,13 +191,11 @@ export function MorgSegV1ChatSink({
   const lumaSnap: SarqLivePhaseSnap | null = useMemo(() => {
     if (!msgId || !fromLower) return null
     return getSarqLivePhase(fromLower, msgId, 'luma')
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- liveTick = Store-Änderung
   }, [fromLower, msgId, liveTick])
 
   const chromaSnap: SarqLivePhaseSnap | null = useMemo(() => {
     if (!msgId || !fromLower) return null
     return getSarqLivePhase(fromLower, msgId, 'chroma')
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- liveTick
   }, [fromLower, msgId, liveTick])
 
   const lumaN =
@@ -286,34 +285,34 @@ export function MorgSegV1ChatSink({
 
       {displayUrl ? (
         <div className="space-y-2">
-          <div className="relative inline-block max-w-full">
-            {!chromaJpeg?.length ? (
-              <span
-                className="pointer-events-none absolute left-2 top-2 z-[1] rounded bg-amber-500/90 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-black shadow-sm"
-                title="Nur Luma (S/W). Farbe kommt, sobald Chroma-Segmente vollständig sind."
-              >
-                S/W · Luma
-              </span>
-            ) : (
-              <span
-                className="pointer-events-none absolute left-2 top-2 z-[1] rounded bg-emerald-600/90 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm"
-                title="Luma + Chroma zusammengefügt."
-              >
-                Farbe
-              </span>
-            )}
-            <img
-              src={displayUrl}
-              alt="S-ARQ LoRa Bild"
-              className="max-h-96 max-w-full rounded-lg border border-border object-contain"
-              onError={() => setImgErr('JPEG-Anzeige fehlgeschlagen (Fragmente noch kein gültiges Bild).')}
-            />
-          </div>
+          <ChatImageWithLightbox
+            src={displayUrl}
+            alt="S-ARQ LoRa Bild"
+            className="max-h-96 max-w-full rounded-lg border border-border object-contain"
+            onError={() => setImgErr('JPEG-Anzeige fehlgeschlagen (Fragmente noch kein gültiges Bild).')}
+            badge={
+              !chromaJpeg?.length ? (
+                <span
+                  className="pointer-events-none absolute left-2 top-2 z-[1] rounded bg-amber-500/90 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-black shadow-sm"
+                  title="Nur Luma (S/W). Farbe kommt, sobald Chroma-Segmente vollständig sind."
+                >
+                  S/W · Luma
+                </span>
+              ) : (
+                <span
+                  className="pointer-events-none absolute left-2 top-2 z-[1] rounded bg-emerald-600/90 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm"
+                  title="Luma + Chroma zusammengefügt."
+                >
+                  Farbe
+                </span>
+              )
+            }
+          />
           {chromaJpeg?.length && lumaOnlyUrl ? (
             <div className="flex flex-wrap items-end gap-3">
               <div className="space-y-1">
                 <p className="text-[10px] text-muted-foreground">S/W behalten (Luma)</p>
-                <img
+                <ChatImageWithLightbox
                   src={lumaOnlyUrl}
                   alt="S-ARQ Luma S/W"
                   className="max-h-28 max-w-[7rem] rounded border border-border object-contain"
