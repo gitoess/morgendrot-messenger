@@ -82,7 +82,7 @@ export function SettingsVaultPasswordSection({ vaultLocked = false }: SettingsVa
     if (
       !window.confirm(
         'Sitzung beenden / Tresor voll sperren?\n\n' +
-          'Das ist nicht das weiche Badge-Sperren im Chat.\n\n' +
+          'Das ist nicht die Soft-Pause (Badge = RAM bleibt, PW zum Weitersprechen).\n\n' +
           '• Keys + Passwort verlassen den Server-RAM (wie Abmelden)\n' +
           '• Schnell-Cache entschlüsselter Nachrichten (.inbox.enc neben dem Tresor) wird gelöscht — damit Klartext nicht auf der Platte liegt, während alles gesperrt ist. Nachrichten bleiben on-chain und laden nach Entsperren wieder\n' +
           '• Tresor-Datei (.morgendrot-vault) bleibt unangetastet\n' +
@@ -124,10 +124,10 @@ export function SettingsVaultPasswordSection({ vaultLocked = false }: SettingsVa
         </button>
       </div>
       <p className="mb-3 text-[12px] leading-relaxed text-muted-foreground">
-        <strong className="text-foreground">Sitzung beenden</strong> = volles Sperren wie Abmelden (Keys aus RAM,
-        Inbox-Schnellcache weg). <strong className="text-foreground">Badge im Chat</strong> = nur weich (Chat bleibt
-        offen, kein Cache-Löschen). <strong className="text-foreground">Neu laden (F5)</strong> sperrt den API-Tresor
-        nicht — nur Abmelden / Sitzung beenden / optional Idle. Notfall-Löschung ist darunter separat.
+        <strong className="text-foreground">Sitzung beenden</strong> = Abmelden (Keys aus RAM, Inbox-Schnellcache
+        weg). <strong className="text-foreground">Badge im Chat</strong> = Soft-Pause (grau, RAM bleibt, Passwort zum
+        Weitersprechen). <strong className="text-foreground">Neu laden (F5)</strong> sperrt den API-Tresor nicht —
+        nur Abmelden / Sitzung beenden / optional Idle. Notfall-Löschung ist darunter separat.
       </p>
       <label className="mb-4 flex max-w-md flex-col gap-1.5 text-[12px] text-muted-foreground">
         <span className="font-medium text-foreground">Auto-Sperren nach Abwesenheit</span>

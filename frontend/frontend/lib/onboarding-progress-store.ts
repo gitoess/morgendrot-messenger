@@ -112,11 +112,17 @@ export function resolveOnboardingDialogPath(opts: {
 export function resolveWizardOnboardingPath(opts: {
   role?: string | null
   standalonePath?: 'boss' | 'einsatz' | 'solo' | null
+  /**
+   * Boss ohne Helfer / IOTA-Messenger: Peer-Pfad (Wallet→Adresse→Mailbox→Funk),
+   * kein Einsatzleitungs-Wizard — auch wenn ROLE=boss.
+   */
+  peerMessengerOnly?: boolean
 }): 'boss' | 'wanderer' | null {
+  const standalone = opts.standalonePath ?? readStandalonePathKey()
+  if (opts.peerMessengerOnly || standalone === 'solo') return 'wanderer'
   const progress = readOnboardingProgress()
   if (progress?.path === 'boss') return 'boss'
-  const standalone = opts.standalonePath ?? readStandalonePathKey()
-  if (standalone === 'solo') return 'wanderer'
+  if (progress?.path === 'wanderer') return 'wanderer'
   if (standalone === 'boss') return 'boss'
   const role = (opts.role || '').trim().toLowerCase()
   if (role === 'boss' || role === 'kommandant') return 'boss'
@@ -438,15 +444,22 @@ export function requestOpenOnboardingWizard(): void {
 /**
  * Tresor sichtbar lassen; Link „Messenger einrichten“ anbieten bis Wizard abgeschlossen.
  */
-export function resolveMessengerSetupOnboardingPath(role?: string | null): 'boss' | 'wanderer' | null {
+export function resolveMessengerSetupOnboardingPath(
+  role?: string | null,
+  opts?: { peerMessengerOnly?: boolean }
+): 'boss' | 'wanderer' | null {
+  if (opts?.peerMessengerOnly) return 'wanderer'
   const progress = readOnboardingProgress()
   if (progress?.path === 'boss' || progress?.path === 'wanderer') return progress.path
-  return resolveWizardOnboardingPath({ role })
+  return resolveWizardOnboardingPath({ role, peerMessengerOnly: opts?.peerMessengerOnly })
 }
 
-export function shouldOfferMessengerSetupFromVault(role?: string | null): boolean {
+export function shouldOfferMessengerSetupFromVault(
+  role?: string | null,
+  opts?: { peerMessengerOnly?: boolean }
+): boolean {
   if (isOnboardingFinished()) return false
-  return resolveMessengerSetupOnboardingPath(role) !== null
+  return resolveMessengerSetupOnboardingPath(role, opts) !== null
 }
 
 /** @deprecated Nutze shouldOfferMessengerSetupFromVault — Tresor wird nicht mehr pauschal unterdrückt. */

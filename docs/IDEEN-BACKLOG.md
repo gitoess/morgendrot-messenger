@@ -8,9 +8,11 @@ Kurznotizen für spätere Phasen — **kein** Implementierungsversprechen.
 
 **Entscheidung 2026-11-20:** Statt vieler Einzel-Gates: bei `locked` Messenger-Hauptfläche ausgrauen/`pointer-events: none`, **nur** Unlock-Dialog bedienbar. Optional Statusleiste sichtbar; SOS nur mit expliziter Whitelist.
 
-**Ist 2026-11-22 (MVP):** `shouldApplyVaultFailClosedOverlay` + `VaultFailClosedSurface` in `messenger-dashboard` / `projekt-dashboard`. Hard-Lock nur; Wizard/Helper-Seed unterdrücken Scrim wie Unlock-Dialog. Soft-Lock unverändert (Chat lesbar). SOS bleibt bei Hard-Lock ohnehin ausgeblendet.
+**Ist 2026-11-24:** Zwei klare Modi:
+- **Abmelden** = Wipe + Unlock-Dialog + Übersicht.
+- **Tresor sperren** (Badge) = Soft-Pause (Scrim, **RAM bleibt**); **Weitersprechen nur nach Passwort** (kein freies Tippen).
 
-**Nicht:** Soft-Lock (lesen ok / schreiben gesperrt) als zweites Fail-Closed — verdoppelt Logik.
+Auge im Unlock: `mousedown preventDefault` gegen Dialog-Flackern.
 
 ---
 

@@ -37,7 +37,16 @@ export function UiPasswordInput(p: UiPasswordInputProps) {
       <button
         type="button"
         className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
-        onClick={() => setVisible((v) => !v)}
+        /** mousedown+preventDefault: kein Fokusverlust → Dialog/Unlock flackert nicht. */
+        onMouseDown={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+        }}
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          setVisible((v) => !v)
+        }}
         aria-label={visible ? 'Passwort verbergen' : 'Passwort anzeigen'}
         tabIndex={-1}
         disabled={p.disabled}

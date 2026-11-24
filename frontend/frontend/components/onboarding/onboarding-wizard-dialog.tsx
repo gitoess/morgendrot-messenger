@@ -157,7 +157,7 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
       : path === 'helper'
         ? 'Helfer einrichten'
         : path === 'wanderer'
-          ? 'Privat einrichten'
+          ? 'Messenger einrichten (Freunde)'
           : 'Einrichtung'
 
   const renderStepBody = () => {

@@ -21,6 +21,13 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-11-24** | PC, **Solo/Peer-Wizard Scheibe** | `peerMessengerOnly` (IOTA-Edition/`hideEinsatzleitung`) → Wanderer-Pfad statt Einsatzleitung; Copy „Messenger einrichten (Freunde)“. Vitest onboarding 20 PASS. | **CODE** |
+| **2026-11-24** | PC, **Hard-Lock Live-Check** | Abmelden → Unlock-Dialog + Scrim „Tresor gesperrt“; Einstellungen `pointer-events: none` (Browser-Click refused); Fallback „Tresor öffnen“ sichtbar. | **PASS (Live)** |
+| **2026-11-24** | PC, **Tresor fail-closed Härte** | Scrim stärker + Hinweis; Fallback „Tresor öffnen“ (pointer-events Insel). | **CODE** |
+| **2026-11-24** | PC, **Soft-Pause vs Abmelden** | Zuerst Weitersprechen-ohne-PW (verworfen). | **CODE** |
+| **2026-11-24** | PC, **Badge-Sperren = echtes Lock** | Kurz Wipe=Abmelden (zu hart) — zurück. | **CODE** |
+| **2026-11-24** | PC, **Soft-Pause + PW** | Badge = grau + RAM; Weitersprechen öffnet Passwort-Dialog; Abmelden = Wipe. | **CODE** — Live: Badge→Scrim→PW→weiter |
+| **2026-11-24** | Docs, **Scope Boss-ohne-Helfer** | I = Alltag inkl. Funk/TG; M = Superset. Detail im PC-Durchgang; Fokus jetzt Tresor-Härte. | **DOCS** — Arbeitsmodell |
 | **2026-11-24** | PC, **H.25a STABIL einfrieren** | Cap **3,6 KB** / Gap **580** / ~1:30–1:45 belassen (kein 1‑min-Ziel). Encode+Tempo Freeze. Live-Progress, fused Save, Inbox-Kollaps. Doku/Roadmap/Smoke/TESTING nachgezogen. | **STABIL** — Merge-Paket |
 | **2026-11-24** | PC, **smoke:standalone-desk** | Root Ritual nach H.25a-Paket — **92 PASS** (H.15 Direct inkl.). | **PASS (Desk)** |
 | **2026-11-23** | PC, **H.25a STABIL-Anker** | User: schöner Lauf nach Nur-Lücken-Repair (kein Blind-Voll). Anker Rule + Smoke § STABIL. | **LIVE OK** — Baseline |

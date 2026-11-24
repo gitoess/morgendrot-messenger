@@ -512,7 +512,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     if (sending) return 'Senden läuft bereits…'
     if (vaultLocked) {
       return privacySoftLocked && apiStatus?.locked !== true
-        ? 'Privacy gesperrt — Badge tippen, Passwort eingeben (Chat bleibt sichtbar).'
+        ? 'Tresor-Pause — Passwort für „Weitersprechen“ (Sitzung war im RAM).'
         : 'Tresor gesperrt — bitte zuerst entsperren.'
     }
     if (onlineChainNeedsKeys && sessionKeysMissingBlock) {

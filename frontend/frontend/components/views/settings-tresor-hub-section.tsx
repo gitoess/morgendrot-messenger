@@ -119,8 +119,8 @@ export function SettingsTresorHubSection({
             verschlüsselten Tresor (Keys, optional Seed, Notizen, Passwort-Einträge).
           </li>
           <li>
-            <strong className="text-foreground">Header-Badge</strong> = Sitzung (scharf / weich gesperrt) — kein
-            zweiter Tresor.
+            <strong className="text-foreground">Header-Badge</strong> = Soft-Pause (grau, RAM, PW zum Weitersprechen)
+            vs. Abmelden (Keys weg) — kein zweiter Tresor.
           </li>
           <li>
             <strong className="text-foreground">Package / Mailbox / RPC</strong> bleiben unter{' '}

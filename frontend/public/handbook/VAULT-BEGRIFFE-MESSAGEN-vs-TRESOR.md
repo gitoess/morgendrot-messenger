@@ -126,7 +126,7 @@ Unter „Tresor/Privacy“ laufen **drei** Mechanismen — nicht drei Passwörte
 | Schicht | Zustand | Wirkung |
 |---------|---------|---------|
 | **A · API-Tresor** | `apiStatus.locked` | Backend-Messaging-Keys / Signer; Hard-Lock → Unlock-Dialog |
-| **B · Privacy Soft-Lock** | Badge „Privacy: gesperrt“ | Secrets + Browser-Signer weg; **Chat bleibt lesbar**; Senden aus |
+| **B · Soft-Pause (Badge)** | „Tresor: Pause“ | Scrim; **Secrets bleiben im RAM**; Weitersprechen nur nach Passwort. Abmelden = Wipe + Übersicht. |
 | **C · Vault-Password-Session** | RAM + Tab-`sessionStorage` (F5 ok; Tab zu / Abmelden → weg) | AES-GCM-`localStorage`-Sidecars (Passphrasen, Team-Keys, Keycards, NFT-Index, Ratchet) |
 
 **Policy (kurz):** Secrets und Merken nur bei C; Schreiben bei Soft/Hard gesperrt; **Frei-/Gesichert-Saldo und NFT-Galerie** bleiben sichtbar (on-chain/öffentlich). Einstellungen browsen offen; Exports/Emergency/Keys nur entsperrt oder maskiert. **Kein zweiter Passwort-Tresor.**
@@ -149,6 +149,6 @@ Details Nutzer: `docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md` §1.
 
 ---
 
-**Nachtrag 2026-11-22 (Schicht C / F5 + Idle):** Vault-Passwort-Session überlebt **Reload im selben Tab** (`sessionStorage`); **Abmelden** / Soft-Lock leert sie. **F5 sperrt den API-Tresor nicht** (solange der Node-Prozess läuft). **API-Prozess-Neustart** (`npm run dm`) braucht weiterhin Unlock. Optional: Einstellungen → Tresor → **Auto-Sperren nach Abwesenheit** (Default **aus**).
+**Nachtrag 2026-11-24:** Soft-Pause leert **keine** Secrets — Scrim + Passwort vor Weitersprechen. **Abmelden** leert Vault-Passwort-Session + Signer. Vault-Passwort-Session überlebt **Reload im selben Tab**. Optional: Idle-Auto-Sperren (Default **aus**).
 
-*Stand: 2026-11-22 — §9 Seed/PW-SPOF; Schicht C Tab-Persist; Soft-Lock / Sidecar.*
+*Stand: 2026-11-24 — Soft-Pause + PW vs Abmelden; Schicht C Tab-Persist.*

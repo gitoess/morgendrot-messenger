@@ -51,6 +51,10 @@ import { DashboardSharedDialogs } from '@/frontend/components/dashboard-shared-d
 import { VaultFailClosedSurface } from '@/frontend/components/vault-fail-closed-surface'
 import { shouldApplyVaultFailClosedOverlay } from '@/frontend/lib/vault-fail-closed'
 import {
+  isPrivacySoftLocked,
+  PRIVACY_SOFT_LOCK_CHANGED_EVENT,
+} from '@/frontend/lib/privacy-soft-lock'
+import {
   IOTA_MESSENGER_UI,
   isIotaMessengerProduct,
   PRODUCT_DISPLAY_NAME,
@@ -147,14 +151,27 @@ function MessengerDashboardBody({
   const [helperSeedSetupOpen, setHelperSeedSetupOpen] = useState(false)
   const [onboardingWizardOpen, setOnboardingWizardOpen] = useState(false)
   const [vaultOverWizard, setVaultOverWizard] = useState(false)
+  const [privacySoftLocked, setPrivacySoftLockedState] = useState(() => isPrivacySoftLocked())
   const vaultFromWizardFlowRef = useRef(false)
+
+  useEffect(() => {
+    const sync = () => setPrivacySoftLockedState(isPrivacySoftLocked())
+    sync()
+    window.addEventListener(PRIVACY_SOFT_LOCK_CHANGED_EVENT, sync)
+    return () => window.removeEventListener(PRIVACY_SOFT_LOCK_CHANGED_EVENT, sync)
+  }, [])
   const liteMessengerFromApi = true
   const effectiveRole = s.role || s.apiSnapshot?.role
   const isEinsatzLeadHome =
     !isIotaMessengerProduct() &&
     !IOTA_MESSENGER_UI.hideEinsatzleitung &&
     canAccessEinsatzleitung(effectiveRole)
-  const offerMessengerSetupInVault = shouldOfferMessengerSetupFromVault(effectiveRole)
+  /** Boss ohne Helfer / IOTA-Edition: Peer-Wizard, nicht Einsatzleitung. */
+  const peerMessengerOnly =
+    isIotaMessengerProduct() || IOTA_MESSENGER_UI.hideEinsatzleitung
+  const offerMessengerSetupInVault = shouldOfferMessengerSetupFromVault(effectiveRole, {
+    peerMessengerOnly,
+  })
   const { t } = useAppTranslation('dashboard')
   const { t: tc } = useAppTranslation('common')
   const { t: tv } = useAppTranslation('vault')
@@ -180,9 +197,11 @@ function MessengerDashboardBody({
   const vaultSessionLocked = !!(s.locked || s.apiSnapshot?.locked)
   const applyVaultFailClosed = shouldApplyVaultFailClosedOverlay({
     vaultSessionLocked,
+    privacySoftLocked,
     suppressForHelperSeed: s.unlock.suppressVaultUnlockForHelperSeed,
     suppressForOnboardingWizard: !vaultOverWizard && onboardingWizardOpen,
   })
+  const softUiPauseOnly = privacySoftLocked && !vaultSessionLocked
   const browserSignerReady = isBrowserSessionSignerReady(s.locked)
   const vaultKeysReady = browserSignerReady
   const standaloneApkWithoutBasis = isStandaloneMessengerWithoutBasis()
@@ -231,6 +250,14 @@ function MessengerDashboardBody({
     promptBrowserWalletUnlock()
   }, [promptBrowserWalletUnlock])
 
+  const requestFailClosedUnlock = useCallback(() => {
+    if (softUiPauseOnly) {
+      s.requestMainnetSessionSignerSync()
+      return
+    }
+    openVaultFromUi()
+  }, [softUiPauseOnly, s.requestMainnetSessionSignerSync, openVaultFromUi])
+
   const returnToWizardFromVault = useCallback(() => {
     vaultFromWizardFlowRef.current = true
     setVaultOverWizard(false)
@@ -255,21 +282,18 @@ function MessengerDashboardBody({
   }, [backendVaultUnlocked, s.locked, s.requestMainnetSessionSignerSync, s.requestVaultUnlock])
 
   const openMessengerSetupFromVault = useCallback(() => {
-    const path = resolveMessengerSetupOnboardingPath(effectiveRole)
+    const path = resolveMessengerSetupOnboardingPath(effectiveRole, { peerMessengerOnly })
     if (!path) return
     setVaultOverWizard(false)
     prepareOnboardingWizardOpen(path)
     setOnboardingWizardOpen(true)
-  }, [effectiveRole])
+  }, [effectiveRole, peerMessengerOnly])
 
+  const vaultSetupPath = resolveMessengerSetupOnboardingPath(effectiveRole, { peerMessengerOnly })
   const messengerSetupVaultLabel =
-    resolveMessengerSetupOnboardingPath(effectiveRole) === 'boss'
-      ? tv('messengerSetup.linkBoss')
-      : tv('messengerSetup.link')
+    vaultSetupPath === 'boss' ? tv('messengerSetup.linkBoss') : tv('messengerSetup.link')
   const messengerSetupVaultHint =
-    resolveMessengerSetupOnboardingPath(effectiveRole) === 'boss'
-      ? tv('messengerSetup.hintBoss')
-      : tv('messengerSetup.hint')
+    vaultSetupPath === 'boss' ? tv('messengerSetup.hintBoss') : tv('messengerSetup.hint')
 
   const wizardApiSnapshot = useMemo(
     () => enrichBossWizardApiSnapshot(s.apiSnapshot, s.myAddress),
@@ -384,6 +408,7 @@ function MessengerDashboardBody({
           onPasswordChange: s.unlock.setPassword,
           onClose: vaultOverWizard ? returnToWizardFromVault : s.sessionSignerSync.close,
           onSync: s.sessionSignerSync.handleSync,
+          softResume: softUiPauseOnly,
         }}
         unlock={{ ...s.unlock, apiSnapshot: s.apiSnapshot }}
       />
@@ -410,6 +435,18 @@ function MessengerDashboardBody({
       {s.activeView ? (
       <VaultFailClosedSurface
         active={applyVaultFailClosed}
+        onRequestUnlock={requestFailClosedUnlock}
+        lockedHint={
+          softUiPauseOnly
+            ? 'Tresor gesperrt — Messenger pausiert (Sitzung bleibt im RAM).'
+            : undefined
+        }
+        lockedDetail={
+          softUiPauseOnly
+            ? 'Weitersprechen nur mit Passwort. Abmelden löscht die Sitzung.'
+            : undefined
+        }
+        unlockLabel={softUiPauseOnly ? 'Weitersprechen' : undefined}
         className={cn(
           'bg-background',
           isCapacitorNativePlatform() && s.activeView.type === 'chat'
@@ -602,6 +639,18 @@ function MessengerDashboardBody({
     <DeploymentProfileBackdrop status={s.apiSnapshot} hideWatermark={isEinsatzLeadHome}>
     <VaultFailClosedSurface
       active={applyVaultFailClosed}
+      onRequestUnlock={requestFailClosedUnlock}
+      lockedHint={
+        softUiPauseOnly
+          ? 'Tresor gesperrt — Messenger pausiert (Sitzung bleibt im RAM).'
+          : undefined
+      }
+      lockedDetail={
+        softUiPauseOnly
+          ? 'Weitersprechen nur mit Passwort. Abmelden löscht die Sitzung.'
+          : undefined
+      }
+      unlockLabel={softUiPauseOnly ? 'Weitersprechen' : undefined}
       className={cn(
         'bg-background/80',
         isCapacitorNativePlatform()

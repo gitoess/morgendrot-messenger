@@ -151,7 +151,7 @@ Details: `docs/TELEGRAM-INTEGRATION-ZIELBILD.md` (Einrichtung + Architektur).
 
 ## Sicherheit (Ist)
 
-**Notfall-Löschung** (Scopes: Chain-Vault / lokaler Cache / Sitzung sperren / lokale Geheimnisse), **Passwort ändern**, **Backup**, **Schatten → Main**, **Tresor-Landkarte** (Stand 2026-11-12, T8/T9/T37). Soft-Lock = Chat-Kopf (Badge), kein volles Vault-Shred.
+**Notfall-Löschung** (Scopes: Chain-Vault / lokaler Cache / Sitzung sperren / lokale Geheimnisse), **Passwort ändern**, **Backup**, **Schatten → Main**, **Tresor-Landkarte** (Stand 2026-11-12, T8/T9/T37). Badge = Soft-Pause (RAM + PW); Abmelden = Keys weg.
 
 ---
 

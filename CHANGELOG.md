@@ -6,6 +6,10 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+### Produkt-Split (2026-11-24)
+
+- **Arbeitsmodell:** IOTA-Messenger = Boss ohne Helfer (IOTA+Funk+Telegram-Alltag); Morgendrot = alles. Detail-Schnitt beim PC-Durchgang; Caps nicht blind flippen (`IOTA-MESSENGER-EDITION-V1.md` §2.1).
+
 ### Funk / H.25a (2026-11-24)
 
 - **LoRa-Bild Schreibtisch STABIL:** Live-RX-Fortschritt ohne Tab-Wechsel, Nur-Lücken-Repair, Cap ≤ 3,6 KB, Gap 580 ms, fused Speichern, Inbox-Kollaps; Encode/Tempo eingefroren (~1:30–1:45). Anker `lora-h25a-stable-anchor.mdc`, Smoke `docs/LORA-PC-FIRST-SMOKE.md` §5.

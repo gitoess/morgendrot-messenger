@@ -48,8 +48,8 @@
   "lock": {
     "button": "Abmelden",
     "buttonTitle": "Sitzung beenden — Tresor voll sperren",
-    "confirmSoft": "Tresor weich sperren?\n\n• Signer und Passphrasen nur aus diesem Browser-RAM\n• Chat bleibt offen (lesbar)\n• Kein Inbox-Cache-Löschen, Tresor-Datei unverändert\n• Tippen aufs Badge = wieder entsperren",
-    "confirmFull": "Sitzung beenden / Tresor voll sperren?\n\n• Keys + Passwort verlassen den Server-RAM\n• Schnell-Cache entschlüsselter Nachrichten (.inbox.enc) wird gelöscht — Privacy, falls jemand die Festplatte liest; Chat kommt von der Chain nach Entsperren zurück\n• Tresor-Datei (.morgendrot-vault) bleibt\n• Seed in der Datei bleibt (wenn gespeichert); nur RAM-Seed ist weg"
+    "confirmSoft": "Tresor sperren?\n\n• Messenger wird ausgegraut — nicht bedienbar\n• Sitzung bleibt im RAM — Weitersprechen nur mit Passwort\n• Abmelden = alles weg + Login-Dialog",
+    "confirmFull": "Abmelden / Sitzung beenden?\n\n• Keys + Passwort verlassen den Server-RAM\n• Schnell-Cache entschlüsselter Nachrichten (.inbox.enc) wird gelöscht — Privacy, falls jemand die Festplatte liest; Chat kommt von der Chain nach Entsperren zurück\n• Tresor-Datei (.morgendrot-vault) bleibt\n• Seed in der Datei bleibt (wenn gespeichert); nur RAM-Seed ist weg"
   },
   "mesh": {
     "internet": "Internet",

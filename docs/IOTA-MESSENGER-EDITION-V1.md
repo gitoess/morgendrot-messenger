@@ -1,9 +1,9 @@
 # IOTA Messenger — Minimal-Spec (ohne Boss / Helfer / Handoff)
 
-**Stand:** 2026-11-23  
-**Status:** **Freeze-Scheibe 1** (nach Handy 4b–4d) — Kern drin/raus in Roadmap-Merkliste; Endabnahme erst vor Vertrieb. Eigenständiges Desktop-Projekt (`iota-messenger/`) bleibt getrennt von Morgendrot-Voll.  
-**Zielgruppe:** Nutzer, die **nur** über IOTA chatten und Token senden wollen — **ohne** Einsatz-Organisation  
-**Nicht-Ziel:** Offizieller IOTA-Foundation-Messenger, Signal-Ersatz, Behörden-Zertifizierung, Boss-Werkstatt, Handoff-ZIP-Provisioning, **Funk/Meshtastic** (bleibt Morgendrot)
+**Stand:** 2026-11-24  
+**Status:** **Arbeitsmodell „Boss ohne Helfer“** (User 2026-11-24) — Detail-Schnitt erst beim **PC-Messenger-Durchgang**. Caps-Overlay (`hideFunk` etc.) kann noch von Freeze-Scheibe 1 abweichen → Abgleich im Durchgang.  
+**Zielgruppe:** Peers / „Bosse unter Freunden“ — voller Messenger-Alltag **ohne** Helfer-Provisioning  
+**Nicht-Ziel:** Helfer-Handoff, Einsatzleitung-Hub, Boss-provisioniert-Helfer; kein IOTA-Foundation-Produkt
 
 ---
 
@@ -51,7 +51,25 @@ Cursor-Regel: `.cursor/rules/iota-messenger-no-auto-execute.mdc`.
 
 **Technik:** Derselbe Move-Messenger und dieselbe PWA/APK — nur **Capabilities + UI-Gates** schneiden alles andere weg. Kein Protokoll-Neubau.
 
+### 2.1 Arbeitsmodell — Boss ohne Helfer (2026-11-24, vorläufig)
+
+**Kurz:** **Morgendrot = alles.** **IOTA-Messenger ⊂ Morgendrot:** derselbe Chat-Alltag (IOTA **und** Funk **und** Telegram, Gruppen, Freunde = andere „Bosse“), **ohne** Helfer-/Einsatz-Provisioning.
+
+| | IOTA-Messenger | Morgendrot |
+|--|----------------|------------|
+| **Bild** | Boss **ohne** Helfer; Peers/Freunde | Boss **mit** Helfer + Einsatz-Org |
+| **Transport** | IOTA + Funk + Telegram (Alltag) | dasselbe + Org-Extras |
+| **Raus (I)** | Handoff-ZIP, Einsatzleitung-Hub, Helfer einrichten, H.36 Einsatz-Wizard, typische Boss-Admin-Move-UI | behalten |
+| **Detail** | Zeile-für-Zeile erst beim **PC-Durchgang** | — |
+
+**Konflikt merken:** Overlay Freeze-Scheibe 1 setzt noch `hideFunk`/`hideTelegram` — **nicht** still umbauen; Abgleich im Durchgang.
+
+**Onboarding (2026-11-24):** Bei Edition (`hideEinsatzleitung` / `isIotaMessengerProduct`) Vault-Link → **Wanderer/Peer-Wizard** („Messenger einrichten (Freunde)“), nicht Einsatzleitung. Schritte: Wallet → Adresse → Postfach → optional Funk.
+
+**Caps-Ist:** `product-identity.ts` / Overlay — bis Durchgang unverändert lassen außer explizitem Auftrag.
+
 ---
+
 
 ## 3. Nutzer-Flow (Zielbild)
 

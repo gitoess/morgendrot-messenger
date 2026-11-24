@@ -10,6 +10,15 @@ describe('shouldApplyVaultFailClosedOverlay', () => {
     expect(shouldApplyVaultFailClosedOverlay({ vaultSessionLocked: true })).toBe(true)
   })
 
+  it('an bei Soft-Lock (UI-Pause)', () => {
+    expect(
+      shouldApplyVaultFailClosedOverlay({
+        vaultSessionLocked: false,
+        privacySoftLocked: true,
+      })
+    ).toBe(true)
+  })
+
   it('aus bei Helper-Seed-Suppress', () => {
     expect(
       shouldApplyVaultFailClosedOverlay({

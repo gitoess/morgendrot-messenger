@@ -124,7 +124,7 @@ export function TresorSessionBadge({
     ? 'Tresor-Sitzung fehlt — tippen, Tresor-Passwort eingeben (Merken / Passphrasen).'
     : ui === 'locked'
       ? softLocked && !sessionLocked
-        ? 'Tresor weich gesperrt — Passphrasen/Signer aus RAM; Chat lesbar. Tippen zum Entsperren.'
+        ? 'Tresor-Pause — ausgegraut; Sitzung im RAM. Tippen → Passwort → Weitersprechen.'
         : 'Tresor gesperrt — Entsperr-Dialog öffnen.'
       : ui === 'no-keys'
         ? 'Tresor ist offen — Browser-Signer fehlt (Reload/RAM). Tippen → Passwort → Signer laden (On-Chain/Zeitkapsel).'
@@ -133,11 +133,11 @@ export function TresorSessionBadge({
     ? 'Tresor-Passwort eingeben (Session-Signer + Browser-Geheimnisse).'
     : ui === 'locked'
       ? softLocked && !sessionLocked
-        ? 'Tresor entsperren (Passwort → Signer + Browser-Geheimnisse).'
+        ? 'Pause beenden — Passwort eingeben (Sitzung war im RAM).'
         : 'Dialog „Tresor entsperren“ öffnen.'
       : ui === 'no-keys'
         ? 'Signer laden — Tresor-Passwort tippen (Tresor kann schon offen sein; Signer sitzt nur im Browser-RAM).'
-        : 'Tresor weich sperren — Signer/Passphrasen aus dem RAM; Chat bleibt offen (kein Login-Fenster).'
+        : 'Tresor sperren — ausgrauen; Sitzung im RAM; Weitersprechen mit Passwort. Abmelden = alles weg.'
 
   const icon =
     ui === 'ready' && !needsVaultPassword ? (
@@ -151,7 +151,7 @@ export function TresorSessionBadge({
         ? 'Tresor: Passwort'
         : ui === 'locked'
           ? softLocked && !sessionLocked
-            ? 'Tresor: weich'
+            ? 'Tresor: Pause'
             : 'Tresor: gesperrt'
           : ui === 'no-keys'
             ? 'Signer laden'
@@ -181,9 +181,7 @@ export function TresorSessionBadge({
             ? 'Tresor-Passwort eingeben'
             : ui === 'no-keys'
               ? 'Session-Signer laden'
-              : softLocked && !sessionLocked
-                ? 'Tresor weich sperren'
-                : 'Tresor sperren'
+              : 'Tresor sperren'
       }
       onClick={() => {
         if (ui === 'locked' || ui === 'no-keys' || needsVaultPassword) {

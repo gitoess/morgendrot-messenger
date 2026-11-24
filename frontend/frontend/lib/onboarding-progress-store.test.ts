@@ -133,6 +133,11 @@ describe('onboarding-progress-store', () => {
   it('resolveMessengerSetupOnboardingPath', () => {
     expect(resolveMessengerSetupOnboardingPath('boss')).toBe('boss')
     expect(resolveMessengerSetupOnboardingPath('messenger')).toBe('wanderer')
+    expect(resolveMessengerSetupOnboardingPath('boss', { peerMessengerOnly: true })).toBe('wanderer')
+  })
+
+  it('peerMessengerOnly erzwingt Wanderer-Pfad auch bei ROLE=boss', () => {
+    expect(resolveWizardOnboardingPath({ role: 'boss', peerMessengerOnly: true })).toBe('wanderer')
   })
 
   it('boss wallet skip nur bei Browser-Signer', () => {

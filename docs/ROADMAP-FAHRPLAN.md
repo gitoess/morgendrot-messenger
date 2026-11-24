@@ -28,13 +28,12 @@
 
 **Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
-1. **Fokus jetzt:** **Phase 3 Desk zu** (H.25a STABIL 2026-11-24). Ohne neue Hardware wenig Code-Pflicht — nur kleine Klartext-/Copy-Scheiben bei Bedarf. Encode/Tempo **Freeze**.  
-2. **Erledigt Phase 1 (PC):** Messenger-Kern, Vault-UX, Enc A↔B, Stage‑2 (#26–#28).  
-3. **Erledigt Phase 2 Kern:** Standalone **4b–4d PASS** 2026-11-23. **Edition-Freeze-Scheibe** 2026-11-23 (Merkliste). 4e/4f = Phase 4.  
-4. **Erledigt Phase 3 Desk-Kern:** USB/BT-Klartext + Stall-ehrlich (#31–#33); **H.25a** Bild PC↔PC STABIL (Live-Progress, Nur-Lücken, Cap 3,6 KB, Gap 580, ~1:30–1:45).  
-5. **Nächste echte Schritte (brauchen Gerät/Entscheidung):** (a) optional Outdoor/LongFast, (b) **Phase 4** physisches 2. Gerät / 4e–4f. **Nicht parallel:** `.exe`-Big-Bang, Helfer/Boss/WhatsApp/Paywall, Cap/Gap-Experimente.  
-6. **Wallet/IOTA-Aktivität:** Freeze. **IOTA-Messenger:** Funk absichtlich **raus** (Overlay `hideFunk`) — Funk = Morgendrot-Voll.  
-7. **Merge-Ritual** nach sinnvollem Paket (PR #34).
+1. **Fokus jetzt:** **Tresor fail-closed Härte** → Solo-Wizard → **PC-Durchgang** (dort Scope Zeile-für-Zeile: I = Boss ohne Helfer, inkl. Funk/TG) → Alpha.  
+2. **Erledigt Phase 1–3 Desk:** Messenger-Kern, 4b–4d, H.25a STABIL. Encode/Tempo Freeze.  
+3. **Scope-Arbeitsmodell (vorläufig):** IOTA-Messenger = **Boss ohne Helfer** + Freunde; Transporte IOTA/Funk/Telegram **drin**; Helfer/Handoff/Einsatz-Hub **raus**. Morgendrot = **alles**. Detail erst im Durchgang — Caps nicht blind flippen.  
+4. **Nicht parallel:** EXE vor Wizard/Durchgang; Cap/Gap-Experimente; WhatsApp/Paywall.  
+5. **Wallet/IOTA-Aktivität:** Freeze.  
+6. **Merge-Ritual** nach sinnvollem Paket. SSOT Modell: **`docs/IOTA-MESSENGER-EDITION-V1.md` §2.1**.
 
 ### Jetzt machen (IOTA-Messenger — User-Durchgang 2026-11-22)
 
@@ -56,8 +55,8 @@
 | **H.26** (Teil) | Telegram Klingel/Notify Ist | Alarmgruppe → später |
 | **H.27** | Handshake-UX Labels | **Ist** (Partner=0x; Annehmen-Copy) |
 | **H.34** | Port-Refactor bei Touch | kein Parallel-Epik |
-| **Split** | product-identity Caps | **Ist** (Env/Overlay) |
-| **Ideen** | Fail-closed Overlay | **Ist** |
+| **Split** | product-identity Caps | Arbeitsmodell Boss-ohne-Helfer; Caps-Abgleich im PC-Durchgang |
+| **Ideen** | Fail-closed Overlay | **Härten jetzt** (Hard-Lock) |
 
 ### Später machen bzw. nochmals später klären (User-Durchgang ab 2026-11-22)
 
@@ -3048,50 +3047,10 @@ Nicht umsetzen. Bei späterem Bedarf neu spezifizieren (nur Ciphertext-Hash, nie
 3. **Vor Vertrieb / öffentlichem ZIP-exe / Store-Claim:** **Endabnahme** (Labels, Claims, Default-Env).
 4. **Nicht warten bis Phase 4** für die Produktgrenze Einsatz vs. Solo-Chat.
 
-#### Freeze 2026-11-23 (IOTA-Messenger — erste Scheibe)
+#### Scope-Arbeitsmodell 2026-11-24 (Boss ohne Helfer — vorläufig)
 
-| Drin (Kern) | Raus (verbindlich für Edition) |
-|-------------|-------------------------------|
-| Vault unlock / lokal `SIGNER=sdk` | Boss / Helfer / Handoff / Einsatzleitung / Einsatz beenden |
-| Klartext + Enc (ECDH) Mailbox, Peering-QR | SOS, Funk/Meshtastic-UI, Mesh-Status |
-| Gruppen lokal (pairwise), IOTA senden/empfangen | Telegram-Bot / Alarmgruppe als Kern |
-| Direkt-RPC Default, Testnet/Mainnet | Auto-Execute / Coin-Fernsteuerung / Lock-Fernsteuerung |
-| Wallet Empfangen/Senden (Wallet-Karte **nicht** umbauen — Freeze-Regel) | Seal/Key-Broker (P4b), Package & Move-Upgrade-Boss-UI |
-
-**Ist-Technik:** Overlay `tools/iota-messenger/overlays/product-identity.ts` + `frontend/.../product-identity.ts`. Env-Preset: `ENABLE_AUTO_EXECUTE=false` bei `MESSENGER_EDITION=iota-messenger`. Spec: `IOTA-MESSENGER-EDITION-V1.md`.
-
-#### IOTA-Messenger braucht **nicht** (Merkliste)
-
-| Feature | Status Merkliste | Overlay / Notiz |
-|---------|------------------|-----------------|
-| **Einsatz beenden (H.32b)** | **gemerkt 2026-11-16** (User) | `hideEinsatzEnd` in Overlay; Panel heute unter Einsatzleitung (`hideEinsatzleitung` deckt mit ab) |
-| **Einsatzleitung** (Hub / Helfer einrichten) | gemerkt | `hideEinsatzleitung` Ist |
-| **Handoff** import/export | gemerkt | Einsatz-Provisioning |
-| **SOS** | gemerkt | `hideSos` Ist / T14 |
-| **Funk / Meshtastic-Tab** | gemerkt | T6; Phase B |
-| **Telegram Bot / Alarmgruppe / Einsatz-TG** | gemerkt | optional später nur Klingel — Einsatz-Boss eher weg |
-| **Package & Move-Upgrade** (Boss-Chain-Admin) | gemerkt | Alltagschat braucht das nicht |
-| **Hauptpostfach als „Einsatz-Shared“-Narrativ** | prüfen | Mailbox-Technik kann bleiben, Einsatz-Label weg |
-| **Auto-Execute / Coin-Fernsteuerung** (`ENABLE_AUTO_EXECUTE`) | **gemerkt 2026-11-17** | Edition-Default **aus**; kein Auto-Execute aus Chat; Lock-Fernsteuerung weg oder nur Boss/Lock-Produkt — Spec `IOTA-MESSENGER-EDITION-V1.md` §1.1 |
-| **Seal / Key-Broker (P4b)** | **gemerkt 2026-11-20** | Boss-Remote-Broker; Solo/IOTA-Messenger unnötig — Composer-UI aus; Spec `IDEEN-BACKLOG.md` |
-
-#### Entwurf-Tabelle (Detail — Stand fortgeschrieben)
-
-| Feature | Morgendrot (Einsatz) | IOTA-Messenger (only) | Notiz |
-|---------|----------------------|------------------------|-------|
-| **Hauptpostfach / `MAILBOX_ID`** | behalten (Deploy) | prüfen / umbenennen | User 2026-11-16 |
-| **Team beitreten Ort** | Settings IOTA (Ist) | Chat/Team später | Backlog |
-| Expertenmodus | behalten | optional / aus | |
-| Handoff importieren | behalten | **weg** | Merkliste |
-| **Einsatz beenden** | behalten (Einsatzleitung) | **weg** | Merkliste 2026-11-16; Sicht-PASS; Voll→Endabnahme |
-| Hobby-Disclaimer | kurz | behalten | |
-| .env-Link | ganz unten | minimal | |
-| Funk / Telegram-Alarm / SOS / Einsatzleitung | Morgendrot | **weg** | Overlay teils Ist |
-| Passwort / Vault-Backup | Sicherheit | behalten | |
-| Schatten-Sweep | Sicherheit | optional/weg | T4 später |
-| Funk-Tab | Morgendrot; T6 | **weg** | |
-| Einsatz-Alarmgruppe (B4b) | Boss | **weg** | |
-| PWA „App installieren“ Settings | **entfernt** 2026-11-16 | weg | Browser/APK/Installer |
+**SSOT:** **`docs/IOTA-MESSENGER-EDITION-V1.md` §2.1**.  
+IOTA-Messenger: Alltagschat inkl. **Funk/Telegram/IOTA/Gruppen**; **ohne** Helfer-Handoff/Einsatz-Hub. Morgendrot = **Superset**. Zeilen-Freeze erst im **PC-Durchgang**. Overlay `hideFunk` ggf. veraltet — nicht still ändern.
 
 ---
 

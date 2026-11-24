@@ -17,7 +17,7 @@ Kurzreferenz: **was** welcher Schalter löscht und **was nicht**.
 
 | Aktion | Inbox-Cache `.inbox.enc` | Keys/RAM | Chat-UI |
 |--------|--------------------------|----------|---------|
-| Badge im Chat (weich) | bleibt | Browser-Signer/Passphrasen weg | bleibt offen |
+| Badge im Chat (Pause) | bleibt | Secrets im RAM; UI-Scrim; Weitersprechen mit PW | ausgegraut / nicht bedienbar |
 | **Sitzung beenden** (Sicherheit / Abmelden) = `/vault-lock` | **geschreddert** (Privacy: Klartext-Cache weg) | Server-Keys weg | Entsperr-Dialog |
 
 `.inbox.enc` = lokaler Schnellcache entschlüsselter Nachrichten neben dem Tresor — **nicht** die Tresor-Datei und nicht die Chain. Nach Entsperren + Laden wieder da.
