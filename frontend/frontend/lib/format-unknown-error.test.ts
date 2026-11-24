@@ -36,14 +36,22 @@ describe('formatUnknownError', () => {
     expect(formatUnknownError({ code: 1, x: 'y' })).toBe('{"code":1,"x":"y"}')
   })
 
-  it('leeres Objekt → kein leeres JSON', () => {
-    expect(formatUnknownError({})).toBe('[object Object]')
+  it('leeres Objekt → lesbarer Fallback', () => {
+    expect(formatUnknownError({})).toBe('Funk-Fehler (nicht lesbar)')
   })
 
-  it('Zirkelreferenz: JSON.stringify scheitert → String()', () => {
+  it('Zirkelreferenz: JSON.stringify scheitert → lesbarer Fallback', () => {
     const o: Record<string, unknown> = {}
     o.self = o
-    expect(formatUnknownError(o)).toBe('[object Object]')
+    expect(formatUnknownError(o)).toBe('Funk-Fehler (nicht lesbar)')
+  })
+
+  it('Error mit message [object Object] → name/Fallback', () => {
+    expect(formatUnknownError(new Error('[object Object]'))).toBe('Error')
+  })
+
+  it('Routing-Objekt mit numerischem error', () => {
+    expect(formatUnknownError({ id: 9, error: 5 })).toMatch(/Routing-Fehler 5/)
   })
 
   it('Primitives', () => {

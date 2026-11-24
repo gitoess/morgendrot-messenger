@@ -300,7 +300,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
     expect(screen.queryByText(/Empfänger · Wallet \(0x\)/i)).not.toBeInTheDocument()
   })
 
-  it('zeigt getrennte Funk-Checkboxen bei Klartext + Funk (privat)', () => {
+  it('zeigt Funk-Bild-Eintrag + Chain-Haken im +-Menü', () => {
     render(
       <ChatViewSendPanel
         {...baseSendPanel({
@@ -316,7 +316,78 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
     expect(screen.getByTestId('mesh-path4-self-archive')).toBeInTheDocument()
   })
 
-  it('zeigt Kanalindex-Feld nur im Expert-Modus und übernimmt 0..7', () => {
+  it('Bilder über Funk: ein +-Menü-Eintrag aktiviert + öffnet Datei-Dialog', () => {
+    const fileRef = createRef<HTMLInputElement>()
+    const onMeshLoRaImagesEnabledChange = vi.fn()
+    render(
+      <ChatViewSendPanel
+        {...baseSendPanel({
+          encrypted: false,
+          message: 'Hi',
+          forcedTransport: 'mesh',
+          meshLoRaImagesEnabled: false,
+          onMeshLoRaImagesEnabledChange,
+          compactFileRef: fileRef,
+        })}
+      />
+    )
+    openComposerPlusMenu()
+    const btn = screen.getByTestId('mesh-lora-images-enabled')
+    expect(btn).toHaveTextContent(/Bilder über Funk/)
+    expect(fileRef.current).toBeInstanceOf(HTMLInputElement)
+    const clickSpy = vi.spyOn(fileRef.current!, 'click').mockImplementation(() => {})
+    fireEvent.click(btn)
+    expect(onMeshLoRaImagesEnabledChange).toHaveBeenCalledWith(true)
+    expect(clickSpy).toHaveBeenCalled()
+  })
+
+  it('Bilder über Funk: mit Anhang heißt der +-Eintrag Anderes Funk-Bild', () => {
+    render(
+      <ChatViewSendPanel
+        {...baseSendPanel({
+          encrypted: false,
+          forcedTransport: 'mesh',
+          meshLoRaImagesEnabled: true,
+          attachedLora: {
+            lumaWire: '[[MORG_LUMA_V1:x]]',
+            chromaWire: '[[MORG_CHROMA_V1:x]]',
+            messageId: 'aabbccdd',
+            lumaJpegBytes: 1200,
+            chromaJpegBytes: 600,
+          },
+        })}
+      />
+    )
+    openComposerPlusMenu()
+    expect(screen.getByTestId('mesh-lora-images-enabled')).toHaveTextContent(/Anderes Funk-Bild/)
+  })
+
+  it('zeigt Nochmals senden-Leiste nach Fehler mit angehängtem LoRa-Bild', () => {
+    const onSend = vi.fn()
+    render(
+      <ChatViewSendPanel
+        {...baseSendPanel({
+          encrypted: false,
+          forcedTransport: 'mesh',
+          meshLoRaImagesEnabled: true,
+          status: 'error',
+          statusMsg: 'Übertragung abgebrochen.',
+          onSend,
+          attachedLora: {
+            lumaWire: '[[MORG_LUMA_V1:x]]',
+            chromaWire: '[[MORG_CHROMA_V1:x]]',
+            messageId: 'aabbccdd',
+            lumaJpegBytes: 1200,
+            chromaJpegBytes: 600,
+          },
+        })}
+      />
+    )
+    fireEvent.click(screen.getByTestId('mesh-lora-resend'))
+    expect(onSend).toHaveBeenCalledWith({ forceMeshLoRaImages: true })
+  })
+
+  it('zeigt Funk-Kanal-Feld im Expert-Modus und übernimmt 0..7', () => {
     const onMeshtasticChannelIndexChange = vi.fn()
     const { rerender } = render(
       <ChatViewSendPanel
@@ -328,7 +399,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         })}
       />
     )
-    expect(screen.queryByLabelText(/Kanalindex \(0–7, optional\)/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Funk-Kanal \(vom Radio\)/i)).not.toBeInTheDocument()
 
     rerender(
       <ChatViewSendPanel
@@ -340,7 +411,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         })}
       />
     )
-    const input = screen.getByLabelText(/Kanalindex \(0–7, optional\)/i)
+    const input = screen.getByLabelText(/Funk-Kanal \(vom Radio\)/i)
     fireEvent.change(input, { target: { value: '3' } })
     expect(onMeshtasticChannelIndexChange).toHaveBeenLastCalledWith(3)
     fireEvent.change(input, { target: { value: '9' } })
@@ -438,7 +509,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
       />
     )
     openComposerPlusMenu()
-    expect(screen.getByTestId('mesh-lora-images-enabled')).toBeChecked()
+    expect(screen.getByTestId('mesh-lora-images-enabled')).toHaveTextContent(/Anderes Funk-Bild|Bilder über Funk/)
     const sendBtn = primarySend(container)
     expect(sendBtn).toBeEnabled()
     fireEvent.click(sendBtn)

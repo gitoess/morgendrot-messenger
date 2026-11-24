@@ -6,7 +6,18 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
-import { AlertCircle, BookUser, Check, KeyRound, ListOrdered, Lock, Mic, RefreshCw, Send } from 'lucide-react'
+import {
+  AlertCircle,
+  BookUser,
+  Camera,
+  Check,
+  KeyRound,
+  ListOrdered,
+  Lock,
+  Mic,
+  RefreshCw,
+  Send,
+} from 'lucide-react'
 import { ChatComposerEmojiPicker } from '@/frontend/components/chat-composer-emoji-picker'
 import { ChatViewComposerPlusMenu } from '@/frontend/components/chat-view-composer-plus-menu'
 import { cn } from '@/lib/utils'
@@ -71,7 +82,15 @@ import {
   isLoRaMeshTransport,
   MESH_PLAINTEXT_MAX_CHARS,
 } from '@/frontend/lib/chat-view-messenger-transport'
+import { MORG_LORA_RETRY_EVENT } from '@/frontend/lib/morg-lora-retry-wire'
+import { toast } from 'sonner'
 import { parseMeshtasticNodeIdToNumber } from '@/frontend/lib/meshtastic-node-id'
+import {
+  meshtasticVisibleNodeLabel,
+  type MeshtasticVisibleNode,
+} from '@/frontend/lib/meshtastic-visible-nodes'
+import { meshtasticRadioChannelLabel } from '@/frontend/lib/meshtastic-radio-channels'
+import { filterMeshtasticVisibleNodes } from '@/frontend/lib/meshtastic-mesh-cache'
 import {
   MESHTASTIC_CHANNEL_INDEX_MAX,
   MESHTASTIC_CHANNEL_INDEX_MIN,
@@ -90,6 +109,58 @@ import {
   plaintextSendBlockedByCapabilitiesReason,
 } from '@/frontend/lib/messenger-capability-gates'
 const MESSAGE_PLACEHOLDER = 'Nachricht …'
+
+function MeshVisibleNodesPicker(p: {
+  nodes: readonly MeshtasticVisibleNode[]
+  selectedNodeId: string
+  onPick: (nodeId: string) => void
+  onBroadcast: () => void
+}) {
+  const [q, setQ] = useState('')
+  const filtered = useMemo(() => filterMeshtasticVisibleNodes(p.nodes, q), [p.nodes, q])
+  return (
+    <div>
+      <label className="mb-1 block text-xs font-medium text-foreground">
+        Direkt an sichtbaren Heltec / Node
+      </label>
+      <input
+        type="search"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Node suchen…"
+        className="mb-2 w-full rounded-lg border border-border bg-input px-3 py-1.5 text-xs"
+        aria-label="LoRa-Nodes suchen"
+      />
+      <div className="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto overscroll-contain">
+        {filtered.map((n) => (
+          <button
+            key={n.nodeId}
+            type="button"
+            onClick={() => p.onPick(n.nodeId)}
+            className={cn(
+              'rounded-md border px-2 py-1 text-[11px] hover:bg-accent',
+              p.selectedNodeId.trim() === n.nodeId
+                ? 'border-sky-500 bg-sky-500/15'
+                : 'border-border bg-background'
+            )}
+          >
+            {meshtasticVisibleNodeLabel(n)}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={p.onBroadcast}
+          className="rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground hover:bg-accent"
+        >
+          An alle
+        </button>
+      </div>
+      {filtered.length === 0 ? (
+        <p className="mt-1 text-[11px] text-muted-foreground">Keine Treffer.</p>
+      ) : null}
+    </div>
+  )
+}
 
 /** Nur echte Datei-Drags vom OS — sonst kein preventDefault auf dragOver (stört vertikales Scrollen auf dem Handy). */
 function dataTransferLooksLikeFileDrag(dt: DataTransfer | null): boolean {
@@ -139,6 +210,10 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   onMeshPlaintextToNodeEnabledChange: (v: boolean) => void
   meshPlaintextNodeId: string
   onMeshPlaintextNodeIdChange: (v: string) => void
+  /** Live NodeDB (ohne Self) — Auswahl setzt Node-ID. */
+  meshVisibleNodes?: readonly import('@/frontend/lib/meshtastic-visible-nodes').MeshtasticVisibleNode[]
+  /** Kanäle vom Radio für Index-Wahl. */
+  meshRadioChannels?: readonly import('@/frontend/lib/meshtastic-radio-channels').MeshtasticRadioChannel[]
   /** Expert: optionaler Meshtastic Channel-Index (0..7), leer = Default/Primary. */
   meshtasticChannelIndex?: number
   onMeshtasticChannelIndexChange?: (v: number | undefined) => void
@@ -226,6 +301,8 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     onMeshPlaintextToNodeEnabledChange,
     meshPlaintextNodeId,
     onMeshPlaintextNodeIdChange,
+    meshVisibleNodes = [],
+    meshRadioChannels = [],
     meshtasticChannelIndex,
     onMeshtasticChannelIndexChange,
     showMeshtasticChannelIndexInput = false,
@@ -323,6 +400,14 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     attachmentBarProps.attachedLora == null &&
     attachmentBarProps.attachedTxtFile == null &&
     attachmentBarProps.attachedAudioBase64 == null
+
+  /** value='' damit dieselbe Datei erneut gewählt werden kann (change-Event). */
+  const openCompactFilePicker = () => {
+    const el = attachmentBarProps.compactFileRef.current
+    if (!el) return
+    el.value = ''
+    el.click()
+  }
 
   const meshFunkSpecialMode = meshLoRaImagesEnabled || meshSelfArchiveAfterLoRa
 
@@ -505,6 +590,33 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     window.addEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, syncPrivacy)
     return () => window.removeEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, syncPrivacy)
   }, [])
+
+  /** „Nochmals senden“ in der Abbruch-Nachricht (Posteingang). */
+  useEffect(() => {
+    const onRetry = () => {
+      if (sending) {
+        toast.message('Senden läuft noch — Abbruch oder warten, dann erneut „Nochmals senden“.')
+        return
+      }
+      if (attachmentBarProps.attachedLora == null) {
+        toast.error('Kein LoRa-Bild mehr im Composer — bitte erneut „Bilder über Funk“ und Bild wählen.')
+        return
+      }
+      if (!meshLoRaImagesEnabled) {
+        onMeshLoRaImagesEnabledChange(true)
+      }
+      /** forceMeshLoRaImages: Toggle-setState ist asynchron — sonst Fallthrough ohne Bild-Pfad. */
+      void onSend({ forceMeshLoRaImages: true })
+    }
+    window.addEventListener(MORG_LORA_RETRY_EVENT, onRetry)
+    return () => window.removeEventListener(MORG_LORA_RETRY_EVENT, onRetry)
+  }, [
+    attachmentBarProps.attachedLora,
+    meshLoRaImagesEnabled,
+    onMeshLoRaImagesEnabledChange,
+    onSend,
+    sending,
+  ])
 
   const showIotaField =
     (!hideComposerIotaRecipient || manualAddressMode) &&
@@ -838,6 +950,20 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
 
         {!isTelegramDelivery && !encrypted && forcedTransport === 'mesh' && (
           <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 p-3 space-y-2">
+            {meshVisibleNodes.length > 0 ? (
+              <MeshVisibleNodesPicker
+                nodes={meshVisibleNodes}
+                selectedNodeId={meshPlaintextToNodeEnabled ? meshPlaintextNodeId : ''}
+                onPick={(nodeId) => {
+                  onMeshPlaintextToNodeEnabledChange(true)
+                  onMeshPlaintextNodeIdChange(nodeId)
+                }}
+                onBroadcast={() => {
+                  onMeshPlaintextToNodeEnabledChange(false)
+                  onMeshPlaintextNodeIdChange('')
+                }}
+              />
+            ) : null}
             <label className="flex cursor-pointer items-start gap-2 text-sm text-foreground">
               <input
                 type="checkbox"
@@ -848,40 +974,67 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               <span>An Node-ID senden (statt „An alle“)</span>
             </label>
             {meshPlaintextToNodeEnabled ? (
-              <div>
-                <label className="mb-1 block text-xs font-medium text-foreground">Node-ID</label>
-                <input
-                  type="text"
-                  value={meshPlaintextNodeId}
-                  onChange={(e) => onMeshPlaintextNodeIdChange(e.target.value.trim())}
-                  placeholder="!1a2b3c4d"
-                  className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs"
-                  spellCheck={false}
-                />
-                {meshPlaintextNodeId.trim() && parseMeshtasticNodeIdToNumber(meshPlaintextNodeId) === null ? (
-                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">Format: Ausrufezeichen + 1–8 Hex-Ziffern.</p>
-                ) : null}
+              <div className="space-y-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-foreground">Node-ID</label>
+                  <input
+                    type="text"
+                    value={meshPlaintextNodeId}
+                    onChange={(e) => onMeshPlaintextNodeIdChange(e.target.value.trim())}
+                    placeholder="!1a2b3c4d"
+                    className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs"
+                    spellCheck={false}
+                  />
+                  {meshPlaintextNodeId.trim() && parseMeshtasticNodeIdToNumber(meshPlaintextNodeId) === null ? (
+                    <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+                      Format: Ausrufezeichen + 1–8 Hex-Ziffern.
+                    </p>
+                  ) : null}
+                </div>
               </div>
             ) : null}
-            {showMeshtasticChannelIndexInput ? (
+            {(showMeshtasticChannelIndexInput || meshRadioChannels.length > 0) && onMeshtasticChannelIndexChange ? (
               <div>
                 <label htmlFor="chat-mesh-channel-index" className="mb-1 block text-xs font-medium text-foreground">
-                  Kanalindex (0–7, optional)
+                  Funk-Kanal (vom Radio)
                 </label>
-                <input
-                  id="chat-mesh-channel-index"
-                  type="number"
-                  min={MESHTASTIC_CHANNEL_INDEX_MIN}
-                  max={MESHTASTIC_CHANNEL_INDEX_MAX}
-                  step={1}
-                  value={meshtasticChannelIndex ?? ''}
-                  onChange={(e) => {
-                    onMeshtasticChannelIndexChange?.(normalizeMeshtasticChannelIndex(e.target.value))
-                  }}
-                  placeholder="leer = Primary"
-                  className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs"
-                  inputMode="numeric"
-                />
+                {meshRadioChannels.length > 0 ? (
+                  <select
+                    id="chat-mesh-channel-index"
+                    className="w-full rounded-lg border border-border bg-input px-3 py-2 text-xs"
+                    value={meshtasticChannelIndex ?? ''}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      onMeshtasticChannelIndexChange(
+                        v === '' ? undefined : normalizeMeshtasticChannelIndex(v)
+                      )
+                    }}
+                  >
+                    <option value="">Primary / Default (Index 0)</option>
+                    {meshRadioChannels
+                      .filter((c) => c.role !== 'disabled')
+                      .map((c) => (
+                        <option key={c.index} value={c.index}>
+                          {meshtasticRadioChannelLabel(c)}
+                        </option>
+                      ))}
+                  </select>
+                ) : (
+                  <input
+                    id="chat-mesh-channel-index"
+                    type="number"
+                    min={MESHTASTIC_CHANNEL_INDEX_MIN}
+                    max={MESHTASTIC_CHANNEL_INDEX_MAX}
+                    step={1}
+                    value={meshtasticChannelIndex ?? ''}
+                    onChange={(e) => {
+                      onMeshtasticChannelIndexChange(normalizeMeshtasticChannelIndex(e.target.value))
+                    }}
+                    placeholder="leer = Primary"
+                    className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs"
+                    inputMode="numeric"
+                  />
+                )}
               </div>
             ) : null}
           </div>
@@ -914,7 +1067,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               groupTeamBroadcastReady={groupTeamBroadcastReady}
             />
           ) : null}
-          {!encrypted && forcedTransport === 'mesh' && (
+          {!encrypted && forcedTransport === 'mesh' ? (
             <div className="mb-2 rounded-md border border-orange-600/45 bg-orange-950/35 px-3 py-2 text-xs tabular-nums text-orange-50">
               <span className="font-semibold">Klartext-Funk</span> · {[...message].length}/{MESH_PLAINTEXT_MAX_CHARS}{' '}
               Zeichen
@@ -925,19 +1078,19 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 ? ' · keine Anhänge'
                 : null}
             </div>
-          )}
+          ) : null}
 
           <div className="flex items-end gap-2">
             {isPrivate ? (
               <ChatViewComposerPlusMenu
                 disabled={dropDisabled}
-                onPickFile={() => attachmentBarProps.compactFileRef.current?.click()}
+                onPickFile={openCompactFilePicker}
                 onPickCamera={() => cameraPick?.()}
                 showStt={
                   forcedTransport === 'internet' || forcedTransport === 'mesh' || isTelegramDelivery
                 }
                 onStt={prepareSttDictation}
-                extraItems={
+                extraItems={(closePlus) => (
                   <>
                     <div className="px-1 py-1">
                       <ChatComposerEmojiPicker
@@ -1033,19 +1186,25 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                     ) : null}
                     {showPath4Checkbox && forcedTransport === 'mesh' && !isTelegramDelivery ? (
                       <div className="space-y-1 border-t border-border/60 px-1 py-2">
-                        <label
-                          className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs font-medium text-foreground hover:bg-muted/60"
+                        <button
+                          type="button"
+                          disabled={sending || voiceLocksComposer || attachmentBarProps.compactBusy}
                           title={CHAT_MESH_LORA_IMAGES_HINT}
+                          data-testid="mesh-lora-images-enabled"
+                          onClick={() => {
+                            if (!meshLoRaImagesEnabled) onMeshLoRaImagesEnabledChange(true)
+                            closePlus()
+                            openCompactFilePicker()
+                          }}
+                          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
                         >
-                          <input
-                            type="checkbox"
-                            checked={meshLoRaImagesEnabled}
-                            onChange={(e) => onMeshLoRaImagesEnabledChange(e.target.checked)}
-                            data-testid="mesh-lora-images-enabled"
-                            className="border-border"
-                          />
-                          Bilder über Funk
-                        </label>
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-100">
+                            <Camera className="h-4 w-4" aria-hidden />
+                          </span>
+                          {attachmentBarProps.attachedLora != null
+                            ? 'Anderes Funk-Bild…'
+                            : 'Bilder über Funk…'}
+                        </button>
                         <label
                           className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs font-medium text-foreground hover:bg-muted/60"
                           title={CHAT_PATH4_SELF_ARCHIVE_HINT}
@@ -1053,7 +1212,10 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                           <input
                             type="checkbox"
                             checked={meshSelfArchiveAfterLoRa}
-                            onChange={(e) => onMeshSelfArchiveAfterLoRaChange(e.target.checked)}
+                            onChange={(e) => {
+                              onMeshSelfArchiveAfterLoRaChange(e.target.checked)
+                              queueMicrotask(closePlus)
+                            }}
                             data-testid="mesh-path4-self-archive"
                             className="border-border"
                           />
@@ -1062,7 +1224,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                       </div>
                     ) : null}
                   </>
-                }
+                )}
               />
             ) : null}
 
@@ -1396,6 +1558,33 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 ) : null}
               </>
             ) : null}
+          </div>
+        ) : null}
+
+        {status === 'error' &&
+        attachmentBarProps.attachedLora != null &&
+        forcedTransport === 'mesh' &&
+        isPrivate ? (
+          <div
+            className="mb-2 flex flex-wrap items-center gap-2 rounded-lg border border-amber-600/45 bg-amber-950/25 px-3 py-2"
+            role="status"
+            data-testid="mesh-lora-resend-bar"
+          >
+            <p className="min-w-0 flex-1 text-xs text-amber-950 dark:text-amber-50">
+              Übertragung unvollständig — Bild bleibt angehängt (kein neues Kodieren nötig).
+            </p>
+            <button
+              type="button"
+              disabled={sending || attachmentBarProps.compactBusy}
+              onClick={() => {
+                if (!meshLoRaImagesEnabled) onMeshLoRaImagesEnabledChange(true)
+                void onSend({ forceMeshLoRaImages: true })
+              }}
+              data-testid="mesh-lora-resend"
+              className="shrink-0 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              Nochmals senden
+            </button>
           </div>
         ) : null}
 

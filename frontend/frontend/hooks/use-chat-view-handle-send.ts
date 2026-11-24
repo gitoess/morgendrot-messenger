@@ -129,6 +129,7 @@ import {
 } from '@/frontend/lib/meshtastic-node-id'
 import type { Message } from '@/frontend/lib/types'
 import { formatUnknownError } from '@/frontend/lib/format-unknown-error'
+import { buildMorgLoraRetryStubMessage } from '@/frontend/lib/morg-lora-retry-wire'
 import { notifyTelegramContact } from '@/frontend/lib/api/telegram-notify'
 import { postTelegramGroupAlarm } from '@/frontend/lib/api/telegram-integrations'
 import { resolveChatSendEncryption } from '@/frontend/lib/resolve-chat-send-encryption'
@@ -173,8 +174,11 @@ function applyValidationError(
 ): void {
   setStatus('error')
   setStatusMsg(v.message)
-  toast.error(v.message, { duration: Math.max(v.idleMs ?? 20_000, 12_000) })
-  setTimeout(() => setStatus('idle'), v.idleMs ?? 20_000)
+  const idle = v.idleMs ?? 20_000
+  toast.error(v.message, { duration: Math.max(idle === 0 ? 12_000 : idle, 8_000) })
+  /** idleMs === 0: Status bleibt error (z. B. LoRa „Nochmals senden“). */
+  if (idle === 0) return
+  setTimeout(() => setStatus('idle'), idle)
 }
 
 
@@ -244,8 +248,11 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
 
   const cancelSend = useCallback(() => {
     cancelRequestedRef.current = true
-    setStatusMsg('Abbruch angefordert — stoppt nach dem laufenden Schritt …')
-  }, [setStatusMsg])
+    /** UI sofort frei — Hintergrund bricht am nächsten Await / Cancel-Poll ab. */
+    setSending(false)
+    setStatus('error')
+    setStatusMsg(`${CHAT_SEND_CANCELLED_MSG} — Bild bleibt: „Nochmals senden“.`)
+  }, [setSending, setStatus, setStatusMsg])
 
   const handleSend = useCallback(async (opts?: ChatSendHandleOptions) => {
     cancelRequestedRef.current = false
@@ -270,7 +277,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     const meshLoRaImageSendActive = isMeshLoRaImageSendActive({
       isPrivate,
       forcedTransport,
-      meshLoRaImagesEnabled,
+      meshLoRaImagesEnabled: meshLoRaImagesEnabled || opts?.forceMeshLoRaImages === true,
     })
     const path4SelfArchiveActive = isMeshPath4SelfArchiveActive({
       isPrivate,
@@ -606,7 +613,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       loraOnlineOfferPayloadRef.current = null
       setSending(true)
       setStatus('idle')
-      let userCancelledPath4 = false
+      /** Anhang nur nach Erfolg löschen — Abbruch/Fehler → „Nochmals senden“. */
+      let clearLoraAttachment = false
       clearMeshInboundText?.()
       const drainInbound = drainMeshInboundText ?? (() => [] as string[])
       try {
@@ -618,10 +626,28 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           onProgress: (line) => setMeshProgress?.(line),
           onStatusMsg: setStatusMsg,
           drainInboundMeshText: drainInbound,
-          sendMeshText: (text, d) => meshtastic.sendMeshText(text, d, meshtasticChannelIndex),
+          /** wantAck aus + queueConfirm: ~1,8 s max/Paket statt 25 s×Retries. */
+          sendMeshText: (text, d) =>
+            meshtastic.sendMeshText(text, d, meshtasticChannelIndex, {
+              wantAck: false,
+              queueConfirm: true,
+              isCancelled: () => cancelRequestedRef.current,
+            }),
+          ensureConnected: meshtastic.ensureConnected,
         })
         if (!segResult.ok) {
-          applyValidationError({ ok: false, message: segResult.error, idleMs: 10_000 }, setStatus, setStatusMsg)
+          recordMeshOutgoingPlaintext(
+            appendMeshMessage,
+            myAddress,
+            buildMorgLoraRetryStubMessage(segResult.error),
+            dest,
+            false
+          )
+          applyValidationError(
+            { ok: false, message: `${segResult.error} — Bild bleibt: „Nochmals senden“ in der Nachricht.`, idleMs: 0 },
+            setStatus,
+            setStatusMsg
+          )
           return
         }
         throwIfCancelled()
@@ -643,28 +669,39 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           true
         )
         setMessage('')
+        clearLoraAttachment = true
         if (shouldLoadMessagesAfterSend()) {
           scheduleInboxReloadAfterSend()
         }
       } catch (e) {
+        const detail = isUserCancelError(e)
+          ? CHAT_SEND_CANCELLED_MSG
+          : formatUnknownError(e)
+        recordMeshOutgoingPlaintext(
+          appendMeshMessage,
+          myAddress,
+          buildMorgLoraRetryStubMessage(detail),
+          dest,
+          false
+        )
         if (isUserCancelError(e)) {
-          userCancelledPath4 = true
           setStatus('error')
-          setStatusMsg(CHAT_SEND_CANCELLED_MSG)
+          setStatusMsg(`${CHAT_SEND_CANCELLED_MSG} → „Nochmals senden“ in der Abbruch-Nachricht.`)
         } else {
-          const raw = formatUnknownError(e)
           setStatus('error')
           setStatusMsg(
-            /NO_RESPONSE|\"error\":\s*8\b|error:\s*8\b/i.test(raw)
-              ? 'LoRa (Funk) hat nicht geantwortet (NO_RESPONSE / error 8). Bitte erneut senden oder näher/stabiler verbinden.'
-              : raw
+            /NO_RESPONSE|\"error\":\s*8\b|error:\s*8\b/i.test(detail)
+              ? 'LoRa ohne Antwort — „Nochmals senden“ in der Abbruch-Nachricht.'
+              : `${detail} — „Nochmals senden“ in der Abbruch-Nachricht.`
           )
         }
       } finally {
         setMeshProgress?.(null)
-        if (!userCancelledPath4) clearCompactAttachment()
+        if (clearLoraAttachment) clearCompactAttachment()
         setSending(false)
-        setTimeout(() => setStatus('idle'), userCancelledPath4 ? 2500 : 6000)
+        if (clearLoraAttachment) {
+          setTimeout(() => setStatus('idle'), 6000)
+        }
       }
       return
     }
@@ -1055,7 +1092,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         setStatus,
         setStatusMsg
       )
-      clearCompactAttachment()
+      /** Anhang behalten — sonst „Nochmals senden“ / Toggle-Race löscht das Bild. */
       setTimeout(() => setStatus('idle'), 6000)
       return
     }

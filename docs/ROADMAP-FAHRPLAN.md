@@ -18,22 +18,23 @@
 
 **Cursor-„Plan“-Modus** = nur Chat-Modus, **kein** zweites Produktdokument.
 
-**Aktueller Arbeitsstand (verbindlich 2026-11-22 — IOTA-Messenger + Phasen-Reihenfolge):**
+**Aktueller Arbeitsstand (verbindlich 2026-11-24 — IOTA-Messenger + Phasen-Reihenfolge):**
 
 **Phasen-Reihenfolge (User 2026-11-22 — verbindlich):**
 1. **PC zuerst komplett** — Messenger-Kern, UX, Desk-Smoke, Direct-IOTA Stage‑2, optional **Zwei-Wallet/Zwei-Browser auf demselben PC** für Handshake/E2EE/NFT-Solo.  
 2. **Dann Handy (1 Gerät)** — frische APK, Standalone **4b–4d** (kein zweites Handy nötig).  
-3. **Funk / Meshtastic** — Heltec/Web-BT, Klartext-Pfad, Feld (braucht Radios; **nicht** physisches 2. Handy-Messenger-Gerät).  
+3. **Funk / Meshtastic** — Heltec USB/BLE, Klartext-Pfad, Feld (braucht Radios; **nicht** physisches 2. Handy-Messenger-Gerät).  
 4. **Physisches 2. Gerät ganz am Schluss** — Session C, Standalone **4e/4f**, echte Zwei-Geräte-QR/Peering.
 
 **Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
-1. **Fokus jetzt:** **Phase 3 Funk** — PC-first Klartext (`docs/LORA-PC-FIRST-SMOKE.md`). Gate: mind. **1 Heltec** (Web-BT); Empfang-Beweis ideal **2. Meshtastic-Knoten** (2. Heltec oder offizielle Meshtastic-App).  
+1. **Fokus jetzt:** **Phase 3 Desk zu** (H.25a STABIL 2026-11-24). Ohne neue Hardware wenig Code-Pflicht — nur kleine Klartext-/Copy-Scheiben bei Bedarf. Encode/Tempo **Freeze**.  
 2. **Erledigt Phase 1 (PC):** Messenger-Kern, Vault-UX, Enc A↔B, Stage‑2 (#26–#28).  
 3. **Erledigt Phase 2 Kern:** Standalone **4b–4d PASS** 2026-11-23. **Edition-Freeze-Scheibe** 2026-11-23 (Merkliste). 4e/4f = Phase 4.  
-4. **Danach:** Phase 4 physisches 2. Messenger-Gerät. **Nicht parallel:** `.exe`-Big-Bang, Helfer/Boss/WhatsApp/Paywall.  
-5. **Wallet/IOTA-Aktivität:** Freeze. **IOTA-Messenger:** Funk absichtlich **raus** (Overlay `hideFunk`) — Funk = Morgendrot-Voll.  
-6. **Merge-Ritual** nach sinnvollem Paket.
+4. **Erledigt Phase 3 Desk-Kern:** USB/BT-Klartext + Stall-ehrlich (#31–#33); **H.25a** Bild PC↔PC STABIL (Live-Progress, Nur-Lücken, Cap 3,6 KB, Gap 580, ~1:30–1:45).  
+5. **Nächste echte Schritte (brauchen Gerät/Entscheidung):** (a) optional Outdoor/LongFast, (b) **Phase 4** physisches 2. Gerät / 4e–4f. **Nicht parallel:** `.exe`-Big-Bang, Helfer/Boss/WhatsApp/Paywall, Cap/Gap-Experimente.  
+6. **Wallet/IOTA-Aktivität:** Freeze. **IOTA-Messenger:** Funk absichtlich **raus** (Overlay `hideFunk`) — Funk = Morgendrot-Voll.  
+7. **Merge-Ritual** nach sinnvollem Paket (PR #34).
 
 ### Jetzt machen (IOTA-Messenger — User-Durchgang 2026-11-22)
 
@@ -46,7 +47,7 @@
 | **H.8** | Dienst vs. privat (Doku) | Zwei Installationen merken; kein Soft-Switch-Bau |
 | **H.10** (Teil) | Ehrliche Claims / schlanke Härtung | Kein „Regierungs-Niveau“-Theater |
 | **H.13 / H.14** | Schlankheit / Hardening | Nur bei Bedarf mit Messenger-Scheibe |
-| **H.15** | Direct-IOTA / Desk-Smoke | **PC Stage‑2 zu** (2026-11-23). **Jetzt:** Handy 4b–4d (Gerät + frische APK) |
+| **H.15** | Direct-IOTA / Desk-Smoke | **PC Stage‑2 zu**; **4b–4d PASS** (2026-11-23). **4e/4f** = Phase 4 |
 | **H.16** (Teil) | Telefonbuch + QR | **Ist PC:** Telefonbuch/Kontakt-QR/`mp` Peering (#Vitest). Boss-LAN = später |
 | **H.20** | Signer `sdk` | **Ist:** `.env.example` Default `sdk` (2026-11-22) |
 | **H.21** (Teil) | Empfänger-Auswahl Ist | Kurier-Umschlag → später |
@@ -91,7 +92,7 @@
 | **H.15 4e/4f** | Zwei-Geräte Peering/QR (APK) | **Phase 4** |
 | **Physisches 2. Gerät** | Session C Privacy/NFT Joint | **Phase 4** — PC vorher 2-Wallet-Surrogat ok |
 | **H.24 / H.24a/b** | Package-Profile Multi-Einsatz UI | Nach Messenger-Kern |
-| **H.25 / H.25a** | LoRa-Bilder LUMA/CHROMA | Feld später |
+| **H.25 / H.25a** | LoRa-Bilder LUMA/CHROMA | **Desk STABIL 2026-11-24**; Outdoor-Feld später |
 | **H.26** (Rest) | Alarmgruppe B4b / Einsatz-TG | Split: Edition weg |
 | **H.28 / H.29** | Discord/Matrix; TG-Token aus .env ganz | Sehr spät |
 | **H.31** | Multi-Pinnwand | Ganz hinten |
@@ -349,7 +350,7 @@ Manuelle Checks, die **nach** Handshake-UX-Fix und **Rollen-Retest** folgen — 
 | 4 | **Sendepfad** Flüchtig (Event) vs. Persistent (Mailbox) | Private/Shared-Mailbox, Consumer vs. Einsatz | **Ist 2026-06-02** (Composer „Speicher auf der Chain“, Persistenz-Badge, Kontakt-Default Consumer=Event / Einsatz=aktiv; Feld retesten) |
 | 5 | **Private Mailbox Nummerierung/Label** nach Erstellen | UX: `Private #1`, `#2`, … in Meine Mailboxen | **Ist 2026-05-21** |
 | 6 | **Gruppenchat „Mailbox an alle Mitglieder“** | M2c Team-Broadcast (1× TX); pairwise-Checkbox entfernt | **Ist 2026-06-02** (Gruppe + Internet + Mailbox = Team-Postfach; `group-team-broadcast.ts`; Consumer wie Einsatz-Rollen) |
-| 7 | **§ H.25a** Flüchtig-LoRa-Bild Feldtest | Zwei Heltecs, Vitest grün | **Vitest Schreibtisch ✅** — Feld offen |
+| 7 | **§ H.25a** Flüchtig-LoRa-Bild Feldtest | Zwei Heltecs, Vitest grün | **Desk STABIL 2026-11-24** (Vitest + Live PC↔PC MediumFast) — **Outdoor-Feld offen** |
 | 8 | **§ H.15 Stufe 2** Handy-first Smoke | `docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md` **4b–4f** (Code Standalone/APK) | **Teil-PASS (Feld 2026-07-07)** — **4b–4d** + Helfer→Boss grün (1 Gerät); **4e/4f** offen |
 | 9 | **Rollen-Profile** Arbeiter / Kommandant / Boss | `npm run dev:role:*`, `docs/TEST-ROLLE-PROFILES.md` | **Schreibtisch ✅** (Simple-Mode-Gates, Vitest); Feld Team-Mailbox retesten |
 | 10 | **Move-Deploy** `create_team_mailbox` | `npm run deploy:move-package` + `create_globals` | **Ist 2026-05-21** |
@@ -1504,7 +1505,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 | **E2E-IOTA-Quittung vs. Digest-Stop** | **Tangle-verankerte** Rückbestätigung + schlanker Burst = **eigenes** Priorität‑1-Ziel; optionale Digest-/Gateway-Hooks **ersetzen** das narrativ **nicht** — siehe **§ H.6b**, **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**. |
 | **`@morgendrot/core` / geteilter TS-Kern** | Wire, Hash, Retry, Opcodes **eine** Bibliothek für Handy + optional Laptop — Schrittweise aus **`src/shared`** + Frontend-Spiegel konsolidieren (**§ C.1** Prio‑1‑Reihe). |
 | **`.env` vs. Runtime-Konfig** | `.env` ist auf dem **Handy** nach Build kaum änderbar; Core braucht **keinen** `.env`-Loader. | **§ H.6e** — Node bleibt `.env`, App = **Storage/DB** + injizierbare Defaults. |
-| **`.morg` / Paket-Archiv → LoRa weiterleiten** | **Idee nur — bewusst nicht umsetzen (2026-06-02):** Archiv-Inhalte (vollständige Wire-Payloads, Audio, große Bilder) sind für Funk **praktisch zu groß** (§ **H.25a**: max. **12 KB** LUMA+CHROMA gesamt, **≤32** Segmente/Phase, Airtime). **Ist:** Import, Vorschau, Öffnen/Speichern, **Weiterleiten in den Online-Composer** (IOTA/Mailbox). Kein „Paket 1:1 auf Funk spiegeln“. | Referenz **§ H.25a**, **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**. |
+| **`.morg` / Paket-Archiv → LoRa weiterleiten** | **Idee nur — bewusst nicht umsetzen (2026-06-02):** Archiv-Inhalte (vollständige Wire-Payloads, Audio, große Bilder) sind für Funk **praktisch zu groß** (§ **H.25a**: max. **≤ 3,6 KB** LUMA+CHROMA gesamt, **≤32** Segmente/Phase, Airtime). **Ist:** Import, Vorschau, Öffnen/Speichern, **Weiterleiten in den Online-Composer** (IOTA/Mailbox). Kein „Paket 1:1 auf Funk spiegeln“. | Referenz **§ H.25a**, **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**. |
 | **LoRa-Verschlüsselung über Meshtastic klären** | **Gebucht → § H.3o** (Modus A Channel-PSK, Split Meshtastic-App vs. Messenger). Ist: Klartext LongFast; E2E über Online/IOTA. | **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**, **`docs/MESSENGER-CHAT-HANDBUCH.md`** |
 
 ### H.6b **Handy-Only Resilience** (Vorschlag — **kritisch eingeordnet**, kein harter Architektur-Bruch)
@@ -1942,7 +1943,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 ### H.25 Bilder über LoRa — Produktpfad vs. Referenz-Labor (**→ Später** 2026-11-22)
 
-**Status:** **§ H.25a Code Ist (2026-05-21):** Versand **`sendLoraImageViaMorgSegV1()`** (Pfad 4, MORG_SEG_V1-Burst, Sender-NAK max. 3 Runden, Hard-Cap 12 KB, UI Vorschau/ETA/Fortschritt in **`chat-view-attachment-bar`**). Vitest **`lora-image-morg-seg-v1*`** + **`lora-sarq*`** grün (Schreibtisch **2026-05-21**). **Schreibtisch-Nachzug 2026-05-28:** Root **`npm run test:smoke`** (41/41) + **`npm run test:h15-direct-submit`** (5) grün, Logbuch aktualisiert. **Anhang-Kodierung autark (2026-05-28):** **`ImageEncodePort`** + WASM (**`@jsquash/jpeg`** LoRa, **`@jsquash/webp`** IOTA) + Policy **`@morgendrot/core/image`** — Ingest ohne Pflicht-`/api/lora-progressive-encode` / **`/api/compact-image-encode`**; **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`** § 6 **B.2b/B.2c**. **Feldtest + Gerät (später):** **`TESTING.md`** — **H.25a** (2 Heltecs) und **„Bild-Kodierung autark“** (LoRa+IOTA ohne Node) im **Handy-Fenster**, nach Schreibtisch-Vitest.
+**Status:** **§ H.25a Code Ist** + **Schreibtisch STABIL 2026-11-24:** **`sendLoraImageViaMorgSegV1()`** (Pfad 4, MORG_SEG_V1, Nur-Lücken-Repair, Cap **≤ 3,6 KB**, Gap **580 ms**, Live-RX-Store). Vitest **`test:h25a-lora-image`** + Sim. **UX:** „Bilder über Funk…“ / Entfernen-Vorschau; fused Medien-Speichern; Inbox-Kollaps. Anker: **`lora-h25a-stable-anchor.mdc`**, Smoke **`docs/LORA-PC-FIRST-SMOKE.md`** §5. **Encode/Tempo eingefroren** (~1:30–1:45 OK; kein 1‑min-Push). **Outdoor-Feld** (Distanz/LongFast) weiter offen — **`TESTING.md`**.
 
 #### H.25a Umsetzungspaket „Flüchtig (LoRa)“ — **priorisiert**
 
@@ -1951,14 +1952,14 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 | # | Lieferung | Details |
 |---|-----------|---------|
 | **1** | **Modus „Flüchtig (LoRa)“** | Anhang → Bild → expliziter Modus (ersetzt/ergänzt „Für LoRa senden“); nur bei Transport **funk** + Pfad 4; Verschlüsselung **aus** (Klartext). |
-| **2** | **Hard-Cap 12 KB gesamt** | Nach starker LUMA/CHROMA-Kompression: **`lumaBytes + chromaBytes ≤ 12_000`** — sonst Senden blockieren + Hinweis (kleineres Motiv / Qualität). |
+| **2** | **Hard-Cap ≤ 3,6 KB gesamt (eingefroren)** | Luma ≤ **2800**, Chroma ≤ **1000**, Summe ≤ **3600** (max. 32 Segmente/Phase × ~93 B). Baseline ~210×280; Encode-Tweaks am Cap unsichtbar. |
 | **3** | **Segment-Validierung** | Pro Phase (`luma`, `chroma`): Segmentanzahl **`n ≤ 32`** (**`MORG_NAK_V1`**-Maske, **`lora-sarq-wire.ts`**); vor Burst prüfen; bei Überschreitung Fehler mit konkreter Zahl. |
 | **4** | **`sendLoraImageViaMorgSegV1()`** | **Neue** Funktion (Vorschlag Ort: **`frontend/frontend/features/send/lora-image-morg-seg-v1-send.ts`**): Rohbytes je Phase mit **`buildMorgSegV1Wire`** segmentieren, **`computeMaxMorgSegV1RawPayloadBytes`** nutzen, **Burst** über **`meshtastic.sendMeshText`** (Backoff zwischen Paketen); Reihenfolge **Luma komplett → Chroma komplett**. Ersetzt Monolithen-Versand in **`use-chat-view-handle-send.ts`** für Flüchtig-Modus. |
 | **5** | **Sender-State + NAK-Loop** | Laufender Transfer-State (msgId, phase, gesendete Indizes, Runde): eingehende **`MORG_NAK_V1`** parsen (**`parseMorgNakV1Message`**), **`missingIndicesFromNakMask`** → **nur fehlende** Segmente nachsenden; **max. 3 NAK-Runden** pro Phase, danach Abbruch mit klarem Fehlertext. Heltec während Transfer **verbunden** lassen (NAK kommt über Mesh). |
 | **6** | **UI vor Senden** | Vorschau (bestehend) + **Warnung**: Gesamtgröße (KB), Segmente Luma/Chroma, **geschätzte Dauer** (Heuristik aus Segmentzahl × Airtime-Faktor, Bandbreite z. B. „ca. 30–120 s“). |
 | **7** | **UI während Senden** | Fortschrittsbalken **pro Phase** (z. B. „Luma 12/18“, „Chroma 5/14“), **Abbrechen** (bestehenden Cancel an State koppeln). |
 | **8** | **Optional (gleiche Scheibe)** | Self-Mirror Pfad 4 (**`mesh-path4-self-archive`**) nach erfolgreichem Transfer; Empfänger-UI „Bild wird zusammengesetzt…“ bereits nahe **`MorgSegV1ChatSink`** — nur Text angleichen. |
-| **9** | **Tests / Abnahme** | Vitest: Segmentierung, Cap 12 KB, `n>32` abgelehnt, NAK-Mask-Parsing + Sender-Nachsenden; Schreibtisch: **`npm run test:h25a-lora-image`** (`TESTING.md`). Feld: zwei Heltecs, 1 kleines Bild &lt;12 KB — **offen**. |
+| **9** | **Tests / Abnahme** | Vitest + Sim: Segmentierung, Cap 3,6 KB, `n>32` abgelehnt, NAK + Nur-Lücken; **`npm run test:h25a-lora-image`**. Desk PC↔PC: **`docs/LORA-PC-FIRST-SMOKE.md`** §5 — **STABIL**. Outdoor-Feld offen. |
 
 **Leitplanken:**
 
@@ -1980,7 +1981,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 |---|--------|----------------|
 | Senden | 2× `sendMeshText` mit vollem LUMA/CHROMA-Wire | N× **`MORG_SEG_V1`** pro Phase |
 | Retry | 3× ganze Nachricht | NAK-gesteuert, **fehlende Segmente** only, max 3 Runden |
-| Größe | ~500 B UTF-8/Wire hard | **12 KB** gesamt + **≤32** Segmente/Phase |
+| Größe | **200** B UTF-8/Wire hard (ToRadio ≤512) | **≤ 3,6 KB** gesamt + **≤32** Segmente/Phase |
 | UX | Meta in Anhang-Leiste | **Flüchtig** + ETA + Fortschrittsbalken |
 
 #### Machbarkeitsprüfung (Anleitung ESP32-CAM + SX1276 + Serial/Python)

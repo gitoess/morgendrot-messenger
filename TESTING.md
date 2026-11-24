@@ -136,7 +136,7 @@ Ergebnis in **`docs/TEST-RUN-LOGBOOK.md`** (Datum, Gerät, Pass/Fail pro Zeile).
 npm run test:h25a-lora-image
 ```
 
-Deckt u. a. `MORG_SEG_V1`/`MORG_NAK_V1`, `MORG_IMG_INIT_V1`, Segment-Cap 12 KB, max. 32 Segmente/Phase und Sender-NAK-Nachsenden ab. Ergebnis kurz in **`docs/TEST-RUN-LOGBOOK.md`**.
+Deckt u. a. `MORG_SEG_V1`/`MORG_NAK_V1`, `MORG_IMG_INIT_V1`, Segment-Cap ≤ **3,6 KB** (Luma ≤ 2800 B, Chroma ≤ 1000 B, airtime-first), Mesh-Text ≤ 200 B UTF-8/Wire, max. 32 Segmente/Phase und Sender-NAK/Nur-Lücken ab. Desk-Anker: **`docs/LORA-PC-FIRST-SMOKE.md`** §5 **STABIL**. Ergebnis kurz in **`docs/TEST-RUN-LOGBOOK.md`**.
 
 ### H.25a Feldtest — 2 Heltecs (Pfad 4 Bild, Pass/Fail)
 

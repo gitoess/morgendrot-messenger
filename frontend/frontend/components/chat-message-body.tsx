@@ -62,6 +62,10 @@ import { checkNftKeycardOwnedBySigner } from '@/frontend/lib/nft-keycard-ownersh
 import { getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { MESSENGER_INBOX_FORCE_REFRESH_EVENT } from '@/frontend/lib/messenger-inbox-force-refresh'
 import { cn } from '@/lib/utils'
+import {
+  parseMorgLoraRetryStub,
+  requestMorgLoraImageRetry,
+} from '@/frontend/lib/morg-lora-retry-wire'
 
 const TXT_PREVIEW_CHARS = 480
 const TXT_COLLAPSE_MAX_H = 'max-h-36' /* 9rem */
@@ -1068,6 +1072,8 @@ export function ChatMessageBody({
   /** Anzeige: einmal voll normalisiert. Parser bekommen `raw` und probieren mehrere Varianten (JSON-Hülle, Slice ab `[[`, …). */
   const wire = useMemo(() => normalizeMessengerWireContent(raw), [content])
 
+  const loraRetryStub = parseMorgLoraRetryStub(raw)
+
   const parsedImg = parseCompactImageMessage(raw)
   const parsedFile = parsedImg ? null : parseFileTxtMessage(raw)
   const parsedAudio = parsedImg || parsedFile ? null : parseMorgAudioV1Message(raw)
@@ -1130,6 +1136,29 @@ export function ChatMessageBody({
     } catch {
       setCopied(false)
     }
+  }
+
+  if (loraRetryStub) {
+    return (
+      <div
+        className="space-y-2 rounded-lg border border-amber-600/50 bg-amber-950/20 p-3"
+        data-testid="morg-lora-retry-stub"
+      >
+        <p className="text-xs font-semibold text-amber-900 dark:text-amber-100">Funk-Bild abgebrochen</p>
+        <p className="text-xs text-amber-950/90 dark:text-amber-50/90">{loraRetryStub.detail}</p>
+        <p className="text-[11px] text-muted-foreground">
+          Das Bild bleibt im Composer (kein neues Kodieren). Erneut senden, wenn Funk bereit ist.
+        </p>
+        <button
+          type="button"
+          data-testid="morg-lora-retry-in-message"
+          onClick={() => requestMorgLoraImageRetry()}
+          className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+        >
+          Nochmals senden
+        </button>
+      </div>
+    )
   }
 
   if (isNftGateMessageWire(raw) || isNftGateMessageWire(wire)) {

@@ -20,6 +20,16 @@ import {
   tryExtractTruncatedCompactLumaWebp,
 } from '@/frontend/lib/compact-image-canvas'
 import { encryptEinsatzprotokollZipBytes, downloadEinsatzprotokollEncryptedJson } from '@/frontend/lib/einsatzbericht-crypto'
+import { parseMorgSegV1Message } from '@/frontend/lib/lora-sarq-parser'
+import { MorgSegV1ReassemblyBuffer } from '@/frontend/lib/lora-sarq-reassembly'
+import {
+  fuseLoraProgressivePreferSharpBackend,
+  revokeObjectUrlSafe,
+} from '@/frontend/lib/lora-progressive-image-client'
+import {
+  getSarqLiveAssembled,
+  normalizeSarqPeerKey,
+} from '@/frontend/lib/lora-sarq-live-progress'
 
 export const EINSATZPROTOKOLL_SCHEMA = 'morgendrot.einsatzprotokoll.v1' as const
 
@@ -412,6 +422,10 @@ export async function extractMorgMediaFromMessages(
           )
           continue
         }
+        if (tag === 'MORG_SEG_V1') {
+          /** Einzel-Segment ist kein Bild — unten Reassembly. */
+          continue
+        }
         const bytes = b64ToBytes(payload)
         const ext = sniffMediaExt(bytes)
         pushUnique(
@@ -424,7 +438,94 @@ export async function extractMorgMediaFromMessages(
       }
     }
   }
+
+  if (kindAllowed('image', opts?.kinds)) {
+    await appendAssembledSarqImages(chronological, pushUnique, () => mediaIdx++)
+  }
   return out
+}
+
+/** S-ARQ `MORG_SEG_V1` → JPEG (Live-Store und/oder Inbox-Segmente). */
+async function appendAssembledSarqImages(
+  chronological: Message[],
+  pushUnique: (path: string, bytes: Uint8Array, kind: MorgMediaKind) => void,
+  nextIdx: () => number
+): Promise<void> {
+  type Key = string
+  const buffers = new Map<Key, MorgSegV1ReassemblyBuffer>()
+  const meta = new Map<Key, { from: string; msgId: string; phase: 'luma' | 'chroma' }>()
+
+  for (const m of chronological) {
+    const p = parseMorgSegV1Message(m.content ?? '')
+    if (!p) continue
+    const from = normalizeSarqPeerKey(m.from ?? '')
+    if (!from) continue
+    const k: Key = `${from}:${p.msgId}:${p.phase}`
+    let buf = buffers.get(k)
+    if (!buf) {
+      buf = new MorgSegV1ReassemblyBuffer({ maxNakRounds: 64 })
+      buffers.set(k, buf)
+      meta.set(k, { from, msgId: p.msgId, phase: p.phase })
+    }
+    buf.ingest(p)
+  }
+
+  const assembled = new Map<string, { luma?: Uint8Array; chroma?: Uint8Array }>()
+
+  for (const [k, buf] of buffers) {
+    const info = meta.get(k)!
+    const done = buf.takeAssembledIfComplete()
+    let bytes = done?.assembled ?? null
+    if (!bytes) {
+      bytes = getSarqLiveAssembled(info.from, info.msgId, info.phase)
+    }
+    if (!bytes || bytes.length < 1) continue
+    const slot = assembled.get(`${info.from}:${info.msgId}`) ?? {}
+    if (info.phase === 'luma') slot.luma = bytes
+    else slot.chroma = bytes
+    assembled.set(`${info.from}:${info.msgId}`, slot)
+  }
+
+  /** Live-Store ohne Inbox-Segmente (Session noch im RAM). */
+  for (const m of chronological) {
+    const p = parseMorgSegV1Message(m.content ?? '')
+    if (!p) continue
+    const from = normalizeSarqPeerKey(m.from ?? '')
+    if (!from) continue
+    const id = `${from}:${p.msgId}`
+    const slot = assembled.get(id) ?? {}
+    if (!slot.luma) {
+      const live = getSarqLiveAssembled(from, p.msgId, 'luma')
+      if (live?.length) slot.luma = live
+    }
+    if (!slot.chroma) {
+      const live = getSarqLiveAssembled(from, p.msgId, 'chroma')
+      if (live?.length) slot.chroma = live
+    }
+    if (slot.luma || slot.chroma) assembled.set(id, slot)
+  }
+
+  for (const [id, slot] of assembled) {
+    const stem = id.replace(/[^a-z0-9]+/gi, '-').slice(0, 40)
+    /** Ein Download: Farbe wenn möglich, sonst S/W — nicht Luma+Chroma+Fusion (3× Speichern). */
+    if (slot.luma?.length && slot.chroma?.length) {
+      try {
+        const url = await fuseLoraProgressivePreferSharpBackend(slot.luma, slot.chroma)
+        const res = await fetch(url)
+        const buf = new Uint8Array(await res.arrayBuffer())
+        revokeObjectUrlSafe(url)
+        if (buf.length > 0) {
+          pushUnique(`medien/sarq-${stem}-farbe-${nextIdx()}.jpg`, buf, 'image')
+          continue
+        }
+      } catch {
+        /* fallback S/W */
+      }
+    }
+    if (slot.luma?.length) {
+      pushUnique(`medien/sarq-${stem}-sw-${nextIdx()}.jpg`, slot.luma, 'image')
+    }
+  }
 }
 
 function mimeForExt(ext: string): string {

@@ -8,4 +8,9 @@ export type ChatSendHandleOptions = {
   composerOverride?: string
   /** Dashboard-SOS: Boss/Partner vor dem ersten Composer-Mount setzen. */
   emergencyPartnerOverride?: string
+  /**
+   * „Nochmals senden“: Toggle „Bilder über Funk“ sofort für diesen Send —
+   * sonst Race (setState asynchron) → Fallthrough löscht `attachedLora`.
+   */
+  forceMeshLoRaImages?: boolean
 }

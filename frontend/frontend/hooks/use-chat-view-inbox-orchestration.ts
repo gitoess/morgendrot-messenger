@@ -63,6 +63,7 @@ import {
   PACKAGE_PROFILE_REGISTRY_CHANGED,
   readActiveProfileSnapshot,
 } from '@/frontend/lib/package-profile-registry'
+import { noteSarqSegFromMesh } from '@/frontend/lib/lora-sarq-live-progress'
 
 export type UseChatViewInboxOrchestrationParams = {
   channelMode: MessengerChatChannel
@@ -173,11 +174,18 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
 
   const appendMeshMessageWithInboundCapture = useCallback(
     (msg: Message) => {
-      if (msg.source === 'mesh' && typeof msg.content === 'string' && msg.content.includes('MORG_NAK_V1')) {
-        meshInboundTextBufferRef.current.push(msg.content)
+      const content = typeof msg.content === 'string' ? msg.content : ''
+      if (msg.source === 'mesh' && content.includes('MORG_NAK_V1')) {
+        meshInboundTextBufferRef.current.push(content)
         if (meshInboundTextBufferRef.current.length > 64) {
           meshInboundTextBufferRef.current.shift()
         }
+        /** NAK/ACK nicht als Chat-Zeile — sonst Posteingang-Müll (hunderte TX). */
+        return
+      }
+      if (msg.source === 'mesh' && content.includes('MORG_SEG_V1')) {
+        /** Live-Fortschritt / Reassembly sofort — nicht erst nach Tab-Fokus / Inbox-Remount. */
+        noteSarqSegFromMesh(msg.from ?? '', content)
       }
       appendMeshMessage(msg)
     },

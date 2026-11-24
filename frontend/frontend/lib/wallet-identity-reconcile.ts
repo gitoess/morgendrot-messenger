@@ -15,6 +15,20 @@ import {
 
 const WALLET_RE = /^0x[a-f0-9]{64}$/i
 
+/**
+ * Zwei Browser-Fenster + zwei Seeds auf demselben `localhost`-API:
+ * Default überschreibt der Server (`MY_ADDRESS`) den Browser-Signer.
+ * Opt-in: `localStorage.setItem('morgendrot.dualWalletDev','1')` — dann bleibt der Tab-Signer.
+ */
+export function isDualWalletDevOverrideEnabled(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return window.localStorage.getItem('morgendrot.dualWalletDev') === '1'
+  } catch {
+    return false
+  }
+}
+
 export function normalizeWalletIdentity(addr: string | null | undefined): string {
   return (addr ?? '').trim().toLowerCase()
 }
@@ -38,6 +52,10 @@ export function reconcileWalletIdentityWithServer(
   }
   const server = (serverMyAddress ?? '').trim()
   if (!isValidWalletIdentity(server)) return result
+
+  if (isDualWalletDevOverrideEnabled()) {
+    return result
+  }
 
   const browser = getDirectIotaSessionSignerAddress()?.trim()
   if (browser && !directIotaSignerMatchesIdentity(browser, server)) {

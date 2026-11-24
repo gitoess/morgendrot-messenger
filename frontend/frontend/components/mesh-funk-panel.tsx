@@ -29,18 +29,9 @@ export function MeshFunkPanel({ ble: meshtastic, previewLines, contextHint }: Me
         <Radio className="h-4 w-4" />
         Mesh / Funk (experimentell)
       </h4>
-      <p className="mb-2 text-xs text-muted-foreground">
-        Heltec per Web Bluetooth (Chrome/Edge; Brave oft aus — <span className="font-mono">brave://flags</span>, localhost). Pro Browser-Tab meist nur eine aktive BT-Verbindung zum
-        gleichen Gerät – wenn du parallel <strong className="text-foreground">Nachrichten</strong> offen hast, dort oder
-        hier koppeln, nicht doppelt.
-      </p>
       {contextHint ? (
-        <p className="mb-3 text-xs text-muted-foreground border-l-2 border-primary/40 pl-2">{contextHint}</p>
-      ) : (
-        <p className="mb-3 text-xs text-muted-foreground">
-          Eingehende Texte und PRIVATE_APP Binary v2 (Zuordnung über Kontaktverzeichnis / Fingerprint).
-        </p>
-      )}
+        <p className="mb-3 border-l-2 border-primary/40 pl-2 text-xs text-muted-foreground">{contextHint}</p>
+      ) : null}
       <div className="mb-3 flex flex-wrap gap-2">
         {!meshtastic.bleSupported && !meshtastic.serialSupported ? (
           <span className="text-xs text-amber-600 dark:text-amber-400">
@@ -64,23 +55,23 @@ export function MeshFunkPanel({ ble: meshtastic, previewLines, contextHint }: Me
           <>
             <button
               type="button"
-              disabled={meshtastic.connecting || !meshtastic.bleSupported}
-              onClick={() => void meshtastic.connectBluetooth()}
-              className="rounded-lg bg-muted px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
-            >
-              {meshtastic.connecting && meshtastic.transportKind === 'bluetooth'
-                ? 'Verbinde…'
-                : 'Bluetooth verbinden'}
-            </button>
-            <button
-              type="button"
               disabled={meshtastic.connecting || !meshtastic.serialSupported}
               onClick={() => void meshtastic.connectUsb()}
-              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+              className="rounded-lg bg-muted px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
             >
               {meshtastic.connecting && meshtastic.transportKind === 'usb'
                 ? 'USB verbindet…'
                 : 'USB verbinden'}
+            </button>
+            <button
+              type="button"
+              disabled={meshtastic.connecting || !meshtastic.bleSupported}
+              onClick={() => void meshtastic.connectBluetooth()}
+              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+            >
+              {meshtastic.connecting && meshtastic.transportKind === 'bluetooth'
+                ? 'Verbinde…'
+                : 'Bluetooth verbinden'}
             </button>
           </>
         )}

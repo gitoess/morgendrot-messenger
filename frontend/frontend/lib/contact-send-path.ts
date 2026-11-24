@@ -74,7 +74,7 @@ export function sidebarAllSubtitleForSendPath(path: ActiveSendPath, contactCount
         : 'Alle Telegram-Chat-IDs eintragen'
     case 'mesh':
       return contactCount > 0
-        ? `${contactCount} Funk-Kontakte — Broadcast (nicht 1:1-Node)`
+        ? `${contactCount} Funk-Kontakte — Alle = Broadcast; Kontakt = Node-ID`
         : 'Funk-Broadcast (kein Ziel-Node)'
     case 'adhoc':
       return contactCount > 0

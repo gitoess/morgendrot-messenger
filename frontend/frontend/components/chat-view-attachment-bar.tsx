@@ -1,12 +1,11 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Camera, RefreshCw, Upload } from 'lucide-react'
 import { MEDIA_IOTA_AUDIO_RAW_MAX_BYTES, MEDIA_LORA_AUDIO_RAW_MAX_BYTES } from '@/frontend/lib/compact-image-wire'
 import type { AttachmentBarPort } from '@/frontend/features/messenger-ports'
 import { prefersFileCameraCapture } from '@/frontend/lib/device-detect'
 import {
-  formatFluentLoraPreSendWarning,
   isFluentLoraImagePlan,
   planFluentLoraImage,
 } from '@/frontend/features/send/lora-image-morg-seg-v1-policy'
@@ -15,6 +14,11 @@ import {
   ATTACHMENT_PREVIEW_PREFS_CHANGED,
   readAttachmentPreviewEnabled,
 } from '@/frontend/lib/attachment-preview-prefs'
+import {
+  parseLoraMeshProgressLine,
+  SarqSegmentProgressGrid,
+  sentIndicesUpTo,
+} from '@/frontend/components/sarq-segment-progress-grid'
 
 export type ChatViewAttachmentBarProps = AttachmentBarPort & {
   /** z. B. STT, Sprachmemo — rechts neben „Von Kamera“. */
@@ -22,6 +26,34 @@ export type ChatViewAttachmentBarProps = AttachmentBarPort & {
   /** false = nur Vorschau/Pipeline (Picker im +-Menü). */
   showImportPickers?: boolean
   onRegisterCameraPick?: (pick: () => void) => void
+}
+
+function SenderLoraMeshProgress({ line }: { line: string }) {
+  const parsed = useMemo(() => parseLoraMeshProgressLine(line), [line])
+  const received = useMemo(
+    () => (parsed ? sentIndicesUpTo(parsed.done) : new Set<number>()),
+    [parsed]
+  )
+  return (
+    <div
+      className="mb-2 space-y-1.5 rounded-md border border-border bg-muted/30 px-2 py-1.5"
+      role="status"
+      aria-live="polite"
+    >
+      <p className="text-xs font-medium tabular-nums text-foreground">Flüchtig (LoRa): {line}</p>
+      {parsed ? (
+        <SarqSegmentProgressGrid
+          n={parsed.total}
+          received={received}
+          label={parsed.phase === 'chroma' ? 'Chroma senden' : 'Luma senden'}
+        />
+      ) : (
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted" aria-hidden>
+          <div className="h-full w-2/3 animate-pulse rounded-full bg-primary/80" />
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
@@ -77,10 +109,7 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
 
   const fluentLoraPlan =
     attachedLora != null ? planFluentLoraImage(attachedLora) : null
-  const fluentLoraHint =
-    fluentLoraPlan && isFluentLoraImagePlan(fluentLoraPlan)
-      ? formatFluentLoraPreSendWarning(fluentLoraPlan)
-      : null
+  /** Kein langer Duty-/ETA-Text — nur harte Validierungsfehler. */
   const fluentLoraError =
     fluentLoraPlan && !isFluentLoraImagePlan(fluentLoraPlan) ? fluentLoraPlan.message : null
 
@@ -188,14 +217,31 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
         <p className="mb-2 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
           {fluentLoraError}
         </p>
-      ) : fluentLoraHint ? (
-        <p className="mb-2 rounded-md border border-amber-500/35 bg-amber-500/10 px-2 py-1.5 text-xs text-amber-950 dark:text-amber-100">
-          {fluentLoraHint}
-        </p>
+      ) : null}
+      {!showImportPickers && hasAnyAttachment ? (
+        <div className="mb-2 flex justify-end">
+          <button
+            type="button"
+            onClick={clearCompactAttachment}
+            className="text-xs font-medium text-red-400 hover:underline"
+            title="Anhang und Vorschau löschen (auch Composer-Draft)"
+          >
+            Anhang / Vorschau entfernen
+          </button>
+        </div>
       ) : null}
       {previewOn && compactPreviewUrl ? (
         <div className="mb-2">
-          <p className="mb-1 text-xs text-muted-foreground">Vorschau (Canvas color-Blend wie im Chat):</p>
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">Vorschau (Canvas color-Blend wie im Chat):</p>
+            <button
+              type="button"
+              onClick={clearCompactAttachment}
+              className="text-xs font-medium text-red-400 hover:underline"
+            >
+              Entfernen
+            </button>
+          </div>
           <img
             src={compactPreviewUrl}
             alt="Vorschau kompaktes Bild"
@@ -205,9 +251,19 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
       ) : null}
       {previewOn && loraPreviewUrl ? (
         <div className="mb-2">
-          <p className="mb-1 text-xs text-muted-foreground">
-            Vorschau Flüchtig (LoRa): zuerst Luma (S/W), dann Chroma. Senden über Funk (Heltec) mit MORG_SEG_V1-Segmenten.
-          </p>
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-muted-foreground">
+              Vorschau Flüchtig (LoRa): zuerst Luma (S/W), dann Chroma. Senden über Funk (Heltec) mit MORG_SEG_V1-Segmenten.
+            </p>
+            <button
+              type="button"
+              onClick={clearCompactAttachment}
+              className="shrink-0 text-xs font-medium text-red-400 hover:underline"
+              title="Vorschau und Funk-Anhang löschen"
+            >
+              Entfernen
+            </button>
+          </div>
           <img
             src={loraPreviewUrl}
             alt="Vorschau LoRa Luma"
@@ -216,16 +272,7 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
         </div>
       ) : null}
       {attachedLora != null && loraMeshProgressLine ? (
-        <div
-          className="mb-2 space-y-1.5 rounded-md border border-border bg-muted/30 px-2 py-1.5"
-          role="status"
-          aria-live="polite"
-        >
-          <p className="text-xs font-medium tabular-nums text-foreground">Flüchtig (LoRa): {loraMeshProgressLine}</p>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted" aria-hidden>
-            <div className="h-full w-2/3 animate-pulse rounded-full bg-primary/80" />
-          </div>
-        </div>
+        <SenderLoraMeshProgress line={loraMeshProgressLine} />
       ) : null}
       {previewOn && attachedTxtFile != null && !attachedBlobBase64 ? (
         <div className="mb-2 max-h-28 overflow-auto rounded-md border border-border bg-muted/20 p-2">

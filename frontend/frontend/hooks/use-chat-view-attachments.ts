@@ -13,6 +13,12 @@ import type { CompactAttachmentMeta } from '@/frontend/features/attachments/chat
 import type { ChatAttachedLora } from '@/frontend/lib/chat-view-attached-types'
 import { useChatViewAttachmentPreviews } from '@/frontend/hooks/use-chat-view-attachment-previews'
 import { loraProgressiveFromCompactBlob } from '@/frontend/lib/api/media'
+import {
+  clearLoraComposerDraft,
+  loadLoraComposerDraft,
+  saveLoraComposerDraft,
+} from '@/frontend/lib/lora-composer-draft'
+import { MESH_LORA_IMAGES_LS } from '@/frontend/lib/mesh-lora-composer-options'
 
 export type { ChatAttachedLora } from '@/frontend/lib/chat-view-attached-types'
 
@@ -27,6 +33,8 @@ export type UseChatViewAttachmentsParams = {
   setStatusMsg: (v: string) => void
   /** Vor jedem neuen Import (SOS-Banner o. Ä. zurücksetzen). */
   onCompactIngestStart?: () => void
+  /** Draft-Restore: Toggle „Bilder über Funk“ in React-State einschalten. */
+  onEnsureMeshLoRaImagesEnabled?: () => void
 }
 
 export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
@@ -39,6 +47,7 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
     setStatus,
     setStatusMsg,
     onCompactIngestStart,
+    onEnsureMeshLoRaImagesEnabled,
   } = p
 
   const [attachedBlobBase64, setAttachedBlobBase64] = useState<string | null>(null)
@@ -60,6 +69,35 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
     attachedBlobBase64,
     attachedLora
   )
+
+  /** Unvollständige TX nach Reload wiederherstellen (S-ARQ-Resume / Nochmals senden). */
+  useEffect(() => {
+    if (attachedLora != null) return
+    const draft = loadLoraComposerDraft()
+    if (!draft) return
+    try {
+      window.localStorage.setItem(MESH_LORA_IMAGES_LS, '1')
+    } catch {
+      /* ignore */
+    }
+    onEnsureMeshLoRaImagesEnabled?.()
+    setAttachedLora(draft)
+    setCompactMeta({
+      total: draft.lumaJpegBytes + draft.chromaJpegBytes,
+      luma: draft.lumaJpegBytes,
+      chroma: draft.chromaJpegBytes,
+      q: 0,
+      mode: 'lora',
+    })
+    setStatus('error')
+    setStatusMsg('Gespeichertes Funk-Bild wiederhergestellt — „Nochmals senden“ füllt Lücken.')
+    setTimeout(() => setStatus('idle'), 8_000)
+  }, [])
+
+  /** Draft mitschreiben, solange Anhang hängt (Abbruch / Reload). */
+  useEffect(() => {
+    if (attachedLora) saveLoraComposerDraft(attachedLora)
+  }, [attachedLora])
 
   /** Privater Chat + „Bilder über Funk“: IOTA-Kompakt-Blob → LUMA+CHROMA. */
   useEffect(() => {
@@ -146,6 +184,17 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
     ) {
       return
     }
+    /** Draft-Resume: Toggle-State hinkt LS hinterher — nicht löschen. */
+    const draft = loadLoraComposerDraft()
+    if (draft && draft.messageId === attachedLora.messageId) {
+      try {
+        window.localStorage.setItem(MESH_LORA_IMAGES_LS, '1')
+      } catch {
+        /* ignore */
+      }
+      onEnsureMeshLoRaImagesEnabled?.()
+      return
+    }
     if (attachmentPolicyIdleTimerRef.current) {
       clearTimeout(attachmentPolicyIdleTimerRef.current)
       attachmentPolicyIdleTimerRef.current = null
@@ -154,6 +203,7 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
     setCompactMeta(null)
     setLoraOnlineFallbackOffer(null)
     loraOnlineOfferPayloadRef.current = null
+    clearLoraComposerDraft()
     setStatus('error')
     setStatusMsg(CHAT_LORA_DUAL_IMAGE_POLICY_MSG)
     attachmentPolicyIdleTimerRef.current = setTimeout(() => {
@@ -168,6 +218,7 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
     meshLoRaImagesEnabled,
     setStatus,
     setStatusMsg,
+    onEnsureMeshLoRaImagesEnabled,
   ])
 
   /** IOTA-Kompakt auf Funk nur mit „Bilder über Funk“. */
@@ -204,6 +255,7 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
     setCompactMeta(null)
     setLoraOnlineFallbackOffer(null)
     loraOnlineOfferPayloadRef.current = null
+    clearLoraComposerDraft()
   }, [])
 
   const ingestChatAttachmentFile = useCallback(

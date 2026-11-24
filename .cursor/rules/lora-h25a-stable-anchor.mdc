@@ -1,0 +1,45 @@
+---
+description: H.25a LoRa-Bild — Stabil-Anker STABIL (Live 2026-11-24), nicht still zurückdrehen
+alwaysApply: true
+---
+
+# Freeze / Anker: LoRa H.25a — **STABIL** (2026-11-24)
+
+User-Live: Qualität **Plateau** (~**210×280**) + Senden stabil (~**1:30–1:45** MediumFast).  
+**Encode + Tempo eingefroren** (2026-11-24): kein 1‑min-Push ohne Absprache.
+
+## Anker-Werte
+
+| Hebel | Wert | Warum |
+|-------|------|--------|
+| Encode Cap | **≤ 3600 B** — **einfrieren** | JPEG-Blöcke = Bitrate-Limit, nicht Feinschliff |
+| Bild-Baseline | ~**210×280** | Qualitäts-Plateau am Cap |
+| Luma-Encode | MozJPEG GRAYSCALE + Trellis | belassen |
+| `PACKET_GAP_MS` | **580** | stabil; nicht unter ~500 ohne Live |
+| Rate-Limit (38) | **+2 s**, nur dieses Segment | unverändert |
+| Nachsend | nur Lücken | unverändert |
+| Luma→Chroma Settle | **~1,0 s** | unverändert |
+| NAK-Wartefenster | **~3,5 s** | Idle-NAK RX weiter 2,5 s |
+| Soft-Gap | = `PACKET_GAP` | kein Extra-Warten |
+| `wantAck` | false + queueConfirm | unverändert |
+| Idle-NAK RX | 2,5 s; max 24; Reset bei Seg | unverändert |
+| Modem | MediumFast | Schreibtisch |
+
+Code: `lora-image-morg-seg-v1-send.ts`, Encode: `lora-fluent-*`, RX: `lora-sarq-live-progress.ts`.
+
+## Grenze Qualität / Tempo
+
+- Encode-Tweaks unter 3,6 KB: **kaum sichtbar**.
+- **~1 min** Ziel = aggressiver Gap/weniger Segmente → oft mehr 38, unruhiger — **nicht** ohne Live-grün.
+
+## Nächste Richtung (nur Absprache)
+
+- Outdoor-Feld / Distanz (LongFast) — getrennt vom Desk-Anker
+- Gap/Cap nur mit Live-Beweis und User-OK
+
+## Nicht
+
+- Blind-Voll-Resend, Früh-NAK, wantAck an für SEG-Burst
+- Gap unter ~500 ohne Live-Beweis
+- Wallet/IOTA-Aktivität anfassen
+- Big-Bang am Send/Reassembly-Kern

@@ -68,6 +68,9 @@ export type MeshtasticBleSendApi = {
   sendMeshText: (
     text: string,
     destination?: number | 'broadcast',
-    channelIndex?: number
+    channelIndex?: number,
+    opts?: { wantAck?: boolean; isCancelled?: () => boolean; queueConfirm?: boolean }
   ) => Promise<unknown>
+  /** Stiller Reconnect (USB: getPorts / createFromPort; BLE: sticky). */
+  ensureConnected?: () => Promise<boolean>
 }

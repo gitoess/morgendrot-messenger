@@ -37,38 +37,38 @@ describe('NAK-Maske', () => {
 
 describe('MORG_SEG_V1 Wire-Budget', () => {
   it('Default-Max-Rohbytes passt in Meshtastic-UTF8-Limit', () => {
-    expect(MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES).toBe(500)
-    expect(MORG_SEG_V1_DEFAULT_MAX_RAW_BYTES).toBe(321)
+    expect(MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES).toBe(200)
+    expect(MORG_SEG_V1_DEFAULT_MAX_RAW_BYTES).toBe(93)
     const raw = new Uint8Array(MORG_SEG_V1_DEFAULT_MAX_RAW_BYTES)
     const w = buildMorgSegV1Wire({
       msgId: 'deadbeef',
-      phase: 'luma',
-      seg: 0,
-      n: 16,
+      phase: 'chroma',
+      seg: 31,
+      n: 32,
       raw,
     })
-    expect(wireUtf8ByteLength(w)).toBeLessThanOrEqual(500)
-    expect(MORG_SEG_V1_DEFAULT_MAX_RAW_BYTES).toBeGreaterThan(200)
+    expect(wireUtf8ByteLength(w)).toBeLessThanOrEqual(MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES)
+    expect(MORG_SEG_V1_DEFAULT_MAX_RAW_BYTES).toBeGreaterThan(80)
   })
 
   it('ein Byte mehr verletzt das Limit (bei gleichen Header-Dimensionen)', () => {
     const max = MORG_SEG_V1_DEFAULT_MAX_RAW_BYTES
     const wOk = buildMorgSegV1Wire({
       msgId: 'deadbeef',
-      phase: 'luma',
-      seg: 0,
-      n: 16,
+      phase: 'chroma',
+      seg: 31,
+      n: 32,
       raw: new Uint8Array(max),
     })
     const wBad = buildMorgSegV1Wire({
       msgId: 'deadbeef',
-      phase: 'luma',
-      seg: 0,
-      n: 16,
+      phase: 'chroma',
+      seg: 31,
+      n: 32,
       raw: new Uint8Array(max + 1),
     })
-    expect(wireUtf8ByteLength(wOk)).toBeLessThanOrEqual(500)
-    expect(wireUtf8ByteLength(wBad)).toBeGreaterThan(500)
+    expect(wireUtf8ByteLength(wOk)).toBeLessThanOrEqual(MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES)
+    expect(wireUtf8ByteLength(wBad)).toBeGreaterThan(MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES)
   })
 
   it('längere msgId/n-Digits reduzieren das Maximum', () => {

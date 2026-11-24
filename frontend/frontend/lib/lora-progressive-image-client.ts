@@ -93,11 +93,19 @@ function loadImage(src: string): Promise<HTMLImageElement> {
   })
 }
 
-/** Zuerst sharp-Fusion über API; bei Fehler/Ausfall Canvas-Fusion. */
+/**
+ * Farbe für LoRa-Progressiv: **Canvas `color`-Blend** (Luma-Schärfe behalten).
+ * Backend sharp `composite over` deckt Luma zu → enormer Qualitätsverlust — daher Canvas zuerst.
+ */
 export async function fuseLoraProgressivePreferSharpBackend(
   luma: Uint8Array,
   chroma: Uint8Array
 ): Promise<string> {
+  try {
+    return await fuseLoraProgressiveJpegsToDataUrl(luma, chroma)
+  } catch {
+    /* Canvas fehlgeschlagen → optional Backend */
+  }
   try {
     const r = await loraProgressiveFuse(uint8ArrayToBase64(luma), uint8ArrayToBase64(chroma))
     if (r.ok === true && typeof r.fusedJpegBase64 === 'string' && r.fusedJpegBase64.length > 0) {
@@ -106,10 +114,10 @@ export async function fuseLoraProgressivePreferSharpBackend(
   } catch {
     /* Backend nicht erreichbar */
   }
-  return fuseLoraProgressiveJpegsToDataUrl(luma, chroma)
+  throw new Error('LoRa-Farbfusion fehlgeschlagen (Canvas und Backend).')
 }
 
-/** Heuristische Farbe: Luma-Helligkeit + Chroma-Färbung (Canvas `color`) – Fallback. */
+/** Heuristische Farbe: Luma-Helligkeit behalten, Chroma nur färben (Canvas `color`). */
 export async function fuseLoraProgressiveJpegsToDataUrl(luma: Uint8Array, chroma: Uint8Array): Promise<string> {
   const u1 = uint8ToObjectUrl(luma)
   const u2 = uint8ToObjectUrl(chroma)
@@ -122,11 +130,14 @@ export async function fuseLoraProgressiveJpegsToDataUrl(luma: Uint8Array, chroma
     canvas.height = h
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('Kein 2D-Context')
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
     ctx.drawImage(lumaImg, 0, 0)
     ctx.globalCompositeOperation = 'color'
     ctx.drawImage(chromaImg, 0, 0, w, h)
     ctx.globalCompositeOperation = 'source-over'
-    return canvas.toDataURL('image/jpeg', 0.88)
+    /** Hohe Fuse-Q: weniger zweite JPEG-Generation (Wire bleibt Cap). */
+    return canvas.toDataURL('image/jpeg', 0.98)
   } finally {
     URL.revokeObjectURL(u1)
     URL.revokeObjectURL(u2)

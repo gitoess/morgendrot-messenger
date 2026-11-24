@@ -61,6 +61,7 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     contactDirectoryRead,
     connectionStatusRead,
     meshSendOptions,
+    meshDevice,
     offlineMailboxQueueRead,
     handshakeActions,
     handshakeOffersRead,
@@ -346,6 +347,8 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     onMeshPlaintextToNodeEnabledChange: meshSendOptions.setMeshPlaintextToNodeEnabled,
     meshPlaintextNodeId: meshSendOptions.meshPlaintextNodeId,
     onMeshPlaintextNodeIdChange: meshSendOptions.setMeshPlaintextNodeId,
+    meshVisibleNodes: meshDevice.visibleNodes,
+    meshRadioChannels: meshDevice.radioChannels,
     meshtasticChannelIndex: meshSendOptions.meshtasticChannelIndex,
     onMeshtasticChannelIndexChange: meshSendOptions.setMeshtasticChannelIndex,
     showMeshtasticChannelIndexInput: deps.expertTools,
@@ -387,7 +390,8 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     encryptedHandshakeBlocksSend: encryptedRecipientHandshake.blocksSend,
     onEncryptedHandshakeForRecipient: handleEncryptedHandshakeForComposerRecipient,
     onEncryptedAcceptHandshakeForRecipient: handleEncryptedAcceptForComposerRecipient,
-    showPath4Checkbox: deps.expertTools,
+    /** H.25a: Funk-Bild-Optionen auch ohne Expert-Tools (Feldtest/Simple). */
+    showPath4Checkbox: true,
     onOpenPhonebook: deps.onOpenPhonebook,
     onOpenGroupSettings: deps.onOpenGroupSettings,
     isPinnwandChannel:

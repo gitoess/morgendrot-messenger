@@ -7,6 +7,11 @@ import {
   MORG_SEG_V1_REASSEMBLY_MAX_NAK_ROUNDS_DEFAULT,
   MorgSegV1ReassemblyBuffer,
 } from '@/frontend/lib/lora-sarq-reassembly'
+import {
+  clearLoraSarqRxDraft,
+  loadLoraSarqRxDraft,
+  saveLoraSarqRxDraft,
+} from '@/frontend/lib/lora-sarq-rx-draft'
 
 export type UseMorgSegReassemblyOpts = {
   /**
@@ -14,6 +19,8 @@ export type UseMorgSegReassemblyOpts = {
    */
   idleTimeoutMs?: number
   maxNakRounds?: number
+  /** Persistenz-Slot (Luma/Chroma parallel). */
+  persistPhase: 'luma' | 'chroma'
   /** Standard: no-op, wenn kein Funk-Rückkanal angebunden. */
   onNakWire?: (wire: string) => void
   onAssembled?: (bytes: Uint8Array, meta: { msgId: string; phase: 'luma' | 'chroma' }) => void
@@ -30,11 +37,13 @@ export type IngestMorgSegWireResult = {
 /**
  * Reassembly + Idle-Timer: Stufe 2 (`emitIdleNakRound`), Stufe 3 (Freeze nach `maxNakRounds`),
  * Timer nur bei neuen Segmenten (Duplikat-Rebroadcast resettet 15 s nicht).
+ * Unvollständige Sessions → localStorage (Reload → NAK „fehlende Segmente“).
  */
 const noopNak = () => {}
 
 export function useMorgSegReassembly(opts: UseMorgSegReassemblyOpts) {
   const maxRounds = opts.maxNakRounds ?? MORG_SEG_V1_REASSEMBLY_MAX_NAK_ROUNDS_DEFAULT
+  const persistPhase = opts.persistPhase
   const buffer = useMemo(() => new MorgSegV1ReassemblyBuffer({ maxNakRounds: maxRounds }), [maxRounds])
   const onNakRef = useRef(opts.onNakWire ?? noopNak)
   const onAssembledRef = useRef(opts.onAssembled)
@@ -47,6 +56,11 @@ export function useMorgSegReassembly(opts: UseMorgSegReassemblyOpts) {
   onSessionFrozenRef.current = opts.onSessionFrozen
   idleMsRef.current = opts.idleTimeoutMs ?? MORG_SEG_V1_REASSEMBLY_IDLE_MS_DEFAULT
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const restoredRef = useRef(false)
+
+  const persistRx = useCallback(() => {
+    saveLoraSarqRxDraft(buffer.exportSnapshot(), persistPhase)
+  }, [buffer, persistPhase])
 
   const clearIdleTimer = useCallback(() => {
     if (timerRef.current != null) {
@@ -64,6 +78,7 @@ export function useMorgSegReassembly(opts: UseMorgSegReassemblyOpts) {
       timerRef.current = null
       const w = buffer.emitIdleNakRound()
       if (w) onNakRef.current(w)
+      persistRx()
       const meta = buffer.getActiveSession()
       if (buffer.isSessionFrozen() && meta) {
         onSessionFrozenRef.current?.({ msgId: meta.msgId, phase: meta.phase, n: meta.n })
@@ -75,9 +90,26 @@ export function useMorgSegReassembly(opts: UseMorgSegReassemblyOpts) {
     }
 
     timerRef.current = setTimeout(tick, ms)
-  }, [buffer, clearIdleTimer, bumpUi])
+  }, [buffer, clearIdleTimer, bumpUi, persistRx])
 
   useEffect(() => () => clearIdleTimer(), [clearIdleTimer])
+
+  /** Reload: Session wiederherstellen + sofort NAK (fehlende Segmente anfordern). */
+  useEffect(() => {
+    if (restoredRef.current) return
+    restoredRef.current = true
+    const snap = loadLoraSarqRxDraft(persistPhase)
+    if (!snap) return
+    if (!buffer.importSnapshot(snap)) {
+      clearLoraSarqRxDraft(persistPhase)
+      return
+    }
+    bumpUi()
+    const wire = buffer.emitNakNow()
+    if (wire) onNakRef.current(wire)
+    persistRx()
+    if (buffer.needsIdleTimer()) armIdleTimer()
+  }, [])
 
   const ingestWire = useCallback(
     (content: string): IngestMorgSegWireResult => {
@@ -95,22 +127,56 @@ export function useMorgSegReassembly(opts: UseMorgSegReassemblyOpts) {
 
       if (r.assembled) {
         clearIdleTimer()
+        clearLoraSarqRxDraft(persistPhase)
+        if (r.completeAck) onNakRef.current(r.completeAck)
         onAssembledRef.current?.(r.assembled, { msgId: parsed.msgId, phase: parsed.phase })
         return { parsed, assembled: r.assembled }
       }
 
+      persistRx()
+      /**
+       * Kein Früh-NAK während des Bursts — kollidiert mit Sender-TX
+       * (jedes 2. Paket weg + Endlos-Nachsend). Nur Idle nach Funk-Ruhe.
+       */
       if (buffer.needsIdleTimer()) armIdleTimer()
       else clearIdleTimer()
 
       return { parsed }
     },
-    [buffer, clearIdleTimer, armIdleTimer, bumpUi]
+    [buffer, clearIdleTimer, armIdleTimer, bumpUi, persistRx, persistPhase]
   )
 
   const reset = useCallback(() => {
     clearIdleTimer()
     buffer.reset()
-  }, [buffer, clearIdleTimer])
+    clearLoraSarqRxDraft(persistPhase)
+  }, [buffer, clearIdleTimer, persistPhase])
 
-  return { ingestWire, reset, buffer, uiTick }
+  const seedFromInit = useCallback(
+    (msgId: string, phase: 'luma' | 'chroma', n: number, opts?: { nakNow?: boolean }) => {
+      buffer.seedFromInit(msgId, phase, n)
+      bumpUi()
+      if (opts?.nakNow !== false) {
+        const wire = buffer.emitNakNow()
+        if (wire) onNakRef.current(wire)
+      }
+      persistRx()
+      if (buffer.needsIdleTimer()) armIdleTimer()
+    },
+    [buffer, bumpUi, armIdleTimer, persistRx]
+  )
+
+  /**
+   * Bei neuer Mesh-Aktivität: offene Lücken erneut als MORG_NAK melden
+   * („schicke noch Segment x von Bild y“) — kein neues Protokoll.
+   */
+  const requestMissingAgain = useCallback(() => {
+    const wire = buffer.emitNakNow()
+    if (wire) onNakRef.current(wire)
+    persistRx()
+    if (buffer.needsIdleTimer()) armIdleTimer()
+    return wire
+  }, [buffer, armIdleTimer, persistRx])
+
+  return { ingestWire, reset, buffer, uiTick, seedFromInit, requestMissingAgain }
 }

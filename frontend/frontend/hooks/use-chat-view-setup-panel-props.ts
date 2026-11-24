@@ -5,13 +5,16 @@ import type { ChatViewSetupPanelProps } from '@/frontend/components/chat-view-se
 import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
 
 export type ChatViewSetupPanelPropsDeps = {
-  messengerPorts: Pick<ChatViewMessengerPorts, 'sendTransportRead' | 'meshDevice' | 'meshSetup'>
+  messengerPorts: Pick<
+    ChatViewMessengerPorts,
+    'sendTransportRead' | 'meshDevice' | 'meshSetup' | 'meshSendOptions'
+  >
 }
 
 export function useChatViewSetupPanelProps(
   deps: ChatViewSetupPanelPropsDeps
 ): ChatViewSetupPanelProps {
-  const { sendTransportRead, meshDevice, meshSetup } = deps.messengerPorts
+  const { sendTransportRead, meshDevice, meshSetup, meshSendOptions } = deps.messengerPorts
 
   return useMemo(
     () => ({
@@ -25,6 +28,17 @@ export function useChatViewSetupPanelProps(
         error: meshDevice.error,
         lastRxDebug: meshDevice.lastRxDebug,
         meshRxSubscriptions: meshDevice.meshRxSubscriptions,
+        visibleNodes: meshDevice.visibleNodes,
+        radioChannels: meshDevice.radioChannels,
+        onPickVisibleNode: (nodeId: string) => {
+          meshSendOptions.setMeshPlaintextNodeId(nodeId)
+          meshSendOptions.setMeshPlaintextToNodeEnabled(true)
+        },
+        onPickRadioChannel: (index: number) => {
+          meshSendOptions.setMeshtasticChannelIndex(index)
+        },
+        selectedChannelIndex: meshSendOptions.meshtasticChannelIndex,
+        refreshMeshDirectory: meshDevice.refreshMeshDirectory,
         connect: meshDevice.connect,
         connectBluetooth: meshDevice.connectBluetooth,
         connectUsb: meshDevice.connectUsb,
@@ -40,6 +54,6 @@ export function useChatViewSetupPanelProps(
       meshSyncMsg: meshSetup.meshSyncMsg,
       setMeshSyncMsg: meshSetup.setMeshSyncMsg,
     }),
-    [sendTransportRead.forcedTransport, meshDevice, meshSetup]
+    [sendTransportRead.forcedTransport, meshDevice, meshSetup, meshSendOptions]
   )
 }

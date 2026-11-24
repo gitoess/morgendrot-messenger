@@ -54,6 +54,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { SlideShowCrossfade } from '@/frontend/components/slide-show-crossfade'
 import type { ChatInboxRow } from '@/frontend/features/inbox/chat-view-inbox-rows'
+import { inboxMessageRowStableKey } from '@/frontend/features/inbox/chat-view-inbox-rows'
 import {
   downloadInboxMessagePlainText,
   downloadSneakernetPackage,
@@ -390,8 +391,9 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
               : row.msg.from)
 
           if (chatLayout) {
+            const stableKey = inboxMessageRowStableKey(row.msg)
             return (
-              <Fragment key={row.msg.id}>
+              <Fragment key={stableKey}>
                 {showDayHeading ? (
                   <li className="list-none py-2 text-center" aria-hidden={false}>
                     <span className="inline-block rounded-full bg-muted/80 px-3 py-0.5 text-[10px] font-semibold text-muted-foreground">
@@ -400,7 +402,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   </li>
                 ) : null}
                 <li
-                  id={`inbox-msg-${row.msg.id}`}
+                  id={`inbox-msg-${stableKey}`}
                   className={cn(
                     'flex list-none gap-2',
                     outgoingRowEarly ? 'justify-end' : 'justify-start'
@@ -491,8 +493,8 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
 
           return (
           <li
-            key={row.msg.id}
-            id={`inbox-msg-${row.msg.id}`}
+            key={inboxMessageRowStableKey(row.msg)}
+            id={`inbox-msg-${inboxMessageRowStableKey(row.msg)}`}
             className={cn(
               'rounded-xl border border-border bg-card/80 p-4 shadow-sm transition-colors hover:bg-accent/30',
               isPinnwandInboxMessage?.(row.msg) &&
@@ -902,14 +904,32 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     disabled={!hasMorgMedia}
                     title={
                       hasMorgMedia
-                        ? 'Dekodierbare MORG-Medien aus dieser Zeile speichern'
+                        ? 'Dekodierbare MORG-Medien speichern (S-ARQ: alle Segmente derselben msgId)'
                         : 'Keine MORG-Medien-Marker in dieser Zeile. Galerie → Optionen → Export.'
                     }
                     onSelect={() => {
                       if (!hasMorgMedia) return
-                      void downloadMorgMediaFilesDirect([row.msg]).then((r) => {
+                      /** S-ARQ: Leader-Zeile allein hat nur 1 Segment — Geschwister mit gleicher msgId mitgeben. */
+                      const raw = row.msg.content ?? ''
+                      const msgIdMatch = /msgId=([a-f0-9]{8})/i.exec(raw)
+                      const msgId = msgIdMatch?.[1]?.toLowerCase()
+                      const from = (row.msg.from ?? '').trim().toLowerCase()
+                      const bundle =
+                        msgId && raw.includes('MORG_SEG_V1')
+                          ? messages.filter((m) => {
+                              const c = m.content ?? ''
+                              if (!c.includes(msgId)) return false
+                              if (!c.includes('MORG_SEG_V1') && !c.includes('MORG_LUMA') && !c.includes('MORG_CHROMA')) {
+                                return m.id === row.msg.id
+                              }
+                              return (m.from ?? '').trim().toLowerCase() === from || m.id === row.msg.id
+                            })
+                          : [row.msg]
+                      void downloadMorgMediaFilesDirect(bundle.length ? bundle : [row.msg]).then((r) => {
                         if (r.count === 0) {
-                          toast.message('Keine dekodierbaren Medien in dieser Nachricht.')
+                          toast.message(
+                            'Keine dekodierbaren Medien — S-ARQ-Bild ggf. noch unvollständig (Lücken).'
+                          )
                           return
                         }
                         toast.success(`${r.count} Datei(en) gespeichert.`)

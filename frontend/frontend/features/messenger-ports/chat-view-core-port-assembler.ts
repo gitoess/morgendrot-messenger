@@ -341,15 +341,20 @@ export type ChatViewMeshDeviceSlice = {
   error: string | null
   lastRxDebug: string | null
   meshRxSubscriptions: string | null
+  visibleNodes: readonly import('@/frontend/lib/meshtastic-visible-nodes').MeshtasticVisibleNode[]
+  radioChannels: readonly import('@/frontend/lib/meshtastic-radio-channels').MeshtasticRadioChannel[]
   connect: () => Promise<void>
   connectBluetooth: () => Promise<void>
   connectUsb: () => Promise<void>
   disconnect: () => void
+  refreshMeshDirectory: () => Promise<void>
   sendMeshText: (
     text: string,
     destination?: number | 'broadcast',
-    channelIndex?: number
-  ) => Promise<number>
+    channelIndex?: number,
+    opts?: { wantAck?: boolean; isCancelled?: () => boolean; queueConfirm?: boolean }
+  ) => Promise<unknown>
+  ensureConnected?: () => Promise<boolean>
 }
 
 export type ChatViewMeshSetupSlice = {

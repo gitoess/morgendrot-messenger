@@ -228,7 +228,7 @@ async function ingestImage(
     return {
       ok: true,
       softWarning: rawOverLoRaCap
-        ? `Bild wird für Funk (Flüchtig) auf dem Gerät verkleinert (max. ${Math.round(FLUENT_LORA_IMAGE_MAX_TOTAL_BYTES / 1024)} KB, MozJPEG WASM — ohne PC/Server).`
+        ? `Bild wird für Funk automatisch verkleinert (max. ~${(FLUENT_LORA_IMAGE_MAX_TOTAL_BYTES / 1024).toFixed(1)} KB JPEG Luma+Chroma).`
         : enc.encoder === 'wasm'
           ? 'LoRa-Bild lokal kodiert (Gerät, ohne Morgendrot-API).'
           : undefined,

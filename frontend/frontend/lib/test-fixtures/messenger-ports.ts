@@ -49,10 +49,13 @@ function defaultMeshDeviceSlice(over: Partial<ChatViewMeshDeviceSlice> = {}): Ch
     error: null,
     lastRxDebug: null,
     meshRxSubscriptions: null,
+    visibleNodes: [],
+    radioChannels: [],
     connect: vi.fn(async () => {}),
     connectBluetooth: vi.fn(async () => {}),
     connectUsb: vi.fn(async () => {}),
     disconnect: vi.fn(),
+    refreshMeshDirectory: vi.fn(async () => {}),
     sendMeshText: vi.fn(async () => 0),
     ...over,
   }

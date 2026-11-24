@@ -15,7 +15,7 @@
 | Bereich | Inhalt |
 |---------|--------|
 | **App-Header** (Boss/Messenger) | **Tresor**, **Aktualisieren** (Status + Posteingang + Kontakte), Handbuch, Einstellungen — **nicht** in der Posteingang-Leiste. In **Nachrichten** / **Einsatzleitung**: nur das **Gegenstück** als Schalter. In **Einstellungen**: Titel + Sprünge zu Nachrichten und Einsatzleitung |
-| **Chat-Kopf** | Sendepfad (**Alle** / Funk / **IOTA** / Telegram) steuert **Senden** (nicht die Posteingangs-Liste), **Ton/Stumm**, **SOS**. Liste filtern: Filter/Kanal. Mit Sidebar: **kein** großer Kanal-/Posteingang-Titel |
+| **Chat-Kopf** | Sendepfad (**Alle** / Funk / **IOTA** / Telegram) steuert **Senden** und blendet die Posteingangs-Liste auf die Quelle (Funk→nur Funk, IOTA→Chain, Telegram→TG; Online/Alle→alles). Zusätzlich Toolbar-Filter (Eingang/Ausgang, Verschl./Klartext). **Ton/Stumm**, **SOS**. |
 | **Seitenleiste** (Desktop) | **Chats** gleiche Höhe wie Posteingang (`min(70vh,44rem)`), scrollt |
 | **Posteingang** (rechts) | Nachrichten + Toolbar; **Auswahl** = gebündelte Zeilen-Aktionen |
 | **Composer** | **Volle Breite unter beiden Spalten** (eigene Leiste, kein Overlap): `[+]` = Datei, Kamera, STT, Telefonbuch, **An Adresse senden**, **Sprachnachricht**, **Passphrase-Schutz**, **NFT-Leserecht**; Text; Senden. Empfänger-Wallet bei aktivem Chat ausgeblendet |
@@ -127,6 +127,12 @@ Laut [Meshtastic Channel Configuration](https://meshtastic.org/docs/configuratio
 
 **Ist (App, § H.3o):** Funk-Senden nutzt standardmäßig den **Primary-Kanal** des verbundenen Heltec (Klartext). In **Gruppe verwalten** kann pro Gruppe **Kanalindex 0–7**, **Kanalname** und **PSK-Ref** gespeichert werden; im Composer (Expert, `[+]`) optional derselbe Index. PSK/Frequenz bleiben in der **Meshtastic-App** — Morgendrot sendet auf dem vorkonfigurierten Index. **Offen:** Feldtest mit random PSK (Roadmap § H.3o.6 Schritt 4).
 
+**Funk-Betrieb (kurz):** Einstellungen (Region, Modem-Preset, Kanalname, PSK) = **Meshtastic-App**. Chat = **Morgendrot** (USB oder Bluetooth). **Ein USB-Port = ein Programm**. Parallel: App auf USB, Morgendrot per Bluetooth. Schreibtisch-Bilder: beide Nodes **MediumFast** — siehe **`docs/LORA-PC-FIRST-SMOKE.md`**.
+
+**Gleich auf Sender und Empfänger:** Region, Modem-Preset, Kanalindex **und** PSK (Primary oft Default; deine Kanäle = Secondary mit gleichem PSK). Im Messenger: Funk & Geräte zeigt **Kanäle vom Radio** und **sichtbare Nodes** (Suchfeld + „Nodes & Kanäle neu laden“); Node antippen = direkt anschreiben. Nodes/Kanäle bleiben nach Reload lokal gecacht; nach Connect lädt `configure()` die Radio-NodeDB. Community-Kanäle („Freiraum“, „Kanal frei“ o. Ä.): nur in der Meshtastic-App als Secondary anlegen/teilen — erscheinen danach hier, kein globales Kanal-Verzeichnis. Dauerhaft: Telefonbuch → Meshtastic-Node-ID.
+
+**Bilder über Funk (H.25a, Desk STABIL):** Sendepfad **Funk**, Verschlüsselung **aus** → **+** → **Bilder über Funk…** → Bild wählen → **Senden**. Empfänger: zuerst S/W, dann Farbe; Fortschritt ohne Tab-Wechsel; **Klick aufs Bild → Vollbild/Zoom** (Mausrad oder +/−, Esc zu). Speichern = ein Farb-JPEG. Cap ≤ 3,6 KB; typisch ~1:30–1:45 am Schreibtisch. Audio über Funk gibt es nicht (nur Online/IOTA).
+
 #### LoRa „An alle“ — nicht Pinnwand
 
 **Kurz:** Primary-Broadcast auf Funk heißt in der App **„An alle“** (nur **Klartext**, Kanal **1:1**, Sendepfad **Funk**). Das ist **kein** eigener Kanal-Tab und **keine** Morgendrot-Pinnwand.
@@ -146,7 +152,7 @@ Laut [Meshtastic Channel Configuration](https://meshtastic.org/docs/configuratio
 
 Der frühere **Mesh-v2-/PRIVATE_APP-Versand** ist im **Produkt abgeschaltet** (nur noch **Empfang** älterer Nachrichten).
 
-**Visuell getrennt:** **Alle** / **IOTA** = Wallet, Chain, ggf. **Tor** (siehe unten). **Funk** = **Heltec** über **Web Bluetooth** im Browser — kein „WLAN-Funk“, sondern BLE zum Gerät.
+**Visuell getrennt:** **Alle** / **IOTA** = Wallet, Chain, ggf. **Tor** (siehe unten). **Funk** = **Heltec** über **Web Serial (USB)** oder **Web Bluetooth** — kein WLAN-Funk.
 
 ---
 
