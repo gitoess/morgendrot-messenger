@@ -144,6 +144,32 @@ Lokal-Dev zusätzlich: `ENABLE_UI=true`, `API_PORT`/`UI_PORT`, `API_BIND_HOST=12
 
 **Server:** Kernnutzung ohne Pflicht-Node möglich; optional lokal für Komfort — `docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`.
 
+### Caps / Pill sehen (Demo)
+
+| Was | Wo |
+|-----|-----|
+| Pill **Messenger** statt Boss | Build mit `NEXT_PUBLIC_PRODUCT_ID=iota-messenger` **oder** `.env` `ROLE=messenger` (dann Pill „Messenger“) |
+| Titel **IOTA Messenger** | nur mit `NEXT_PUBLIC_PRODUCT_ID=iota-messenger` (Frontend-Build) |
+| Visitenkarte | **Nachrichten** → Sidebar **Ich** → Profil öffnen → Block **Visitenkarte teilen** |
+
+Normales `npm run dm` mit `ROLE=boss` = **volles Morgendrot** → Boss-Pill bleibt. Edition bewusst starten (Overlay / `Desktop/iota-messenger` Bootstrap).
+
+### Weg A — HTTPS-Web-Demo (Vercel / Cloudflare Pages)
+
+**Ja, grundsätzlich** — gut für PC + Handy-Browser (PWA, Secure Context für BLE später).
+
+| Braucht’s | Urteil |
+|-----------|--------|
+| **Statisches Next-Frontend** + `NEXT_PUBLIC_PRODUCT_ID=iota-messenger` + Testnet-RPC/IDs | **Kern-Demo** (Tresor, Direct-IOTA, Chat) machbar |
+| **Eigener Morgendrot-API-Node** auf dem Hoster | Oft **nicht** trivial auf reinem Pages/Vercel (langer Node-Prozess, Secrets, Telegram-Poll). Demo dann **Direkt-RPC** / Standalone-Pfad |
+| **„Geschützt“** | Edge-Basic-Auth / Cloudflare Access **oder** nur Tresor-PW in der App — nicht dasselbe |
+| Custom Domain `app.…` | DNS → Hosting; **HTTPS** Pflicht |
+| Funk USB/BLE | Browser braucht Secure Context; USB am Handy oft nicht |
+
+**Nicht erwarten:** ein Upload von `frontend/` allein ersetzt nicht `.env`, Gas, Package/Mailbox-IDs und Live-Testnet. Seed nie ins Repo / Build-Log.
+
+**Lokal zeigen jetzt:** Overlay-Env + `dm` mit Edition-Flags — oder Desktop-`iota-messenger` Bootstrap. Öffentliche URL = eigene Scheibe (Deploy-Skript + Secrets-Checkliste), nicht Big-Bang.
+
 ---
 
 ## 5. Capabilities-Override (Runtime)

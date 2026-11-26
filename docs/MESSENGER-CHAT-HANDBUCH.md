@@ -41,7 +41,8 @@ Details + Tabelle: **`EINSTELLUNGEN-NUTZER-HANDBUCH.md`**.
 
 ### Visitenkarte (Ich)
 
-Unter Sidebar / Profil **„Ich“**: Block **Visitenkarte teilen** — Checkboxen (Name, Wallet, optional Mailbox / TG-ID / ECDH) → **Text** oder **QR-JSON** (`k:'mc'`, gleiches Kontakt-QR). Kein Avatar in dieser Stufe.
+**Pfad:** **Nachrichten** → linke Sidebar Eintrag **Ich** (nicht Einstellungen) → Profil → Block **Visitenkarte teilen**.  
+Checkboxen (Name, Wallet, optional Mailbox / TG-ID / ECDH) → **Text** oder **QR-JSON** (`k:'mc'`). Kein Avatar in dieser Stufe.
 
 ### Zwei-Wallet am selben PC (E2EE-Surrogat)
 

@@ -28,8 +28,9 @@
 
 **Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
-**Alpha-PC-Checkliste (Messenger, manuell — 2026-11-26):** Soft-Pause→Weitersprechen · Burn · Solo-Wizard · Visitenkarte in „Ich“ · Caps Pill „Messenger“ (Edition) · Zwei-Wallet-Hinweis im Handbuch.  
-**Nächste Bau-Zeile (eine):** Alpha-Zeilen live abhaken *oder* H.16 „Gruppe je Sendepfad“ **nur Spec/Skizze** (kein UI-Big-Bang). Boss/Helfer/Ratchet-Default/TG-Auto-Sidebar-Bau **nicht** parallel.
+**Alpha-PC-Checkliste (Messenger, manuell — 2026-11-26):** Soft-Pause→Weitersprechen · Burn · Solo-Wizard · Visitenkarte (**Nachrichten → Sidebar Ich → Visitenkarte teilen**) · Caps Pill (**Edition-Build** / `ROLE=messenger`, sonst Boss) · Zwei-Wallet-Handbuch.  
+**Weg A HTTPS-Demo:** Spec-Notiz in `IOTA-MESSENGER-EDITION-V1.md` §4 — machbar, eigene Deploy-Scheibe; kein Big-Bang.  
+**Nächste Bau-Zeile (eine):** Edition lokal zeigen (`ROLE=messenger` / PRODUCT_ID) *oder* Deploy-Checkliste Weg A (klein). Boss/Helfer/H.16-UI/Ratchet-Default **nicht** parallel.
 
 **„Jetzt fertig“ ≠ gesamtes H.\*-Universum.** Die Nov-22-Triage-Tabelle am Kopf war **PC-Messenger-Alltag** (Unlock, Desk-Smoke, Labels, Soft-Pause, Burn-Doku, Solo-Wizard). Folgendes bleibt **offen / Später** — bewusst nicht „mitabgehakt“:
 
