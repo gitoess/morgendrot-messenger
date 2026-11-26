@@ -28,8 +28,8 @@ export function ChatViewGroupSettingsSheet(p: ChatViewGroupSettingsSheetProps) {
             Gruppe verwalten
           </SheetTitle>
           <SheetDescription>
-            IOTA: Mitglieder und Postfach. Funk-Kanal optional in diesem Sheet. Telegram-Alarm nur unter
-            Einstellungen → Telegram — das ist kein Gruppenchat.
+            Tabs IOTA / Funk / Telegram: ein Gruppen-Datensatz, drei Pfade. Composer wählt den Transport.
+            Telegram-Tab = Hinweis; Alarm-Setup unter Einstellungen → Telegram.
           </SheetDescription>
         </SheetHeader>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">

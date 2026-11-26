@@ -669,9 +669,9 @@ Zum Prüfen: Browser-DevTools → Application → localStorage → `morgendrot.m
 
 ### 5–6) „Gruppe verwalten“ pro Sendepfad?
 
-**Ist:** ein Sheet (IOTA-Kern + optional Funk-Meta). Telegram-Alarm = Einstellungen → Telegram (kein Bot-Gruppenchat).
+**Ist:** Sheet mit Tabs **IOTA** / **Funk** / **Telegram** (ein Datensatz). Composer wählt den Transport. Telegram-Tab = Hinweis; Alarm-Setup = Einstellungen → Telegram (kein Bot-Gruppenchat). Edition kann den Telegram-Tab ausblenden.
 
-**Spec:** `docs/H16-GRUPPE-JE-SENDEPFAD-SPEC.md` (S0 Spec + S1 Copy Ist; S2 Tabs später). Drei Fenster = ein Datenmodell, kein Parallel-Chaos.
+**Spec:** `docs/H16-GRUPPE-JE-SENDEPFAD-SPEC.md` (S0–S2 Ist).
 
 ---
 

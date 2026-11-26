@@ -39,9 +39,17 @@ describe('ChatViewGroupPanel (§ H.1a)', () => {
     expect(screen.getByRole('button', { name: /Alpha Team \(1\)/i })).toBeInTheDocument()
   })
 
-  it('zeigt Meshtastic Secondary bei Sendepfad funk', () => {
-    render(<ChatViewGroupPanel contactDirectory={{}} forcedTransport="mesh" />)
+  it('zeigt Funk-Kanal im Tab Funk (nicht nur bei Sendepfad funk)', () => {
+    render(<ChatViewGroupPanel contactDirectory={{}} />)
+    expect(screen.queryByPlaceholderText(/Index 0-7/i)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: /^Funk$/i }))
     expect(screen.getByPlaceholderText(/Index 0-7/i)).toBeInTheDocument()
+  })
+
+  it('Telegram-Tab verweist auf Einstellungen', () => {
+    render(<ChatViewGroupPanel contactDirectory={{}} />)
+    fireEvent.click(screen.getByRole('tab', { name: /^Telegram$/i }))
+    expect(screen.getByText(/Einstellungen → Telegram/i)).toBeInTheDocument()
   })
 
   it('deaktiviert Enc bei funk', () => {

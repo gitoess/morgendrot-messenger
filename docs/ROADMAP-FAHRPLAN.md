@@ -29,7 +29,7 @@
 **Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
 **Alpha-PC-Checkliste (Messenger, manuell — 2026-11-26):** Soft-Pause→Weitersprechen · Burn · Solo-Wizard · Visitenkarte in „Ich“ · Caps Pill „Messenger“ (Edition) · Zwei-Wallet-Hinweis im Handbuch — **User: soweit ok**.  
-**Nächste Bau-Zeile (eine):** H.16 S2 Tabs nur mit OK · sonst kleine PC-UX (H.22 Copy) · **Profilbild** Später. Boss/Helfer/Ratchet-Default **nicht** parallel.
+**Nächste Bau-Zeile (eine):** H.16 S2 Tabs **Ist** — Live kurz Gruppe/Funk-Tab; dann kleine UX/H.22-Reste. **Profilbild** Später. Boss/Helfer/Ratchet-Default **nicht** parallel.
 
 **„Jetzt fertig“ ≠ gesamtes H.\*-Universum.** Die Nov-22-Triage-Tabelle am Kopf war **PC-Messenger-Alltag** (Unlock, Desk-Smoke, Labels, Soft-Pause, Burn-Doku, Solo-Wizard). Folgendes bleibt **offen / Später** — bewusst nicht „mitabgehakt“:
 
@@ -43,7 +43,7 @@
 
 **Nicht parallel:** Profilbild-Bau (Backlog), Drehrad/Handy-UI, EXE, Cap/Gap-Experimente, Blind-Big-Bang an Mailbox-Indexer, Ratchet-Default ohne Live-2-Geräte.
 
-1. **Fokus jetzt:** H.16 S2 Tabs nur mit OK · kleine H.22/UX-Scheiben → **kein** Boss/Helfer-Bau. Alpha soweit ok.  
+1. **Fokus jetzt:** H.16 S2 Live-Abnahme · kleine H.22/UX-Scheiben → **kein** Boss/Helfer-Bau. Alpha soweit ok.  
 2. **Erledigt Phase 1–3 Desk:** Messenger-Kern, 4b–4d, H.25a STABIL. Burn/Solo-Wizard/PC-Durchgang/Soft-Pause-Live + Caps Role-Pill **Ist 2026-11-26**.  
 3. **Scope-Arbeitsmodell (vorläufig):** IOTA-Messenger = **Boss ohne Helfer** + Freunde; Transporte IOTA/Funk/Telegram **drin**; Helfer/Handoff/Einsatz-Hub **raus**. Morgendrot = **alles**. Detail erst im Durchgang — Caps nicht blind flippen.  
 4. **Nicht parallel:** EXE vor Wizard/Durchgang; Cap/Gap-Experimente; WhatsApp/Paywall; Drehrad-Mock.  
@@ -64,7 +64,7 @@
 | **Drehrad-UI** | Handy-Idee merken; **kein** PC-Umbau jetzt | später Phase 2 |
 | **Nachrichten-FAQ** | Funk-Cap 200 / S-ARQ-Kollaps / TG nur Text+Platzhalter / Alarm≠Gruppenchat / Prefix hardcoded | `MESSENGER-CHAT-HANDBUCH.md` FAQ |
 | **Backlog Nachrichten** | Auto-Sidebar wenn Bot in TG-Gruppe; NFT-Chip an Aktionen (opt.) | nach Solo-Wizard |
-| **H.16 / Gruppen** | **Gruppe verwalten je Sendepfad** — Spec S0 + Sheet-Copy S1 **Ist 2026-11-26**; S2 Tabs später | `docs/H16-GRUPPE-JE-SENDEPFAD-SPEC.md` |
+| **H.16 / Gruppen** | Tabs IOTA/Funk/Telegram **S2 Ist 2026-11-26** | `docs/H16-GRUPPE-JE-SENDEPFAD-SPEC.md` |
 | **TG-Bild** | Composer: `sendPhoto` + Ack (Cap ~1,5 MB) **Ist**; Klingel weiter Text. Feinschliff/Tests → merken | `MESSENGER-CHAT-HANDBUCH` FAQ |
 | **Vault on-chain** | create→update ein Blob; Insufficient Gas → skaliertes Budget | Härte |
 | **Vault Soft-Pause UX** | Direkt Weitersprechen; kein unteres PW-CTA; Scrim viewport-fixed | Ist 2026-11-26 Live |
@@ -101,6 +101,7 @@
 | **Visitenkarte MVP** | „Ich“ Share-Checkboxen → `mc`-QR/Text | **erledigt 2026-11-26** |
 | **Ich-Blatt UX** | Visitenkarte im Kontakt-Detail; Alarmgruppe raus; kein Chat-öffnen auf Self | **erledigt 2026-11-26** |
 | **Visitenkarte +** | Als Nachricht; TG-Dedupe; Funk-Node optional Klartext; kein Telefon | **erledigt 2026-11-26** |
+| **H.16 S2 Tabs** | Gruppe verwalten: IOTA / Funk / Telegram-Tabs | **erledigt 2026-11-26** |
 | **Alpha-Checkliste** | Desk-Smoke + Caps + Soft-Pause + Burn + Wizard + Visitenkarte | **soweit ok** (User 2026-11-26) |
 | **H.16 Gruppe×Pfad** | Spec S0 + Sheet-Copy S1 | **erledigt 2026-11-26** — S2 Tabs → später |
 

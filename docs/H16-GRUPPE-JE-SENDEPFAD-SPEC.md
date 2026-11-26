@@ -1,7 +1,7 @@
 # H.16 — Gruppe verwalten je Sendepfad (Spec / Skizze)
 
-**Stand:** 2026-11-26 · **Status:** Spec only — **kein** UI-Big-Bang in dieser Tranche.  
-**Ort UI heute:** ein Sheet „Gruppe verwalten“ (`ChatViewGroupSettingsSheet` → `ChatViewGroupPanel`).  
+**Stand:** 2026-11-26 · **Status:** S0–S2 Teil-Ist (Tabs im Sheet, gleiche Stores).  
+**Ort UI:** Sheet „Gruppe verwalten“ (`ChatViewGroupSettingsSheet` → `ChatViewGroupPanel`) mit Tabs IOTA / Funk / Telegram.  
 **Verwandt:** `docs/IDEEN-BACKLOG.md` · Chat-Handbuch FAQ 5–6 · `docs/CHAT-GRUPPE-EINRICHTEN.md` (älter, .env-lastig).
 
 ---
@@ -54,11 +54,11 @@ Composer-Sendepfad wählt weiterhin den **Transport**; die Fenster pflegen nur d
 | Stufe | Was | Akzeptanz |
 |-------|-----|-----------|
 | **S0 Spec** | Dieses Dokument + Handbuch-Hinweis | **Ist 2026-11-26** |
-| **S1 Copy** | Sheet-Beschreibung ehrlich: „IOTA-Kern; Funk-Felder unten; TG-Alarm → Einstellungen“ | kleine UI-Zeile ok |
-| **S2 Tabs** | Drei Tabs im bestehenden Sheet, gleiche `GroupRecord`-Felder, keine neuen Stores | Vitest Panel; Live Gruppe anlegen |
-| **S3 Edition** | IOTA-Messenger: Tab Telegram aus / Alarmgruppe Caps | Caps-Test |
+| **S1 Copy** | Sheet-Beschreibung ehrlich | **Ist** |
+| **S2 Tabs** | Drei Tabs im Sheet, gleiche Stores; Funk immer pflegbar; TG-Tab = Hinweis | **Ist 2026-11-26** (Vitest) |
+| **S3 Edition** | IOTA-Messenger: Tab Telegram aus (`hideTelegramEinsatzAlarm`) | **Ist** (Cap blendet Tab) |
 
-**Stopp vor S2**, bis Alpha/PC-Alltag ruhig und User-OK für Tabs.
+**Weiter:** kein Big-Bang an Wire/Handoff-`groupPaths`; Live kurz Gruppe speichern + Funk-Tab prüfen.
 
 ---
 
