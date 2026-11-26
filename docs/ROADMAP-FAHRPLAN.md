@@ -36,7 +36,7 @@
 | Thema | Stand | Wann |
 |-------|--------|------|
 | **H.23 C1 Double Ratchet** | Spec+Codec+C1.6 Opt-in-Send **Ist**; **kein** Composer-Default | PC 2-Wallet-Smoke; Default erst nach Feld/2. Gerät |
-| **H.22 Rest** (Mailbox-Abhol/Indexer, Enc-Events neben DFs; Kontakt-Slots Feinschliff) | Klarheit-Copy **Ist**; tiefer Abhol-/Index-Pfad **offen** | kleine PC-Scheiben ok; kein Big-Bang |
+| **H.22 Rest** (Mailbox-Abhol/Indexer, Enc-Events neben DFs; Kontakt-Slots Feinschliff) | Klarheit-Copy + Enc≠nur-Mailbox Claims **Ist**; tiefer Abhol-/Index-Pfad **offen** | kleine PC-Scheiben ok; kein Big-Bang |
 | **B2 TBA-/Discovery-Index** (NFT „Gesichert“) | Code-Ist + Smoke; nicht dasselbe wie Chat-Mailbox-Index | halten; Joint-Retest mit 2. Gerät |
 | **IOTA↔LoRa / Delayed Upload** | Spec `LORA-IOTA-DELAYED-UPLOAD-SPEC`; **keine** volle IOTA-TX über LoRa (`H.3m`) | **Phase 3 Funk** (+ Gateway) |
 | **Handy / 2. Gerät / H.36 / Shop** | Später-Tabelle | Phasen 2–4 |
@@ -110,6 +110,7 @@
 | **H.22 Slot-Copy** | Composer „Speicher auf der Chain“ Kurz-Hinweis | **erledigt 2026-11-26** |
 | **C1.6 Doku-Nachzug** | Privacy-Anleitung + PWA-Handbuch (C1.6 Ist); Role-Pill Vitest | **erledigt 2026-11-26** |
 | **C1 nur 1:1 UI** | Gruppen-⋮ ohne Ratchet-Toggle; Claims/Handbuch ehrlich | **erledigt 2026-11-26** |
+| **H.22 Enc/Event Claims** | SSOT+Handbuch+Composer-Hinweis: Enc auch Event; Empfang ≠ DF | **erledigt 2026-11-26** |
 | **H.16 Gruppe×Pfad** | Spec S0–S2 Tabs | **erledigt 2026-11-26** |
 
 ### Später machen bzw. nochmals später klären (User-Durchgang ab 2026-11-22)

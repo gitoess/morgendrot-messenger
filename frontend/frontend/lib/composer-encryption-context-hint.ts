@@ -49,11 +49,11 @@ export function getComposerEncryptionContextHint(input: ComposerEncryptionHintIn
   if (forcedTransport === 'internet') {
     if (encrypted) {
       if (typeof window !== 'undefined' && readRatchetExperimentEnabled()) {
-        return 'Online · Double Ratchet (Experiment, Opt-in): innere RATCHET_V3 — Partner braucht dasselbe Flag. Kein Produktiv-Default.'
+        return 'Online · Double Ratchet (Experiment, Opt-in, 1:1): innere RATCHET_V3 — Partner braucht dasselbe Flag. Kein Produktiv-Default.'
       }
-      return 'Online · Session Keys+ (Envelope v2): Schutz auf der Mailbox — Rotation unter ⋮ Schlüssel erneuern.'
+      return 'Online · Session Keys+ (Envelope v2): Enc on-chain (Event oder Mailbox laut „Speicher auf der Chain“) — Rotation unter ⋮ Schlüssel erneuern.'
     }
-    return 'Online · Klartext: unverschlüsselt auf Mailbox/IOTA — Schloss aus.'
+    return 'Online · Klartext: unverschlüsselt (Event oder Mailbox) — Schloss aus.'
   }
 
   if (forcedTransport === 'adhoc') {

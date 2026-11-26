@@ -110,6 +110,26 @@ describe('ChatConversationMenuItems', () => {
     expect(screen.queryByText(/Double Ratchet/i)).not.toBeInTheDocument()
   })
 
+  it('1:1 mit Chain-Tools: Double-Ratchet-Eintrag sichtbar', () => {
+    render(
+      <DropdownMenu open>
+        <DropdownMenuTrigger asChild>
+          <button type="button">open</button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <ChatConversationMenuItems
+            title="Peer"
+            canClearHistory
+            canExport={false}
+            showChainSecurityTools
+            showRatchetExperiment
+          />
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
+    expect(screen.getByText(/Double Ratchet/i)).toBeInTheDocument()
+  })
+
   it('rendert Info ohne ⋮-Trigger', () => {
     const onViewInfo = vi.fn()
     render(
