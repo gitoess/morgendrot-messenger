@@ -30,7 +30,17 @@
 
 **Nächste Bau-Zeile (eine):** **PC-Durchgang** (manuell Live: Soft-Pause, Burn, Solo-Wizard einmal durch) → Alpha-Checkliste. Solo-Wizard Wanderer-Pfad **Ist**.
 
-**Nicht parallel:** Profilbild/Visitenkarte-Bau, Drehrad/Handy-UI, EXE, Cap/Gap-Experimente, Später-Tabelle (Funk-Feld, Handy, 2. Gerät, H.36, Shop, …).
+**„Jetzt fertig“ ≠ gesamtes H.\*-Universum.** Die Nov-22-Triage-Tabelle am Kopf war **PC-Messenger-Alltag** (Unlock, Desk-Smoke, Labels, Soft-Pause, Burn-Doku, Solo-Wizard). Folgendes bleibt **offen / Später** — bewusst nicht „mitabgehakt“:
+
+| Thema | Stand | Wann |
+|-------|--------|------|
+| **H.23 C1 Double Ratchet** | Spec+Codec **Ist**; **kein** Composer-Default | Default / Session-C nach **2. Gerät** (Phase 4); FS-Claims ehrlich halten |
+| **H.22 Rest** (Mailbox-Abhol/Indexer, Enc-Events neben DFs; Kontakt-Slots Feinschliff) | Klarheit-Copy **Ist**; tiefer Abhol-/Index-Pfad **offen** | kleine PC-Scheiben ok; kein Big-Bang |
+| **B2 TBA-/Discovery-Index** (NFT „Gesichert“) | Code-Ist + Smoke; nicht dasselbe wie Chat-Mailbox-Index | halten; Joint-Retest mit 2. Gerät |
+| **IOTA↔LoRa / Delayed Upload** | Spec `LORA-IOTA-DELAYED-UPLOAD-SPEC`; **keine** volle IOTA-TX über LoRa (`H.3m`) | **Phase 3 Funk** (+ Gateway) |
+| **Handy / 2. Gerät / H.36 / Shop** | Später-Tabelle | Phasen 2–4 |
+
+**Nicht parallel:** Profilbild/Visitenkarte-Bau, Drehrad/Handy-UI, EXE, Cap/Gap-Experimente, Blind-Big-Bang an Mailbox-Indexer, Ratchet-Default ohne Live-2-Geräte.
 
 1. **Fokus jetzt:** **PC-Durchgang** → Alpha.  
 2. **Erledigt Phase 1–3 Desk:** Messenger-Kern, 4b–4d, H.25a STABIL. Encode/Tempo Freeze. Burn-Doku/Rebate-Toast + Solo-Wizard (inkl. TG/Funk optional) **Ist 2026-11-26**.  
@@ -74,8 +84,8 @@
 | **H.16** (Teil) | Telefonbuch + QR | **erledigt PC** — Boss-LAN = später |
 | **H.20** | Signer `sdk` | **erledigt** |
 | **H.21** (Teil) | Empfänger-Auswahl | **erledigt** — Kurier → später |
-| **H.22** | Mailbox-Klarheit | **erledigt** |
-| **H.23** | ECDH + Passphrase/NFT | **halten** — kein Großfeature |
+| **H.22** | Mailbox-Klarheit (Copy) | **erledigt** — Abhol/Indexer-Rest → Später/kleine Scheibe |
+| **H.23** | ECDH + Passphrase/NFT | **halten** — C1-Default / Session C → Später |
 | **H.26** (Teil) | Telegram Klingel/Notify | **erledigt** — Alarmgruppe → später |
 | **H.27** | Handshake-UX Labels | **erledigt** |
 | **H.34** | Port-Refactor bei Touch | **halten** |

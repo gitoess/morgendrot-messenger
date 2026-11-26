@@ -173,18 +173,21 @@ async function purgePairwiseHybrid(
       timeoutMs: 120_000,
     })
     if (api.ok) {
+      const apiBody = api as unknown as {
+        digest?: unknown
+        txDigest?: unknown
+        message?: unknown
+        gasSummary?: unknown
+      }
       const dig =
-        typeof (api as { digest?: unknown }).digest === 'string'
-          ? (api as { digest: string }).digest
-          : typeof (api as { txDigest?: unknown }).txDigest === 'string'
-            ? (api as { txDigest: string }).txDigest
+        typeof apiBody.digest === 'string'
+          ? apiBody.digest
+          : typeof apiBody.txDigest === 'string'
+            ? apiBody.txDigest
             : undefined
       noteBurnSuccess(target, dig, usedPlain)
-      const m =
-        typeof (api as { message?: unknown }).message === 'string'
-          ? (api as { message: string }).message
-          : 'Nachricht geburnt (Morgendrot-API).'
-      const okMsg = burnOkMessage(m, (api as { gasSummary?: unknown }).gasSummary, dig)
+      const m = typeof apiBody.message === 'string' ? apiBody.message : 'Nachricht geburnt (Morgendrot-API).'
+      const okMsg = burnOkMessage(m, apiBody.gasSummary, dig)
       return {
         ok: true,
         path: 'api',
@@ -211,18 +214,21 @@ async function purgePairwiseHybrid(
     timeoutMs: 120_000,
   })
   if (api.ok) {
+    const apiBody = api as unknown as {
+      digest?: unknown
+      txDigest?: unknown
+      message?: unknown
+      gasSummary?: unknown
+    }
     const dig =
-      typeof (api as { digest?: unknown }).digest === 'string'
-        ? (api as { digest: string }).digest
-        : typeof (api as { txDigest?: unknown }).txDigest === 'string'
-          ? (api as { txDigest: string }).txDigest
+      typeof apiBody.digest === 'string'
+        ? apiBody.digest
+        : typeof apiBody.txDigest === 'string'
+          ? apiBody.txDigest
           : undefined
     noteBurnSuccess(target, dig, target.variant === 'plaintext')
-    const m =
-      typeof (api as { message?: unknown }).message === 'string'
-        ? (api as { message: string }).message
-        : 'Nachricht geburnt.'
-    const okMsg = burnOkMessage(m, (api as { gasSummary?: unknown }).gasSummary, dig)
+    const m = typeof apiBody.message === 'string' ? apiBody.message : 'Nachricht geburnt.'
+    const okMsg = burnOkMessage(m, apiBody.gasSummary, dig)
     return {
       ok: true,
       path: 'api',

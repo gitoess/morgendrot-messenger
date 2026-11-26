@@ -64,7 +64,7 @@ export async function downloadVaultFileFromServer(): Promise<{
       if (fr.response.status !== 404 && !/Route nicht gefunden/i.test(fr.text)) {
         const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'Vault-Download fehlgeschlagen.' })
         if (!r.ok) return { ok: false, error: r.error }
-        return finishExport(r.body)
+        return finishExport(r.body as unknown as ExportPayload)
       }
     } else if (fr.error && !/Route nicht gefunden|404/i.test(fr.error)) {
       /** Echter Netzwerk-/Auth-Fehler — nicht als fehlende Route maskieren. */
