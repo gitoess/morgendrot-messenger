@@ -111,6 +111,7 @@
 | **C1.6 Doku-Nachzug** | Privacy-Anleitung + PWA-Handbuch (C1.6 Ist); Role-Pill Vitest | **erledigt 2026-11-26** |
 | **C1 nur 1:1 UI** | Gruppen-⋮ ohne Ratchet-Toggle; Claims/Handbuch ehrlich | **erledigt 2026-11-26** |
 | **H.22 Enc/Event Claims** | SSOT+Handbuch+Composer-Hinweis: Enc auch Event; Empfang ≠ DF | **erledigt 2026-11-26** |
+| **H.22 Persistenz-Detail** | `describeChainPersistenceRoute` Enc-Event ehrlich + Anleitung | **erledigt 2026-11-26** |
 | **H.16 Gruppe×Pfad** | Spec S0–S2 Tabs | **erledigt 2026-11-26** |
 
 ### Später machen bzw. nochmals später klären (User-Durchgang ab 2026-11-22)

@@ -93,6 +93,8 @@ Begriffe Datei vs Sidecar: `docs/VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md` §8. **Ke
 
 **Nur 1:1-Direktchat** (IOTA Enc). Chat ⋮ → **Double Ratchet (Experiment)** = Opt-in. **Gruppenchat:** kein Eintrag (weiter Team-Key). **Default bleibt Session Keys+.** Mit Flag an: Direct-Enc legt innere `RATCHET_V3`-Lage (beide Seiten Flag + Handshake). Composer-Hinweis zeigt den Modus. State im Sidecar `ratchet.enc.v1`. **Kein** Produktiv-Default / kein FS-pro-Msg-Marketing ohne Feld-PASS.
 
+**Speicher (Enc):** Schloss und „Speicher auf der Chain“ sind getrennt. Enc **kann** flüchtig (Event) oder Mailbox — Event landet **nicht** als Mailbox-Zeile; Partner braucht Event-Abhol. Alltag: Enc eher Mailbox (burnbar / Postamt).
+
 **Grenze:** XSS/Malware mit Vault-Passwort kann Sidecars lesen. Kein Hardware-Fragment, kein „nur RAM, nie Disk“ für den Seed (Vault-Blob liegt verschlüsselt auf Disk/LS). Session Keys+ (`directSessionKeys.v1`) sind noch nicht vault-wrapped (bekanntes Backlog).
 
 ---

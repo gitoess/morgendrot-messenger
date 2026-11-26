@@ -22,4 +22,10 @@ describe('describeChainPersistenceRoute', () => {
     expect(describeChainPersistenceRoute(true, 'mailbox').label).toContain('Mailbox')
     expect(describeChainPersistenceRoute(false, 'event').label).toContain('Klartext')
   })
+
+  it('Enc-Event: warnt vor Event-Abhol ≠ Mailbox-Inbox', () => {
+    const d = describeChainPersistenceRoute(true, 'event').detail
+    expect(d).toMatch(/Event-Abhol/)
+    expect(d).toMatch(/Mailbox/)
+  })
 })

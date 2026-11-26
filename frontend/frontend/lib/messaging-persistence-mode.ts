@@ -39,7 +39,7 @@ export function describeChainPersistenceRoute(
     return {
       label: 'Verschlüsselt · flüchtig (Event)',
       detail:
-        'Schnell, kein Eintrag im Postamt. Nachträglich nicht von der Chain löschbar (Explorer behält Events).',
+        'Schnell, kein Postamt-DF. Partner braucht Event-Abhol (nicht nur Mailbox-Inbox). Nicht burnbar — Explorer behält Events. Alltag oft besser: Mailbox.',
     }
   }
   if (encrypted && mode === 'mailbox') {
