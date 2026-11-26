@@ -15,21 +15,21 @@ describe('messenger-client-expert-mode', () => {
     expect(isMessengerClientExpertModeEnabled()).toBe(false)
   })
 
+  it('Legacy allein schaltet nicht an (Default aus)', () => {
+    localStorage.setItem(LEGACY_DEV_EXPERT_TOOLS_LS, '1')
+    expect(isMessengerClientExpertModeEnabled()).toBe(false)
+  })
+
   it('explizit aus trotz Legacy=1', () => {
     localStorage.setItem(LEGACY_DEV_EXPERT_TOOLS_LS, '1')
     setMessengerClientExpertModeEnabled(false)
     expect(localStorage.getItem(MESSENGER_CLIENT_EXPERT_MODE_LS)).toBe('0')
-    expect(localStorage.getItem(LEGACY_DEV_EXPERT_TOOLS_LS)).toBe('0')
     expect(isMessengerClientExpertModeEnabled()).toBe(false)
   })
 
-  it('Legacy-Fallback nur ohne expliziten Key', () => {
-    localStorage.setItem(LEGACY_DEV_EXPERT_TOOLS_LS, '1')
-    expect(isMessengerClientExpertModeEnabled()).toBe(true)
-  })
-
-  it('an schreibt beide Keys', () => {
+  it('an schreibt neuen Key', () => {
     setMessengerClientExpertModeEnabled(true)
+    expect(localStorage.getItem(MESSENGER_CLIENT_EXPERT_MODE_LS)).toBe('1')
     expect(isMessengerClientExpertModeEnabled()).toBe(true)
   })
 })

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Download, Shield, Cloud, Upload, Check, AlertCircle } from 'lucide-react'
+import { Download, Shield, Cloud, Upload, Check, AlertCircle, HardDrive } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import {
@@ -22,12 +22,17 @@ import {
   vaultListLocalFiles,
   vaultDeleteLocal,
   importVaultFileFromDevice,
+  downloadVaultFileFromServer,
   fetchVaultOnchainPreflight,
   syncVaultChainConfig,
   saveVaultNotes,
   fetchVaultNotes,
 } from '@/frontend/lib/api'
-import { getIncludeSdkMnemonicInBackup } from '@/frontend/lib/vault-sdk-mnemonic-preference'
+import {
+  getIncludeSdkMnemonicInBackup,
+  setIncludeSdkMnemonicInBackup,
+} from '@/frontend/lib/vault-sdk-mnemonic-preference'
+import { offerLocalVaultSave } from '@/frontend/lib/offer-local-vault-save'
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms))
@@ -51,7 +56,10 @@ export function SettingsVaultBackupSection({ vaultLocked = false, onRequestVault
   const [deleteLocalBusy, setDeleteLocalBusy] = useState(false)
   const [vaultPaths, setVaultPaths] = useState<string[]>([])
   const [defaultVaultPath, setDefaultVaultPath] = useState('.morgendrot-vault')
+  const [serverVaultPath, setServerVaultPath] = useState('')
   const [selectedVaultPath, setSelectedVaultPath] = useState('')
+  const [hasLocalFile, setHasLocalFile] = useState(false)
+  const [includeSeed, setIncludeSeed] = useState(() => getIncludeSdkMnemonicInBackup())
   const vaultFileInputRef = useRef<HTMLInputElement>(null)
   const autoSyncDoneRef = useRef(false)
 
@@ -62,7 +70,7 @@ export function SettingsVaultBackupSection({ vaultLocked = false, onRequestVault
   const showStatus = (success: boolean, msg: string) => {
     setStatus(success ? 'success' : 'error')
     setStatusMsg(msg)
-    setTimeout(() => setStatus('idle'), 5000)
+    setTimeout(() => setStatus('idle'), 8000)
   }
 
   const refreshVaultStatus = useCallback(async () => {
@@ -73,6 +81,10 @@ export function SettingsVaultBackupSection({ vaultLocked = false, onRequestVault
         setSignerKind(typeof s.signer === 'string' ? s.signer : undefined)
         setLastLocalSavedAt(s.vaultStatus?.lastLocalSavedAt)
         setLastSavedToChainAt(s.vaultStatus?.lastSavedToChainAt)
+        setHasLocalFile(s.vaultStatus?.hasLocal === true)
+        if (typeof s.vaultStatus?.localPath === 'string' && s.vaultStatus.localPath.trim()) {
+          setServerVaultPath(s.vaultStatus.localPath.trim())
+        }
       }
     } catch {
       setHasKeys(undefined)
@@ -86,11 +98,18 @@ export function SettingsVaultBackupSection({ vaultLocked = false, onRequestVault
       setVaultPaths(r.paths)
       const def = r.defaultPath?.trim() || '.morgendrot-vault'
       setDefaultVaultPath(def)
+      const abs =
+        r.defaultPathAbs?.trim() ||
+        r.paths.find((p) => p.endsWith(def.replace(/^\.\//, ''))) ||
+        r.paths[0] ||
+        ''
+      if (abs) setServerVaultPath(abs)
       setSelectedVaultPath((prev) => {
         if (prev && r.paths!.includes(prev)) return prev
         if (r.paths!.includes(def)) return def
         return r.paths![0] ?? def
       })
+      setHasLocalFile(r.paths.length > 0)
     }
   }, [])
 
@@ -119,17 +138,33 @@ export function SettingsVaultBackupSection({ vaultLocked = false, onRequestVault
       setProcessing(false)
       return
     }
-    const includeSigner = getIncludeSdkMnemonicInBackup() && signerKind === 'sdk' && hasKeys === true
+    const includeSigner = includeSeed && signerKind === 'sdk' && hasKeys === true
     const res = await vaultSave(undefined, undefined, { includeIotaMnemonic: includeSigner })
+    const pathHint =
+      typeof (res as { path?: string }).path === 'string' ? (res as { path?: string }).path : serverVaultPath
     const okMsg = res.ok
-      ? includeSigner
-        ? 'Lokal gesichert — inkl. Wallet-Seed.'
-        : 'Lokal gesichert (vorhandener Seed in der Datei bleibt erhalten).'
+      ? pathHint
+        ? `Tresor gesichert: ${pathHint}`
+        : includeSigner
+          ? 'Tresor gesichert — inkl. Wallet-Seed.'
+          : 'Tresor gesichert (Seed in der Datei bleibt erhalten, falls vorhanden).'
       : res.error || res.message || 'Fehler beim Speichern'
     showStatus(res.ok, okMsg)
-    if (res.ok) toast.success(okMsg)
-    else toast.error(okMsg)
-    if (res.ok) void refreshVaultStatus()
+    if (res.ok) {
+      toast.success('Tresor auf dieser Festplatte gesichert — zum Mitnehmen „Kopie herunterladen“.')
+      if (pathHint) setServerVaultPath(pathHint)
+      void refreshVaultStatus()
+      void refreshVaultFileList()
+    } else toast.error(okMsg)
+    setProcessing(false)
+  }
+
+  const handleDownload = async () => {
+    setProcessing(true)
+    const res = await downloadVaultFileFromServer()
+    showStatus(res.ok, res.ok ? res.message || 'Download gestartet.' : res.error || 'Download fehlgeschlagen')
+    if (res.ok) toast.success(res.message || 'Download gestartet (Browser-Downloads).')
+    else toast.error(res.error || 'Download fehlgeschlagen')
     setProcessing(false)
   }
 
@@ -142,7 +177,7 @@ export function SettingsVaultBackupSection({ vaultLocked = false, onRequestVault
     await syncVaultChainConfig({ apply: true })
     const pre = await fetchVaultOnchainPreflight()
     if (!pre.ok || !pre.preflight?.ok) {
-      const issues = pre.preflight?.issues?.join(' ') || pre.error || 'Chain-Konfiguration unvollständig.'
+      const issues = pre.preflight?.issues?.join(' ') || pre.error || 'Chain-Konfiguration unvollständig (VAULT_REGISTRY_ID / Package).'
       showStatus(false, issues)
       toast.error(issues)
       setSyncingOnchain(false)
@@ -153,7 +188,7 @@ export function SettingsVaultBackupSection({ vaultLocked = false, onRequestVault
       return
     }
     const res = await vaultOnchain(undefined, undefined, {
-      includeIotaMnemonic: getIncludeSdkMnemonicInBackup() && signerKind === 'sdk' && hasKeys === true,
+      includeIotaMnemonic: includeSeed && signerKind === 'sdk' && hasKeys === true,
     })
     showStatus(
       res.ok,
@@ -190,6 +225,7 @@ export function SettingsVaultBackupSection({ vaultLocked = false, onRequestVault
     if (del.ok) {
       toast.success(typeof del.message === 'string' ? del.message : 'Lokale Vault-Datei gelöscht.')
       void refreshVaultFileList()
+      void refreshVaultStatus()
     } else {
       toast.error(del.error || del.message || 'Lokale Datei konnte nicht gelöscht werden.')
     }
@@ -241,7 +277,37 @@ export function SettingsVaultBackupSection({ vaultLocked = false, onRequestVault
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+    <div className="rounded-xl border border-border bg-card p-4 space-y-4">
+      <h4 className="font-semibold text-foreground">Backup</h4>
+
+      <label
+        className={cn(
+          'flex cursor-pointer items-start gap-2 rounded-lg border border-border/80 bg-muted/20 p-3 text-xs text-muted-foreground',
+          signerKind != null && signerKind !== 'sdk' && 'opacity-70'
+        )}
+      >
+        <input
+          type="checkbox"
+          className="mt-0.5 shrink-0"
+          checked={includeSeed}
+          disabled={signerKind != null && signerKind !== 'sdk'}
+          onChange={(e) => {
+            const v = e.target.checked
+            setIncludeSeed(v)
+            setIncludeSdkMnemonicInBackup(v)
+            if (v) offerLocalVaultSave('seed')
+          }}
+        />
+        <span>
+          <span className="font-medium text-foreground">Wallet-Seed in Tresor-Datei</span>
+          <span className="mt-0.5 block">
+            {signerKind != null && signerKind !== 'sdk'
+              ? `Aktuell Signer=${signerKind} — Seed-Eintrag gilt nur bei SIGNER=sdk.`
+              : 'Nach Neustart reicht das Tresor-Passwort (kein Seed neu tippen). Default an.'}
+          </span>
+        </span>
+      </label>
+
       {vaultLocked ? (
         <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
           Tresor gesperrt —{' '}
@@ -255,22 +321,18 @@ export function SettingsVaultBackupSection({ vaultLocked = false, onRequestVault
           , um zu sichern oder zu laden.
         </p>
       ) : null}
-      {chainDirty ? (
-        <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-100">
-          Lokale Vault-Änderungen sind noch nicht auf der Chain — „Auf Chain sichern“ ausführen.
-        </p>
-      ) : null}
       {status !== 'idle' ? (
         <div
           className={cn(
-            'flex items-center gap-2 rounded-lg p-3 text-sm font-medium',
+            'flex items-center gap-2 rounded-lg p-3 text-sm font-medium break-all',
             status === 'success' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
           )}
         >
-          {status === 'success' ? <Check className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+          {status === 'success' ? <Check className="h-4 w-4 shrink-0" /> : <AlertCircle className="h-4 w-4 shrink-0" />}
           {statusMsg}
         </div>
       ) : null}
+
       <input
         ref={vaultFileInputRef}
         type="file"
@@ -282,50 +344,97 @@ export function SettingsVaultBackupSection({ vaultLocked = false, onRequestVault
           if (f) void handleImportVaultFromDevice(f)
         }}
       />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <button
-          type="button"
-          onClick={() => void handleSave()}
-          disabled={processing || !canUseVault}
-          className="flex flex-col items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-5 text-center transition-colors hover:bg-emerald-500/10 disabled:opacity-50"
-        >
-          <Download className="h-8 w-8 text-emerald-400" />
-          <span className="font-semibold text-foreground">{processing ? 'Speichere…' : 'Lokal sichern'}</span>
-          <span className="text-xs text-muted-foreground">Überschreibt die Standard-Tresor-Datei (.morgendrot-vault)</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => void handleOnchain()}
-          disabled={processing || syncingOnchain || !canUseVault}
-          className="flex flex-col items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 p-5 text-center transition-colors hover:bg-amber-500/10 disabled:opacity-50"
-        >
-          <Shield className="h-8 w-8 text-amber-400" />
-          <span className="font-semibold text-foreground">{syncingOnchain ? 'Sichere…' : 'Auf Chain sichern'}</span>
-          <span className="text-xs text-muted-foreground">Verschlüsselter Blob auf der Chain</span>
-        </button>
-        <button
-          type="button"
-          disabled={processing}
-          onClick={() => vaultFileInputRef.current?.click()}
-          className="flex flex-col items-center gap-2 rounded-xl border border-blue-500/20 bg-blue-500/5 p-5 text-center transition-colors hover:bg-blue-500/10 disabled:opacity-50"
-        >
-          <Upload className="h-8 w-8 text-blue-400" />
-          <span className="font-semibold text-foreground">{processing ? 'Bitte warten…' : 'Datei wählen & laden'}</span>
-          <span className="text-xs text-muted-foreground">Tresor-Datei vom Gerät importieren</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => void handleLoadFromChain()}
-          disabled={processing || !canUseVault}
-          className="flex flex-col items-center gap-2 rounded-xl border border-sky-500/20 bg-sky-500/5 p-5 text-center transition-colors hover:bg-sky-500/10 disabled:opacity-50"
-        >
-          <Cloud className="h-8 w-8 text-sky-400" />
-          <span className="font-semibold text-foreground">{processing ? 'Lade…' : 'Von Chain laden'}</span>
-          <span className="text-xs text-muted-foreground">On-Chain-Backup in die Sitzung</span>
-        </button>
+
+      <div className="space-y-2 rounded-lg border border-border/70 bg-muted/10 p-3">
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <HardDrive className="h-4 w-4" aria-hidden />
+          Diese Festplatte
+        </div>
+        {!hasLocalFile ? (
+          <p className="text-[11px] text-muted-foreground">Noch keine Datei — einmal „Tresor sichern“.</p>
+        ) : null}
+        <div className="grid gap-2 sm:grid-cols-3">
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={processing || !canUseVault}
+            className="flex flex-col items-center gap-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-center hover:bg-emerald-500/10 disabled:opacity-50"
+            title="Aktuelle Keys/Notizen/Seed in die verschlüsselte Arbeitsdatei schreiben"
+          >
+            <Download className="h-6 w-6 text-emerald-400 rotate-180" aria-hidden />
+            <span className="text-sm font-semibold text-foreground">
+              {processing ? 'Speichere…' : 'Tresor sichern'}
+            </span>
+            <span className="text-[10px] text-muted-foreground">Arbeitsdatei aktualisieren</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleDownload()}
+            disabled={processing || !canUseVault || !hasLocalFile}
+            className="flex flex-col items-center gap-1.5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 text-center hover:bg-emerald-500/10 disabled:opacity-50"
+            title={
+              !canUseVault
+                ? 'Zuerst Tresor entsperren'
+                : !hasLocalFile
+                  ? 'Zuerst Tresor sichern'
+                  : 'Verschlüsselte Kopie (Tresor-Passwort) in Downloads'
+            }
+          >
+            <Download className="h-6 w-6 text-emerald-400" aria-hidden />
+            <span className="text-sm font-semibold text-foreground">
+              {processing ? '…' : 'Kopie herunterladen'}
+            </span>
+            <span className="text-[10px] text-muted-foreground">PW-verschlüsselt · Unlock nötig</span>
+          </button>
+          <button
+            type="button"
+            disabled={processing}
+            onClick={() => vaultFileInputRef.current?.click()}
+            className="flex flex-col items-center gap-1.5 rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 text-center hover:bg-blue-500/10 disabled:opacity-50"
+            title="Vorhandene .morgendrot-vault vom Gerät laden (Wiederherstellen)"
+          >
+            <Upload className="h-6 w-6 text-blue-400" aria-hidden />
+            <span className="text-sm font-semibold text-foreground">
+              {processing ? '…' : 'Backup importieren'}
+            </span>
+            <span className="text-[10px] text-muted-foreground">Wiederherstellen</span>
+          </button>
+        </div>
       </div>
+
+      <div className="space-y-2 rounded-lg border border-border/70 bg-muted/10 p-3">
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <Cloud className="h-4 w-4" aria-hidden />
+          Chain
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => void handleOnchain()}
+            disabled={processing || syncingOnchain || !canUseVault}
+            className="flex flex-col items-center gap-1.5 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-center hover:bg-amber-500/10 disabled:opacity-50"
+          >
+            <Shield className="h-6 w-6 text-amber-400" aria-hidden />
+            <span className="text-sm font-semibold text-foreground">
+              {syncingOnchain ? 'Sichere…' : 'Auf Chain sichern'}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleLoadFromChain()}
+            disabled={processing || !canUseVault}
+            className="flex flex-col items-center gap-1.5 rounded-xl border border-sky-500/20 bg-sky-500/5 p-4 text-center hover:bg-sky-500/10 disabled:opacity-50"
+          >
+            <Cloud className="h-6 w-6 text-sky-400" aria-hidden />
+            <span className="text-sm font-semibold text-foreground">
+              {processing ? 'Lade…' : 'Von Chain laden'}
+            </span>
+          </button>
+        </div>
+      </div>
+
       {vaultPaths.length > 1 ? (
-        <div className="border-t border-border/60 pt-4">
+        <div className="border-t border-border/60 pt-3">
           <div className="flex flex-wrap items-end gap-2">
             <label className="min-w-[12rem] flex-1 text-sm">
               <span className="text-muted-foreground">Weitere Server-Dateien</span>
@@ -337,7 +446,7 @@ export function SettingsVaultBackupSection({ vaultLocked = false, onRequestVault
                 {vaultPaths.map((p) => (
                   <option key={p} value={p}>
                     {p.split(/[/\\]/).pop()}
-                    {p === defaultVaultPath ? ' (Standard)' : ''}
+                    {p === defaultVaultPath || p.endsWith(defaultVaultPath) ? ' (Standard)' : ''}
                   </option>
                 ))}
               </select>
@@ -353,13 +462,14 @@ export function SettingsVaultBackupSection({ vaultLocked = false, onRequestVault
           </div>
         </div>
       ) : null}
+
       <Dialog open={deleteLocalDialogOpen} onOpenChange={setDeleteLocalDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>On-Chain-Backup erfolgreich</DialogTitle>
             <DialogDescription className="space-y-2 pt-1 text-left text-sm">
               <span className="block">
-                Lokale Vault-Datei löschen? Sinnvoll, wenn du künftig nur noch von der Chain entsperren willst.
+                Lokale Server-Datei löschen? Nur sinnvoll, wenn du künftig nur noch von der Chain entsperren willst.
               </span>
             </DialogDescription>
           </DialogHeader>

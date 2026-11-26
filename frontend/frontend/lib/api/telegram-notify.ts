@@ -22,6 +22,10 @@ export async function notifyTelegramContact(body: {
   targetChatId?: string
   /** Weitere Chat-IDs (CC), max. 5 — nicht die Einsatz-Alarmgruppe. */
   extraChatIds?: string[]
+  /** Echtes Bild (sendPhoto) — nur mit acknowledgeUnencryptedMedia. */
+  photoBase64?: string
+  /** Pflicht bei photoBase64: User bestätigt unverschlüsselte Telegram-Zustellung. */
+  acknowledgeUnencryptedMedia?: boolean
 }): Promise<
   TelegramNotifyResult & {
     deliveredContact?: boolean

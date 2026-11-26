@@ -12,11 +12,17 @@ export function isIotaMessengerProduct(): boolean {
 
 export const IOTA_MESSENGER_UI = {
   hideBossHandoff: true,
+  /** Kein Helfer-Handoff — Einstellungen → Allgemein → Import aus. */
+  hideHandoffImport: true,
   hideEinsatzleitung: true,
   /** H.32b — Einsatz-Zyklus; gemerkt Split 2026-11-16 (noch verdrahten wenn Panel außerhalb Einsatzleitung). */
   hideEinsatzEnd: true,
-  hideFunk: true,
-  hideTelegram: true,
+  /** Kanäle Sendepfad Funk/Telegram — Settings-Tabs bleiben. */
+  hideFunk: false,
+  hideTelegram: false,
+  /** Kein Sensor-Monitor / kein Team-SOS über TG-Gruppe. */
+  hideTelegramMonitor: true,
+  hideTelegramEinsatzAlarm: true,
   hideSos: true,
   hideShadowSweep: true,
   hideActiveProfile: true,

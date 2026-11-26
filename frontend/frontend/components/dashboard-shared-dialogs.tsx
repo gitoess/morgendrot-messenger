@@ -147,7 +147,7 @@ export function DashboardSharedDialogs(p: {
               </DialogTitle>
               <DialogDescription>
                 {p.sessionSignerSync.softResume
-                  ? 'Tresor-Pause: Vault-Passwort eingeben. Sitzung bleibt im RAM — danach ist der Messenger wieder bedienbar.'
+                  ? 'Vault-Passwort — danach weiter.'
                   : 'Der Tresor ist schon offen. Noch einmal Vault-Passwort: lädt den Signer in diesen Browser (RAM) für Direct-Send, On-Chain/NFT und Zeitkapsel — Testnet wie Mainnet. Nach Reload oft nötig.'}
               </DialogDescription>
             </DialogHeader>

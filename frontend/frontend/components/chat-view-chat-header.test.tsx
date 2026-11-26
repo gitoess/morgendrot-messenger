@@ -21,13 +21,13 @@ function baseHeader(over: Partial<ChatViewChatHeaderProps> = {}): ChatViewChatHe
 }
 
 describe('TresorSessionBadge (§ H.1a)', () => {
-  it('zeigt gesperrt / Keys fehlen / bereit', () => {
+  it('zeigt nur bereit oder gesperrt', () => {
     setVaultPasswordSession('vault-pass-99')
     const { rerender } = render(<TresorSessionBadge sessionLocked hasKeys={false} />)
     expect(screen.getByText(/Tresor: gesperrt/)).toBeInTheDocument()
 
     rerender(<TresorSessionBadge sessionLocked={false} hasKeys={false} />)
-    expect(screen.getByText(/^Signer laden$/)).toBeInTheDocument()
+    expect(screen.getByText(/Tresor: gesperrt/)).toBeInTheDocument()
 
     rerender(<TresorSessionBadge sessionLocked={false} hasKeys />)
     expect(screen.getByText(/Tresor: bereit/)).toBeInTheDocument()
@@ -60,7 +60,7 @@ describe('TresorSessionBadge (§ H.1a)', () => {
     expect(onLockSession).toHaveBeenCalledTimes(1)
   })
 
-  it('ohne Tresor-Sitzung: Badge „Tresor: Passwort“ öffnet Sync statt zu sperren', () => {
+  it('ohne Browser-Passwort: Badge „gesperrt“ öffnet Unlock statt Soft-Pause', () => {
     setVaultPasswordSession(null)
     const onNavigateHomeWhenLocked = vi.fn()
     const onLockSession = vi.fn()
@@ -71,7 +71,7 @@ describe('TresorSessionBadge (§ H.1a)', () => {
         actions={{ onLockSession, onNavigateHomeWhenLocked }}
       />
     )
-    expect(screen.getByText(/Tresor: Passwort/)).toBeInTheDocument()
+    expect(screen.getByText(/Tresor: gesperrt/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Tresor-Passwort eingeben/i }))
     expect(onNavigateHomeWhenLocked).toHaveBeenCalledTimes(1)
     expect(onLockSession).not.toHaveBeenCalled()

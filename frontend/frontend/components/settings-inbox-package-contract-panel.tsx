@@ -1,8 +1,9 @@
 'use client'
 
 /**
- * Move-Vertrag (Package-ID) — Einstellungen → Expertenmodus.
- * Temporär = nur Posteingang-Filter; Dauerhaft = /set-package-id.
+ * Move-Vertrag (Package-ID) — Einstellungen → IOTA → Expertenmodus.
+ * Temporär = Posteingang-Filter; Dauerhaft = /set-package-id.
+ * Details: docs/INBOX-PACKAGE-EXPERT-MODE.md
  */
 
 import { useCallback, useEffect, useState } from 'react'
@@ -87,13 +88,8 @@ export function SettingsInboxPackageContractPanel({ apiStatus }: SettingsInboxPa
   }, [refreshSuggestions])
 
   return (
-    <div className="mt-4 space-y-2 border-t border-border/60 pt-4">
+    <div className="space-y-2">
       <h5 className="text-sm font-semibold text-foreground">IOTA-Vertrag (Package-ID)</h5>
-      <p className="text-[11px] leading-snug text-muted-foreground">
-        Temporär = nur diese Programm-ID im Posteingang (ohne Server-Wechsel). Dauerhaft = wie{' '}
-        <code className="text-[10px]">/set-package-id</code>. Nicht verwechseln mit Datei-Paket{' '}
-        <span className="font-medium text-foreground">.morg-pkg</span> unter Optionen.
-      </p>
       <ChatViewInboxPackageExpertMenu
         embedded
         serverPackageId={serverPackageId}

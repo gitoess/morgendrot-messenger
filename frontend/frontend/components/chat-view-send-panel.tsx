@@ -234,6 +234,10 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   /** Nur bei composerDelivery === 'telegram'. */
   onTelegramSend?: () => void | Promise<void>
   canSendTelegram?: boolean
+  /** Telegram-Sendepfad + Bildanhang → echte sendPhoto nur mit Ack. */
+  wantsTelegramPhoto?: boolean
+  telegramUnencryptedMediaAck?: boolean
+  onTelegramUnencryptedMediaAckChange?: (ack: boolean) => void
   telegramBusy?: boolean
   onNavigateHomeWhenLocked?: () => void
   composerMailboxObjectId?: string
@@ -317,6 +321,9 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     showPath4Checkbox = true,
     onTelegramSend,
     canSendTelegram = false,
+    wantsTelegramPhoto = false,
+    telegramUnencryptedMediaAck = false,
+    onTelegramUnencryptedMediaAckChange,
     telegramBusy = false,
     onNavigateHomeWhenLocked,
     composerMailboxObjectId = '',
@@ -850,6 +857,20 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                   Hier geht die Nachricht <strong className="font-medium text-foreground">direkt über den Bot</strong>{' '}
                   (ohne IOTA). Der optionale Klingel-Hinweis nach IOTA-Send steht unter Einstellungen → Telegram.
                 </p>
+                {wantsTelegramPhoto ? (
+                  <label className="mb-2 flex items-start gap-2 rounded-lg border border-amber-600/40 bg-amber-950/20 px-3 py-2 text-[11px] leading-snug text-amber-100/95">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5"
+                      checked={telegramUnencryptedMediaAck}
+                      onChange={(e) => onTelegramUnencryptedMediaAckChange?.(e.target.checked)}
+                    />
+                    <span>
+                      Bild wirklich über Telegram senden — <strong>unverschlüsselt</strong> auf
+                      Telegram-Servern (kein E2EE). Ohne Haken nur Platzhalter-Text.
+                    </span>
+                  </label>
+                ) : null}
                 <input
                   type="text"
                   list="chat-telegram-recipients"

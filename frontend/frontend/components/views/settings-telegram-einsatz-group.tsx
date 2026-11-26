@@ -225,8 +225,7 @@ export function SettingsTelegramEinsatzGroup(p: SettingsTelegramEinsatzGroupProp
             <div className="min-w-0 space-y-1">
               <h4 className="font-semibold text-foreground">Einsatz-Alarmgruppe</h4>
               <p className="text-sm text-muted-foreground">
-                Eine Telegram-<strong className="font-medium text-foreground">Gruppe</strong> als Klingel für SOS und
-                Boss-Hinweise an alle Helfer mit Telegram — kein Ersatz für den Morgendrot-Chat, kein E2EE.
+                Telegram-Gruppe als SOS-/Team-Klingel. Setup: Handbuch → Telegram.
               </p>
               <p
                 className={cn(
@@ -251,28 +250,12 @@ export function SettingsTelegramEinsatzGroup(p: SettingsTelegramEinsatzGroupProp
             </button>
           </div>
 
-          <div className="rounded-lg border border-border/70 bg-muted/15 px-3 py-2 text-xs text-muted-foreground space-y-1.5">
-            <p>
-              <strong className="text-foreground">Warum aus?</strong> Default aus — damit der Bot nicht versehentlich
-              in eine Gruppe schreibt, bevor Chat-ID und Einladung stehen. Einschalten nur, wenn die Gruppe eingerichtet
-              ist.
-            </p>
-            <p>
-              <strong className="text-foreground">Aktivieren:</strong> Schalter an → Felder ausfüllen →{' '}
-              <strong className="text-foreground">Speichern</strong>. Danach „Test an Gruppe“ / „Team alarmieren“.
-            </p>
-            <p>
-              <strong className="text-foreground">Deaktivieren:</strong> Schalter aus → Speichern. SOS und manuelle
-              Team-Alarme gehen dann nicht mehr in die TG-Gruppe (IOTA/Funk bleiben).
-            </p>
-          </div>
-
           <div className="flex items-center justify-between gap-4">
             <div>
               <Label htmlFor="tg-einsatz-enabled" className="text-sm">
                 Alarmgruppe aktiv
               </Label>
-              <p className="text-[11px] text-muted-foreground">Server speichert den Schalter erst nach „Speichern“.</p>
+              <p className="text-[11px] text-muted-foreground">Wirkt erst nach Speichern. Default aus.</p>
             </div>
             <Switch
               id="tg-einsatz-enabled"
@@ -295,9 +278,6 @@ export function SettingsTelegramEinsatzGroup(p: SettingsTelegramEinsatzGroupProp
                 disabled={formDisabled}
                 className="mt-1"
               />
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Wann: beim Einrichten. Wozu: erscheint als „Team Alpha: Hilferuf…“ in der Gruppe.
-              </p>
             </div>
             <div>
               <Label htmlFor="tg-einsatz-link" className="text-xs text-muted-foreground">
@@ -311,9 +291,6 @@ export function SettingsTelegramEinsatzGroup(p: SettingsTelegramEinsatzGroupProp
                 disabled={formDisabled}
                 className="mt-1 font-mono text-xs"
               />
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Wann: nach Anlegen der TG-Gruppe. Wozu: Helfer-Beitritt (Handoff / „An Team senden“) — nicht die Bot-Ziel-ID.
-              </p>
             </div>
             <div>
               <Label htmlFor="tg-einsatz-chat" className="text-xs text-muted-foreground">
@@ -327,10 +304,6 @@ export function SettingsTelegramEinsatzGroup(p: SettingsTelegramEinsatzGroupProp
                 disabled={formDisabled}
                 className="mt-1 font-mono text-xs"
               />
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                Wann: Bot als Admin in die Gruppe, dann ID ermitteln (z. B. @userinfobot / Gruppeninfo). Wozu: Ziel für
-                SOS, „Team alarmieren“, „Test an Gruppe“. Ohne ID: Server meldet „Gruppen-Chat-ID fehlt“.
-              </p>
             </div>
           </div>
 

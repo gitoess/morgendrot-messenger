@@ -1,44 +1,29 @@
 'use client'
 
 import type { ApiStatus } from '@/frontend/lib/api'
+import type { ContactMeshEntryClient } from '@/frontend/lib/api/contacts'
 import { DashboardBossQuickActions } from '@/frontend/components/dashboard-boss-quick-actions'
-import { DashboardIotaTransferCard } from '@/frontend/components/dashboard-iota-transfer-card'
-import { DashboardIotaActivityCard } from '@/frontend/components/dashboard-iota-activity-card'
 
 export function DashboardMessengerBossHome(p: {
-  apiSnapshot: (ApiStatus & { error?: string }) | null
-  hasValidMyAddressForBalance: boolean
-  onRefreshStatus: () => void
-  addressSuggestions: string[]
-  recipientOptions?: { address: string; label: string; favorite?: boolean }[]
   onOpenMessages: () => void
+  onOpenIota: () => void
   onOpenEinsatzleitung: () => void
+  showEinsatzleitung?: boolean
+  apiSnapshot?: (ApiStatus & { error?: string }) | null
+  contactDirectory?: Record<string, ContactMeshEntryClient>
+  myAddress?: string
 }) {
   return (
     <div className="space-y-5">
       <DashboardBossQuickActions
         onOpenMessages={p.onOpenMessages}
+        onOpenIota={p.onOpenIota}
         onOpenEinsatzleitung={p.onOpenEinsatzleitung}
+        showEinsatzleitung={p.showEinsatzleitung}
+        sosApiStatus={p.apiSnapshot}
+        sosContactDirectory={p.contactDirectory}
+        sosMyAddress={p.myAddress || p.apiSnapshot?.myAddressFull || p.apiSnapshot?.myAddress || undefined}
       />
-
-      <div className="space-y-3">
-        <DashboardIotaTransferCard
-          compact
-          myAddressFull={p.apiSnapshot?.myAddressFull}
-          walletNativeIotaBalance={p.apiSnapshot?.walletNativeIotaBalance ?? undefined}
-          walletNativeIotaBalanceFetchFailed={p.apiSnapshot?.walletNativeIotaBalanceFetchFailed}
-          hasValidMyAddressForBalance={p.hasValidMyAddressForBalance}
-          onRefreshStatus={p.onRefreshStatus}
-          addressSuggestions={p.addressSuggestions}
-          recipientOptions={p.recipientOptions}
-          mailboxIds={[
-            ...(p.apiSnapshot?.mailboxId ? [p.apiSnapshot.mailboxId] : []),
-            ...(p.apiSnapshot?.inboxUnionMailboxIds ?? []),
-          ]}
-          primaryMailboxId={p.apiSnapshot?.mailboxId || undefined}
-        />
-        <DashboardIotaActivityCard compact />
-      </div>
     </div>
   )
 }

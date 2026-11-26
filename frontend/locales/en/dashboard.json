@@ -15,12 +15,14 @@
     "settings": "Settings",
     "bottomNavAria": "Messenger navigation",
     "messages": "Messages",
+    "iota": "IOTA Wallet",
     "einsatzleitung": "Operations lead",
     "phonebook": "Phonebook"
   },
   "views": {
     "settings": "Settings",
     "config": "Edit .env",
+    "iota": "IOTA Wallet",
     "einsatzleitung": "Operations lead"
   },
   "settings": {
@@ -115,6 +117,10 @@
       "title": "Messages",
       "subtitle": "Chats, radio, team mailboxes"
     },
+    "iota": {
+      "title": "IOTA Wallet",
+      "subtitle": "Transfer, receive, activity"
+    },
     "einsatzleitung": {
       "title": "Operations lead",
       "subtitle": "Handoff ZIP, helper QR (LAN)"
@@ -190,7 +196,7 @@
   },
   "appearance": {
     "incomingTone": "Incoming tone (new message)",
-    "incomingToneHint": "Bell chime (not click beep). Open tab only — no system push. Default off.",
+    "incomingToneHint": "",
     "attachmentPreview": "Composer attachment preview",
     "attachmentPreviewHint": "Show image / LoRa luma / .txt before send. Default on."
   },
@@ -205,6 +211,6 @@
   "telegramNotify": {
     "title": "After online IOTA: Telegram chime",
     "aria": "Telegram notify after online IOTA",
-    "hint": "Optional short ping after a successful 1:1 online IOTA send — not the Telegram send path. No E2EE. Does not message the ops alarm group."
+    "hint": "Optional short ping after online 1:1 IOTA. Details: handbook → Telegram."
   }
 }

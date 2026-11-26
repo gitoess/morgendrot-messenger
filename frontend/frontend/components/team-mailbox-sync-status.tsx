@@ -33,7 +33,6 @@ export function TeamMailboxSyncStatus(p: {
   const variant = p.variant ?? 'full'
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
-  const [detailsOpen, setDetailsOpen] = useState(false)
 
   const diff = useMemo(
     () =>
@@ -55,7 +54,7 @@ export function TeamMailboxSyncStatus(p: {
       })
       setMsg(
         r.ok
-          ? 'Team-ID zur Posteingang-Abfrage hinzugefügt (App-Config). On-Chain war schon da.'
+          ? 'Zur Posteingang-Abfrage hinzugefügt (App-Config). On-Chain war schon da.'
           : r.error || 'Übernehmen fehlgeschlagen.'
       )
       if (r.ok) p.onReload?.()
@@ -96,13 +95,11 @@ export function TeamMailboxSyncStatus(p: {
     <div className={p.className ?? 'space-y-2 rounded-md border border-amber-500/35 bg-amber-500/5 p-3'}>
       <div className="space-y-1">
         <p className="text-xs font-medium text-foreground">Abfrage-Liste (nicht On-Chain)</p>
-        <p className="text-[11px] text-muted-foreground">
-          <strong className="text-foreground">{missingLabels.join(' · ')}</strong> liegt bereits{' '}
-          <strong className="text-foreground">on-chain</strong> und in deiner Team-Liste. Die App fragt standardmäßig
-          nur das Hauptpostfach ab — diese Team-ID fehlt noch in der{' '}
-          <strong className="text-foreground">Abfrage-Liste</strong> (lokale Config{' '}
-          <code className="text-[10px]">TEAM_MAILBOX_IDS</code>). Kein zweites Speichern des Postfachs.
-          Browser-Team-Liste wird beim Posteingang ohnehin mitgeladen; der Knopf hält die App-Config synchron.
+        <p className="text-[11px] leading-snug text-muted-foreground">
+          <strong className="text-foreground">{missingLabels.join(' · ')}</strong> ist on-chain und in deiner
+          Team-Liste — der Server pollt sie aber noch nicht (
+          <code className="text-[10px]">TEAM_MAILBOX_IDS</code>). Nur Boss/Backend; Knopf = Config sync, kein
+          zweites Deploy.
         </p>
       </div>
 
@@ -118,34 +115,6 @@ export function TeamMailboxSyncStatus(p: {
       ) : (
         <p className="text-[11px] text-muted-foreground">App-Backend offline — später erneut.</p>
       )}
-
-      <button
-        type="button"
-        className="text-[10px] text-muted-foreground underline hover:no-underline"
-        onClick={() => setDetailsOpen((v) => !v)}
-      >
-        {detailsOpen ? 'Weniger' : 'Kurz: was liegt wo?'}
-      </button>
-
-      {detailsOpen ? (
-        <ul className="list-disc space-y-1 pl-4 text-[11px] text-muted-foreground">
-          <li>
-            <span className="text-foreground">On-Chain:</span> Team-Objekt {diff.missingOnServer.map(fmt).join(', ')}{' '}
-            — existiert schon (Messenger/Chain).
-          </li>
-          <li>
-            <span className="text-foreground">Browser:</span> lokale Team-Liste unter Meine Mailboxen (Merker).
-          </li>
-          <li>
-            <span className="text-foreground">Abfrage-Liste:</span> Object-IDs in der App-Config für den
-            Server-Pfad — hier fehlt die Team-ID noch.
-          </li>
-          <li>
-            <span className="text-foreground">Hauptpostfach</span> (Karte darunter) = Setup-
-            <code className="text-[10px]">MAILBOX_ID</code>, andere ID, gemeinsames Deploy-Postamt.
-          </li>
-        </ul>
-      ) : null}
 
       {msg ? <p className="text-xs text-muted-foreground">{msg}</p> : null}
     </div>

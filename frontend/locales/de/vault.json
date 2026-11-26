@@ -63,8 +63,8 @@
     "blockedHint": "Noch offen: Passwort mindestens 8 Zeichen, beide Felder identisch, und gültiger Seed (erzeugen oder einfügen)."
   },
   "sdkMnemonicPref": {
-    "label": "Wallet-Seed merken",
-    "hint": "Beim Entsperren/Sichern den Seed aus der Sitzung in die Tresor-Datei schreiben. Ein schon gespeicherter Seed wird beim normalen „Lokal sichern“ nicht mehr gelöscht."
+    "label": "Wallet-Seed in Tresor-Datei",
+    "hint": "Nach Neustart reicht das Tresor-Passwort — Seed nicht neu tippen. Default an (empfohlen)."
   },
   "messengerSetup": {
     "link": "oder Messenger einrichten (Freunde)",

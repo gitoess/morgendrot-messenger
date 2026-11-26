@@ -121,15 +121,9 @@ export function SettingsTelegramNotifyOnSend() {
                   placeholder="123456789, 987654321"
                   className="font-mono text-xs"
                 />
-                <p className="text-[11px] text-muted-foreground">
-                  Sinnvoll als feste CC (z. B. zweite Nummer / Kollege) — zusätzlich zu Kontakt/Ich. Nicht die
-                  Einsatz-Alarmgruppe (die bleibt SOS / „Team alarmieren“). Klartext-Vorschau geht an jede ID.
-                </p>
               </div>
             </div>
-          ) : (
-            <p className="text-[11px] text-muted-foreground">Aus = kein Klingel-Hinweis nach IOTA-Send.</p>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

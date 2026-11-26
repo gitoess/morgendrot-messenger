@@ -1,6 +1,8 @@
 /**
  * Kammer „Befehl“: ein Dispatcher für /api/command und Terminal (kein zweiter Pfad).
  */
+import fs from 'node:fs';
+import path from 'node:path';
 import { logger } from '../logger.js';
 import {
     CFG,
@@ -54,6 +56,7 @@ import {
     saveVaultLocal,
     loadVaultContent,
     vaultFileExists,
+    resolveVaultFilePathForSession,
     exportEcdhKeyMaterialForBrowser,
     listVaultFiles,
     encryptVaultPayloadForChain,
@@ -270,12 +273,18 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         }
                         if (CFG.PACKAGE_ID) writeVaultPackageId(savePath, CFG.PACKAGE_ID);
                         if (CFG.STREAMS_ANCHOR_ID) await writeVaultAnchorId(savePath, CFG.STREAMS_ANCHOR_ID, pw);
+                        const resolvedPath = path.resolve(process.cwd(), savePath);
                         const extra = phrase
                             ? ' Wallet-Seed bleibt verschlüsselt in der Datei (gleiches Tresor-Passwort).'
                             : '';
                         return {
                             ok: true,
-                            message: 'Vault gespeichert.' + (CFG.STREAMS_ANCHOR_ID ? ' (inkl. Streams Anchor-ID, verschlüsselt)' : '') + extra,
+                            path: resolvedPath,
+                            message:
+                                'Vault auf dem API-Server gespeichert: ' +
+                                resolvedPath +
+                                (CFG.STREAMS_ANCHOR_ID ? ' (inkl. Streams Anchor-ID, verschlüsselt)' : '') +
+                                extra,
                         };
                     }
                     if (c === '/vault-load') {
@@ -566,7 +575,7 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             psecretsOn,
                             vaultNotesOn
                         );
-                        await createVaultOnChain(enc, CFG.DEFAULT_TTL_DAYS);
+                        const tx = await createVaultOnChain(enc, CFG.DEFAULT_TTL_DAYS);
                         if (vaultStateRef.current) {
                             vaultStateRef.current = {
                                 keys: vaultStateRef.current.keys,
@@ -580,8 +589,17 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             : 'On-Chain-Vault erstellt.';
                         return {
                             ok: true,
-                            message: chainMsg,
-                            preflight: pre,
+                            message: `${chainMsg}${tx?.digest ? ` TX ${tx.digest}` : ''}`,
+                            digest: tx?.digest,
+                            status: tx?.status,
+                            preflight: {
+                                ...pre,
+                                vaultOnChain: true,
+                                hints: [
+                                    'Vault liegt on-chain — „Von Chain laden“ nutzt denselben Blob (weitere Saves = update).',
+                                    ...(pre.hints || []).filter((h) => !/Noch kein On-Chain-Vault/i.test(h)),
+                                ],
+                            },
                         };
                     }
                     if (c === '/vault-change-password') {
@@ -663,9 +681,49 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         return { ok: true, message: parts.join(' | '), debug };
                     }
                     if (c === '/vault-list') {
-                        const list = listVaultFiles(process.cwd());
+                        const cwd = process.cwd();
+                        const list = listVaultFiles(cwd);
                         const defaultPath = CFG.VAULT_FILE || '.morgendrot-vault';
-                        return { ok: true, message: list.length ? list.join('\n') : 'Keine Vault-Dateien (.morgendrot-vault*) im Arbeitsverzeichnis.', paths: list, defaultPath };
+                        const defaultPathAbs = path.isAbsolute(defaultPath)
+                            ? defaultPath
+                            : path.join(cwd, defaultPath);
+                        return {
+                            ok: true,
+                            message: list.length
+                                ? list.join('\n')
+                                : 'Keine Vault-Dateien (.morgendrot-vault*) im Arbeitsverzeichnis.',
+                            paths: list,
+                            defaultPath,
+                            defaultPathAbs,
+                            cwd,
+                        };
+                    }
+                    /**
+                     * Ciphertext-Datei für Browser-Download.
+                     * Inhalt = bereits AES-GCM mit Tresor-Passwort. Export nur bei entsperrtem Tresor
+                     * (Zugriffskontrolle — Datei selbst bleibt PW-verschlüsselt, kein Klartext).
+                     */
+                    if (c === '/vault-export') {
+                        const vaultPath = resolveVaultFilePathForSession(CFG.VAULT_FILE || undefined);
+                        if (!vaultFileExists(vaultPath)) {
+                            return {
+                                ok: false,
+                                message:
+                                    'Keine Tresor-Datei auf der Festplatte. Zuerst „Tresor sichern“, dann herunterladen.',
+                            };
+                        }
+                        const raw = fs.readFileSync(vaultPath);
+                        if (raw.length > 12 * 1024 * 1024) {
+                            return { ok: false, message: 'Vault-Datei zu groß (max. 12 MB).' };
+                        }
+                        return {
+                            ok: true,
+                            path: vaultPath,
+                            filename: path.basename(vaultPath) || '.morgendrot-vault',
+                            contentBase64: raw.toString('base64'),
+                            bytes: raw.length,
+                            message: `Verschlüsselte Tresor-Datei bereit (${raw.length} Bytes). Öffnen nur mit Tresor-Passwort.`,
+                        };
                     }
                     if (c === '/vault-load-from-chain') {
                         if (!CFG.VAULT_REGISTRY_ID || !CFG.PACKAGE_ID) return { ok: false, message: 'VAULT_REGISTRY_ID und PACKAGE_ID nötig.' };

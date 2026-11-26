@@ -18,7 +18,7 @@
 
 **Cursor-„Plan“-Modus** = nur Chat-Modus, **kein** zweites Produktdokument.
 
-**Aktueller Arbeitsstand (verbindlich 2026-11-24 — IOTA-Messenger + Phasen-Reihenfolge):**
+**Aktueller Arbeitsstand (verbindlich 2026-11-26 — IOTA-Messenger + PC-Stabilität):**
 
 **Phasen-Reihenfolge (User 2026-11-22 — verbindlich):**
 1. **PC zuerst komplett** — Messenger-Kern, UX, Desk-Smoke, Direct-IOTA Stage‑2, optional **Zwei-Wallet/Zwei-Browser auf demselben PC** für Handshake/E2EE/NFT-Solo.  
@@ -28,12 +28,38 @@
 
 **Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
-1. **Fokus jetzt:** **Tresor fail-closed Härte** → Solo-Wizard → **PC-Durchgang** (dort Scope Zeile-für-Zeile: I = Boss ohne Helfer, inkl. Funk/TG) → Alpha.  
+**Nächste Gesprächs-/Bau-Reihenfolge (User 2026-11-26 — ja, sinnvoll):**
+1. **Nachrichten** (Copy/UX/Klarheit am Desk) — kleine Scheiben.  
+2. **Solo-Wizard** (Edition-Onboarding / „Neu anfangen“-Assistent, **nicht** § H.36 Team-Helfer-Wizard).  
+3. **Roadmap-Durchgang** weiter (Zeile-für-Zeile PC-Scope).  
+**Nicht dazwischen:** Profilbild/Visitenkarte-Bau, Drehrad/Handy-UI, EXE, Cap/Gap-Experimente.
+
+1. **Fokus jetzt:** Nachrichten abschließen → Solo-Wizard nach `IOTA-MESSENGER-SOLO-WIZARD-VORSCHLAG.md` → **PC-Durchgang** → Alpha.  
 2. **Erledigt Phase 1–3 Desk:** Messenger-Kern, 4b–4d, H.25a STABIL. Encode/Tempo Freeze.  
 3. **Scope-Arbeitsmodell (vorläufig):** IOTA-Messenger = **Boss ohne Helfer** + Freunde; Transporte IOTA/Funk/Telegram **drin**; Helfer/Handoff/Einsatz-Hub **raus**. Morgendrot = **alles**. Detail erst im Durchgang — Caps nicht blind flippen.  
-4. **Nicht parallel:** EXE vor Wizard/Durchgang; Cap/Gap-Experimente; WhatsApp/Paywall.  
+4. **Nicht parallel:** EXE vor Wizard/Durchgang; Cap/Gap-Experimente; WhatsApp/Paywall; Drehrad-Mock.  
 5. **Wallet/IOTA-Aktivität:** Freeze.  
 6. **Merge-Ritual** nach sinnvollem Paket. SSOT Modell: **`docs/IOTA-MESSENGER-EDITION-V1.md` §2.1**.
+
+**Nachtrag 2026-11-26 (Tresor / Backup / Env / Visitenkarte — Entscheidungen):**
+
+| Thema | Urteil | Wo |
+|-------|--------|-----|
+| **Tresor-Badge** | Nur **bereit \| gesperrt**; Klick gesperrt→Unlock, bereit→Soft-Pause | `chat-view-chat-header` + Handbuch Einstellungen |
+| **Vault-Inhalt Ist** | Keys, Notizen, PW-Safe, optional Seed | Handbuch; UI-Prosa weg |
+| **Vault-Ziel** | Telefonbuch + ID-Snapshot (Package/Mailbox) | Backlog — Live-IDs weiter unter IOTA |
+| **Nicht in Vault** | ganze `.env`; Chatverlauf; Meshtastic-PSK; TG-Token Default = Runtime-Datei (persönlich, nicht „nur Boss“) | Handbuch § Backup |
+| **iota-messenger `.env`** | Pflichtliste Overlay; Root-`.env.example` = Vollprodukt | `tools/iota-messenger/overlays/.env.example`, Edition §4 |
+| **Profilbild / Visitenkarte** | Ort = Dialog **„Ich“**; Bau **später** (nach Nachrichten+Wizard) | `IDEEN-BACKLOG.md` |
+| **Drehrad-UI** | Handy-Idee merken; **kein** PC-Umbau jetzt | später Phase 2 |
+| **Nachrichten-FAQ** | Funk-Cap 200 / S-ARQ-Kollaps / TG nur Text+Platzhalter / Alarm≠Gruppenchat / Prefix hardcoded | `MESSENGER-CHAT-HANDBUCH.md` FAQ |
+| **Backlog Nachrichten** | Auto-Sidebar wenn Bot in TG-Gruppe; NFT-Chip an Aktionen (opt.) | nach Solo-Wizard |
+| **H.16 / Gruppen** | **Gruppe verwalten je Sendepfad** (IOTA / Funk-Kanal / TG-Alarm — drei Fenster, ein Modell) | nach Nachrichten+Solo-Wizard |
+| **TG-Bild** | Composer: `sendPhoto` + Ack (Cap ~1,5 MB) **Ist**; Klingel weiter Text. Feinschliff/Tests → merken | `MESSENGER-CHAT-HANDBUCH` FAQ |
+| **Vault on-chain** | create→update ein Blob; Insufficient Gas → skaliertes Budget | Härte |
+| **Vault Soft-Pause UX** | Scrim aus während PW-Dialog; Home-Badge → PW nicht Mega-Unlock; kein Confirm vor Soft-Pause | Ist 2026-11-26 |
+| **Solo-Wizard** | Vorschlag ausgearbeitet: `docs/IOTA-MESSENGER-SOLO-WIZARD-VORSCHLAG.md` — Bau nach Nachrichten | H.30 / Edition |
+| **Storage-Rebate UI** | **Nicht bauen** „offene Rebates“ (kein Claim-Queue). Optional später: Burn-Toast mit `storageRebate` | `IDEEN-BACKLOG` |
 
 ### Jetzt machen (IOTA-Messenger — User-Durchgang 2026-11-22)
 
@@ -56,7 +82,7 @@
 | **H.27** | Handshake-UX Labels | **Ist** (Partner=0x; Annehmen-Copy) |
 | **H.34** | Port-Refactor bei Touch | kein Parallel-Epik |
 | **Split** | product-identity Caps | Arbeitsmodell Boss-ohne-Helfer; Caps-Abgleich im PC-Durchgang |
-| **Ideen** | Fail-closed Overlay | **Härten jetzt** (Hard-Lock) |
+| **Ideen** | Fail-closed Overlay | Soft-Pause/Abmelden Ist; Badge 2 Labels Ist |
 
 ### Später machen bzw. nochmals später klären (User-Durchgang ab 2026-11-22)
 
@@ -82,6 +108,7 @@
 | **H.11** | Offline-Karten | Backlog |
 | **H.12** | Sync SoT (Mesh-Verzahnung) | Doku ok; Bau mit Phase B |
 | **H.16** (Teil) | Boss-LAN-Onboarding | Helfer |
+| **H.16** | Visitenkarte + Profilbild in „Ich“ | Spez Ist in Backlog; Bau nach Nachrichten+Solo-Wizard |
 | **H.17** | Volldashboard / Geräte-Radar / Kacheln | Boss-UI |
 | **H.18** | TTS/STT Ausbau | Vorlesen Ist-teilweise; Cloud-STT später |
 | **H.19** | Forensic Capture | Nach Kern |
@@ -101,7 +128,8 @@
 | **H.30** | „Neu anfangen“ Voll-Wizard | Doku VAULT-EINRICHTEN Ist; UI-Assistent Backlog |
 | **H.37** | Multi-Profil Login | Nach Durchgang; **keine** Multi-Adresse im Account |
 | **T4 / T6 / T56…** | Schatten-Sweep 2. Acc; Funk-Strategie; Komplett-löschen | Ritual-Tabelle |
-| **Ideen** | ReleaseManifest on-chain SHA; Linkify; Zauberstab; Visitenkarte | `IDEEN-BACKLOG.md` |
+| **Ideen** | ReleaseManifest on-chain SHA; Linkify; Zauberstab; Visitenkarte+Avatar (Ort „Ich“) | `IDEEN-BACKLOG.md` |
+| **Handy-UI** | Drehrad / 4 freie Slots | Phase 2 — nicht PC |
 | **Schluss** | Ad-hoc/BLE Direct | Ganz hinten |
 
 **Stand-Kopf (Historie):** 2026-03 / **Navigations-Nachzug 2026-11-16** / zuvor **2026-11-08** (H.23 B2 Token-Spend + TBA-Index + Mint-Modi; Fortschrittstabelle unten) / zuvor **2026-07-07** (Nachtrag **2026-07-07:** Block-2-Feldtest **teil-PASS** — Modus A **PASS 2026-07-03**; Standalone **4b–4d** + Helfer→Boss CDP **PASS** (1 Gerät); Boss-Inbox **ohne Flackern**; APK **Mobile-Shell** Bottom-Nav + 2×2-Sendepfad; Handoff-ZIP **Globals-Reconcile**; **4e/4f** + Block-2 §3 Simple-Checks **offen**; zuvor **2026-06-17:** Messenger-**Sidebar-Navigation**, Telefonbuch/Kontakt-Dialog, Funk-Export-Vorschau, **§ H.36 P0/P1 Teil-Ist**, **§ H.3n B2.5 Teil-Ist**, **§ H.26 B4b Teil-Ist**, Scope-B-**lazy**; zuvor **2026-06-16** **§ H.36** Spec + **§ H.3n §9** Zivil-SOS; zuvor 2026-06-02 **§ H.33** API **`GET /api/einsatz-manifest/*`** — **`docs/API-EINSATZ-MANIFEST.md`**; zuvor **Produkt-Matrix** Abgabe Helfer-APK / Boss-PC / Wanderer / Installer; zuvor **§ H.33** Einsatz-On-Chain — **Mainnet direkt** + Testnet→Anker — **`docs/EINSATZ-MANIFEST-MOVE-SKIZZE.md`**; zuvor **§ H.32** Posteingang **„Antworten“** + **„Einsatz beenden“**; zuvor Einsatzleitung **Helfer einrichten** compact — **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`**; zuvor 2026-05-20 Strategie-Pivot **§ H.0-SIMPLE**: Mesh-First, IOTA optional, Simple Mode; zuvor 2026-05-21 Move-Deploy) (Move-Deploy **`create_team_mailbox`** + **`create_globals`**; § **H.28** Discord/Matrix Backlog; § **H.27** Handshake; § **H.26** Telegram Runtime **Ist-Code**; § **H.25a** Flüchtig-LoRa-Bild) — **§ H.22** Messenger-Kanäle & Mailbox **M1–M4** (`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`); zuvor 2026-03-28 — **§ H.18** TTS/STT (Barrierefreiheit / Freihand, Backlog); **§ H.17** Dashboard/Volldashboard vs. Boss-Ansicht (**Nachtrag**); **§ H.16** Telefonbuch / QR-Onboarding / Boss-LAN (**Nachtrag**); zuvor **2026-04-28** — **§ H.15** Handy-first / Client-IOTA / optionaler Node (**`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6) — **§ H.6b–H.6f** Resilience, Cold-Start, Umzug-Zeitfenster, **Konfiguration (.env vs. Runtime)**, **Android FG-Service + minimale Sync-Ehrlichkeit** (**`docs/ANDROID-FOREGROUND-SERVICE-MINIMAL-SYNC.md`**, **§ H.6f**) — **§ C.0/C.0b** Gliederung + **kanonische Ausführungsreihenfolge** — **§ H.3n** SOS / **`MORG_EMERGENCY_V1`** **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** — **§ H.1b** Messenger-UI-Modularität **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**; **§ H.12** Sync/Source-of-Truth **`SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**; **§ H.11** Offline-Karten **`OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`**; **§ H.10** Sicherheit/Vertrauen **`ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`**; **§ H.10b** Boss/Arbeiter-Seed (Team vs. dezentral) **`docs/BOSS-WORKER-SEED-CUSTODY.md`**; **§ H.3l** Spike **Web Serial Android** + USB/BLE-Doku **`HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** (Mesh/BLE zuerst); **§ H.3m** LoRa/Notfall: **keine** volle IOTA-TX über Funk, Gateway **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**; **§ H.3k** modularer Kern/Adapter/Interop **`MODULAR-KERN-ADAPTER-INTEROP.md`**; **§ H.3j** EU-Funk/Hardware/Einsatzprofile **`LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`**; **§ G** Verweis **`NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**; Lite-Messenger **Boss-Ausnahme** in **§ H.0 #1** / **`UI-ROLLEN-WORKSPACES.md`** § 5; **§ H.9** ATAK/CoT-Backlog (**`ATAK-COT-INTEGRATION-ZIELBILD.md`**); Backend vs. IOTA-RPC + **kein Hybrid-Signatur-Pfad** **`BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6; **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**; **Team-Rollenwechsel (Ist vs. Narrativ):** **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**; **§ H.8:** zwei Installationen Dienst/Testnet (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**), Weiterarbeit **A→B**, Aufräumen = fortlaufend (**§ H.5**); **§ H.1a** Qualität/Baseline/Vitest/AppError **`PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**; **§ H.14** Hardening V3 (**`docs/MORGENDROT-HARDENING-V3-PRECISION.md`**: PWA-Speicher, Lite-UI L2, Wipe, Idempotenz, PTB-Audit).  
@@ -1877,7 +1905,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 ### H.24 Package-Profile & package-abhängige UI (**→ Später** 2026-11-22; Expertenmodus-Ist reicht für Messenger)
 
-**Nachtrag 2026-06 / 2026-11 (Expertenmodus Vertrag):** Messenger-UI **Ist** — client opt-in **Expertenmodus** (Einstellungen) + **Vertrags-Panel** dort (temporär vs. `/set-package-id`); nicht mehr Posteingang-Toolbar. Wire/Klartext unter Nachrichten → Optionen. Doku: **`docs/INBOX-PACKAGE-EXPERT-MODE.md`**. **Volles Multi-Package-Dropdown / Side-by-Side-Vergleich** bleibt **H.24b**-Backlog.
+**Nachtrag 2026-06 / 2026-11 / 2026-11-24 (Expertenmodus Vertrag):** Messenger-UI **Ist** — client opt-in **Expertenmodus** unter **Einstellungen → IOTA** + **Vertrags-Panel** dort (temporär vs. `/set-package-id`); nicht mehr Posteingang-Toolbar / Allgemein. Wire/Klartext unter Nachrichten → Optionen. Doku: **`docs/INBOX-PACKAGE-EXPERT-MODE.md`**. **Volles Multi-Package-Dropdown / Side-by-Side-Vergleich** bleibt **H.24b**-Backlog.
 
 **Status:** **Teil-Ist (Schreibtisch 2026-07-08)** — P0–P4 + Adoption + Kontakt-Mailbox-Slots namespaced; **offen:** Multi-Package-Dropdown, P1c Server-Doku, Feldtest Einsatzwechsel am Gerät.  
 **SSOT Wechsel-Logik:** **`docs/PACKAGE-PROFILE-WECHSEL-SPEC.md`**.

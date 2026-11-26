@@ -2,7 +2,7 @@
 
 **Zweck:** Ausführliche Hinweise, die früher direkt in der Chat-UI standen — hier gebündelt für Nachlesen (PWA-Handbuch, offline nach erstem Abruf möglich).
 
-**Stand:** 2026-11-23 — Settings-Kurzblatt: `EINSTELLUNGEN-NUTZER-HANDBUCH.md` (Ton/Stumm/TG-Klingel). Chat-UI: Sidebar | Posteingang (kurz), Composer volle Breite darunter; Sendepfad Alle/IOTA/Funk/Telegram; Aktualisieren im App-Header neben Tresor.
+**Stand:** 2026-11-26 — Settings-Kurzblatt: `EINSTELLUNGEN-NUTZER-HANDBUCH.md` (Ton/Stumm/TG-Klingel). Chat-UI: Sidebar | Posteingang (kurz), Composer volle Breite darunter; Sendepfad Alle/IOTA/Funk/Telegram; Aktualisieren im App-Header neben Tresor. FAQ Funk/Telegram/Gruppen: Abschnitt unten **„Nachrichten FAQ (2026-11-26)“**.
 
 **Verwandt:** `docs/PWA-HANDBUCH-OFFLINE.md`, `docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`, `docs/MESSENGER-CAPABILITIES-OVERVIEW.md`, `docs/GRUPPENCHAT-ZIELBILD.md`, `docs/EXPORT-ASSISTENT-REFERENZ.md`.  
 **Privacy / Vault / NFT-Schlüsselkarte (alle Ist-Funktionen + 1-Gerät-Test):** → **`docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`**.  
@@ -560,7 +560,7 @@ Nach erfolgreichem **Klartext-Funk**: optionale Kopie per **Klartext-Mailbox** a
 
 ## Package-ID / Vertrag und Posteingang
 
-Steuerung unter **Einstellungen → Expertenmodus** (nicht in der Nachrichten-Toolbar).
+Steuerung unter **Einstellungen → IOTA → Expertenmodus** (nicht in der Nachrichten-Toolbar).
 
 | Aktion | Wirkung |
 |--------|---------|
@@ -601,4 +601,46 @@ Bei mehreren Package-IDs in `.env` und **package-id-history** liest der Posteing
 
 ---
 
-*Stand: 2026-11-22 — Zeilen-⋯ operativ (ohne Doppel zu Body/Optionen); Handoff als sichtbarer Button; NFT in Wallet.*
+## Nachrichten FAQ (2026-11-26)
+
+### 1) Wo / wie viele Funk- und Telegram-Nachrichten?
+
+| Kanal | Speicher | Cap |
+|-------|----------|-----|
+| **Funk** | Browser **localStorage** `morgendrot.meshLocalMessages.v1` (+ RAM) | **max. 200** Zeilen (ältere fallen weg) |
+| **Telegram** | Server-Journal `.morgendrot-telegram-journal.json` | bis **2000**; UI-Merge typ. weniger |
+| **IOTA** | Chain/Mailbox + kurzer Offline-Cache | Pagination (kein Mesh-200) |
+
+**„Nur ~7 sichtbar, obwohl 200 — und Alle / kein Filter?“** Häufigste Ursachen **ohne** Partner-Filter:
+
+1. **LoRa-Bild / S-ARQ:** Dutzende `MORG_SEG_V1`-Segmente werden zu **einer** Posteingangs-Zeile kollabiert (plus NAK-Zeilen ausgeblendet). 200 Segmente ≠ 200 Bubbles.  
+2. Archiv hat wirklich nur ~7 **Chat**-Texte; „200“ oft = **Zeichenlimit** Composer oder Cap-Zahl.  
+3. Kanalindex **0–7** = Kanäle, nicht Nachrichtenanzahl.
+
+Zum Prüfen: Browser-DevTools → Application → localStorage → `morgendrot.meshLocalMessages.v1` (Array-Länge).
+
+### 2) Datei/Bild über Telegram?
+
+**Default / Klingel:** nur Text; ohne Ack oft nur **`[Bild-Anhang]`**.
+
+**Composer-Sendepfad Telegram + Bild (Ist 2026-11-26):** Checkbox **„unverschlüsselt auf Telegram-Servern“** → dann echtes `sendPhoto` (Cap ~1,5 MB). Ohne Haken kein Bild-Send. **Kein E2EE** — wer Privatsphäre will: IOTA/Funk.
+
+### 3) Bot in Telegram-Gruppe — wo ist die Gruppe?
+
+**Heute:** Sidebar-Eintrag erscheint erst nach **lokaler Mitgliedschaft** (Join-Karte / Chat-ID bestätigen) — **nicht** automatisch, nur weil der Bot in TG hinzugefügt wurde. Gruppen-Chat-ID in Einstellungen allein reicht für Alarme, nicht für Chat-Zeile.
+
+**Wunsch (Backlog):** Auto-Eintrag wenn Bot der Gruppe beitritt (`my_chat_member` / Config) — weiterhin **Alarm/Hinweis**, kein Voll-Gruppenchat.
+
+### 4) Text „📩 Morgendrot / von ich:“ ändern?
+
+**Nein (Ist).** Prefix hardcoded.
+
+### 5–6) „Gruppe verwalten“ pro Sendepfad?
+
+**Ist:** ein Sheet (Morgendrot-Gruppe + optional Funk-Meta). Telegram-Alarm = Einstellungen.
+
+**Wunsch (Backlog, nach Solo-Wizard):** drei angepasste Einstiege — **IOTA:** Mitglieder/`0x`/Mailbox; **Funk:** Kanalindex/Name/PSK-Ref (+ Link Meshtastic); **Telegram:** Alarmgruppen-ID/Label (kein Bot-Gruppenchat). Ein Datenmodell, drei Fenster — kein Parallel-Chaos.
+
+---
+
+*Stand: 2026-11-26 — FAQ Funk/Telegram/Gruppen; zuvor Zeilen-⋯ / Handoff / NFT.*

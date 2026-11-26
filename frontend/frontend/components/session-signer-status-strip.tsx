@@ -79,11 +79,6 @@ export function SessionSignerStatusStrip(p: {
           ) : null}
         </div>
       )}
-      {!p.locked && active && matchesMy ? (
-        <p className="mt-1.5 text-[10px] text-muted-foreground">
-          Beim Login gesetzt · über Reload im Tab erhalten · beim Sperren gelöscht.
-        </p>
-      ) : null}
     </div>
   )
 }

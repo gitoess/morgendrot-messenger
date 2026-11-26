@@ -15,12 +15,14 @@
     "settings": "Einstellungen",
     "bottomNavAria": "Messenger-Navigation",
     "messages": "Nachrichten",
+    "iota": "IOTA Wallet",
     "einsatzleitung": "Einsatzleitung",
     "phonebook": "Telefonbuch"
   },
   "views": {
     "settings": "Einstellungen",
     "config": ".env anpassen",
+    "iota": "IOTA Wallet",
     "einsatzleitung": "Einsatzleitung"
   },
   "settings": {
@@ -115,6 +117,10 @@
       "title": "Nachrichten",
       "subtitle": "Chats, Funk, Team-Postfächer"
     },
+    "iota": {
+      "title": "IOTA Wallet",
+      "subtitle": "Überweisen, Empfangen, Aktivität"
+    },
     "einsatzleitung": {
       "title": "Einsatzleitung",
       "subtitle": "Handoff-ZIP, Helfer-QR (WLAN)"
@@ -190,7 +196,7 @@
   },
   "appearance": {
     "incomingTone": "Eingangs-Ton (neue Nachricht)",
-    "incomingToneHint": "Glocken-Chime (nicht Klick-Piep). Nur offener Tab — kein System-Push. Default aus.",
+    "incomingToneHint": "",
     "attachmentPreview": "Anhang-Vorschau im Composer",
     "attachmentPreviewHint": "Bild / LoRa-Luma / .txt vor dem Senden anzeigen. Default an."
   },
@@ -205,6 +211,6 @@
   "telegramNotify": {
     "title": "Nach Online-IOTA: Telegram-Hinweis (Klingel)",
     "aria": "Nach Online-IOTA Telegram-Hinweis",
-    "hint": "Optionaler Kurz-Ping nach erfolgreichem 1:1-IOTA-Send über Online — nicht der Sendepfad „Telegram“. Kein E2EE. Die Einsatz-Alarmgruppe wird hier nicht angeschrieben."
+    "hint": "Optionaler Kurz-Ping nach IOTA-1:1 Online. Details: Handbuch → Telegram."
   }
 }

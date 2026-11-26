@@ -537,7 +537,14 @@ export type GasSummary = {
     storageRebate?: string;
     nonRefundableStorageFee?: string;
 };
-export type SignAndExecuteResult = { digest?: string; status?: string; createdObjectIds?: string[]; gasSummary?: GasSummary };
+export type SignAndExecuteResult = {
+    digest?: string;
+    status?: string;
+    /** Rohfehler aus effects.status.error (z. B. Insufficient Gas). */
+    statusError?: string;
+    createdObjectIds?: string[];
+    gasSummary?: GasSummary;
+};
 
 export type ChainTxEvaluation = { ok: true; digest: string } | { ok: false; message: string };
 
@@ -703,7 +710,35 @@ export type SignAndExecuteOptions = {
      * und Besitz von MESSENGER_LICENSE_NFT_OBJECT_ID → Gas durch SPONSOR_GAS_OWNER (MESSENGER_AUTO_SPONSOR).
      */
     messengerGasPolicy?: boolean;
+    /** Explizites Gas-Budget (Mist). Vault-Create mit großem Blob braucht oft > Default 10M. */
+    gasBudget?: number | bigint;
 };
+
+/** Gas-Budget für On-Chain-Vault (Storage-Deposit skaliert mit Blob-Größe). */
+export function vaultOnChainGasBudgetMist(encryptedPayloadBytes: number): number {
+    const envBudget = CFG.GAS_BUDGET != null && Number(CFG.GAS_BUDGET) > 0 ? Number(CFG.GAS_BUDGET) : 10_000_000;
+    const scaled = 25_000_000 + Math.max(0, encryptedPayloadBytes) * 400;
+    return Math.min(500_000_000, Math.max(envBudget, 80_000_000, scaled));
+}
+
+function resolveGasBudgetMist(options?: SignAndExecuteOptions): number {
+    if (options?.gasBudget != null) {
+        const n = Number(options.gasBudget);
+        if (Number.isFinite(n) && n > 0) return Math.floor(n);
+    }
+    const envBudget = CFG.GAS_BUDGET != null && Number(CFG.GAS_BUDGET) > 0 ? Number(CFG.GAS_BUDGET) : 10_000_000;
+    return Number.isNaN(envBudget) ? 10_000_000 : envBudget;
+}
+
+function chainTxStatusErrorFromEffects(effects: unknown): string | undefined {
+    const st = (effects as { status?: unknown } | null | undefined)?.status;
+    if (st && typeof st === 'object' && st !== null && 'error' in st) {
+        const err = (st as { error?: unknown }).error;
+        if (typeof err === 'string' && err.trim()) return err.trim();
+        if (err != null) return String(err).trim();
+    }
+    return undefined;
+}
 
 function isIotaHttp404(err: unknown): boolean {
     const st = err && typeof err === 'object' && 'status' in err ? (err as { status?: number }).status : undefined;
@@ -934,8 +969,8 @@ export async function signAndExecute(
         const sponsoredTx = Transaction.fromKind(kindBytes);
         sponsoredTx.setSender(signingAddress);
         sponsoredTx.setGasOwner(sponsorAddress);
-        const gasBudgetNum = CFG.GAS_BUDGET != null && Number(CFG.GAS_BUDGET) > 0 ? Number(CFG.GAS_BUDGET) : 10_000_000;
-        sponsoredTx.setGasBudget(BigInt(Number.isNaN(gasBudgetNum) ? 10_000_000 : gasBudgetNum));
+        const gasBudgetNum = resolveGasBudgetMist(resolvedOptions);
+        sponsoredTx.setGasBudget(BigInt(gasBudgetNum));
         const coins = await getSponsorGasCoins(client, sponsorAddress);
         if (coins.length === 0) throw new Error('SPONSOR_GAS_OWNER hat keine Coin-Objekte für Gas.');
         sponsoredTx.setGasPayment(coins);
@@ -943,8 +978,8 @@ export async function signAndExecute(
         signAddress = sponsorAddress;
         signPassword = sponsorPassword;
     } else {
-        const gasBudgetNum = CFG.GAS_BUDGET != null && Number(CFG.GAS_BUDGET) > 0 ? Number(CFG.GAS_BUDGET) : 10_000_000;
-        txToSign.setGasBudget(BigInt(Number.isNaN(gasBudgetNum) ? 10_000_000 : gasBudgetNum));
+        const gasBudgetNum = resolveGasBudgetMist(resolvedOptions);
+        txToSign.setGasBudget(BigInt(gasBudgetNum));
         const coins = await getSponsorGasCoins(client, signAddress);
         if (coins.length === 0) throw new Error('Keine Coin-Objekte für Gas. Bitte IOTA aufladen (Wallet-Adresse: Signer).');
         txToSign.setGasPayment(coins);
@@ -964,7 +999,14 @@ export async function signAndExecute(
         const createdObjectIds = parseCreatedObjectIds(effects, objectChanges);
         const gasSummary = parseGasSummary(effects);
         const status = effectStatusFromEffects(effects);
-        const out = { digest: (resp as { digest?: string }).digest, status, createdObjectIds: createdObjectIds.length ? createdObjectIds : undefined, gasSummary };
+        const statusError = chainTxStatusErrorFromEffects(effects);
+        const out: SignAndExecuteResult = {
+            digest: (resp as { digest?: string }).digest,
+            status,
+            statusError,
+            createdObjectIds: createdObjectIds.length ? createdObjectIds : undefined,
+            gasSummary,
+        };
         recordMessengerSelfPaidMilestoneIfNeeded(trackMessengerMilestone, useSponsor, signingAddress, status, out.digest);
         return out;
     }
@@ -3792,7 +3834,7 @@ export async function createVaultOnChain(
     signingAddress: string,
     walletPassword?: string,
     signOptions?: SignAndExecuteOptions
-): Promise<{ digest?: string; status?: string }> {
+): Promise<SignAndExecuteResult> {
     if (!CFG.VAULT_REGISTRY_ID) throw new Error('VAULT_REGISTRY_ID nicht gesetzt.');
     assertSafeAddress(signingAddress);
     assertVaultPayloadSize(encryptedPayload);
@@ -3807,7 +3849,11 @@ export async function createVaultOnChain(
             txb.pure.u64(ttlDays),
         ],
     });
-    return signAndExecute(getClient(), txb, signingAddress, walletPassword, signOptions);
+    const gasBudget = signOptions?.gasBudget ?? vaultOnChainGasBudgetMist(encryptedPayload.length);
+    return signAndExecute(getClient(), txb, signingAddress, walletPassword, {
+        ...signOptions,
+        gasBudget,
+    });
 }
 
 /** On-Chain-Vault aktualisieren (Objekt bleibt, nur encrypted_data wird ersetzt → kein Rebate-Verlust). Vault muss existieren.
@@ -3818,7 +3864,7 @@ export async function updateVaultOnChain(
     signingAddress: string,
     walletPassword?: string,
     signOptions?: SignAndExecuteOptions
-): Promise<{ digest?: string; status?: string }> {
+): Promise<SignAndExecuteResult> {
     if (!CFG.VAULT_REGISTRY_ID) throw new Error('VAULT_REGISTRY_ID nicht gesetzt.');
     assertSafeAddress(signingAddress);
     assertVaultPayloadSize(encryptedPayload);
@@ -3833,7 +3879,11 @@ export async function updateVaultOnChain(
             txb.pure.u64(ttlDays),
         ],
     });
-    return signAndExecute(getClient(), txb, signingAddress, walletPassword, signOptions);
+    const gasBudget = signOptions?.gasBudget ?? vaultOnChainGasBudgetMist(encryptedPayload.length);
+    return signAndExecute(getClient(), txb, signingAddress, walletPassword, {
+        ...signOptions,
+        gasBudget,
+    });
 }
 
 /** Handshake aus Mailbox lesen (Discovery). Optional `parentMailboxObjectId` (Default: Server-`MAILBOX_ID`). */

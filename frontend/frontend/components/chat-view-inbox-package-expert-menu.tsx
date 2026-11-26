@@ -2,8 +2,8 @@
 
 /**
  * Experten: IOTA Move-Programm (Package-ID) für den Posteingang.
- * Nicht verwechseln mit „Datei-Paket (.morg-pkg)“ unter Optionen.
- * Platz: Einstellungen → Expertenmodus (nicht Posteingang-Toolbar).
+ * Platz: Einstellungen → IOTA → Expertenmodus (nicht Posteingang-Toolbar).
+ * Details / Abgrenzung .morg-pkg: docs/INBOX-PACKAGE-EXPERT-MODE.md
  */
 
 import { useState } from 'react'

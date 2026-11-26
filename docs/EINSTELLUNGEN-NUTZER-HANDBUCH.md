@@ -1,6 +1,6 @@
 # Einstellungen — Kurzhandbuch
 
-**Stand:** 2026-11-23 · Eine Seite, Ist-UI. Keine Spez, keine Geschichte.
+**Stand:** 2026-11-24 · Eine Seite, Ist-UI. Keine Spez, keine Geschichte.
 
 ---
 
@@ -8,10 +8,10 @@
 
 | Tab | Für wen | Kern |
 |-----|---------|------|
-| **Allgemein** | alle | Sprache, Wizard, Erscheinungsbild (Klack / Klick-Ton / **Eingangs-Ton** / Magnet), Expertenmodus, Handbuch, **Handoff importieren** (Helfer). Kein PWA-„App installieren“ mehr — Browser-Menü / APK / Installer. **Einsatz beenden** → Einsatzleitung (nicht hier). |
-| **IOTA** | alle | Netz (Boss/Kommandant), Gas, Chain-IDs, Mailboxen; Boss: **Package & Move-Upgrade** |
-| **Funk** | Einsatz | Meshtastic/Puls — Strategie später (offizielle App vs. eigene UI) |
-| **Telegram** | Boss (+ Helfer Join) | Bot, Alarme, optional Gruppenalarm, Hinweis nach Online-Send |
+| **Allgemein** | alle | Sprache, Wizard, Erscheinungsbild, Handbuch, **Handoff importieren** (Morgendrot-Helfer; **IOTA-Messenger-Produkt: ausgeblendet**). Nav = Sendepfad-Farben. Funk/Telegram-Tabs bleiben (Kanäle). |
+| **IOTA** | alle | Netz (Boss/Kommandant), Gas, Chain-IDs, Mailboxen; **Expertenmodus + IOTA-Vertrag (Package-ID)**; Boss: **Package & Move-Upgrade** |
+| **Funk** | Einsatz | Kurzhinweis + Link Meshtastic-App; Verbinden/Senden = Chat → Sendepfad Funk (§ H.3o) |
+| **Telegram** | Boss (+ Helfer Join) | Bot, Klingel, optional Monitor/Alarmgruppe (Morgendrot). **IOTA-Messenger:** nur Bot + Eingang + Klingel — kein Monitor, keine Einsatz-Alarmgruppe |
 | **Tresor** | alle | Ein Passwort: Seed anzeigen, Notizen/Passwörter, Backup lokal/Chain, Schatten, Notfall. Header-Badge = Sitzung. Netz-IDs → **IOTA** |
 
 **.env:** nur Link ganz unten → „Konfiguration öffnen“. Nicht in Allgemein.
@@ -43,7 +43,18 @@
 
 Ein aktives Netz. Signer-Status darunter (Browser-Signer für Direkt-Send).
 
-**Mainnet einrichten:** Gas → Deploy oder IDs eintragen → Speichern → Produktion wählen. Gemeinsam testen: Roadmap T1.
+**Mainnet einrichten** (selten, hinter **Expertenmodus**):
+
+| | |
+|--|--|
+| **Wer** | Boss/Betreiber am PC mit Backend + IOTA-CLI + Mainnet-Gas — nicht Helfer |
+| **Wann** | Vor dem ersten echten Produktions-Send; Testnet-Alltag braucht das nicht |
+| **Deployen** | 1 Klick Publish + Postfach → speichert selbst, Speichern-Button unnötig |
+| **Aus Boss-.env übernehmen** | Nur Morgendrot: `MAINNET_PACKAGE_ID` aus Server in lokale Felder ziehen; Mailbox oft noch tippen → dann **Speichern**. **IOTA-Messenger:** Button weg (kein Boss-.env-Pull) |
+| **Manuell + Speichern** | Wenn Package/Mailbox schon existieren (Explorer/anderes Gerät) → IDs eintragen → Speichern → Produktion wählen |
+| **Nicht verwechseln** | Felder = Mainnet-*Profil*. Chain-IDs oben = Anzeige. Experten-Vertrag darunter = aktiver Posteingang/Server-Package (Filter/Wechsel) — andere Aufgabe |
+
+Alltag: nur Übung/Produktion umschalten, wenn Mainnet schon „bereit“ ist.
 
 ### Gas
 
@@ -52,9 +63,19 @@ Ein aktives Netz. Signer-Status darunter (Browser-Signer für Direkt-Send).
 
 ### Chain-IDs zum Sichern
 
-Pro Netz: Package + **Postfach** (= Hauptpostfach/`MAILBOX_ID` zum Backup). Unter „Globals“: Vault-Registry / Command-Registry / Upgrade Cap = aktive `.env` (On-Chain, **nicht** lokaler Tresor).
+Pro Netz: Package + **Postfach** (= Hauptpostfach/`MAILBOX_ID` zum Backup).
 
-**Verlauf:** Unter „Frühere Package- / Postfach-IDs“ — lokale Dateien `.morgendrot-package-id-history` / `.morgendrot-mailbox-id-history` auf dem Boss. Wird aktualisiert bei **Neu-Publish** / Package-Wechsel bzw. wenn `create_globals` ein **neues** Postfach setzt. **In-Place-Upgrade** ändert die IDs nicht → kein neuer Verlaufseintrag. Move-Quellcode = Git/`move-test/`, nicht diese Liste.
+**Frühere Package- / Postfach-IDs:** Archiv (Kopieren/Sichern) auf dem Boss (`.morgendrot-package-id-history` / `.morgendrot-mailbox-id-history`). Aktualisiert bei Neu-Publish / ID-Wechsel. **Kein Umschalter** — Vertrag wechseln → **Expertenmodus** (gleiche IDs als Vorschläge). In-Place-Upgrade ändert die IDs nicht.
+
+**Weitere On-Chain-IDs (früher „Globals“):** nur Anzeige aus aktiver Boss-`.env`, **nicht tippen**. Entstehen automatisch beim Erst-Deploy / `create_globals`:
+
+| ID | Wozu | Ändern? |
+|----|------|---------|
+| **Vault-Registry** | On-Chain-Vault / Notfall-Purge (nicht der lokale Tresor unter „Tresor“) | Nur bei Neu-Deploy / Registry-Bootstrap |
+| **Command-Registry** | On-Chain-Kommandos (gleiches `create_globals` wie Mailbox) | Wie oben |
+| **Upgrade Cap** | Recht, Move-Code unter **derselben** Package-ID zu ersetzen | Beim Erst-Deploy in `.env`; fehlt → nur Neu-Publish |
+
+Alltag: nichts eingeben — Werte prüfen/sichern/kopieren. Helfer brauchen sie in der Regel nicht.
 
 **Nicht hier:** Team #n / Private #n — **Meine Mailboxen**.
 
@@ -68,23 +89,43 @@ Pro Netz: Package + **Postfach** (= Hauptpostfach/`MAILBOX_ID` zum Backup). Unte
 | **Erzeugen** | Automatisch beim Erst-Deploy; sonst Cap-ID aus Explorer/Wallet in `.env` |
 | **Fehlt** | Nur Neu-Publish möglich (neue IDs + Handoff) |
 
-### Package & Move-Upgrade (Boss/Kommandant)
+### Wo senden? / Signer / Chain-IDs
 
-**Pfad:** Einstellungen → **IOTA** → **Package & Move-Upgrade**.
+**Wo senden?** = aktives Netz (Testnet/Mainnet): Package + Hauptpostfach + RPC — nicht Composer-Ziel und nicht „Meine Mailboxen“.
+
+**Signer:** beim Login gesetzt, über Reload im Tab erhalten, beim Sperren gelöscht.
+
+**Chain-IDs:** Pro Netz Package + Postfach (auch Boss-`.env` / Handoff). Neu-Publish → alte ID in „Frühere…“. In-Place-Upgrade ändert IDs nicht.
+
+### Expertenmodus (IOTA)
+
+**Pfad:** Einstellungen → **IOTA** → unter den Netz-Tabs (Karte „Expertenmodus“). **Default aus.**
+
+Wenn **an**, erscheinen **in derselben Karte**: **Mainnet-Setup** (Deploy / IDs) → **IOTA-Vertrag** → Boss: **Move-Upgrade**. Alltag: nur Übung/Produktion umschalten.
 
 | Begriff | Bedeutung |
 |---------|-----------|
-| **Grün (… speichern / löschen)** | RPC-Probe: Move-Funktionen **existieren** im Package |
-| **Move upgraden** | Confirm → Boss-API; braucht UpgradeCap + fehlende Funktionen (oder Probe offen). Danach Backend neu starten. |
+| **Grün** | Move-Funktion existiert im Package |
+| **Move upgraden** | Confirm → Boss-API; braucht UpgradeCap. Danach Backend neu starten. |
 
-Team-Postfächer: **Meine Mailboxen**. Helfer sehen den Block nicht.
+### Meine Mailboxen
+
+**Was:** Postfach = Speicherort on-chain (nicht Chat-Partner). Lesen: Haupt + bekannte Privat/Team. Schreiben: Composer. Kontakt-IDs: Telefonbuch → Erweitert.
+
+**Team:** optionales Shared-Postfach. Beitritt: ID/QR · QR teilen · erstellen (Leitung) · Handoff · Spontan-Anfrage (Einsatzleitung). Schreiben: Composer-Ziel.
+
+**Abfrage-Liste:** nur Morgendrot-Boss mit Backend, wenn Team on-chain + lokal da, aber Server noch nicht pollt (`TEAM_MAILBOX_IDS`). **IOTA-Messenger:** ausgeblendet (kein Boss-`TEAM_MAILBOX_IDS`-Sync).
+
+**Mein Kontakt-QR:** Messenger-Identität für Telefonbuch — nicht IOTA-Hub „Empfangen“ (Coins). Funk/Telegram-IDs bleiben in ihren Tabs / Kontakt-Erweitert.
+
+**Visitenkarte / Profilbild (Ziel, nicht Ist):** Teilen und eigenes Profilbild leben unter Dialog **„Ich“** (eine Aktion „Visitenkarte teilen“ + später Bild Opt-in) — nicht unter Empfangen, keine zweite QR-Welt. Details: `docs/IDEEN-BACKLOG.md`.
 
 ### Passwort / Backup / Mailboxen / Schatten
 
 | Block | Kurz | Ort |
 |-------|------|-----|
-| Passwort ändern | Vault-Datei neu verschlüsseln; „Sitzung beenden“ = Keys aus RAM (wie Abmelden). **Auto-Sperren nach Abwesenheit** = optional, Default aus. F5 sperrt den API-Tresor nicht | **Sicherheit** / Tresor |
-| Backup | Lokal / Chain sichern & laden | **Sicherheit** |
+| Passwort ändern | Vault-Datei neu verschlüsseln. **Voll sperren** = Chat-Header **Abmelden** (nicht unter Passwort ändern). Soft-Pause = Badge. **Auto-Sperren** optional, Default aus. F5 sperrt den API-Tresor nicht | **Sicherheit** / Tresor |
+| Backup | Server-Datei + Download/Import + optional Chain | **Sicherheit** |
 | Meine Mailboxen | Privat/Team-Postfächer ≠ Deploy-Mailbox unter „Wo senden?“ | **IOTA** |
 | Schatten → Main | Einmal-Sweep temporäre Adresse → Main | **Sicherheit** |
 
@@ -125,44 +166,135 @@ Team-Postfächer: **Meine Mailboxen**. Helfer sehen den Block nicht.
 
 ## Telegram
 
+**Scope (T42):** Telegram = Klingel / Inbound / Alarm — **kein** Video, kein NFT, kein E2EE über Telegram. Archiv und Beweis laufen über IOTA / Export+Hash.
+
 Telegram = **optionaler Push/Hinweis**, kein Chat-Ersatz für IOTA/Funk.
 
-**IOTA→Telegram-Klingel (Hinweis nach Online-Send):** Genau das, wofür sie gebaut ist — **Aufmerksamkeits-Ping**, kein zweiter Messenger. Bedeutung: „Es liegt was in Morgendrot“ (Handy vibriert über Telegram, App muss nicht offen sein). Inhalt/Verlauf bleiben in Morgendrot; Telegram ersetzt weder IOTA noch Funk.
+**IOTA→Telegram-Klingel (Hinweis nach Online-Send):** Aufmerksamkeits-Ping („Es liegt was in Morgendrot“) — Handy vibriert über Telegram, App muss nicht offen sein. Inhalt/Verlauf bleiben in Morgendrot. **Nicht** der Composer-Sendepfad „Telegram“ (der ist ein eigener Bot-Kanal ohne IOTA). **Kein E2EE.** Die Einsatz-Alarmgruppe wird vom Klingel-Schalter **nicht** angeschrieben. Aus = kein Klingel-Hinweis nach IOTA-Send.
 
-**Eingangs-Ton (App):** Einstellungen → Erscheinungsbild — Master + 1:1/Gruppe/Pinnwand. **Stumm pro Chat:** im Chat-Kopf „Ton/Stumm“ — nur der In-App-Chime, kein On-Chain-Block. **Anhang-Vorschau:** Erscheinungsbild → Schalter (Composer-Bild/.txt vor dem Send; Default an). Chat-Kurzblatt: **`MESSENGER-CHAT-HANDBUCH.md`** § *Ton, Stumm, Telegram-Klingel*.
+**Eingangs-Ton (App):** Einstellungen → Erscheinungsbild — Master + 1:1/Gruppe/Pinnwand. Nur **offener Tab**, kein System-Push. Chat-Kurzblatt: **`MESSENGER-CHAT-HANDBUCH.md`** § *Ton, Stumm, Telegram-Klingel*.
 
 | Einstellung | Bedeutung |
 |-------------|-----------|
-| **System-Alarme** | Nur Monitor/Sensor → deine Chat-ID. Kann aus bleiben für normalen Chat. |
-| **Bot-Token** | Von @BotFather. Ersetzen = alter Token weg (ein Slot). Nur Admin; Klartext in Runtime-JSON + UI. |
-| **Persönliche Chat-ID** | Deine User-ID (@userinfobot), nicht die Zahl vor „:“ im Token. Für Alarme + „Test an mich“. |
-| **Relay-URL** | Optional für Monitor (`127.0.0.1:8787`). Chat oft ohne Relay. |
-| **Eingehende Antworten** | **Long Polling** = Server fragt Telegram (kein Tunnel). Webhook braucht HTTPS. Aus = nur senden. Nur Telefonbuch-IDs. |
-| **Test an mich** | An deine Admin-Chat-ID. |
-| **Test an Kontakt** | An manuell eingegebene Partner-Chat-ID — nicht dasselbe. |
-| **Einsatz-Alarmgruppe** | Boss: eine Telegram-**Gruppe** als Klingel für SOS / „Team alarmieren“. Default **aus** (kein versehentliches Gruppen-Schreiben). Aktiv = Schalter an + **Gruppen-Chat-ID (-100…)** + Speichern; Einladungslink nur für Helfer-Beitritt. |
-| **Hinweis nach Online-Send** | Nach erfolgreichem **IOTA-1:1 Online**: optionaler Kurz-Ping (**Klingel**, siehe Absatz oben). Empfänger: **Kontakt / Ich / Beide** + optional **weitere Chat-IDs (CC, max. 5)**. Nicht die Alarmgruppe. Composer-Sendepfad „Telegram“ = **anderer** Kanal (nur Bot, ohne IOTA). |
+| **System-Alarme** | Nur Monitor/Sensor → deine Chat-ID. Kann aus bleiben für normalen Chat. **IOTA-Messenger: ausgeblendet.** |
+| **Bot-Token** | Von @BotFather. Ersetzen = alter Token weg (ein Slot). |
+| **Persönliche Chat-ID** | Deine User-ID von **@userinfobot** — **nicht** die Zahl vor „:“ im Bot-Token (das ist die Bot-ID). Vorher den Bot in Telegram öffnen und **Start** tippen. Für Alarme + „Test an mich“. |
+| **Relay-URL** | Optional **nur Monitor** (Default `http://127.0.0.1:8787`). Läuft ein lokaler Relay-Prozess? Sonst Probe = „nicht erreichbar“ — **normal**. Chat-/Klingel-/Alarm-Tests gehen **direkt** über die Telegram-Bot-API ohne Relay. Monitor-Webhook „inaktiv“ = System-Alarme aus oder Webhook nicht gesetzt. Statuszeile in der UI bewusst weggelassen (lärmt ohne Nutzen). |
+| **Eingehende Antworten** | **Long Polling** läuft im API-Server (`npm run dev`). Nur Chats aus dem **Telefonbuch** (Telegram Chat-ID). Nach Speichern Backend neu starten, wenn der Poll nicht startet. Webhook braucht öffentliche HTTPS-URL. Aus = nur senden. |
+| **Test an mich / Kontakt** | Admin-Chat-ID bzw. manuell eingegebene Partner-ID. |
+| **Einsatz-Alarmgruppe** | Boss (nur **Morgendrot**): eine Telegram-**Gruppe** als Klingel für SOS / „Team alarmieren“. **Default aus.** **Aktivieren:** Schalter an → Felder → Speichern → „Test an Gruppe“ / „Team alarmieren“. **IOTA-Messenger: ausgeblendet** (kein SOS/Einsatz-Team). |
+| **Hinweis nach Online-Send** | Optionaler Kurz-Ping nach **IOTA-1:1 Online**. Empfänger: Kontakt / Ich / Beide + optional CC (max. 5 Chat-IDs). Nicht die Alarmgruppe. |
 
-**Einstieg:** App → **Einstellungen → Telegram** (Handbuch-Karte unter Allgemein → „Öffnen“ führt ins Handbuch; Telegram-Tab = Aktion). Kurz-Setup: `TELEGRAM-INTEGRATION-EINRICHTUNG.md`.
-
-Details: `docs/TELEGRAM-INTEGRATION-ZIELBILD.md` (Einrichtung + Architektur).
+**Einstieg:** App → **Einstellungen → Telegram**. Kurz-Setup: `TELEGRAM-INTEGRATION-EINRICHTUNG.md`. Architektur: `docs/TELEGRAM-INTEGRATION-ZIELBILD.md`.
 
 ---
 
-## Sicherheit (Ist)
+## Sicherheit / Tresor (Ist)
 
-**Notfall-Löschung** (Scopes: Chain-Vault / lokaler Cache / Sitzung sperren / lokale Geheimnisse), **Passwort ändern**, **Backup**, **Schatten → Main**, **Tresor-Landkarte** (Stand 2026-11-12, T8/T9/T37). Badge = Soft-Pause (RAM + PW); Abmelden = Keys weg.
+**Einloggen / Entsperren** = Tresor-Passwort öffnet Keys, optional Seed, Notizen, Passwort-Einträge.
+
+**Sitzung:** Header-**Badge** = Soft-Pause (grau, RAM bleibt, PW zum Weitersprechen). **Abmelden** = Keys + Inbox-Schnellcache weg (wie früher „Sitzung beenden“ unter Passwort — der Extra-Knopf ist weg, Doppel zu Abmelden). F5 sperrt den API-Tresor nicht. Notfall-Löschung darunter separat.
+
+**Package / Mailbox / RPC** = Einstellungen → **IOTA** (Betrieb, auch bei Soft-Pause nötig) — **nicht** unter Tresor angezeigt.
+
+**Tresor-Datei = Vault** (engl. Name derselben Datei `.morgendrot-vault`) — kein zweites Produkt.
+
+**Badge im Chat-Kopf (nur zwei Labels):** `Tresor: bereit` = Keys + Browser-Passwort ok (Tippen = Soft-Pause). `Tresor: gesperrt` = alles andere (Abmelden, Soft-Pause, F5 ohne Browser-PW, Signer fehlt) — Tippen öffnet den **Passwort-Dialog** (Soft-Pause) bzw. Unlock.
+
+**Sperrt sich der Tresor „von allein“?** Oft ja, ohne dass du Soft-Pause gewählt hast:
+
+| Ursache | Was passiert |
+|---------|----------------|
+| **F5 / Tab neu** | Browser-PW-Session weg → Badge **gesperrt**, Keys oft noch im API-Prozess |
+| **Idle** | Einstellungen → Tresor → Idle-Sperre (Default **aus**). Wenn Minuten > 0 → Hard-Lock |
+| **PWA im Hintergrund** | Installierte PWA: nach ~45 s Hintergrund → `/vault-lock` (abschaltbar `morgendrot.pwaBackgroundVaultLock=0`) |
+| **Abmelden** | Vollsperre |
+| **API-Neustart** | Keys weg → gesperrt |
+
+**Storage-Rebate (On-Chain-Vault / Burn):** **keine** Wallet-Karte „Rebate offen“ (anders als NFT-Leihe „zurückholen“) — bewusst nicht gebaut. Rebate fließt **in derselben TX** zurück; optional später nur Toast nach Burn.
+
+Toast **„Tresor sichern?“** nach relevanten Änderungen (Notizen/Safe o. Ä.).
+
+### Was gehört in die Tresor-Backup-Datei?
+
+| Rein (Ist / Ziel) | Urteil |
+|-------------------|--------|
+| Messaging-Keys, Notizen, Passwort-Safe, optional Wallet-Seed | **Ist** |
+| Telefonbuch / Kontakte (IOTA-Adressen, optional TG-/Funk-Felder am Kontakt) | **Ziel** (Backlog) — sinnvoll für Gerätewechsel |
+| Snapshot Package-ID, Mailbox-ID(s), Absender | **Ziel** (Backlog) — Snapshot zum Restore, Live-Pflege weiter unter IOTA |
+| Telegram Bot-Token / Runtime-Alarmgruppe | **Nein als Default** — Boss-Runtime (`.morgendrot-runtime-config.json`), nicht User-Tresor |
+| Komplette `.env` / RPC-Secrets / Gas-Station | **Nein** — Maschinen-/Deploy-Config, zu breit und riskant |
+| Meshtastic Region/Modem/PSK | **Nein** — Meshtastic-App; optional nur App-Metadaten (Kanalindex) am Kontakt |
+| Chatverlauf | **Nein** — Chain / Inbox-Cache |
+
+**Kurz:** Identität + Safe + (Ziel) Kontakte/ID-Snapshot. **Nicht** die ganze `.env` und nicht der Chat.
+
+**Kein Cloud-Server:** „Tresor sichern“ = aktuelle Sitzung → verschlüsselte Arbeitsdatei **`.morgendrot-vault` im Projektordner dieses PCs** (`npm run dev`). Browser kann keine Geheimdatei still irgendwohin schreiben; deshalb Arbeitsdatei + optional „Kopie herunterladen“.
+
+**Import allein reicht nicht:** Import lädt eine **schon vorhandene** Backup-Datei. Ohne vorheriges Sichern (oder ältere Kopie) gibt es nichts wiederherzustellen.
+
+**Schutz der Datei:** AES-GCM mit **Tresor-Passwort** (Inhalt nie Klartext). Zusätzliches ECDH für die Backup-Datei lohnt nicht — die Messaging-Keys **sind** der Inhalt. **Kopie herunterladen** nur bei **entsperrtem** Tresor (Zugriffskontrolle).
+
+**Wallet-Seed:** Schalter Entsperr-Dialog + Backup, Default an. Aus = nach Neustart Seed neu.
+
+**Sicherster Alltag:** Seed an → Tresor sichern → Kopie herunterladen. Chain optional.
+
+**Backup-Aktionen:**
+
+| Aktion | Was passiert |
+|--------|----------------|
+| **Tresor sichern** | Sitzung → Arbeitsdatei auf **dieser Festplatte** (Projektordner). |
+| **Kopie herunterladen** | Dieselbe PW-verschlüsselte Datei → Browser-Downloads. Unlock Pflicht. |
+| **Backup importieren** | Vorhandene Datei vom PC → Sitzung (Wiederherstellen). |
+| **Auf Chain sichern / laden** | Optional zweites Backup (`VAULT_REGISTRY_ID`). |
+
+**On-Chain-Tresor (technisch):** Unter der **Vault-Registry** (Shared-Objekt, `create_globals`) liegt **pro Wallet-Adresse ein** Dynamic-Field mit **AES-Blob** (Tresor-Passwort) — kein Klartext-Event-Stream der Notizen. Zusätzlich Move-Events `VaultCreated` / `VaultUpdated` (Metadaten, kein Klartext). **Erster Speichern:** `create_vault`. **Weitere:** `update_vault` = **derselbe** Eintrag überschrieben (kein Versionsarchiv). Beim erneuten `create_vault` (Rotate) wird das alte Objekt gelöscht → Storage-**Rebate**. Normales Update: Objekt bleibt, Gas für die TX. Große Blobs brauchen höheres Gas-Budget (App skaliert; Fehler „Insufficient Gas“ = Budget/Blob). „Von Chain laden“ liest diesen einen Blob.
+
+**Notfall-Löschung**, **Passwort ändern**, **Backup**, **Schatten → Main** bleiben. Badge = Soft-Pause; Abmelden = Keys weg.
 
 ---
 
 ## Funk
 
-Kurz: Puls/Geräte-Embed. Entscheidung offizielle Meshtastic-App vs. eigene UI = Roadmap T6 — **noch nicht**.
+**Einstellungen → Funk:** Kurzhinweis (Port-Besitz) + Link „Meshtastic einrichten“ (`client.meshtastic.org`). Kein zweites USB/BT-Hook in den Settings (sonst Port-Kampf).
+
+### Was wo?
+
+| Ort | Zuständig für |
+|-----|----------------|
+| **Meshtastic-App** (oder Web-Client) | Region (EU_868), Modem (z. B. MediumFast Bilder / LongFast Feld), hop_limit, MQTT aus, Kanalname/PSK/Secondary |
+| **Chat → Sendepfad Funk → Funk & Geräte** | USB/BT verbinden, Nodes, Kanal**index**, Klartext senden, „Bilder über Funk“ — bleibt im Chat (richtig so) |
+| **Composer-Schloss** | Online/IOTA-Verschlüsselung — **nicht** dasselbe wie Funk-Luft (Klartext bzw. Channel-PSK in der App) |
+
+**Parallel:** App auf USB, Morgendrot per Bluetooth (oder 2. Heltec). Am PC oft: USB nur für den Messenger, Config vorher in der App setzen und Port freigeben.
+
+**Damit zwei Heltecs sich verstehen:** gleiche Region (z. B. EU_868), gleiches Modem (meist LONG_FAST; Desk-Bilder = MediumFast), gleicher Kanalindex + gleicher Kanalname/PSK. Primary (Index 0) = öffentliches Mesh; eigene Gruppen = Secondary mit geteiltem PSK. Modem/PSK nur in der Meshtastic-App — Messenger wählt Index und Nodes.
+
+### Split (Roadmap § H.3o.3 — verbindlich für PC-Phase)
+
+| Einstellung | Jetzt | Später (nur Absprache) |
+|-------------|--------|-------------------------|
+| **Region** (EU_868) | Meshtastic-App; UNSET = kein TX | Optional 1-Klick-Fix im Messenger, wenn Radio UNSET meldet |
+| **Modem** (LongFast / MediumFast / …) | Meshtastic-App; Desk-Bilder = **MediumFast** (H.25a-Anker) | Optional 3 Profil-Buttons — **nicht** still am Encode-Freeze drehen |
+| **hop_limit** | Meshtastic-App (Default oft 3) | Optional Slider 1–7 in Einstellungen→Funk |
+| **MQTT / Uplink** | Meshtastic-App; Privat = **aus** | Optional Schalter „Internet-Gateway“ Default aus |
+| **Kanal / PSK / Secondary** | Meshtastic-App; Messenger nur **Index** + Metadaten | H.3o Phase 2: QR/PSK-Ref aus Handoff — kein Frequenz-Editor |
+| **1:1 / Gruppe / Verschlüsselung Funk** | Ist: Klartext + optional Channel-PSK in der App; App-E2E = Online/IOTA | H.3o.1 Feldtest random PSK; Mesh-v2-Versand bleibt aus |
+
+**Nicht jetzt bauen:** volle Meshtastic-Config-UI im Messenger (T6 offen; H.3o.3: Modem/Frequenz bleiben Firmware/App). Profil-Buttons / hop_limit im Messenger = Roadmap später — nicht parallel zum H.25a-Anker.
+
+## Expertenmodus / IOTA-Vertrag
+
+**Pfad:** Einstellungen → **IOTA** → Expertenmodus.
+
+Temporär = nur diese Programm-ID im Posteingang (ohne Server-Wechsel). Dauerhaft = wie `/set-package-id`. Nicht verwechseln mit Datei-Paket `.morg-pkg` unter Nachrichten → Optionen. Nur in diesem Browser gespeichert. Details: **`docs/INBOX-PACKAGE-EXPERT-MODE.md`**.
 
 ## Handoff (kurz)
 
-Boss teilt **Einsatz-Konfig** (Package/RPC/Mailbox/Capabilities, **kein** Seed) als ZIP (~3 KB). Helfer: **Allgemein → Handoff importieren** → neu laden → entsperren.  
-**Lassen für Morgendrot-Einsatz** (Helfer/Geräte). Solo/Privat meist ohne. IOTA-Messenger-only: weg (Produkt-Split).
+Boss **exportiert** unter **Einsatzleitung → Helfer einrichten** (ZIP ~3 KB, kein Seed).  
+Helfer **importieren** unter **Einstellungen → Allgemein → Handoff importieren** → neu laden → entsperren.  
+
+**Warum nicht in der Einsatzleitung?** Helfer haben keinen Einsatzleitungs-Tab — Import muss auf dem Helfer-Gerät in den Einstellungen bleiben. Solo/Privat meist ohne. IOTA-Messenger-only: weg (Produkt-Split).
 
 ---
 
@@ -174,8 +306,8 @@ Boss teilt **Einsatz-Konfig** (Package/RPC/Mailbox/Capabilities, **kein** Seed) 
 | IOTA Passwort/Backup/Schatten | → **Sicherheit** (T8/T9 erledigt); IOTA nur Hinweis |
 | Telegram Bot + 1:1 + Gruppe | ausreichend |
 | Telegram Journal/Webhook-URL-UI | fehlt / selten nötig |
-| Sicherheit | Purge + PW/Backup/Schatten/Landkarte |
-| Secrets-Landkarte als eigene UI | fehlt (Roadmap T11) |
+| Sicherheit | Purge + PW/Backup/Schatten; Kurz-Karte 1–3 |
+| Secrets-Landkarte als eigene UI | T11 Backlog; Ist = Kurz „Was im Tresor“ |
 
 **Radikal kürzen / aufräumen** der Settings + Handbuch: Roadmap **T12** (am Schluss des Durchgangs oder früher, wenn blockierend).
 

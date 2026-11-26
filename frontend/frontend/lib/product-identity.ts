@@ -17,10 +17,15 @@ export function isIotaMessengerProduct(): boolean {
 
 const MORGENDROT_UI = {
   hideBossHandoff: false,
+  hideHandoffImport: false,
   hideEinsatzleitung: false,
   hideEinsatzEnd: false,
   hideFunk: false,
   hideTelegram: false,
+  /** Monitor-Sensor-Alarme + Relay (Kanal A) — Morgendrot-Ops. */
+  hideTelegramMonitor: false,
+  /** Einsatz-Alarmgruppe / Helfer-Join (B4b) — SOS-Team. */
+  hideTelegramEinsatzAlarm: false,
   hideSos: false,
   hideShadowSweep: false,
   hideActiveProfile: false,
@@ -31,10 +36,16 @@ const MORGENDROT_UI = {
 /** Schlanker Messenger — Align mit tools/iota-messenger/overlays/product-identity.ts */
 const IOTA_MESSENGER_UI_CAPS = {
   hideBossHandoff: true,
+  /** Kein Helfer-Handoff — Import-Panel unter Allgemein aus. */
+  hideHandoffImport: true,
   hideEinsatzleitung: true,
   hideEinsatzEnd: true,
-  hideFunk: true,
-  hideTelegram: true,
+  /** Kanäle gibt es — Settings-Tabs Funk/Telegram bleiben. */
+  hideFunk: false,
+  hideTelegram: false,
+  /** Kein Sensor-Monitor / kein Team-SOS über TG-Gruppe. */
+  hideTelegramMonitor: true,
+  hideTelegramEinsatzAlarm: true,
   hideSos: true,
   hideShadowSweep: true,
   hideActiveProfile: true,

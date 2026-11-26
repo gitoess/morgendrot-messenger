@@ -658,6 +658,11 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     navigateTo({ type: 'einsatzleitung', variant: 'einsatzleitung-hub' })
   }, [navigateTo])
 
+  /** Home-Kachel „IOTA“ → Wallet + Aktivität (nicht permanent auf dem Home). */
+  const openIotaView = useCallback(() => {
+    navigateTo({ type: 'iota' })
+  }, [navigateTo])
+
   const openMessengerChatView = useCallback(() => {
     navigateTo({ type: 'chat', variant: 'private-chat' })
     // APK: Chat-Mount defaultet auf Posteingang; Event setzt Tab falls Chat schon offen.
@@ -1350,13 +1355,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   const chatVaultBannerActions: ChatViewVaultBannerActions = useMemo(
     () => ({
       onLockSession: async () => {
-        if (
-          !window.confirm(
-            'Tresor sperren?\n\nMessenger wird ausgegraut — Sitzung bleibt im RAM.\nWeitersprechen nur mit Passwort.\n\nAbmelden = alles weg + Login-Dialog.'
-          )
-        ) {
-          return
-        }
+        /** Kein Extra-Confirm — Badge-Klick = Soft-Pause; Passwort-Dialog folgt beim Weitersprechen. */
         await lockSession({ stayInView: true })
       },
       onNavigateHomeWhenLocked: () => {
@@ -1471,6 +1470,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     openSettingsCategory,
     openConfigView,
     openEinsatzleitungView,
+    openIotaView,
     openMessengerChatView,
     openVaultView,
     openBossModeView,

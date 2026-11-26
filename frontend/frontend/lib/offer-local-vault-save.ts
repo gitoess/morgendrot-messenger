@@ -2,12 +2,21 @@
 
 import { toast } from 'sonner'
 import { fetchStatus, vaultSave } from '@/frontend/lib/api'
+import { getIncludeSdkMnemonicInBackup } from '@/frontend/lib/vault-sdk-mnemonic-preference'
 
-export type LocalVaultSaveOfferReason = 'handshake' | 'connect'
+export type LocalVaultSaveOfferReason =
+  | 'handshake'
+  | 'connect'
+  | 'notes'
+  | 'secrets'
+  | 'seed'
 
 const REASON_HINT: Record<LocalVaultSaveOfferReason, string> = {
-  handshake: 'nach Handshake',
-  connect: 'nach Verbindung (Connect)',
+  handshake: 'Handshake-Keys liegen nur im RAM.',
+  connect: 'Connect-Keys liegen nur im RAM.',
+  notes: 'Notizen sind nur in der Sitzung — noch nicht dauerhaft in der Tresor-Datei.',
+  secrets: 'Passwort-Einträge sind nur in der Sitzung — noch nicht dauerhaft in der Tresor-Datei.',
+  seed: 'Wallet-Seed soll in die Tresor-Datei — bitte einmal sichern.',
 }
 
 const lastByReason = new Map<LocalVaultSaveOfferReason, number>()
@@ -22,18 +31,21 @@ async function runLocalVaultSave(): Promise<void> {
   if (saving) return
   saving = true
   try {
-    const r = await vaultSave()
+    const includeSeed = getIncludeSdkMnemonicInBackup()
+    const r = await vaultSave(undefined, undefined, {
+      includeIotaMnemonic: includeSeed,
+    })
     if (r.ok) {
-      toast.success(typeof r.message === 'string' && r.message.trim() ? r.message : 'Lokal gesichert.')
+      toast.success(typeof r.message === 'string' && r.message.trim() ? r.message : 'Tresor gesichert.')
     } else {
-      toast.error(r.error || r.message || 'Lokal sichern fehlgeschlagen.')
+      toast.error(r.error || r.message || 'Tresor sichern fehlgeschlagen.')
     }
   } finally {
     saving = false
   }
 }
 
-/** Toast mit Aktion „Lokal sichern“ — nur wenn Tresor entsperrt und Keys im RAM. */
+/** Toast mit Aktion „Tresor sichern“ — nur wenn Tresor entsperrt und Keys im RAM. */
 export function offerLocalVaultSave(reason: LocalVaultSaveOfferReason): void {
   if (typeof window === 'undefined') return
   const now = Date.now()
@@ -54,11 +66,11 @@ export function offerLocalVaultSave(reason: LocalVaultSaveOfferReason): void {
     lastAny = Date.now()
     lastByReason.set(reason, lastAny)
 
-    toast.message('Tresor lokal sichern?', {
-      description: `Handshake/Connect-Keys ${REASON_HINT[reason]} liegen nur im Tresor-RAM. Optional in die Vault-Datei schreiben — deine Gruppe/Kanal (lokal) bleibt erhalten und muss nicht neu angelegt werden.`,
+    toast.message('Tresor sichern?', {
+      description: `${REASON_HINT[reason]} Sonst nach Neustart/Abmelden weg.`,
       duration: 22_000,
       action: {
-        label: 'Lokal sichern',
+        label: 'Tresor sichern',
         onClick: () => {
           void runLocalVaultSave()
         },

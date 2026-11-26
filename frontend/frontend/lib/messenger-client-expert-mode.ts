@@ -11,10 +11,8 @@ export const MESSENGER_CLIENT_EXPERT_MODE_CHANGED = 'morgendrot:messenger-client
 export function isMessengerClientExpertModeEnabled(): boolean {
   if (typeof window === 'undefined') return false
   try {
-    const explicit = window.localStorage.getItem(MESSENGER_CLIENT_EXPERT_MODE_LS)
-    if (explicit === '0') return false
-    if (explicit === '1') return true
-    return window.localStorage.getItem(LEGACY_DEV_EXPERT_TOOLS_LS) === '1'
+    /** Default aus — nur explizit „1“. Legacy-Pulse-Key schaltet Settings-Expert nicht mehr still an. */
+    return window.localStorage.getItem(MESSENGER_CLIENT_EXPERT_MODE_LS) === '1'
   } catch {
     /* ignore */
   }

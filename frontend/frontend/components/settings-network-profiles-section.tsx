@@ -1,13 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { ChevronDown, Globe } from 'lucide-react'
+import { Globe } from 'lucide-react'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { cn } from '@/lib/utils'
+import { SEND_PATH_ACTIVE_CLASS } from '@/frontend/lib/messenger-appearance-theme'
 import {
     applyActiveNetworkProfile,
     EINSATZ_NETWORK_PROFILES_CHANGED,
@@ -28,6 +28,9 @@ import {
 import { postDeployMainnetPackage } from '@/frontend/lib/api/einsatz-config'
 import { DEFAULT_MAINNET_RPC_URL } from '@morgendrot/shared/einsatz-chain-mode'
 import { SessionSignerStatusStrip } from '@/frontend/components/session-signer-status-strip'
+import { useMessengerClientExpertMode } from '@/frontend/hooks/use-messenger-client-expert-mode'
+import { isIotaMessengerProduct } from '@/frontend/lib/product-identity'
+import { SettingsExpertModeSection } from '@/frontend/components/settings-expert-mode-section'
 
 type SettingsNetworkProfilesSectionProps = {
     apiStatus?: ApiStatus | null
@@ -35,9 +38,13 @@ type SettingsNetworkProfilesSectionProps = {
     onApplied?: () => void | Promise<void>
     vaultLocked?: boolean
     onRequestVaultUnlock?: () => void
+    /** Boss/Kommandant: Move-Upgrade im Expertenblock. */
+    showMoveUpgrade?: boolean
 }
 
 export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSectionProps) {
+    const { enabled: expertOn, setExpertMode } = useMessengerClientExpertMode()
+    const hideBossPull = isIotaMessengerProduct()
     const [state, setState] = useState<EinsatzNetworkProfilesState>(() =>
         syncProfilesFromApi(readNetworkProfilesState(), p.apiStatus)
     )
@@ -45,7 +52,6 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
     const [deploying, setDeploying] = useState(false)
     const [msg, setMsg] = useState('')
     const [msgTone, setMsgTone] = useState<'neutral' | 'error' | 'success'>('neutral')
-    const [mainnetSetupOpen, setMainnetSetupOpen] = useState(false)
 
     const refresh = useCallback(() => {
         setState(syncProfilesFromApi(readNetworkProfilesState(), p.apiStatus))
@@ -103,13 +109,13 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
     const pickNetwork = async (target: EinsatzNetworkId) => {
         if (target === state.active && summarizeNetworkState(state).activeOk) {
             setMsgTone('success')
-            setMsg(target === 'testnet' ? 'Übung (Testnet) ist bereits aktiv.' : 'Produktion (Mainnet) ist bereits aktiv.')
+            setMsg(target === 'testnet' ? 'Testnetz ist bereits aktiv.' : 'Mainnet ist bereits aktiv.')
             return
         }
         if (target === 'mainnet' && !summarizeNetworkState({ ...state, active: 'mainnet' }).activeOk) {
-            setMainnetSetupOpen(true)
+            if (!expertOn) setExpertMode(true)
             setMsgTone('error')
-            setMsg('Mainnet zuerst einrichten (eigenes Deploy + Postfach).')
+            setMsg('Mainnet fehlt — unter Expertenmodus → Mainnet-Setup deployen oder IDs speichern.')
             return
         }
         setBusy(true)
@@ -126,7 +132,7 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
             if (!out.ok) {
                 setMsgTone('error')
                 setMsg(out.error)
-                if (target === 'mainnet') setMainnetSetupOpen(true)
+                if (target === 'mainnet' && !expertOn) setExpertMode(true)
                 return
             }
             refresh()
@@ -136,7 +142,7 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
                     ? ` (${out.queueCleared} alte Warteschlangen-Einträge verworfen.)`
                     : ''
             setMsg(
-                (target === 'testnet' ? 'Übung (Testnet) aktiv.' : 'Produktion (Mainnet) aktiv.') + queueNote
+                (target === 'testnet' ? 'Testnetz aktiv.' : 'Mainnet aktiv.') + queueNote
             )
             await p.onApplied?.()
         } finally {
@@ -147,16 +153,12 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
     const onPullMainnetFromBoss = async () => {
         const synced = syncProfilesFromApi(state, p.apiStatus)
         setState(synced)
-        setMainnetSetupOpen(true)
         setMsgTone('neutral')
         setMsg(
             synced.mainnet.packageId
-                ? 'Mainnet-Package aus Boss übernommen — Mailbox-ID noch eintragen (Mainnet-Postfach).'
+                ? 'Mainnet-Package aus Boss übernommen — Mailbox-ID noch eintragen, dann speichern.'
                 : 'Boss hat noch kein MAINNET_PACKAGE_ID — „Mainnet deployen“ oder Terminal.'
         )
-        if (synced.mainnet.packageId) {
-            setMainnetSetupOpen(true)
-        }
     }
 
     const onDeployMainnet = async () => {
@@ -170,7 +172,6 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
         setDeploying(true)
         setMsgTone('neutral')
         setMsg('Mainnet-Deploy läuft — bitte warten (Publish + Postfach, kann 2–5 Min. dauern)…')
-        setMainnetSetupOpen(true)
         try {
             const rpcUrl = state.mainnet.rpcUrl.trim() || DEFAULT_MAINNET_RPC_URL
             const out = await postDeployMainnetPackage({ rpcUrl })
@@ -255,11 +256,6 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
                 </div>
                 <div className="min-w-0">
                     <h4 className="font-semibold text-foreground">Wo senden?</h4>
-                    <p className="text-xs text-muted-foreground">
-                        Welches <strong className="font-medium text-foreground">Netz</strong> (Testnet/Mainnet):
-                        Package + Hauptpostfach + RPC. Nicht das Composer-Ziel einer Nachricht und nicht die Liste unter
-                        Meine Mailboxen.
-                    </p>
                     <p className={cn('mt-0.5 text-sm', summary.activeOk ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-800 dark:text-amber-200')}>
                         {summary.line}
                     </p>
@@ -269,7 +265,7 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
             <div
                 role="tablist"
                 aria-label="Aktives IOTA-Netzwerk"
-                className="relative grid grid-cols-2 gap-1 rounded-xl border border-border bg-muted/40 p-1"
+                className="grid grid-cols-2 gap-2"
             >
                 <button
                     type="button"
@@ -277,17 +273,16 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
                     aria-selected={state.active === 'testnet'}
                     disabled={busy || deploying}
                     className={cn(
-                        'rounded-lg px-2 py-3 text-left transition-all duration-200 ease-out',
-                        'active:scale-[0.97]',
+                        'rounded-xl border-2 px-3 py-2.5 text-left text-sm font-bold transition-colors',
                         state.active === 'testnet'
-                            ? 'z-[1] scale-[1.02] bg-sky-600 text-white shadow-md shadow-sky-900/25 ring-2 ring-sky-300/80 dark:bg-sky-500 dark:ring-sky-200/50'
-                            : 'bg-sky-500/10 text-sky-900/70 hover:bg-sky-500/20 dark:text-sky-200/70'
+                            ? SEND_PATH_ACTIVE_CLASS.online
+                            : 'border-border/70 bg-card/90 text-foreground hover:bg-muted/60'
                     )}
                     onClick={() => void pickNetwork('testnet')}
                 >
-                    <span className="block text-sm font-semibold">Übung</span>
-                    <span className="block text-[11px] opacity-90">Testnet</span>
-                    <span className="mt-1 block text-[10px] font-medium opacity-95">
+                    <span className="block">Testnetz</span>
+                    <span className="block text-[11px] font-medium opacity-90">Übung</span>
+                    <span className="mt-0.5 block text-[10px] font-semibold opacity-95">
                         {state.active === 'testnet' ? 'aktiv' : testnetReady ? 'bereit' : 'IDs fehlen'}
                     </span>
                 </button>
@@ -297,17 +292,16 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
                     aria-selected={state.active === 'mainnet'}
                     disabled={busy || deploying}
                     className={cn(
-                        'rounded-lg px-2 py-3 text-left transition-all duration-200 ease-out',
-                        'active:scale-[0.97]',
+                        'rounded-xl border-2 px-3 py-2.5 text-left text-sm font-bold transition-colors',
                         state.active === 'mainnet'
-                            ? 'z-[1] scale-[1.02] bg-violet-700 text-white shadow-md shadow-violet-950/30 ring-2 ring-violet-300/80 dark:bg-violet-600 dark:ring-violet-200/50'
-                            : 'bg-violet-500/10 text-violet-950/70 hover:bg-violet-500/20 dark:text-violet-200/70'
+                            ? SEND_PATH_ACTIVE_CLASS.iota
+                            : 'border-border/70 bg-card/90 text-foreground hover:bg-muted/60'
                     )}
                     onClick={() => void pickNetwork('mainnet')}
                 >
-                    <span className="block text-sm font-semibold">Produktion</span>
-                    <span className="block text-[11px] opacity-90">Mainnet</span>
-                    <span className="mt-1 block text-[10px] font-medium opacity-95">
+                    <span className="block">Mainnet</span>
+                    <span className="block text-[11px] font-medium opacity-90">Produktion</span>
+                    <span className="mt-0.5 block text-[10px] font-semibold opacity-95">
                         {state.active === 'mainnet' ? 'aktiv' : mainnetReady ? 'bereit' : 'einrichten'}
                     </span>
                 </button>
@@ -326,21 +320,100 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
                 onRequestUnlock={p.onRequestVaultUnlock}
             />
 
+            <SettingsExpertModeSection
+                apiStatus={p.apiStatus}
+                showMoveUpgrade={p.showMoveUpgrade}
+                onRefreshStatus={p.onApplied}
+                mainnetSetup={
+                    <>
+                        {!p.backendOnline ? (
+                            <p className="text-[11px] text-amber-800 dark:text-amber-200">
+                                Backend offline — Deploy braucht laufenden Boss (
+                                <span className="font-mono">npm run dev</span>).
+                            </p>
+                        ) : null}
+                        <div className="flex flex-wrap gap-2">
+                            <Button
+                                type="button"
+                                variant="default"
+                                size="sm"
+                                disabled={busy || deploying}
+                                onClick={() => void onDeployMainnet()}
+                            >
+                                {deploying ? 'Deploy läuft…' : 'Mainnet deployen'}
+                            </Button>
+                            {!hideBossPull ? (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={busy || deploying}
+                                    onClick={() => void onPullMainnetFromBoss()}
+                                >
+                                    Aus Boss-.env übernehmen
+                                </Button>
+                            ) : null}
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-[11px]">Mainnet Package-ID</Label>
+                            <Input
+                                className="h-8 font-mono text-xs"
+                                value={state.mainnet.packageId}
+                                placeholder="0x… (64 Hex)"
+                                spellCheck={false}
+                                onChange={(e) =>
+                                    setState((s) => ({
+                                        ...s,
+                                        mainnet: { ...s.mainnet, packageId: e.target.value },
+                                    }))
+                                }
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <Label className="text-[11px]">Mainnet Mailbox-ID</Label>
+                            <Input
+                                className="h-8 font-mono text-xs"
+                                value={state.mainnet.mailboxId}
+                                placeholder="0x… (64 Hex)"
+                                spellCheck={false}
+                                onChange={(e) =>
+                                    setState((s) => ({
+                                        ...s,
+                                        mainnet: { ...s.mainnet, mailboxId: e.target.value },
+                                    }))
+                                }
+                            />
+                        </div>
+                        <Button
+                            type="button"
+                            size="sm"
+                            disabled={busy || deploying}
+                            onClick={() => void onSaveMainnet()}
+                        >
+                            Mainnet speichern
+                        </Button>
+                    </>
+                }
+            />
+
             <div className="space-y-2">
-                <BossWalletGasFundingPanel
-                    network="testnet"
-                    apiSnapshot={p.apiStatus}
-                    backendOnline={p.backendOnline}
-                    onReload={() => void p.onApplied?.()}
-                    compact
-                />
-                <BossWalletGasFundingPanel
-                    network="mainnet"
-                    apiSnapshot={p.apiStatus}
-                    backendOnline={p.backendOnline}
-                    onReload={() => void p.onApplied?.()}
-                    compact
-                />
+                {state.active === 'testnet' ? (
+                    <BossWalletGasFundingPanel
+                        network="testnet"
+                        apiSnapshot={p.apiStatus}
+                        backendOnline={p.backendOnline}
+                        onReload={() => void p.onApplied?.()}
+                        compact
+                    />
+                ) : (
+                    <BossWalletGasFundingPanel
+                        network="mainnet"
+                        apiSnapshot={p.apiStatus}
+                        backendOnline={p.backendOnline}
+                        onReload={() => void p.onApplied?.()}
+                        compact
+                    />
+                )}
             </div>
 
             <BossNetworkDeployIdsPanel
@@ -354,63 +427,6 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
                 }}
                 extras={deployExtras}
             />
-
-            <Collapsible open={mainnetSetupOpen} onOpenChange={setMainnetSetupOpen}>
-                <CollapsibleTrigger className="flex w-full items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-                    <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', mainnetSetupOpen && 'rotate-180')} />
-                    Mainnet einrichten (nur einmal nötig)
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-2 space-y-2">
-                    <p className="text-[11px] text-muted-foreground">
-                        Mainnet = eigenes Move-Deploy + eigenes Postfach. Nicht dieselben IDs wie Testnet.
-                    </p>
-                    {!p.backendOnline ? (
-                        <p className="text-[11px] text-amber-800 dark:text-amber-200">
-                            Boss-Backend wirkt offline — Deploy trotzdem versuchen oder zuerst{' '}
-                            <span className="font-mono">npm run dev</span> starten.
-                        </p>
-                    ) : null}
-                    <Button
-                        type="button"
-                        variant="default"
-                        size="sm"
-                        disabled={busy || deploying}
-                        onClick={() => void onDeployMainnet()}
-                    >
-                        {deploying ? 'Deploy läuft…' : 'Mainnet deployen (1 Klick)'}
-                    </Button>
-                    <p className="text-[10px] text-muted-foreground">
-                        Boss-PC: IOTA-CLI (<span className="font-mono">iota</span>) + Mainnet-Gas. Nach Erfolg: Package + Mailbox
-                        erscheinen oben und in den Feldern.
-                    </p>
-                    <Button type="button" variant="outline" size="sm" disabled={busy || deploying} onClick={() => void onPullMainnetFromBoss()}>
-                        Vom Boss übernehmen
-                    </Button>
-                    <div className="space-y-1">
-                        <Label className="text-[11px]">Package-ID</Label>
-                        <Input
-                            className="h-8 font-mono text-xs"
-                            value={state.mainnet.packageId}
-                            placeholder="Mainnet Package-ID 0x…"
-                            spellCheck={false}
-                            onChange={(e) => setState((s) => ({ ...s, mainnet: { ...s.mainnet, packageId: e.target.value } }))}
-                        />
-                    </div>
-                    <div className="space-y-1">
-                        <Label className="text-[11px]">Mailbox-ID</Label>
-                        <Input
-                            className="h-8 font-mono text-xs"
-                            value={state.mainnet.mailboxId}
-                            placeholder="Mainnet Mailbox-ID 0x…"
-                            spellCheck={false}
-                            onChange={(e) => setState((s) => ({ ...s, mainnet: { ...s.mainnet, mailboxId: e.target.value } }))}
-                        />
-                    </div>
-                    <Button type="button" size="sm" disabled={busy || deploying} onClick={() => void onSaveMainnet()}>
-                        Mainnet speichern
-                    </Button>
-                </CollapsibleContent>
-            </Collapsible>
 
             {msg ? (
                 <p

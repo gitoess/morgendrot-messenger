@@ -83,12 +83,19 @@
   background: color-mix(in oklab, var(--path-sos) 90%, #0a0c10);
 }
 
+/** Settings-Nav Tresor — kein Sendepfad; gleiche „aktive Pill“-Sprache mit Primär. */
+.send-path-active--primary {
+  border-color: color-mix(in oklab, var(--primary) 65%, transparent);
+  background: color-mix(in oklab, var(--primary) 88%, #0a0c10);
+}
+
 :root[data-appearance='light'] .send-path-active--online,
 :root[data-appearance='light'] .send-path-active--mesh,
 :root[data-appearance='light'] .send-path-active--telegram,
 :root[data-appearance='light'] .send-path-active--adhoc,
 :root[data-appearance='light'] .send-path-active--iota,
-:root[data-appearance='light'] .send-path-active--sos {
+:root[data-appearance='light'] .send-path-active--sos,
+:root[data-appearance='light'] .send-path-active--primary {
   color: #fff;
 }
 

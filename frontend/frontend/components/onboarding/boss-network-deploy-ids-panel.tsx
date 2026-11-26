@@ -28,24 +28,9 @@ export function buildBossDeployIdExtrasFromApi(apiStatus?: ApiStatus | null) {
     const v = (value || '').trim()
     if (PKG_RE.test(v)) extras.push({ label, value: v, copyKey, hint })
   }
-  add(
-    'Vault-Registry',
-    apiStatus?.einsatzConfig?.vaultRegistryId,
-    'vault-reg',
-    'On-Chain-Objekt für verschlüsselte Vault-Blobs / Notfall-Purge — nicht dasselbe wie Package oder Postfach.'
-  )
-  add(
-    'Command-Registry',
-    apiStatus?.einsatzConfig?.commandRegistryId,
-    'cmd-reg',
-    'On-Chain-Registry für Kommandos — gehört zum gleichen create_globals wie Mailbox.'
-  )
-  add(
-    'Upgrade Cap',
-    apiStatus?.einsatzConfig?.upgradeCapId,
-    'upgrade-cap',
-    'On-Chain-Recht (Object-ID), denselben Move-Package-Code zu ersetzen. Wird beim Erst-Deploy in die Boss-.env geschrieben (UPGRADE_CAP_ID). Nur Boss-PC braucht es — Helfer nicht. Fehlt es → nur Neu-Publish (neue PACKAGE_ID + neues Handoff).'
-  )
+  add('Vault-Registry', apiStatus?.einsatzConfig?.vaultRegistryId, 'vault-reg')
+  add('Command-Registry', apiStatus?.einsatzConfig?.commandRegistryId, 'cmd-reg')
+  add('Upgrade Cap', apiStatus?.einsatzConfig?.upgradeCapId, 'upgrade-cap')
   return extras
 }
 
@@ -87,9 +72,11 @@ function NetworkBlock(p: {
 }) {
   if (!hasNetworkDeployPackageId(p.ids)) return null
   const prefix = p.network === 'testnet' ? 'tn' : 'mn'
-  const title = p.network === 'testnet' ? 'Testnet (Übung)' : 'Mainnet (Produktion)'
+  const title = p.network === 'testnet' ? 'Testnetz' : 'Mainnet'
   const borderClass =
-    p.network === 'testnet' ? 'border-sky-500/35 bg-sky-500/10' : 'border-violet-500/35 bg-violet-500/10'
+    p.network === 'testnet'
+      ? 'border-[color-mix(in_oklab,var(--path-online)_40%,transparent)] bg-[color-mix(in_oklab,var(--path-online)_12%,transparent)]'
+      : 'border-[color-mix(in_oklab,var(--path-iota)_40%,transparent)] bg-[color-mix(in_oklab,var(--path-iota)_12%,transparent)]'
 
   return (
     <div className={cn('space-y-2 rounded-md border px-3 py-2.5', borderClass)}>
@@ -203,12 +190,6 @@ export function BossNetworkDeployIdsPanel(p: Props) {
         <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-200">
           Chain-IDs zum Sichern
         </p>
-        <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Pro Netz: Package + Postfach (aus „Wo senden?“). Liegen auch in der Boss-
-          <span className="font-mono">.env</span> / Handoff — Testnet und Mainnet getrennt. Wechselt die aktive
-          Package-/Mailbox-ID (Neu-Publish), wandert die alte in den Verlauf unten. In-Place-Upgrade ändert die IDs{' '}
-          <strong className="text-foreground">nicht</strong>.
-        </p>
       </div>
       <NetworkBlock network="testnet" ids={p.testnet || {}} copied={copied} onCopy={copyId} />
       <NetworkBlock network="mainnet" ids={p.mainnet || {}} copied={copied} onCopy={copyId} />
@@ -219,10 +200,8 @@ export function BossNetworkDeployIdsPanel(p: Props) {
         </summary>
         <div className="mt-2 space-y-3">
           <p className="text-[10px] leading-relaxed text-muted-foreground">
-            Lokal auf dem Boss-PC (
-            <span className="font-mono">.morgendrot-package-id-history</span> /{' '}
-            <span className="font-mono">.morgendrot-mailbox-id-history</span>). Move-Quellcode liegt in{' '}
-            <span className="font-mono">move-test/</span> (Git) — hier nur die On-Chain-Object-IDs.
+            Archiv zum Kopieren/Sichern — nicht zum Umschalten. Vertrag wechseln: Expertenmodus weiter unten
+            (gleiche ID-Liste als Vorschläge).
           </p>
           <HistoryList
             title="Alte Package-IDs"
@@ -246,13 +225,13 @@ export function BossNetworkDeployIdsPanel(p: Props) {
       {(p.extras?.length ?? 0) > 0 ? (
         <details className="rounded-md border border-border/50 bg-background/40 px-2.5 py-2">
           <summary className="cursor-pointer text-[11px] font-medium text-muted-foreground">
-            Globals (aktive .env) — Vault-Reg, Command-Reg, Upgrade Cap
+            Weitere On-Chain-IDs (automatisch aus .env)
           </summary>
           <div className="mt-2 space-y-2">
             <p className="text-[10px] leading-relaxed text-muted-foreground">
-              Keine Doppelung von Package/Mailbox. Werte kommen aus der{' '}
-              <strong className="font-medium">aktuellen</strong> Boss-.env (nicht getrennt Testnet/Mainnet in diesem
-              Panel). Vault-Registry = On-Chain-Vault/Purge, nicht der lokale Tresor.
+              Nur Anzeige/Kopieren — nicht tippen. Entstehen beim Erst-Deploy /{' '}
+              <span className="font-mono">create_globals</span> und stehen in der Boss-
+              <span className="font-mono">.env</span>. Details: Handbuch.
             </p>
             {p.extras!.map((row) => (
               <IdRow
@@ -262,7 +241,6 @@ export function BossNetworkDeployIdsPanel(p: Props) {
                 copyKey={row.copyKey}
                 copied={copied}
                 onCopy={copyId}
-                hint={row.hint}
               />
             ))}
           </div>

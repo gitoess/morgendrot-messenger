@@ -13,6 +13,7 @@ import {
 } from '@/frontend/lib/api'
 import type { VaultNoteEntry } from '@/frontend/lib/api/vault-notes'
 import type { PersonalSecretEntry } from '@/frontend/lib/api/vault-personal-secrets'
+import { offerLocalVaultSave } from '@/frontend/lib/offer-local-vault-save'
 import { cn } from '@/lib/utils'
 
 const RAM_SAVE_DEBOUNCE_MS = 800
@@ -58,7 +59,11 @@ export function ChatViewNotesTabPanel() {
     if (notesTimerRef.current) clearTimeout(notesTimerRef.current)
     notesTimerRef.current = setTimeout(() => {
       void saveVaultNotes(notes, false).then((r) => {
-        if (!r.ok) toast.error(r.error || 'Notizen konnten nicht in die Sitzung geschrieben werden.')
+        if (!r.ok) {
+          toast.error(r.error || 'Notizen konnten nicht in die Sitzung geschrieben werden.')
+          return
+        }
+        offerLocalVaultSave('notes')
       })
     }, RAM_SAVE_DEBOUNCE_MS)
   }, [])
@@ -67,7 +72,11 @@ export function ChatViewNotesTabPanel() {
     if (secretsTimerRef.current) clearTimeout(secretsTimerRef.current)
     secretsTimerRef.current = setTimeout(() => {
       void saveVaultPersonalSecrets(entries, false).then((r) => {
-        if (!r.ok) toast.error(r.error || 'Safe konnte nicht in die Sitzung geschrieben werden.')
+        if (!r.ok) {
+          toast.error(r.error || 'Safe konnte nicht in die Sitzung geschrieben werden.')
+          return
+        }
+        offerLocalVaultSave('secrets')
       })
     }, RAM_SAVE_DEBOUNCE_MS)
   }, [])
@@ -105,8 +114,8 @@ export function ChatViewNotesTabPanel() {
         <div>
           <h2 className="text-sm font-semibold text-foreground">Tresor-Safe</h2>
           <p className="text-[11px] text-muted-foreground">
-            Notizen und Passwort-Einträge im <strong className="text-foreground">selben</strong> Tresor wie Seed/Keys —
-            ein Passwort. Dauerhaft mit „In Vault-Datei schreiben“ (oder Einstellungen → Tresor → Lokal sichern).
+            Notizen und Passwort-Einträge im <strong className="text-foreground">selben</strong> Tresor wie Seed/Keys.
+            Tippen speichert in die Sitzung; dauerhaft mit „Tresor sichern“.
           </p>
         </div>
         <button
@@ -115,7 +124,7 @@ export function ChatViewNotesTabPanel() {
           onClick={() => void handleSaveToFile()}
           className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
         >
-          In Vault-Datei schreiben
+          Tresor sichern
         </button>
       </div>
 

@@ -49,6 +49,8 @@ export async function vaultListLocalFiles(): Promise<{
   ok: boolean
   paths?: string[]
   defaultPath?: string
+  defaultPathAbs?: string
+  cwd?: string
   message?: string
   error?: string
 }> {
@@ -57,6 +59,8 @@ export async function vaultListLocalFiles(): Promise<{
     ok: boolean
     paths?: string[]
     defaultPath?: string
+    defaultPathAbs?: string
+    cwd?: string
     message?: string
     error?: string
   }

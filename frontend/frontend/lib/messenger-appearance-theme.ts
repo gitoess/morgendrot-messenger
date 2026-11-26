@@ -12,24 +12,36 @@ export const DEFAULT_MESSENGER_APPEARANCE: MessengerAppearanceId = 'standard'
 
 export type CustomAppearanceColors = {
   background: string
+  /** Flächen / Kästen (Karten) — bewusst ≠ Hintergrund. */
+  card: string
   primary: string
   accent: string
   border: string
   pathOnline: string
   pathMesh: string
   pathTelegram: string
+  /** IOTA-/Chain-Pfad (Sendepfad + Blasen). */
+  pathIota: string
+  /** Ad-hoc / Direkt (Sendepfad + Blasen). */
+  pathAdhoc: string
+  /** SOS-Pfad (Sendepfad; Blasen nutzen ggf. andere Keys). */
+  pathSos: string
   borderWidth: 'thin' | 'default' | 'thick'
 }
 
 /** Standard-Preset-Werte — Grundlage für Custom-Defaults. */
 export const DEFAULT_CUSTOM_APPEARANCE: CustomAppearanceColors = {
   background: '#1c2333',
+  card: '#151b28',
   primary: '#22c55e',
   accent: '#334155',
   border: '#475569',
   pathOnline: '#22b8e8',
   pathMesh: '#2dd4a0',
   pathTelegram: '#f59e0b',
+  pathIota: '#3b82f6',
+  pathAdhoc: '#d97706',
+  pathSos: '#ef4444',
   borderWidth: 'default',
 }
 
@@ -77,6 +89,21 @@ export const SEND_PATH_ACTIVE_CLASS: Record<SendPathSemanticKey | 'default', str
   iota: 'send-path-active send-path-active--iota',
   sos: 'send-path-active send-path-active--sos',
   default: 'send-path-active send-path-active--online',
+}
+
+/**
+ * Settings-Kategorie-Nav: dieselben aktiven Pills wie Sendepfad
+ * (Allgemein≈Online, IOTA, Funk≈Mesh, Telegram; Tresor=Primär).
+ */
+export const SETTINGS_NAV_ACTIVE_CLASS: Record<
+  'general' | 'iota' | 'funk' | 'telegram' | 'security',
+  string
+> = {
+  general: SEND_PATH_ACTIVE_CLASS.online,
+  iota: SEND_PATH_ACTIVE_CLASS.iota,
+  funk: SEND_PATH_ACTIVE_CLASS.mesh,
+  telegram: SEND_PATH_ACTIVE_CLASS.telegram,
+  security: 'send-path-active send-path-active--primary',
 }
 
 export function isMessengerAppearanceId(v: string): v is MessengerAppearanceId {
@@ -132,7 +159,7 @@ function applyCustomAppearanceCss(colors: CustomAppearanceColors): void {
   root.setAttribute('data-appearance', 'custom')
   root.style.setProperty('--background', colors.background)
   root.style.setProperty('--foreground', '#f1f5f9')
-  root.style.setProperty('--card', colors.background)
+  root.style.setProperty('--card', colors.card || colors.background)
   root.style.setProperty('--card-foreground', '#f1f5f9')
   root.style.setProperty('--primary', colors.primary)
   root.style.setProperty('--primary-foreground', '#0f172a')
@@ -146,6 +173,15 @@ function applyCustomAppearanceCss(colors: CustomAppearanceColors): void {
   root.style.setProperty('--path-online', colors.pathOnline)
   root.style.setProperty('--path-mesh', colors.pathMesh)
   root.style.setProperty('--path-telegram', colors.pathTelegram)
+  root.style.setProperty('--path-iota', colors.pathIota || DEFAULT_CUSTOM_APPEARANCE.pathIota)
+  root.style.setProperty('--path-adhoc', colors.pathAdhoc || DEFAULT_CUSTOM_APPEARANCE.pathAdhoc)
+  root.style.setProperty('--path-sos', colors.pathSos || DEFAULT_CUSTOM_APPEARANCE.pathSos)
+  /** Eigene Blasen-Tönung folgt Online-Pfad (Legacy self) + Card. */
+  root.style.setProperty(
+    '--bubble-self',
+    `color-mix(in oklab, ${colors.pathOnline} 16%, transparent)`
+  )
+  root.style.setProperty('--bubble-other', colors.card || colors.background)
   const bw = colors.borderWidth === 'thin' ? '1px' : colors.borderWidth === 'thick' ? '3px' : '2px'
   root.style.setProperty('--settings-border-width', bw)
   root.style.colorScheme = 'dark'
@@ -171,6 +207,11 @@ export function clearCustomAppearanceCss(): void {
     '--path-online',
     '--path-mesh',
     '--path-telegram',
+    '--path-iota',
+    '--path-adhoc',
+    '--path-sos',
+    '--bubble-self',
+    '--bubble-other',
     '--settings-border-width',
   ]
   for (const v of vars) root.style.removeProperty(v)

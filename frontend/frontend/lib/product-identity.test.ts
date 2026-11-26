@@ -17,5 +17,8 @@ describe('product-identity (Morgendrot-Default-Build)', () => {
     expect(IOTA_MESSENGER_UI.hideSos).toBe(false)
     expect(IOTA_MESSENGER_UI.hideEinsatzleitung).toBe(false)
     expect(IOTA_MESSENGER_UI.hideBossHandoff).toBe(false)
+    expect(IOTA_MESSENGER_UI.hideHandoffImport).toBe(false)
+    expect(IOTA_MESSENGER_UI.hideTelegramMonitor).toBe(false)
+    expect(IOTA_MESSENGER_UI.hideTelegramEinsatzAlarm).toBe(false)
   })
 })

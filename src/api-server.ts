@@ -1151,6 +1151,60 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
             return;
         }
 
+        /** Vault-Datei → Browser-Downloads. Ciphertext (Tresor-PW); nur bei entsperrtem Tresor. */
+        if (url === '/api/vault-export' && req.method === 'GET') {
+            try {
+                const sess = routeCtx.getSessionStatus?.() ?? {};
+                if (sess.hasKeys !== true) {
+                    sendJson(
+                        res,
+                        401,
+                        {
+                            ok: false,
+                            error: 'Tresor entsperren, dann verschlüsselte Kopie herunterladen.',
+                        },
+                        cors
+                    );
+                    return;
+                }
+                const vaultPath = resolveVaultFilePathForSession(CFG.VAULT_FILE || undefined);
+                if (!vaultFileExists(vaultPath)) {
+                    sendJson(
+                        res,
+                        404,
+                        {
+                            ok: false,
+                            error:
+                                'Keine Tresor-Datei auf der Festplatte. Zuerst „Tresor sichern“, dann herunterladen.',
+                        },
+                        cors
+                    );
+                    return;
+                }
+                const raw = fs.readFileSync(vaultPath);
+                if (raw.length > 12 * 1024 * 1024) {
+                    sendJson(res, 413, { ok: false, error: 'Vault-Datei zu groß zum Download (max. 12 MB).' }, cors);
+                    return;
+                }
+                sendJson(
+                    res,
+                    200,
+                    {
+                        ok: true,
+                        path: vaultPath,
+                        filename: path.basename(vaultPath) || '.morgendrot-vault',
+                        contentBase64: raw.toString('base64'),
+                        bytes: raw.length,
+                        message: 'Verschlüsselte Tresor-Datei (nur mit Tresor-Passwort nutzbar).',
+                    },
+                    cors
+                );
+            } catch (e: unknown) {
+                sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+            }
+            return;
+        }
+
         /** Vault-Datei vom Browser hochladen → Server-Arbeitsverzeichnis (für /vault-load). */
         if (url === '/api/vault-import' && req.method === 'POST') {
             let body = '';

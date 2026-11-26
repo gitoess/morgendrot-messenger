@@ -133,6 +133,14 @@ export async function handleTelegramIntegrationRoutes(
         const messagePreview = String(data.messagePreview ?? data.message ?? '').trim();
         const senderLabel = typeof data.senderLabel === 'string' ? data.senderLabel : undefined;
         const skipJournal = data.skipJournal === true;
+        const photoBase64 =
+            typeof data.photoBase64 === 'string'
+                ? data.photoBase64
+                : typeof data.photo_base64 === 'string'
+                  ? data.photo_base64
+                  : undefined;
+        const acknowledgeUnencryptedMedia =
+            data.acknowledgeUnencryptedMedia === true || data.acknowledge_unencrypted_media === true;
         const audienceRaw = String(data.audience ?? 'contact').trim().toLowerCase();
         const audience =
             audienceRaw === 'self' || audienceRaw === 'both' || audienceRaw === 'contact'
@@ -204,6 +212,8 @@ export async function handleTelegramIntegrationRoutes(
                 senderLabel,
                 skipJournal,
                 targetChatId,
+                photoBase64,
+                acknowledgeUnencryptedMedia,
             });
             if (result.delivered) deliveredContact = true;
             else if (result.skipped) skips.push(result.skipped);

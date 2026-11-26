@@ -76,7 +76,7 @@ export function chainModeForNetwork(id: EinsatzNetworkId): EinsatzChainMode {
 }
 
 export function networkLabel(id: EinsatzNetworkId): string {
-    return id === 'mainnet' ? 'Mainnet' : 'Testnet'
+    return id === 'mainnet' ? 'Mainnet' : 'Testnetz'
 }
 
 export function notifyNetworkProfilesChanged(): void {

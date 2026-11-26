@@ -9,6 +9,7 @@ import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { canCreateTeamMailbox } from '@/frontend/lib/messenger-role-capabilities'
 import { toast } from 'sonner'
 import { myMailboxesSettingsBlurb } from '@/frontend/lib/mailbox-clarity-copy'
+import { isIotaMessengerProduct } from '@/frontend/lib/product-identity'
 
 type SettingsMyMailboxesSectionProps = {
   apiStatus: ApiStatus | null
@@ -29,6 +30,8 @@ export function SettingsMyMailboxesSection({
   const { directory } = useContactDirectory()
   const addr = myAddress.trim()
   const show = /^0x[a-fA-F0-9]{64}$/i.test(addr)
+  const showAbfrageListe = !isIotaMessengerProduct() && canCreateTeamMailbox(apiStatus)
+  const blurb = myMailboxesSettingsBlurb()
 
   const onStatus = useCallback((msg: string, kind: 'success' | 'error') => {
     if (kind === 'success') toast.success(msg)
@@ -39,7 +42,7 @@ export function SettingsMyMailboxesSection({
 
   const panel = (
     <>
-      {!embedded && canCreateTeamMailbox(apiStatus) ? (
+      {!embedded && showAbfrageListe ? (
         <TeamMailboxSyncStatus
           apiSnapshot={apiStatus}
           backendOnline={backendOnline}
@@ -70,7 +73,7 @@ export function SettingsMyMailboxesSection({
           </div>
           <div>
             <h4 className="font-semibold text-foreground">Meine Mailboxen</h4>
-            <p className="mt-0.5 text-xs text-muted-foreground">{myMailboxesSettingsBlurb()}</p>
+            {blurb ? <p className="mt-0.5 text-xs text-muted-foreground">{blurb}</p> : null}
           </div>
         </div>
       </div>

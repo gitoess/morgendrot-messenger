@@ -41,10 +41,18 @@ export function useChatViewTelegramComposer(p: {
 }) {
   const [telegramOnlyBusy, setTelegramOnlyBusy] = useState(false)
   const [telegramNotifyOnSend, setTelegramNotifyOnSend] = useState(false)
+  /** Composer Telegram + Bild: User bestätigt unverschlüsselte TG-Zustellung. */
+  const [telegramUnencryptedMediaAck, setTelegramUnencryptedMediaAck] = useState(false)
 
   useEffect(() => {
     setTelegramNotifyOnSend(readTelegramNotifyOnSend())
   }, [])
+
+  useEffect(() => {
+    if (!p.attachedBlobBase64 || p.composerDelivery !== 'telegram') {
+      setTelegramUnencryptedMediaAck(false)
+    }
+  }, [p.attachedBlobBase64, p.composerDelivery])
 
   const composerIota = useMemo(
     () => resolveComposerIotaAddress(p.recipient, p.partner, p.encrypted),
@@ -102,6 +110,9 @@ export function useChatViewTelegramComposer(p: {
 
   const telegramWriteAllowed = canTransportWrite(p.apiStatus, 'telegram')
 
+  const wantsTelegramPhoto =
+    p.composerDelivery === 'telegram' && Boolean(p.attachedBlobBase64?.trim())
+
   const canSendTelegramOnly =
     p.isPrivate &&
     telegramWriteAllowed &&
@@ -109,7 +120,8 @@ export function useChatViewTelegramComposer(p: {
     !telegramOnlyBusy &&
     !p.sending &&
     Boolean(telegramPreview.trim()) &&
-    !p.apiStatus?.locked
+    !p.apiStatus?.locked &&
+    (!wantsTelegramPhoto || telegramUnencryptedMediaAck)
 
   const handleTelegramOnly = async () => {
     const targets =
@@ -117,8 +129,18 @@ export function useChatViewTelegramComposer(p: {
         ? composerTelegramIds.map((id) => `tg:${id}`)
         : notifyRecipientTargets
     if (targets.length === 0 || !p.onStatusFeedback) return
+    if (wantsTelegramPhoto && !telegramUnencryptedMediaAck) {
+      p.onStatusFeedback(
+        'Bild über Telegram: bitte bestätigen (unverschlüsselt auf Telegram-Servern).',
+        'error'
+      )
+      return
+    }
     setTelegramOnlyBusy(true)
-    p.onStatusFeedback('Sende Telegram-Hinweis…', 'idle')
+    p.onStatusFeedback(
+      wantsTelegramPhoto ? 'Sende Telegram-Bild (unverschlüsselt)…' : 'Sende Telegram-Hinweis…',
+      'idle'
+    )
     const myLabel =
       p.contactDirectory[p.myAddress.trim().toLowerCase()]?.label ||
       (p.myAddress.trim() ? `${p.myAddress.trim().slice(0, 10)}…` : 'Morgendrot')
@@ -132,6 +154,8 @@ export function useChatViewTelegramComposer(p: {
         messagePreview: telegramPreview,
         senderLabel: myLabel,
         skipJournal: true,
+        photoBase64: wantsTelegramPhoto ? p.attachedBlobBase64 || undefined : undefined,
+        acknowledgeUnencryptedMedia: wantsTelegramPhoto ? true : undefined,
       })
       if (r.delivered) {
         delivered++
@@ -154,9 +178,12 @@ export function useChatViewTelegramComposer(p: {
     if (delivered > 0) {
       p.onMessageChange('')
       p.clearAttachments()
+      setTelegramUnencryptedMediaAck(false)
       p.onStatusFeedback(
         delivered === 1
-          ? 'Telegram gesendet — siehe Ausgang im Posteingang.'
+          ? wantsTelegramPhoto
+            ? 'Telegram-Bild gesendet (unverschlüsselt bei TG).'
+            : 'Telegram gesendet — siehe Ausgang im Posteingang.'
           : `Telegram an ${delivered} Empfänger gesendet.`,
         'success'
       )
@@ -175,6 +202,9 @@ export function useChatViewTelegramComposer(p: {
       writeTelegramNotifyOnSend(on)
       setTelegramNotifyOnSend(on)
     },
+    wantsTelegramPhoto,
+    telegramUnencryptedMediaAck,
+    setTelegramUnencryptedMediaAck,
     canSendTelegramOnly,
     telegramOnlyBusy,
     handleTelegramOnly,

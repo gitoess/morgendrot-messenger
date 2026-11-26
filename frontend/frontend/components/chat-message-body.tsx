@@ -177,12 +177,15 @@ function NftGateMessageBody(p: {
 
   return (
     <div className="space-y-2 text-xs">
-      <p className="rounded border border-amber-700/40 bg-amber-950/20 px-2 py-1.5 text-[11px] text-amber-100/90">
-        NFT-Gate = Zeitkapsel-Nachricht. Lesen = NFT-Besitz, oder während Leihe nur Empfänger — Verleiher nicht.
-        Klartext lokal bis Ausblenden / Besitz weg / Aktualisieren.
-        Karte: {nftOid ? `${nftOid.slice(0, 14)}…` : '—'}
-        {owned === true ? ' · Leserecht ok' : owned === false ? ' · kein Leserecht' : ''}
-      </p>
+      {nftOid ? (
+        <p
+          className="rounded border border-border/60 bg-muted/20 px-2 py-1 font-mono text-[10px] text-muted-foreground"
+          title={nftOid}
+        >
+          NFT {nftOid.slice(0, 10)}…{nftOid.slice(-6)}
+          {owned === true ? ' · ok' : owned === false ? ' · kein Leserecht' : ''}
+        </p>
+      ) : null}
       {leaseBadge ? (
         <p className="rounded border border-sky-800/30 bg-sky-950/15 px-2 py-1 text-[11px] text-sky-100/90">
           {leaseBadge}
@@ -576,9 +579,6 @@ function PassphraseMessageBody(p: {
         </>
       ) : !formOpen ? (
         <>
-          <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
-            Passphrase nötig — Ciphertext on-chain. Tippe erst, wenn du lesen willst.
-          </p>
           {keycardGateHint ? (
             <p className="text-[11px] text-amber-800/90 dark:text-amber-100/90">{keycardGateHint}</p>
           ) : null}
@@ -592,10 +592,6 @@ function PassphraseMessageBody(p: {
         </>
       ) : (
         <>
-          <p className="text-xs font-medium text-amber-900 dark:text-amber-100">
-            Passphrase nötig — ohne Key nur Ciphertext. Nach dem Entschlüsseln: kopieren, verbergen, Vault,
-            optional NFT-Schlüsselkarte. Wire: Nachrichten-⋯ → PWMSG-Wire kopieren.
-          </p>
           {keycardGateHint ? (
             <div className="space-y-1">
               <p className="text-[11px] text-amber-800/90 dark:text-amber-100/90">{keycardGateHint}</p>

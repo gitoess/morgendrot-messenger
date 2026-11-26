@@ -38,7 +38,7 @@ import { getMessagingMoveFeatures } from '../../move-package-features.js';
 import { getClient } from '../../chain-access.js';
 import { resolveUpgradeCapId } from '../../move-package-deploy.js';
 import { HELP_START, HELP_CHAT, HELP_UI_INTRO } from '../../wallet-bridge.js';
-import { vaultFileExists } from '../../vault-local.js';
+import { resolveVaultFilePathForSession, vaultFileExists } from '../../vault-local.js';
 import { inferNetworkFromRpcUrl } from '../../vault-onchain-preflight.js';
 import { HEARTBEAT_INTERVAL_PRESETS_MS, isAllowedHeartbeatIntervalMs } from '../../shared/heartbeat-presets.js';
 import {
@@ -69,7 +69,7 @@ export async function handleStatusRoutes(
             hierarchyRole: CFG.ROLE,
             override: readCapabilitiesOverrideFromRuntimeRaw(readRuntimeConfigRaw()),
         });
-        const vaultFileResolved = (CFG.VAULT_FILE || '').trim() || '.morgendrot-vault';
+        const vaultFileResolved = resolveVaultFilePathForSession(CFG.VAULT_FILE || undefined);
         const mailboxIdTrim = (CFG.MAILBOX_ID || '').trim();
         const inboxUnion = getInboxUnionIdsForStatus();
         const mailboxConfigured = Boolean(mailboxIdTrim && /^0x[a-fA-F0-9]{64}$/i.test(mailboxIdTrim));
@@ -271,6 +271,7 @@ export async function handleStatusRoutes(
             },
             vaultStatus: {
                 hasLocal: vaultFileExists(vaultFileResolved),
+                localPath: vaultFileResolved,
                 network: vaultNetwork,
                 ...(lastVaultOnchainSuccessAt != null && { lastSavedToChainAt: lastVaultOnchainSuccessAt }),
                 ...(lastVaultLocalSaveAt != null && { lastLocalSavedAt: lastVaultLocalSaveAt }),

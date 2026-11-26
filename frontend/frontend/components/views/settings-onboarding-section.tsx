@@ -17,6 +17,7 @@ import {
   startOnboarding,
 } from '@/frontend/lib/onboarding-progress-store'
 import { readStandaloneOnboardingPath } from '@/frontend/lib/standalone-onboarding'
+import { IOTA_MESSENGER_UI } from '@/frontend/lib/product-identity'
 
 export function SettingsOnboardingSection(p: { apiStatus?: ApiStatus | null }) {
   const [, bump] = useState(0)
@@ -88,6 +89,8 @@ export function SettingsOnboardingSection(p: { apiStatus?: ApiStatus | null }) {
               </Button>
             ) : null}
           </>
+        ) : IOTA_MESSENGER_UI.hideHandoffImport ? (
+          <p className="text-sm text-muted-foreground">Kein Wizard für dieses Profil nötig.</p>
         ) : (
           <p className="text-sm text-muted-foreground">
             Für Helfer ohne Wizard: Handoff-ZIP unter Allgemein → Import laden.

@@ -1,23 +1,18 @@
 'use client'
 
 /**
- * Tresor-Hub (Sollbild): ein Passwort · Header = Sitzung · Inhalt hier · Netz-IDs unter IOTA.
+ * Tresor-Hub: Inhalt + Seed. Netz-IDs → IOTA. Sitzung → Chat-Header (Badge / Abmelden).
  */
 import { useCallback, useEffect, useState } from 'react'
-import { Check, Copy, KeyRound, Lock, Network } from 'lucide-react'
+import { Check, Copy, KeyRound, Lock } from 'lucide-react'
 import { UiPasswordInput } from '@/frontend/components/ui-password-input'
 import { ChatViewNotesTabPanel } from '@/frontend/components/chat-view-notes-tab-panel'
-import { SettingsTresorMapCard } from '@/frontend/components/settings-tresor-map-card'
 import { revealVaultSignerImport } from '@/frontend/lib/api'
-import {
-  getDirectChainFieldIdsFromLs,
-} from '@/frontend/lib/direct-iota-chain-context'
 import {
   hasPersistedDirectIotaSessionSigner,
   revealDirectIotaSessionSignerFromEncryptedStorage,
 } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/standalone-device-mode'
-import { maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
 
 type Props = {
   vaultLocked?: boolean
@@ -27,8 +22,6 @@ type Props = {
   backendOnline?: boolean
   /** Nach Seed-Reveal Status neu laden */
   onAfterReveal?: () => void
-  /** Zu IOTA-Tab springen (Netz-IDs) */
-  onOpenIotaCategory?: () => void
 }
 
 export function SettingsTresorHubSection({
@@ -37,7 +30,6 @@ export function SettingsTresorHubSection({
   vaultHasLocal = false,
   backendOnline = false,
   onAfterReveal,
-  onOpenIotaCategory,
 }: Props) {
   const standalone = isStandaloneMessengerWithoutBasis()
   const [recoveryPw, setRecoveryPw] = useState('')
@@ -46,11 +38,9 @@ export function SettingsTresorHubSection({
   const [revealed, setRevealed] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [showSafe, setShowSafe] = useState(false)
-  const [chainIds, setChainIds] = useState(() => getDirectChainFieldIdsFromLs())
   const [hasLocalSignerEnc, setHasLocalSignerEnc] = useState(false)
 
   const refreshLocal = useCallback(() => {
-    setChainIds(getDirectChainFieldIdsFromLs())
     setHasLocalSignerEnc(hasPersistedDirectIotaSessionSigner())
   }, [])
 
@@ -102,34 +92,16 @@ export function SettingsTresorHubSection({
     }
   }
 
-  const senderShort = chainIds.senderAddress
-    ? maskWalletAddress(chainIds.senderAddress, 6, 4)
-    : null
-
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-primary/25 bg-primary/5 p-4">
-        <div className="mb-2 flex items-center gap-2">
+      <div className="rounded-xl border border-primary/25 bg-primary/5 p-4 space-y-2">
+        <div className="flex items-center gap-2">
           <Lock className="h-5 w-5 text-primary" aria-hidden />
           <h3 className="text-base font-semibold text-foreground">Tresor — ein Passwort</h3>
         </div>
-        <ul className="space-y-1.5 text-sm text-muted-foreground">
-          <li>
-            <strong className="text-foreground">Einloggen / Entsperren</strong> = dieses Passwort öffnet den
-            verschlüsselten Tresor (Keys, optional Seed, Notizen, Passwort-Einträge).
-          </li>
-          <li>
-            <strong className="text-foreground">Header-Badge</strong> = Soft-Pause (grau, RAM, PW zum Weitersprechen)
-            vs. Abmelden (Keys weg) — kein zweiter Tresor.
-          </li>
-          <li>
-            <strong className="text-foreground">Package / Mailbox / RPC</strong> bleiben unter{' '}
-            <strong className="text-foreground">IOTA</strong> (Betrieb, auch bei gesperrtem Tresor nötig).
-          </li>
-        </ul>
         {vaultLocked ? (
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <p className="text-sm text-amber-800 dark:text-amber-200">Tresor gesperrt — Inhalt und Seed erst nach Unlock.</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm text-amber-800 dark:text-amber-200">Gesperrt — Inhalt und Seed erst nach Unlock.</p>
             {onRequestVaultUnlock ? (
               <button
                 type="button"
@@ -143,17 +115,14 @@ export function SettingsTresorHubSection({
         ) : null}
       </div>
 
-      <SettingsTresorMapCard />
-
       <div className="rounded-xl border border-border bg-card p-4 space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h4 className="font-semibold text-foreground">Inhalt: Notizen &amp; Passwörter</h4>
             <p className="mt-1 text-[12px] text-muted-foreground">
-              Derselbe Safe wie unter Nachrichten → Notizen. Dauerhaft mit „In Vault-Datei schreiben“ bzw. Lokal
-              sichern unten.
+              Derselbe Safe wie Nachrichten → Notizen.
               {standalone
-                ? ' Solo-APK ohne Node: Speichern braucht entsperrte Vault-API — sonst nur Sitzung/Browser-Pfad.'
+                ? ' Solo ohne Node: Speichern braucht entsperrte Vault-API.'
                 : null}
             </p>
           </div>
@@ -175,10 +144,8 @@ export function SettingsTresorHubSection({
           <div className="min-w-0 flex-1">
             <h4 className="font-semibold text-foreground">Seed / Signer anzeigen</h4>
             <p className="mt-1 text-[12px] text-muted-foreground">
-              Nur mit Tresor-Passwort. Niemals teilen — wer den Seed hat, hat die Wallet.
-              {!canReveal
-                ? ' Noch kein gespeicherter Seed (Vault-Datei bzw. lokale Signer-Ablage).'
-                : null}
+              Nur mit Tresor-Passwort. Niemals teilen.
+              {!canReveal ? ' Noch kein gespeicherter Seed.' : null}
             </p>
           </div>
         </div>
@@ -218,43 +185,6 @@ export function SettingsTresorHubSection({
               Kopieren
             </button>
           </div>
-        ) : null}
-      </div>
-
-      <div className="rounded-xl border border-border bg-card p-4 space-y-2">
-        <div className="flex items-center gap-2">
-          <Network className="h-5 w-5 text-primary" aria-hidden />
-          <h4 className="font-semibold text-foreground">Netz-IDs (nur Anzeige)</h4>
-        </div>
-        <p className="text-[12px] text-muted-foreground">
-          Aktive Package/Mailbox/Absender liegen im Netzprofil — nicht als Geheimnis im Tresor. Ändern unter IOTA.
-        </p>
-        <dl className="grid gap-1 font-mono text-[11px] text-muted-foreground">
-          <div>
-            Absender:{' '}
-            <span className="text-foreground">{senderShort || '—'}</span>
-          </div>
-          <div>
-            Package:{' '}
-            <span className="text-foreground">
-              {chainIds.packageId ? maskWalletAddress(chainIds.packageId, 8, 6) : '—'}
-            </span>
-          </div>
-          <div>
-            Mailbox:{' '}
-            <span className="text-foreground">
-              {chainIds.mailboxId ? maskWalletAddress(chainIds.mailboxId, 8, 6) : '—'}
-            </span>
-          </div>
-        </dl>
-        {onOpenIotaCategory ? (
-          <button
-            type="button"
-            onClick={onOpenIotaCategory}
-            className="text-xs font-semibold text-primary underline-offset-2 hover:underline"
-          >
-            Zu IOTA / Netz wechseln
-          </button>
         ) : null}
       </div>
     </div>

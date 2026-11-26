@@ -118,7 +118,9 @@ export function ProjektDashboard() {
                   ? 'Einstellungen'
                   : s.activeView.type === 'config'
                     ? '.env anpassen'
-                    : featureTitle(s.activeView.type, projektFeatures)}
+                    : s.activeView.type === 'iota'
+                      ? 'IOTA'
+                      : featureTitle(s.activeView.type, projektFeatures)}
               </span>
             )}
           </div>

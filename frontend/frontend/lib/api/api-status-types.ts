@@ -16,6 +16,8 @@ export type HierarchyPermissions = {
 /** Tresor-Status aus GET /api/status (Punkt 5 Marktreife: Listen-Ansicht + Sync-Status). */
 export type VaultStatus = {
   hasLocal: boolean
+  /** Absoluter Pfad der lokalen Vault-Datei auf dem API-Server. */
+  localPath?: string
   lastSavedToChainAt?: number
   lastLocalSavedAt?: number
   network?: 'testnet' | 'mainnet' | 'unknown'
