@@ -50,6 +50,8 @@ export function onboardingStepHint(path: OnboardingPath, stepId: OnboardingStepI
       return 'Tresor anlegen, importieren oder entsperren — bleibt auf diesem Gerät.'
     case 'iota':
       return 'RPC + Package-ID + Mailbox-ID eintragen (Testnet-Vorlage ok) — ID danach kopierbar.'
+    case 'telegram':
+      return 'Optional — Bot-Token + deine Chat-ID; Token bleibt Runtime, nicht Tresor.'
     case 'address':
       return 'Adresse bestätigen.'
     case 'private-mailbox':

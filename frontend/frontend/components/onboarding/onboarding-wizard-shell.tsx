@@ -154,6 +154,7 @@ export const WANDERER_STEP_TITLES: Record<string, string> = {
   welcome: 'Willkommen',
   wallet: 'Tresor',
   iota: 'IOTA',
+  telegram: 'Telegram',
   address: 'Adresse',
   'private-mailbox': 'Postfächer',
   meshtastic: 'Funk',

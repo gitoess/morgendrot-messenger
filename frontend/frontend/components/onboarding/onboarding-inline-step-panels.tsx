@@ -10,6 +10,8 @@ import { Label } from '@/components/ui/label'
 import type { ApiStatus } from '@/frontend/lib/api/status'
 import { SettingsMyMailboxesSection } from '@/frontend/components/views/settings-my-mailboxes-section'
 import { StandaloneSoloWizardCard } from '@/frontend/components/standalone-solo-wizard-card'
+import { getDirectChainFieldIdsFromLs } from '@/frontend/lib/direct-iota-chain-context'
+import { hasPersistedDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { OnboardingBossTelegramStep } from '@/frontend/components/onboarding/onboarding-boss-telegram-step'
 import { OnboardingBossMailboxesStep } from '@/frontend/components/onboarding/onboarding-boss-mailboxes-step'
 import { OnboardingFunkStep } from '@/frontend/components/onboarding/onboarding-funk-step'
@@ -927,9 +929,20 @@ export function OnboardingWandererWelcomeStep() {
       <ul className="list-disc space-y-1.5 pl-5">
         <li>Kein Chatverlauf-Backup in diesem Assistenten</li>
         <li>Kein Team-/Helfer-Wizard (das ist ein anderer Pfad)</li>
-        <li>Telegram folgt in einer späteren Scheibe — hier überspringbar über Funk/Fertig</li>
+        <li>Telegram und Funk sind optional (Überspringen)</li>
       </ul>
       <p className="text-xs">Weiter / Überspringen pro Schritt. Erneut starten: Einstellungen → Einrichtung.</p>
+    </div>
+  )
+}
+
+export function OnboardingWandererTelegramStep(p: PanelProps) {
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Optional für Klingel/Notify. Alarmgruppe ist Extra — für Solo reicht oft Bot + eigene Chat-ID. Überspringen ok.
+      </p>
+      <OnboardingBossTelegramStep backendOnline={p.backendOnline} />
     </div>
   )
 }
@@ -990,6 +1003,9 @@ export function OnboardingWandererIotaStep(p: PanelProps) {
 }
 
 export function OnboardingDoneStep(p: { path?: 'boss' | 'helper' | 'wanderer' }) {
+  if (p.path === 'wanderer') {
+    return <OnboardingWandererDoneChecklist />
+  }
   return (
     <div className="space-y-3 text-sm text-muted-foreground">
       <p className="text-foreground">
@@ -1002,6 +1018,40 @@ export function OnboardingDoneStep(p: { path?: 'boss' | 'helper' | 'wanderer' })
           diesem Wizard.
         </p>
       ) : null}
+    </div>
+  )
+}
+
+function OnboardingWandererDoneChecklist() {
+  const hasVault = hasPersistedDirectIotaSessionSigner()
+  const fields = getDirectChainFieldIdsFromLs()
+  const hasIota = Boolean(fields.packageId?.trim() && fields.mailboxId?.trim())
+  return (
+    <div className="space-y-3 text-sm text-muted-foreground">
+      <p className="text-foreground">
+        <strong className="font-medium">Solo-Einrichtung fertig.</strong> Chat nutzen; Feinschliff in den Einstellungen.
+      </p>
+      <ul className="space-y-1.5">
+        <li className="flex items-start gap-2">
+          <span className={hasVault ? 'text-emerald-500' : 'text-muted-foreground'} aria-hidden>
+            {hasVault ? '✓' : '○'}
+          </span>
+          <span>Tresor / Wallet</span>
+        </li>
+        <li className="flex items-start gap-2">
+          <span className={hasIota ? 'text-emerald-500' : 'text-muted-foreground'} aria-hidden>
+            {hasIota ? '✓' : '○'}
+          </span>
+          <span>Package- + Mailbox-ID</span>
+        </li>
+        <li className="flex items-start gap-2">
+          <span className="text-muted-foreground" aria-hidden>
+            ○
+          </span>
+          <span>Telegram / Funk — optional, jederzeit nachrüstbar</span>
+        </li>
+      </ul>
+      <p className="text-xs">Tipp: Tresor-Backup unter Einstellungen → Tresor, wenn du den Seed sichern willst.</p>
     </div>
   )
 }

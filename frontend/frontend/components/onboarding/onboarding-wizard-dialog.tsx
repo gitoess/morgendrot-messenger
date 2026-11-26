@@ -19,6 +19,7 @@ import {
   OnboardingWandererAddressStep,
   OnboardingWandererIotaStep,
   OnboardingWandererMailboxStep,
+  OnboardingWandererTelegramStep,
   OnboardingWandererWalletStep,
   OnboardingWandererWelcomeStep,
 } from '@/frontend/components/onboarding/onboarding-inline-step-panels'
@@ -195,6 +196,8 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
           return <OnboardingWandererWalletStep {...panelProps} />
         case 'iota':
           return <OnboardingWandererIotaStep {...panelProps} />
+        case 'telegram':
+          return <OnboardingWandererTelegramStep {...panelProps} />
         case 'address':
           return <OnboardingWandererAddressStep {...panelProps} />
         case 'private-mailbox':

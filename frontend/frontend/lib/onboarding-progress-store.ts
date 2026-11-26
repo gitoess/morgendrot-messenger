@@ -39,6 +39,7 @@ export type WandererStepId =
   | 'welcome'
   | 'wallet'
   | 'iota'
+  | 'telegram'
   | 'meshtastic'
   | 'done'
   | 'address'
@@ -73,11 +74,12 @@ export const BOSS_STEP_ORDER: BossStepId[] = [
   'done',
 ]
 export const HELPER_STEP_ORDER: HelperStepId[] = ['handoff', 'telegram', 'wallet', 'team-self', 'peering', 'done']
-/** Solo-Wizard MVP 0–2 + optional Funk (Spec TG erst später). */
+/** Solo-Wizard: Welcome → Tresor → IOTA → optional TG → optional Funk. */
 export const WANDERER_STEP_ORDER: WandererStepId[] = [
   'welcome',
   'wallet',
   'iota',
+  'telegram',
   'meshtastic',
   'done',
 ]
@@ -264,6 +266,8 @@ export function migrateWandererProgress(o: OnboardingProgress): OnboardingProgre
     skipped.includes('wallet') ||
     completed.includes('iota') ||
     skipped.includes('iota') ||
+    completed.includes('telegram') ||
+    skipped.includes('telegram') ||
     completed.includes('meshtastic') ||
     skipped.includes('meshtastic') ||
     completed.includes('done') ||
@@ -274,6 +278,16 @@ export function migrateWandererProgress(o: OnboardingProgress): OnboardingProgre
     !skipped.includes('welcome')
   ) {
     skipped = [...skipped, 'welcome']
+  }
+  // Laufende Sessions, die Funk schon hatten: neuen TG-Schritt nicht erzwingen.
+  if (
+    (completed.includes('meshtastic') ||
+      skipped.includes('meshtastic') ||
+      completed.includes('done')) &&
+    !completed.includes('telegram') &&
+    !skipped.includes('telegram')
+  ) {
+    skipped = [...skipped, 'telegram']
   }
   const cursor = wandererProgressCursor(completed, skipped)
   return {
@@ -657,6 +671,8 @@ export function shouldSkipOnboardingStep(
     case 'address':
     case 'private-mailbox':
       return Boolean(ctx.hasPackageId && ctx.hasMailboxId)
+    case 'telegram':
+      return false
     case 'meshtastic':
       return Boolean(ctx.hasMeshNodeId)
     case 'done':

@@ -28,12 +28,12 @@
 
 **Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
-**Nächste Bau-Zeile (eine):** Solo-Wizard **Schritt 3 (Telegram optional)** + knappe Fertig-Checkliste — Spec `IOTA-MESSENGER-SOLO-WIZARD-VORSCHLAG.md`. MVP 0–2 **Ist**.
+**Nächste Bau-Zeile (eine):** **PC-Durchgang** (manuell Live: Soft-Pause, Burn, Solo-Wizard einmal durch) → Alpha-Checkliste. Solo-Wizard Wanderer-Pfad **Ist**.
 
 **Nicht parallel:** Profilbild/Visitenkarte-Bau, Drehrad/Handy-UI, EXE, Cap/Gap-Experimente, Später-Tabelle (Funk-Feld, Handy, 2. Gerät, H.36, Shop, …).
 
-1. **Fokus jetzt:** Solo-Wizard TG-Schritt → **PC-Durchgang** → Alpha.  
-2. **Erledigt Phase 1–3 Desk:** Messenger-Kern, 4b–4d, H.25a STABIL. Encode/Tempo Freeze. Nachrichten-Copy/Burn-Doku/Rebate-Toast + Solo-Wizard 0–2 **Ist 2026-11-26**.  
+1. **Fokus jetzt:** **PC-Durchgang** → Alpha.  
+2. **Erledigt Phase 1–3 Desk:** Messenger-Kern, 4b–4d, H.25a STABIL. Encode/Tempo Freeze. Burn-Doku/Rebate-Toast + Solo-Wizard (inkl. TG/Funk optional) **Ist 2026-11-26**.  
 3. **Scope-Arbeitsmodell (vorläufig):** IOTA-Messenger = **Boss ohne Helfer** + Freunde; Transporte IOTA/Funk/Telegram **drin**; Helfer/Handoff/Einsatz-Hub **raus**. Morgendrot = **alles**. Detail erst im Durchgang — Caps nicht blind flippen.  
 4. **Nicht parallel:** EXE vor Wizard/Durchgang; Cap/Gap-Experimente; WhatsApp/Paywall; Drehrad-Mock.  
 5. **Wallet/IOTA-Aktivität:** Freeze.  
@@ -56,7 +56,7 @@
 | **TG-Bild** | Composer: `sendPhoto` + Ack (Cap ~1,5 MB) **Ist**; Klingel weiter Text. Feinschliff/Tests → merken | `MESSENGER-CHAT-HANDBUCH` FAQ |
 | **Vault on-chain** | create→update ein Blob; Insufficient Gas → skaliertes Budget | Härte |
 | **Vault Soft-Pause UX** | Scrim aus während PW-Dialog; Home-Badge → PW nicht Mega-Unlock; kein Confirm vor Soft-Pause | Ist 2026-11-26 |
-| **Solo-Wizard** | **MVP 0–2 Ist** (Welcome/Tresor/IOTA-IDs im Wanderer-Pfad). TG-Schritt + Fertig-Infobox = nächste Scheibe | H.30 / Edition |
+| **Solo-Wizard** | Wanderer-Pfad **Ist** (Welcome→Tresor→IOTA→TG→Funk→Checkliste) | H.30 / Edition |
 | **Storage-Rebate UI** | **Keine** Claim-Queue. Burn-Status mit `storageRebate` **Ist 2026-11-26** | Chat-Handbuch § Burn |
 
 ### Jetzt machen (IOTA-Messenger — triage 2026-11-26)
@@ -82,8 +82,8 @@
 | **Split** | product-identity Caps | **halten** — Caps im PC-Durchgang |
 | **Ideen** | Fail-closed / Soft-Pause / Badge | **erledigt** |
 | **Burn-Doku + Rebate-Toast** | Posteingang Burn sichtbar; Status mit Rebate | **erledigt 2026-11-26** |
-| **Solo-Wizard MVP 0–2** | Welcome / Tresor / IOTA-IDs (Wanderer) | **erledigt 2026-11-26** |
-| **Solo-Wizard TG** | Optionaler Telegram-Schritt + Fertig-Checkliste | **offen** — nächste Bau-Zeile |
+| **Solo-Wizard** | Welcome→Tresor→IOTA→TG→Funk→Checkliste | **erledigt 2026-11-26** |
+| **PC-Durchgang** | Live Soft-Pause / Burn / Solo-Wizard | **offen** — nächste Bau-Zeile (manuell) |
 
 ### Später machen bzw. nochmals später klären (User-Durchgang ab 2026-11-22)
 
