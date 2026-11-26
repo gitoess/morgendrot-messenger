@@ -140,8 +140,8 @@ export function DashboardSharedDialogs(p: {
           open={p.sessionSignerSync.open}
           onOpenChange={(open) => !open && p.sessionSignerSync?.onClose()}
         >
-          <DialogContent className="flex max-h-[min(92vh,640px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
-            <DialogHeader className="space-y-1 border-b border-border/60 px-5 pb-4 pt-5 text-left">
+          <DialogContent className="gap-4 p-5 sm:max-w-md">
+            <DialogHeader className="space-y-1 text-left">
               <DialogTitle>
                 {p.sessionSignerSync.softResume ? 'Weitersprechen' : 'Session-Signer laden'}
               </DialogTitle>
@@ -151,7 +151,7 @@ export function DashboardSharedDialogs(p: {
                   : 'Der Tresor ist schon offen. Noch einmal Vault-Passwort: lädt den Signer in diesen Browser (RAM) für Direct-Send, On-Chain/NFT und Zeitkapsel — Testnet wie Mainnet. Nach Reload oft nötig.'}
               </DialogDescription>
             </DialogHeader>
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4">
+            <div className="space-y-3">
               {p.vaultContextHint ? (
                 <p className="rounded-md border border-sky-500/35 bg-sky-500/10 px-3 py-2 text-xs leading-relaxed text-sky-950 dark:text-sky-100">
                   {p.vaultContextHint}

@@ -263,7 +263,7 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
       nextDisabled={nextDisabled}
       showNextChevron={stepId !== 'done'}
     >
-      <div className="max-h-[min(60vh,32rem)] overflow-y-auto pr-1">{renderStepBody()}</div>
+      <div className="min-w-0">{renderStepBody()}</div>
     </OnboardingWizardShell>
   )
 }

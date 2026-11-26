@@ -444,13 +444,13 @@ function MessengerDashboardBody({
           !(softUiPauseOnly && s.sessionSignerSync.open)
         }
         onRequestUnlock={requestFailClosedUnlock}
+        unlockCta={!softUiPauseOnly}
         lockedHint={
           softUiPauseOnly
-            ? 'Tresor pausiert — Passwort tippen.'
+            ? 'Tresor pausiert — Badge tippen oder Passwort-Dialog.'
             : undefined
         }
         lockedDetail={softUiPauseOnly ? null : undefined}
-        unlockLabel={softUiPauseOnly ? 'Passwort eingeben' : undefined}
         className={cn(
           'bg-background',
           isCapacitorNativePlatform() && s.activeView.type === 'chat'
@@ -678,13 +678,13 @@ function MessengerDashboardBody({
         !(softUiPauseOnly && s.sessionSignerSync.open)
       }
       onRequestUnlock={requestFailClosedUnlock}
+      unlockCta={!softUiPauseOnly}
       lockedHint={
         softUiPauseOnly
-          ? 'Tresor pausiert — Passwort tippen.'
+          ? 'Tresor pausiert — Badge tippen oder Passwort-Dialog.'
           : undefined
       }
       lockedDetail={softUiPauseOnly ? null : undefined}
-      unlockLabel={softUiPauseOnly ? 'Passwort eingeben' : undefined}
       className={cn(
         'bg-background/80',
         isCapacitorNativePlatform()

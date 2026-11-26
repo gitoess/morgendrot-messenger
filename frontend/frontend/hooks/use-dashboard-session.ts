@@ -1154,6 +1154,9 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     lockPollStreakRef.current = 0
     if (stayInView) {
       setPrivacySoftLocked(true)
+      /** Kein Extra-CTA unten — direkt Weitersprechen-Dialog. */
+      setSessionSignerSyncError('')
+      setSessionSignerSyncOpen(true)
       window.dispatchEvent(new Event(DIRECT_IOTA_UI_CHANGED))
       return { ok: true as const }
     }

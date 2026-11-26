@@ -6,8 +6,9 @@ import { cn } from '@/lib/utils'
 
 /**
  * Fail-closed Scrim über der Messenger-Hauptfläche.
- * - Hard-Lock: Unlock-Dialog (Portal) + Fallback-Button
- * - Soft-Pause: Scrim + „Weitersprechen“ (Passwort-Dialog; RAM bleibt)
+ * - Hard-Lock: Unlock-Dialog (Portal) + optional Fallback-Button
+ * - Soft-Pause: leichter Scrim; Passwort nur im Weitersprechen-Dialog (kein CTA unten)
+ * Scrim = `fixed` am Viewport — sonst wandert der Inhalt bei scrollbaren Eltern nach unten.
  */
 export function VaultFailClosedSurface(p: {
   active: boolean
@@ -18,7 +19,10 @@ export function VaultFailClosedSurface(p: {
   lockedHint?: string
   /** Unterzeile; `null` = aus. Default: Hard-Lock-Hinweis. */
   lockedDetail?: string | null
+  /** Soft-Pause: nur Dimmen, kein Unlock-Button (Dialog öffnet separat). */
+  unlockCta?: boolean
 }) {
+  const showUnlockCta = p.unlockCta !== false && Boolean(p.onRequestUnlock)
   const detail =
     p.lockedDetail === null
       ? null
@@ -37,7 +41,7 @@ export function VaultFailClosedSurface(p: {
       {p.active ? (
         <div
           data-testid="vault-fail-closed-scrim"
-          className="absolute inset-0 z-[45] flex flex-col items-center justify-center gap-3 bg-background/70 px-4 backdrop-blur-[2px]"
+          className="fixed inset-0 z-[45] flex flex-col items-center justify-center gap-3 bg-background/70 px-4 backdrop-blur-[2px]"
           aria-hidden
         >
           <div className="pointer-events-none flex max-w-sm flex-col items-center gap-2 text-center">
@@ -49,7 +53,7 @@ export function VaultFailClosedSurface(p: {
               <p className="text-xs text-muted-foreground">{detail}</p>
             ) : null}
           </div>
-          {p.onRequestUnlock ? (
+          {showUnlockCta ? (
             <button
               type="button"
               data-testid="vault-fail-closed-unlock"

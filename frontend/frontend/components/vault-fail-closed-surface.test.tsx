@@ -24,4 +24,14 @@ describe('VaultFailClosedSurface', () => {
     fireEvent.click(screen.getByTestId('vault-fail-closed-unlock'))
     expect(onUnlock).toHaveBeenCalledTimes(1)
   })
+
+  it('Soft-Pause: Scrim ohne Unlock-CTA', () => {
+    render(
+      <VaultFailClosedSurface active unlockCta={false} onRequestUnlock={() => {}}>
+        <span>Inhalt</span>
+      </VaultFailClosedSurface>
+    )
+    expect(screen.getByTestId('vault-fail-closed-scrim')).toBeTruthy()
+    expect(screen.queryByTestId('vault-fail-closed-unlock')).toBeNull()
+  })
 })
