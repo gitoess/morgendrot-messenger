@@ -90,6 +90,26 @@ describe('ChatViewConversationMenu Info', () => {
 })
 
 describe('ChatConversationMenuItems', () => {
+  it('ohne showRatchetExperiment: kein Double-Ratchet-Eintrag (Gruppe)', () => {
+    render(
+      <DropdownMenu open>
+        <DropdownMenuTrigger asChild>
+          <button type="button">open</button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <ChatConversationMenuItems
+            title="Alpha"
+            canClearHistory
+            canExport={false}
+            showChainSecurityTools
+            showRatchetExperiment={false}
+          />
+        </DropdownMenuContent>
+      </DropdownMenu>
+    )
+    expect(screen.queryByText(/Double Ratchet/i)).not.toBeInTheDocument()
+  })
+
   it('rendert Info ohne ⋮-Trigger', () => {
     const onViewInfo = vi.fn()
     render(

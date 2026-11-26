@@ -41,6 +41,8 @@ export type ChatViewConversationMenuProps = {
    * Aus bei Funk/Telegram.
    */
   showChainSecurityTools?: boolean
+  /** C1 nur 1:1 — Gruppen behalten Burn, ohne Ratchet-Toggle. Default = wie Chain-Tools. */
+  showRatchetExperiment?: boolean
   /** header = Titelzeile + ⋮; items = nur Menüeinträge (z. B. in Optionen). */
   variant?: 'header' | 'toolbar' | 'items'
 }
@@ -49,6 +51,7 @@ export type ChatViewConversationMenuProps = {
 export function ChatConversationMenuItems(p: ChatViewConversationMenuProps) {
   const burn = p.burnOnRead
   const chainSecurity = p.showChainSecurityTools !== false
+  const showRatchet = p.showRatchetExperiment ?? chainSecurity
   const hasGroupActions = Boolean(p.onManageGroup || p.onCreateGroup)
   const onInfo = p.onViewInfo
   const [ratchetExp, setRatchetExp] = useState(false)
@@ -126,26 +129,28 @@ export function ChatConversationMenuItems(p: ChatViewConversationMenuProps) {
             {burn?.enabled ? 'Nach Lesen löschen: an (nur Modus)' : 'Nach Lesen löschen: aus (nur Modus)'}
           </DropdownMenuItem>
 
-          <DropdownMenuItem
-            title={
-              ratchetExp
-                ? 'Experiment an — Direct-IOTA Enc nutzt innere RATCHET_V3-Lage (beide Seiten Flag + Handshake). Default bleibt Session Keys+.'
-                : 'Opt-in H.23 C1 — Direct-Enc mit Double Ratchet (Experiment). Beide Seiten brauchen Flag; kein Produktiv-Default.'
-            }
-            onSelect={() => {
-              const next = !ratchetExp
-              writeRatchetExperimentEnabled(next)
-              setRatchetExp(next)
-              if (next) {
-                toast.message('Double Ratchet an — Partner braucht dasselbe Flag; Handshake nötig. Kein Default.')
-              } else {
-                toast.message('Double Ratchet aus — wieder Session Keys+ (v2).')
+          {showRatchet ? (
+            <DropdownMenuItem
+              title={
+                ratchetExp
+                  ? 'Experiment an — Direct-IOTA Enc nutzt innere RATCHET_V3-Lage (beide Seiten Flag + Handshake). Default bleibt Session Keys+.'
+                  : 'Opt-in H.23 C1 — Direct-Enc mit Double Ratchet (Experiment). Beide Seiten brauchen Flag; kein Produktiv-Default.'
               }
-            }}
-          >
-            <FlaskConical className={ratchetExp ? 'mr-2 h-4 w-4 text-amber-700' : 'mr-2 h-4 w-4'} />
-            {ratchetExp ? 'Double Ratchet: an (Opt-in Enc)' : 'Double Ratchet (Experiment)'}
-          </DropdownMenuItem>
+              onSelect={() => {
+                const next = !ratchetExp
+                writeRatchetExperimentEnabled(next)
+                setRatchetExp(next)
+                if (next) {
+                  toast.message('Double Ratchet an — Partner braucht dasselbe Flag; Handshake nötig. Kein Default.')
+                } else {
+                  toast.message('Double Ratchet aus — wieder Session Keys+ (v2).')
+                }
+              }}
+            >
+              <FlaskConical className={ratchetExp ? 'mr-2 h-4 w-4 text-amber-700' : 'mr-2 h-4 w-4'} />
+              {ratchetExp ? 'Double Ratchet: an (Opt-in Enc)' : 'Double Ratchet (Experiment)'}
+            </DropdownMenuItem>
+          ) : null}
           <DropdownMenuSeparator />
         </>
       ) : null}

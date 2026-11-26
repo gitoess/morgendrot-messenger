@@ -1260,6 +1260,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         onClearHistory: clearHistory,
         burnOnRead: burnToggle,
         showChainSecurityTools: chainSecurity,
+        showRatchetExperiment: false,
       }
     }
 
