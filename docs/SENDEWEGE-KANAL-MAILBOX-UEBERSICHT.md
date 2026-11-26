@@ -1,7 +1,7 @@
 # Sendewege: Kanäle (1:1, Gruppe, Pinnwand) × Speicher × Mailbox
 
-**Stand:** 2026-05  
-**UI:** Posteingang → **Meine Mailboxen** → „Übersicht: Kanäle, Speicher & Mailboxen“
+**Stand:** 2026-11-26  
+**UI:** Composer **„Speicher auf der Chain“** + Einstellungen → **Meine Mailboxen** (Übersicht verlinkt hierher).
 
 ---
 
@@ -33,8 +33,10 @@
 
 | Modus | On-chain | Purge/Rebate |
 |-------|----------|--------------|
-| **Flüchtig (Event)** | `PlaintextMessage` / `EncryptedMessage` Events | anders als Mailbox-DF |
+| **Flüchtig (Event)** | `PlaintextMessage` / `EncryptedMessage` Events | anders als Mailbox-DF; **kein** Rebate wie Mailbox-Zeile |
 | **Persistent (Mailbox)** | Dynamic Fields unter Mailbox-Object-ID | Mailbox-Purge möglich |
+
+**Direct-IOTA:** Enc geht in **beide** Modi (`trySubmitEncryptedEventViaDirectIota` / Mailbox). **Empfang Enc-Event** braucht Event-Abhol/Indexer — nicht dieselbe Union wie Mailbox-DFs (H.22 Rest). Alltag: Enc eher **Mailbox**.
 
 Umschalter **„Speicher auf der Chain“** erscheint bei **1:1 Privat** und **Gruppenchat** (online), **nicht** bei Pinnwand (dort Klartext-Hinweise).
 
