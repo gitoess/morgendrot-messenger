@@ -1,14 +1,27 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 import {
   getComposerEncryptionContextHint,
   type ComposerEncryptionHintInput,
 } from '@/frontend/lib/composer-encryption-context-hint'
+import { RATCHET_EXPERIMENT_CHANGED } from '@/frontend/lib/ratchet-experiment'
 
 export function ChatViewEncryptionContextHint(
   p: ComposerEncryptionHintInput & { className?: string; compact?: boolean }
 ) {
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const sync = () => setTick((n) => n + 1)
+    window.addEventListener(RATCHET_EXPERIMENT_CHANGED, sync)
+    window.addEventListener('storage', sync)
+    return () => {
+      window.removeEventListener(RATCHET_EXPERIMENT_CHANGED, sync)
+      window.removeEventListener('storage', sync)
+    }
+  }, [])
+
   const text = getComposerEncryptionContextHint(p)
   if (!text) return null
 

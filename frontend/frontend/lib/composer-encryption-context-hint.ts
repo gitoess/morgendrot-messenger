@@ -1,6 +1,7 @@
 'use client'
 
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
+import { readRatchetExperimentEnabled } from '@/frontend/lib/ratchet-experiment'
 
 export type ComposerEncryptionHintInput = {
   forcedTransport: ForcedTransport
@@ -14,6 +15,7 @@ export type ComposerEncryptionHintInput = {
 /**
  * § H.3o.6 (3): Abgrenzung Meshtastic-Kanal-PSK vs. Online-Schloss (IOTA/ECDH).
  * G2: Gruppe — Online/Team-Postfach vs. Funk klar trennen.
+ * H.23 C1.6: Opt-in Double Ratchet nur 1:1 Direct-Enc.
  */
 export function getComposerEncryptionContextHint(input: ComposerEncryptionHintInput): string | null {
   const { forcedTransport, encrypted, isGroupChannel, groupTeamBroadcastReady } = input
@@ -46,7 +48,10 @@ export function getComposerEncryptionContextHint(input: ComposerEncryptionHintIn
 
   if (forcedTransport === 'internet') {
     if (encrypted) {
-      return 'Online · Session Keys+ (Envelope v2): Schutz auf der Mailbox — Rotation unter Einstellungen (§ H.23).'
+      if (typeof window !== 'undefined' && readRatchetExperimentEnabled()) {
+        return 'Online · Double Ratchet (Experiment, Opt-in): innere RATCHET_V3 — Partner braucht dasselbe Flag. Kein Produktiv-Default.'
+      }
+      return 'Online · Session Keys+ (Envelope v2): Schutz auf der Mailbox — Rotation unter ⋮ Schlüssel erneuern.'
     }
     return 'Online · Klartext: unverschlüsselt auf Mailbox/IOTA — Schloss aus.'
   }
