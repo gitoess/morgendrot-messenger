@@ -108,6 +108,7 @@
 | **PC-Jetzt-Paket** | Unlock…Visitenkarte…H.16 Tabs…C1.6 Opt-in | **geschlossen Code 2026-11-26** — Live 2-Wallet später |
 | **PWA-Handbuch-Sync** | `sync:handbook` nach Chat/Einstellungen-Doku | **erledigt 2026-11-26** |
 | **H.22 Slot-Copy** | Composer „Speicher auf der Chain“ Kurz-Hinweis | **erledigt 2026-11-26** |
+| **C1.6 Doku-Nachzug** | Privacy-Anleitung + PWA-Handbuch (C1.6 Ist); Role-Pill Vitest | **erledigt 2026-11-26** |
 | **H.16 Gruppe×Pfad** | Spec S0–S2 Tabs | **erledigt 2026-11-26** |
 
 ### Später machen bzw. nochmals später klären (User-Durchgang ab 2026-11-22)

@@ -1,7 +1,7 @@
 # IOTA Messenger — Minimal-Spec (ohne Boss / Helfer / Handoff)
 
 **Stand:** 2026-11-24  
-**Status:** **Arbeitsmodell „Boss ohne Helfer“** (User 2026-11-24) — Detail-Schnitt erst beim **PC-Messenger-Durchgang**. Caps-Overlay (`hideFunk` etc.) kann noch von Freeze-Scheibe 1 abweichen → Abgleich im Durchgang.  
+**Status:** **Arbeitsmodell „Boss ohne Helfer“** — PC-Messenger-Durchgang + Caps-Align **Ist 2026-11-26** (Funk/TG an; Boss/Helfer/SOS/Alarmgruppe aus; Role-Pill Messenger).  
 **Zielgruppe:** Peers / „Bosse unter Freunden“ — voller Messenger-Alltag **ohne** Helfer-Provisioning  
 **Nicht-Ziel:** Helfer-Handoff, Einsatzleitung-Hub, Boss-provisioniert-Helfer; kein IOTA-Foundation-Produkt
 
