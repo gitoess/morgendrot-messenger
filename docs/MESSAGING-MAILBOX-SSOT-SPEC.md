@@ -84,8 +84,9 @@ Es gibt **keinen** generischen `store_message`-Eintrag; relevant sind u. a.:
 **Frontend:**
 
 - **`localStorage`:** `morgendrot.messagingPersistenceMode` — Default UI **`event`** (`messaging-persistence-mode.ts`).
-- **Transport-Card:** Schalter **„Flüchtig (Event)“ / „Persistent (Mailbox)“** bei **online** (1:1/Pinnwand), **sichtbar für verschlüsselt und Klartext**; Kurztext via `describeChainPersistenceRoute()`.
-- **Hybrid** (`mailbox-send-hybrid.ts`): reicht Modus an `/send` und `/send-plain` durch; **Direct-IOTA verschlüsselt** nur bei Modus **`mailbox`** (Event → API/Chain-Event).
+- **Composer:** **„Speicher auf der Chain“** (Kontakt-Slots / Event / Hauptpostfach) steuert Persistenz für Klartext **und** Enc; Kurztexte via Slot-Select + `describeChainPersistenceRoute()` wo noch verdrahtet.
+- **Hybrid** (`mailbox-send-hybrid.ts`): reicht Modus an `/send` und `/send-plain` durch.
+- **Direct-IOTA Enc:** **beide** Modi — `trySubmitEncryptedMailboxViaDirectIota` **und** `trySubmitEncryptedEventViaDirectIota` (`direct-iota-encrypted-submit.ts`). Event-Empfang ≠ Mailbox-DF (Indexer/Event-Abhol; H.22 Rest).
 - **Offline-Warteschlange:** Retry nutzt aktuellen `readMessagingPersistenceModeFromStorage()`.
 
 **CLI** (`wallet-bridge.ts` `/send-plain`): weiterhin explizit **Event** (`forceLegacyPlaintext: true`) — unabhängig von UI-`localStorage`.

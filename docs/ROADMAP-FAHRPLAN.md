@@ -29,14 +29,14 @@
 **Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
 **Alpha-PC-Checkliste (Messenger, manuell — 2026-11-26):** Soft-Pause→Weitersprechen · Burn · Solo-Wizard · Visitenkarte in „Ich“ · Caps Pill „Messenger“ (Edition) · Zwei-Wallet-Hinweis im Handbuch — **User: soweit ok**.  
-**Nächste Bau-Zeile:** PC-Jetzt **Ist** (#40/#41). Hygiene: PWA-Handbuch-Sync + H.22 Slot-Copy. 2-Wallet-Smoke später. **Kein** Ratchet-Default. Phase 2/Funk/2. Gerät/Boss = Später.
+**Nächste Bau-Zeile:** PC-Jetzt **Ist** (#39–#43). Halten: Hygiene/Claims. Offen nur User-Live: **2-Wallet-Smoke** (+ optional C1.6 4c). **Kein** Ratchet-Default. Phase 2/Funk/2. Gerät/Boss = Später.
 
 **„Jetzt fertig“ ≠ gesamtes H.\*-Universum.** Die Nov-22-Triage-Tabelle am Kopf war **PC-Messenger-Alltag** (Unlock, Desk-Smoke, Labels, Soft-Pause, Burn-Doku, Solo-Wizard). Folgendes bleibt **offen / Später** — bewusst nicht „mitabgehakt“:
 
 | Thema | Stand | Wann |
 |-------|--------|------|
 | **H.23 C1 Double Ratchet** | Spec+Codec+C1.6 Opt-in-Send **Ist**; **kein** Composer-Default | PC 2-Wallet-Smoke; Default erst nach Feld/2. Gerät |
-| **H.22 Rest** (Mailbox-Abhol/Indexer, Enc-Events neben DFs; Kontakt-Slots Feinschliff) | Klarheit-Copy **Ist**; tiefer Abhol-/Index-Pfad **offen** | kleine PC-Scheiben ok; kein Big-Bang |
+| **H.22 Rest** (Mailbox-Abhol/Indexer, Enc-Events neben DFs; Kontakt-Slots Feinschliff) | Klarheit-Copy + Enc≠nur-Mailbox Claims **Ist**; tiefer Abhol-/Index-Pfad **offen** | kleine PC-Scheiben ok; kein Big-Bang |
 | **B2 TBA-/Discovery-Index** (NFT „Gesichert“) | Code-Ist + Smoke; nicht dasselbe wie Chat-Mailbox-Index | halten; Joint-Retest mit 2. Gerät |
 | **IOTA↔LoRa / Delayed Upload** | Spec `LORA-IOTA-DELAYED-UPLOAD-SPEC`; **keine** volle IOTA-TX über LoRa (`H.3m`) | **Phase 3 Funk** (+ Gateway) |
 | **Handy / 2. Gerät / H.36 / Shop** | Später-Tabelle | Phasen 2–4 |
@@ -109,6 +109,8 @@
 | **PWA-Handbuch-Sync** | `sync:handbook` nach Chat/Einstellungen-Doku | **erledigt 2026-11-26** |
 | **H.22 Slot-Copy** | Composer „Speicher auf der Chain“ Kurz-Hinweis | **erledigt 2026-11-26** |
 | **C1.6 Doku-Nachzug** | Privacy-Anleitung + PWA-Handbuch (C1.6 Ist); Role-Pill Vitest | **erledigt 2026-11-26** |
+| **C1 nur 1:1 UI** | Gruppen-⋮ ohne Ratchet-Toggle; Claims/Handbuch ehrlich | **erledigt 2026-11-26** |
+| **H.22 Enc/Event Claims** | SSOT+Handbuch+Composer-Hinweis: Enc auch Event; Empfang ≠ DF | **erledigt 2026-11-26** |
 | **H.16 Gruppe×Pfad** | Spec S0–S2 Tabs | **erledigt 2026-11-26** |
 
 ### Später machen bzw. nochmals später klären (User-Durchgang ab 2026-11-22)

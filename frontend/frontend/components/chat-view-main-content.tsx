@@ -1244,6 +1244,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         onCreateGroup: openGroupSettings,
         burnOnRead: burnToggle,
         showChainSecurityTools: chainSecurity,
+        showRatchetExperiment: false,
       }
     }
 
@@ -1260,6 +1261,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         onClearHistory: clearHistory,
         burnOnRead: burnToggle,
         showChainSecurityTools: chainSecurity,
+        showRatchetExperiment: false,
       }
     }
 
@@ -1274,6 +1276,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         onCreateGroup: openGroupSettings,
         burnOnRead: burnToggle,
         showChainSecurityTools: chainSecurity,
+        showRatchetExperiment: false,
       }
     }
 

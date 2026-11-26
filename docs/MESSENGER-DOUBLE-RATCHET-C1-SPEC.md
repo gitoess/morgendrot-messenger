@@ -123,7 +123,7 @@ RatchetPeerState {
 | Stufe | Verhalten |
 |-------|-----------|
 | **Default** | Weiter `v=2` Session Keys+ |
-| **Opt-in** | Direktchat-⋮ „Double Ratchet (Experiment)“ — beide Seiten müssen senden/empfangen können |
+| **Opt-in** | Nur **1:1**-Direktchat-⋮ „Double Ratchet (Experiment)“ — beide Seiten Flag; **Gruppenmenü ohne** Toggle |
 | **Fallback** | Unbekannter Peer / nur v2 → weiter v2; kein Hard-Fail |
 | **Claims** | UI-Hinweis: Experiment; Marketing darf FS-pro-Msg erst nach Feld-PASS |
 

@@ -36,10 +36,10 @@ describe('getComposerEncryptionContextHint (H.3o.6)', () => {
     expect(getComposerEncryptionContextHint({ forcedTransport: 'mesh', encrypted: true })).toMatch(/Schloss/)
   })
 
-  it('online verschlüsselt: Session Keys+ Hinweis', () => {
-    expect(getComposerEncryptionContextHint({ forcedTransport: 'internet', encrypted: true })).toMatch(
-      /Session Keys\+/
-    )
+  it('online verschlüsselt: Session Keys+ Hinweis (Event oder Mailbox)', () => {
+    const hint = getComposerEncryptionContextHint({ forcedTransport: 'internet', encrypted: true })
+    expect(hint).toMatch(/Session Keys\+/)
+    expect(hint).toMatch(/Event oder Mailbox/)
   })
 
   it('online Enc + Ratchet-Opt-in: Experiment-Hinweis', () => {
