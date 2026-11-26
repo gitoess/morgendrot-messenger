@@ -31,6 +31,8 @@ const MORGENDROT_UI = {
   hideActiveProfile: false,
   hideMeshStatus: false,
   hideBossOnboardingChoices: false,
+  /** Header Role-Pill „Boss“ — Morgendrot behält echte Rolle. */
+  hideBossRolePill: false,
 } as const
 
 /** Schlanker Messenger — Align mit tools/iota-messenger/overlays/product-identity.ts */
@@ -51,6 +53,8 @@ const IOTA_MESSENGER_UI_CAPS = {
   hideActiveProfile: true,
   hideMeshStatus: true,
   hideBossOnboardingChoices: true,
+  /** Edition: Pill „Messenger“ statt Boss (weg-Liste §2.2 #1). */
+  hideBossRolePill: true,
 } as const
 
 export const IOTA_MESSENGER_UI = isIotaMessengerProduct()

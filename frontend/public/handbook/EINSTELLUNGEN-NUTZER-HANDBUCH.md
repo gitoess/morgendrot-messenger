@@ -213,6 +213,8 @@ Telegram = **optionaler Push/Hinweis**, kein Chat-Ersatz für IOTA/Funk.
 
 **Storage-Rebate (On-Chain-Vault / Burn):** **keine** Wallet-Karte „Rebate offen“ (anders als NFT-Leihe „zurückholen“) — bewusst nicht gebaut. Rebate fließt **in derselben TX** zurück. **Burn** im Posteingang (Zeilen-⋯ / Auswahl → „Von Chain löschen“); bei Erfolg Status ggf. **„Burn ok · Rebate …“** wenn `gasSummary.storageRebate` kommt. Details: `MESSENGER-CHAT-HANDBUCH.md` § *Burn*.
 
+**Zwei-Wallet am PC (Enc testen):** zweites Profil / `dm:b` — siehe Chat-Handbuch § *Zwei-Wallet* und `PC-STAGE2-DIRECT-IOTA-SMOKE.md`.
+
 Toast **„Tresor sichern?“** nach relevanten Änderungen (Notizen/Safe o. Ä.).
 
 ### Was gehört in die Tresor-Backup-Datei?

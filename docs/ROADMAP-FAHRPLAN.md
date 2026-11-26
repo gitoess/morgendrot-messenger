@@ -28,7 +28,7 @@
 
 **Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
-**Nächste Bau-Zeile (eine):** **PC-Durchgang** (manuell Live: Soft-Pause, Burn, Solo-Wizard einmal durch) → Alpha-Checkliste. Solo-Wizard Wanderer-Pfad **Ist**.
+**Nächste Bau-Zeile (eine):** **Visitenkarte MVP** (nur „Ich“-Dialog Share-Checkboxen, kein Avatar) *oder* Alpha-Checkliste abhaken. Boss/Helfer/H.16-Drei-Fenster/TG-Auto-Sidebar/Ratchet-Default **nicht** parallel.
 
 **„Jetzt fertig“ ≠ gesamtes H.\*-Universum.** Die Nov-22-Triage-Tabelle am Kopf war **PC-Messenger-Alltag** (Unlock, Desk-Smoke, Labels, Soft-Pause, Burn-Doku, Solo-Wizard). Folgendes bleibt **offen / Später** — bewusst nicht „mitabgehakt“:
 
@@ -42,8 +42,8 @@
 
 **Nicht parallel:** Profilbild/Visitenkarte-Bau, Drehrad/Handy-UI, EXE, Cap/Gap-Experimente, Blind-Big-Bang an Mailbox-Indexer, Ratchet-Default ohne Live-2-Geräte.
 
-1. **Fokus jetzt:** **PC-Durchgang** → Alpha.  
-2. **Erledigt Phase 1–3 Desk:** Messenger-Kern, 4b–4d, H.25a STABIL. Encode/Tempo Freeze. Burn-Doku/Rebate-Toast + Solo-Wizard (inkl. TG/Funk optional) **Ist 2026-11-26**.  
+1. **Fokus jetzt:** Alpha-Checkliste / kleine Caps-Reste → **kein** Boss/Helfer-Bau.  
+2. **Erledigt Phase 1–3 Desk:** Messenger-Kern, 4b–4d, H.25a STABIL. Burn/Solo-Wizard/PC-Durchgang/Soft-Pause-Live + Caps Role-Pill **Ist 2026-11-26**.  
 3. **Scope-Arbeitsmodell (vorläufig):** IOTA-Messenger = **Boss ohne Helfer** + Freunde; Transporte IOTA/Funk/Telegram **drin**; Helfer/Handoff/Einsatz-Hub **raus**. Morgendrot = **alles**. Detail erst im Durchgang — Caps nicht blind flippen.  
 4. **Nicht parallel:** EXE vor Wizard/Durchgang; Cap/Gap-Experimente; WhatsApp/Paywall; Drehrad-Mock.  
 5. **Wallet/IOTA-Aktivität:** Freeze.  
@@ -65,9 +65,10 @@
 | **H.16 / Gruppen** | **Gruppe verwalten je Sendepfad** (IOTA / Funk-Kanal / TG-Alarm — drei Fenster, ein Modell) | nach Nachrichten+Solo-Wizard |
 | **TG-Bild** | Composer: `sendPhoto` + Ack (Cap ~1,5 MB) **Ist**; Klingel weiter Text. Feinschliff/Tests → merken | `MESSENGER-CHAT-HANDBUCH` FAQ |
 | **Vault on-chain** | create→update ein Blob; Insufficient Gas → skaliertes Budget | Härte |
-| **Vault Soft-Pause UX** | Scrim aus während PW-Dialog; Home-Badge → PW nicht Mega-Unlock; kein Confirm vor Soft-Pause | Ist 2026-11-26 |
+| **Vault Soft-Pause UX** | Direkt Weitersprechen; kein unteres PW-CTA; Scrim viewport-fixed | Ist 2026-11-26 Live |
 | **Solo-Wizard** | Wanderer-Pfad **Ist** (Welcome→Tresor→IOTA→TG→Funk→Checkliste) | H.30 / Edition |
 | **Storage-Rebate UI** | **Keine** Claim-Queue. Burn-Status mit `storageRebate` **Ist 2026-11-26** | Chat-Handbuch § Burn |
+| **Caps Role-Pill** | Edition: Pill **Messenger** statt Boss (`hideBossRolePill`) | Ist 2026-11-26 |
 
 ### Jetzt machen (IOTA-Messenger — triage 2026-11-26)
 
@@ -89,11 +90,12 @@
 | **H.26** (Teil) | Telegram Klingel/Notify | **erledigt** — Alarmgruppe → später |
 | **H.27** | Handshake-UX Labels | **erledigt** |
 | **H.34** | Port-Refactor bei Touch | **halten** |
-| **Split** | product-identity Caps | **halten** — Caps im PC-Durchgang |
+| **Split** | product-identity Caps | **halten** — Role-Pill Messenger Ist; weitere weg-Zeilen nur mit OK |
 | **Ideen** | Fail-closed / Soft-Pause / Badge | **erledigt** |
 | **Burn-Doku + Rebate-Toast** | Posteingang Burn sichtbar; Status mit Rebate | **erledigt 2026-11-26** |
 | **Solo-Wizard** | Welcome→Tresor→IOTA→TG→Funk→Checkliste | **erledigt 2026-11-26** |
-| **PC-Durchgang** | Live Soft-Pause / Burn / Solo-Wizard | **offen** — nächste Bau-Zeile (manuell) |
+| **PC-Durchgang** | Live Soft-Pause / Burn / Solo-Wizard | **PASS 2026-11-26** |
+| **Zwei-Wallet PC** | Handbuch § + Stage‑2 Link | **erledigt Doku 2026-11-26** |
 
 ### Später machen bzw. nochmals später klären (User-Durchgang ab 2026-11-22)
 

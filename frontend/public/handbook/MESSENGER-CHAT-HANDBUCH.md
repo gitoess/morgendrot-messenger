@@ -39,6 +39,18 @@
 
 Details + Tabelle: **`EINSTELLUNGEN-NUTZER-HANDBUCH.md`**.
 
+### Zwei-Wallet am selben PC (E2EE-Surrogat)
+
+Ohne zweites Handy: **zwei Browser-Profile** (oder `npm run dm` + `npm run dm:b`) mit **je eigenem Tresor/Wallet**. Kurzprotokoll: **`docs/PC-STAGE2-DIRECT-IOTA-SMOKE.md`** §1.4.
+
+| Stolperstein | Fix |
+|--------------|-----|
+| Beide Tabs dieselbe Adresse | Getrennte Vault-Datei (`VAULT_FILE=.morgendrot-vault-b` bei B) |
+| Handshake überschreibt Partner | `PARTNER_ADDRESS_FILE=.morgendrot-partner-b` für Instanz B |
+| „Bereits verbunden“ | Anderer Peer → `/cancel-connect` bzw. Partner neu wählen |
+
+Das ist **kein** Phase‑4-Zwei-Geräte-Feldtest — nur Desk-Surrogat für Handshake/Enc.
+
 ### Drei Menüs — nicht verwechseln
 
 | Wo | Was es ist | Was es nicht ist |
