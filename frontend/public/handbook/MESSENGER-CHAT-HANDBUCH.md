@@ -41,7 +41,9 @@ Details + Tabelle: **`EINSTELLUNGEN-NUTZER-HANDBUCH.md`**.
 
 ### Visitenkarte (Ich)
 
-Unter Sidebar / Profil **„Ich“**: Block **Visitenkarte teilen** — Checkboxen (Name, Wallet, optional Mailbox / TG-ID / ECDH) → **Text** oder **QR-JSON** (`k:'mc'`, gleiches Kontakt-QR). Kein Avatar in dieser Stufe.
+Sidebar **„Ich“** (⋯ **Mehr zu Ich** oder Kontakt-Detail der eigenen Adresse): Block **Visitenkarte teilen** — Checkboxen (Name, Wallet, optional Mailbox / TG-ID / Funk-Node / ECDH) → **Als Nachricht** (Composer), **Text** oder **QR-JSON** (`k:'mc'`). Peering-QR = Partner verbinden; Visitenkarte = Kontaktkarte teilen. **Kein** Telefon/E-Mail-Feld (falscher Produktpfad). **Profilbild** = später Backlog (Opt-in, nicht im QR). **Einsatz-Alarmgruppe** → **Einstellungen → Telegram**.
+
+**Caps (Edition):** Kein eigener Dialog — Produkt-Flags (`NEXT_PUBLIC_PRODUCT_ID=iota-messenger`); Kopfzeile zeigt dann Pill **Messenger** statt Boss.
 
 ### Zwei-Wallet am selben PC (E2EE-Surrogat)
 
@@ -103,7 +105,7 @@ Badge **Eingang/Ausgang**, **Verschlüsselt**, **PWMSG** oder **NFT-Gate** ankli
 
 ## Verschlüsselung und Partner-Key
 
-**Verschlüsselt:** Nachrichten sind **nur mit dem Partner-Schlüssel** sinnvoll lesbar. Die **Entschlüsselung** erfolgt auf **diesem Node** (Backend), wenn der **Tresor entsperrt** ist. Das ist **kein** Signal-artiges Perfect Forward Secrecy (PFS): wer Langzeit-Schlüssel und gespeicherte Ciphertexte hat, kann bei späterem Zugriff mitentschlüsseln — Threat Model bewusst mitdenken. **Teil-FS** gibt es über **Schlüssel erneuern** (`keyEpoch`). Passphrase-Kanal, Vault-Sidecars, Burn-on-read (Opt-in) und NFT-Schlüsselkarte: **`docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`**.
+**Verschlüsselt:** Nachrichten sind **nur mit dem Partner-Schlüssel** sinnvoll lesbar. Die **Entschlüsselung** erfolgt lokal/Direct, wenn der **Tresor entsperrt** ist. **Default = Session Keys+** (kein Signal-PFS): **Teil-FS** über **Schlüssel erneuern** (`keyEpoch`). **Opt-in Double Ratchet (H.23 C1.6):** Chat-⋮ → **Double Ratchet (Experiment)** — beide Seiten Flag + Handshake; Direct-Enc nutzt innere `RATCHET_V3`. **Kein** Produktiv-Default. Passphrase/Vault/Burn/NFT: **`docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`** · Spec **`docs/MESSENGER-DOUBLE-RATCHET-C1-SPEC.md`**.
 
 **Unverschlüsselt · online:** Klartext erscheint in der Chain (`/send-plain`); Modus **Nur Event** vs. **Mailbox** steuert die Speicherlogik (siehe `MESSAGING-MAILBOX-SSOT-SPEC.md`).
 
@@ -667,9 +669,9 @@ Zum Prüfen: Browser-DevTools → Application → localStorage → `morgendrot.m
 
 ### 5–6) „Gruppe verwalten“ pro Sendepfad?
 
-**Ist:** ein Sheet (Morgendrot-Gruppe + optional Funk-Meta). Telegram-Alarm = Einstellungen.
+**Ist:** Sheet mit Tabs **IOTA** / **Funk** / **Telegram** (ein Datensatz). Composer wählt den Transport. Telegram-Tab = Hinweis; Alarm-Setup = Einstellungen → Telegram (kein Bot-Gruppenchat). Edition kann den Telegram-Tab ausblenden.
 
-**Wunsch (Backlog, nach Solo-Wizard):** drei angepasste Einstiege — **IOTA:** Mitglieder/`0x`/Mailbox; **Funk:** Kanalindex/Name/PSK-Ref (+ Link Meshtastic); **Telegram:** Alarmgruppen-ID/Label (kein Bot-Gruppenchat). Ein Datenmodell, drei Fenster — kein Parallel-Chaos.
+**Spec:** `docs/H16-GRUPPE-JE-SENDEPFAD-SPEC.md` (S0–S2 Ist).
 
 ---
 

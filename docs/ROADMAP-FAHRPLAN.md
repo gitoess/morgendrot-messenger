@@ -29,7 +29,7 @@
 **Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
 **Alpha-PC-Checkliste (Messenger, manuell — 2026-11-26):** Soft-Pause→Weitersprechen · Burn · Solo-Wizard · Visitenkarte in „Ich“ · Caps Pill „Messenger“ (Edition) · Zwei-Wallet-Hinweis im Handbuch — **User: soweit ok**.  
-**Nächste Bau-Zeile:** PC-Jetzt **Ist** (#40). Kleine Doku/Caps-Findability (Weg A). 2-Wallet-Smoke später. **Kein** Ratchet-Default. Phase 2/Funk/2. Gerät/Boss = Später.
+**Nächste Bau-Zeile:** PC-Jetzt **Ist** (#40/#41). Hygiene: PWA-Handbuch-Sync + H.22 Slot-Copy. 2-Wallet-Smoke später. **Kein** Ratchet-Default. Phase 2/Funk/2. Gerät/Boss = Später.
 
 **„Jetzt fertig“ ≠ gesamtes H.\*-Universum.** Die Nov-22-Triage-Tabelle am Kopf war **PC-Messenger-Alltag** (Unlock, Desk-Smoke, Labels, Soft-Pause, Burn-Doku, Solo-Wizard). Folgendes bleibt **offen / Später** — bewusst nicht „mitabgehakt“:
 
@@ -106,6 +106,9 @@
 | **H.23 C1.6** | Opt-in Double Ratchet → Direct-Enc Send/Decrypt + Composer-Hinweis | **erledigt 2026-11-26** |
 | **Alpha-Checkliste** | Desk-Smoke + Caps + Soft-Pause + Burn + Wizard + Visitenkarte | **soweit ok** (User 2026-11-26) |
 | **PC-Jetzt-Paket** | Unlock…Visitenkarte…H.16 Tabs…C1.6 Opt-in | **geschlossen Code 2026-11-26** — Live 2-Wallet später |
+| **PWA-Handbuch-Sync** | `sync:handbook` nach Chat/Einstellungen-Doku | **erledigt 2026-11-26** |
+| **H.22 Slot-Copy** | Composer „Speicher auf der Chain“ Kurz-Hinweis | **erledigt 2026-11-26** |
+| **C1.6 Doku-Nachzug** | Privacy-Anleitung + PWA-Handbuch (C1.6 Ist); Role-Pill Vitest | **erledigt 2026-11-26** |
 | **H.16 Gruppe×Pfad** | Spec S0–S2 Tabs | **erledigt 2026-11-26** |
 
 ### Später machen bzw. nochmals später klären (User-Durchgang ab 2026-11-22)

@@ -406,7 +406,7 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
             onClick={() => setTechOpen((v) => !v)}
             aria-expanded={techOpen}
           >
-            <span>Mehr — Identität &amp; Mailboxen</span>
+            <span>{isSelf ? 'Mehr — Mailboxen & IDs' : 'Mehr — Identität & Mailboxen'}</span>
             {techOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
           {techOpen ? (
