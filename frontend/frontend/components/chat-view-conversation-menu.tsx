@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 import {
   RATCHET_EXPERIMENT_CHANGED,
   readRatchetExperimentEnabled,
@@ -128,19 +129,22 @@ export function ChatConversationMenuItems(p: ChatViewConversationMenuProps) {
           <DropdownMenuItem
             title={
               ratchetExp
-                ? 'Experiment an — ändert Senden noch nicht (Composer bleibt Envelope v2). FS heute: Schlüssel erneuern.'
-                : 'Experiment — ändert Senden noch nicht. Opt-in H.23 C1; beide Seiten brauchen Flag, wenn Wire verdrahtet ist.'
+                ? 'Experiment an — Direct-IOTA Enc nutzt innere RATCHET_V3-Lage (beide Seiten Flag + Handshake). Default bleibt Session Keys+.'
+                : 'Opt-in H.23 C1 — Direct-Enc mit Double Ratchet (Experiment). Beide Seiten brauchen Flag; kein Produktiv-Default.'
             }
             onSelect={() => {
               const next = !ratchetExp
               writeRatchetExperimentEnabled(next)
               setRatchetExp(next)
+              if (next) {
+                toast.message('Double Ratchet an — Partner braucht dasselbe Flag; Handshake nötig. Kein Default.')
+              } else {
+                toast.message('Double Ratchet aus — wieder Session Keys+ (v2).')
+              }
             }}
           >
             <FlaskConical className={ratchetExp ? 'mr-2 h-4 w-4 text-amber-700' : 'mr-2 h-4 w-4'} />
-            {ratchetExp
-              ? 'Double Ratchet: an (ändert Senden nicht)'
-              : 'Double Ratchet (Exp. — ändert Senden nicht)'}
+            {ratchetExp ? 'Double Ratchet: an (Opt-in Enc)' : 'Double Ratchet (Experiment)'}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
         </>

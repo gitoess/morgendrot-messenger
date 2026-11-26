@@ -29,13 +29,13 @@
 **Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
 **Alpha-PC-Checkliste (Messenger, manuell — 2026-11-26):** Soft-Pause→Weitersprechen · Burn · Solo-Wizard · Visitenkarte in „Ich“ · Caps Pill „Messenger“ (Edition) · Zwei-Wallet-Hinweis im Handbuch — **User: soweit ok**.  
-**Nächste Bau-Zeile (eine):** Live-Abnahme (Ich/Visitenkarte/Gruppe-Tabs) · sonst Caps/Claims halten. **Profilbild** Später. Boss/Helfer/Ratchet-Default **nicht** parallel.
+**Nächste Bau-Zeile:** PC-Messenger-**Jetzt**-Paket weitgehend **Ist** (User: 2-Wallet-Smoke später). Halten + Claims ehrlich. **Kein** Ratchet-Default. Phase 2 Handy / Funk / 2. Gerät / Boss = Später-Tabelle.
 
 **„Jetzt fertig“ ≠ gesamtes H.\*-Universum.** Die Nov-22-Triage-Tabelle am Kopf war **PC-Messenger-Alltag** (Unlock, Desk-Smoke, Labels, Soft-Pause, Burn-Doku, Solo-Wizard). Folgendes bleibt **offen / Später** — bewusst nicht „mitabgehakt“:
 
 | Thema | Stand | Wann |
 |-------|--------|------|
-| **H.23 C1 Double Ratchet** | Spec+Codec **Ist**; **kein** Composer-Default | Default / Session-C nach **2. Gerät** (Phase 4); FS-Claims ehrlich halten |
+| **H.23 C1 Double Ratchet** | Spec+Codec+C1.6 Opt-in-Send **Ist**; **kein** Composer-Default | PC 2-Wallet-Smoke; Default erst nach Feld/2. Gerät |
 | **H.22 Rest** (Mailbox-Abhol/Indexer, Enc-Events neben DFs; Kontakt-Slots Feinschliff) | Klarheit-Copy **Ist**; tiefer Abhol-/Index-Pfad **offen** | kleine PC-Scheiben ok; kein Big-Bang |
 | **B2 TBA-/Discovery-Index** (NFT „Gesichert“) | Code-Ist + Smoke; nicht dasselbe wie Chat-Mailbox-Index | halten; Joint-Retest mit 2. Gerät |
 | **IOTA↔LoRa / Delayed Upload** | Spec `LORA-IOTA-DELAYED-UPLOAD-SPEC`; **keine** volle IOTA-TX über LoRa (`H.3m`) | **Phase 3 Funk** (+ Gateway) |
@@ -43,7 +43,7 @@
 
 **Nicht parallel:** Profilbild-Bau (Backlog), Drehrad/Handy-UI, EXE, Cap/Gap-Experimente, Blind-Big-Bang an Mailbox-Indexer, Ratchet-Default ohne Live-2-Geräte.
 
-1. **Fokus jetzt:** Live-Abnahme der Nov-26-Scheiben → **kein** Boss/Helfer-Bau. Alpha soweit ok.  
+1. **Fokus jetzt:** PC-Jetzt **schließen/halten** (C1.6 Opt-in Ist; 2-Wallet-Smoke User später) → **kein** Ratchet-Default / kein Boss/Helfer.  
 2. **Erledigt Phase 1–3 Desk:** Messenger-Kern, 4b–4d, H.25a STABIL. Burn/Solo-Wizard/PC-Durchgang/Soft-Pause-Live + Caps Role-Pill **Ist 2026-11-26**.  
 3. **Scope-Arbeitsmodell (vorläufig):** IOTA-Messenger = **Boss ohne Helfer** + Freunde; Transporte IOTA/Funk/Telegram **drin**; Helfer/Handoff/Einsatz-Hub **raus**. Morgendrot = **alles**. Detail erst im Durchgang — Caps nicht blind flippen.  
 4. **Nicht parallel:** EXE vor Wizard/Durchgang; Cap/Gap-Experimente; WhatsApp/Paywall; Drehrad-Mock.  
@@ -103,8 +103,10 @@
 | **Visitenkarte +** | Als Nachricht; TG-Dedupe; Funk-Node optional Klartext; kein Telefon | **erledigt 2026-11-26** |
 | **H.16 S2 Tabs** | Gruppe verwalten: IOTA / Funk / Telegram-Tabs | **erledigt 2026-11-26** |
 | **H.22 Copy** | Mailbox-Klarheit-Zeilen wieder sichtbar (Meine Mailboxen) | **erledigt 2026-11-26** |
+| **H.23 C1.6** | Opt-in Double Ratchet → Direct-Enc Send/Decrypt + Composer-Hinweis | **erledigt 2026-11-26** |
 | **Alpha-Checkliste** | Desk-Smoke + Caps + Soft-Pause + Burn + Wizard + Visitenkarte | **soweit ok** (User 2026-11-26) |
-| **H.16 Gruppe×Pfad** | Spec S0 + Sheet-Copy S1 | **erledigt 2026-11-26** — S2 Tabs → später |
+| **PC-Jetzt-Paket** | Unlock…Visitenkarte…H.16 Tabs…C1.6 Opt-in | **geschlossen Code 2026-11-26** — Live 2-Wallet später |
+| **H.16 Gruppe×Pfad** | Spec S0–S2 Tabs | **erledigt 2026-11-26** |
 
 ### Später machen bzw. nochmals später klären (User-Durchgang ab 2026-11-22)
 

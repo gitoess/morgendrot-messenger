@@ -105,7 +105,7 @@ Badge **Eingang/Ausgang**, **Verschlüsselt**, **PWMSG** oder **NFT-Gate** ankli
 
 ## Verschlüsselung und Partner-Key
 
-**Verschlüsselt:** Nachrichten sind **nur mit dem Partner-Schlüssel** sinnvoll lesbar. Die **Entschlüsselung** erfolgt auf **diesem Node** (Backend), wenn der **Tresor entsperrt** ist. Das ist **kein** Signal-artiges Perfect Forward Secrecy (PFS): wer Langzeit-Schlüssel und gespeicherte Ciphertexte hat, kann bei späterem Zugriff mitentschlüsseln — Threat Model bewusst mitdenken. **Teil-FS** gibt es über **Schlüssel erneuern** (`keyEpoch`). Passphrase-Kanal, Vault-Sidecars, Burn-on-read (Opt-in) und NFT-Schlüsselkarte: **`docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`**.
+**Verschlüsselt:** Nachrichten sind **nur mit dem Partner-Schlüssel** sinnvoll lesbar. Die **Entschlüsselung** erfolgt lokal/Direct, wenn der **Tresor entsperrt** ist. **Default = Session Keys+** (kein Signal-PFS): **Teil-FS** über **Schlüssel erneuern** (`keyEpoch`). **Opt-in Double Ratchet (H.23 C1.6):** Chat-⋮ → **Double Ratchet (Experiment)** — beide Seiten Flag + Handshake; Direct-Enc nutzt innere `RATCHET_V3`. **Kein** Produktiv-Default. Passphrase/Vault/Burn/NFT: **`docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md`** · Spec **`docs/MESSENGER-DOUBLE-RATCHET-C1-SPEC.md`**.
 
 **Unverschlüsselt · online:** Klartext erscheint in der Chain (`/send-plain`); Modus **Nur Event** vs. **Mailbox** steuert die Speicherlogik (siehe `MESSAGING-MAILBOX-SSOT-SPEC.md`).
 
