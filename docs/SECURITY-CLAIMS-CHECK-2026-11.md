@@ -7,7 +7,7 @@
 | Claim | Morgendrot Ist | Urteil |
 |-------|----------------|--------|
 | **Double Ratchet / Forward Secrecy** | **Default:** Session Keys+ (ECDH → AES-GCM, `keyEpoch`). **Opt-in (C1.6):** nur **1:1**-Direktchat-⋮ → innere `RATCHET_V3` bei Direct-Enc (beide Seiten Flag). **Gruppen:** kein Toggle (Team-Key). **Kein** Produktiv-Default; FS-pro-Msg **nicht** als Marketing-Claim. | **Teilweise** — Experiment verdrahtet; Default unverändert Session Keys+. |
-| **Asynchrone Dead-Drop, Discovery-Tags, rotierende Outboxes** | Feste `MAILBOX_ID` / Package-IDs; DFs unter Mailbox; Events | **Nur teilweise.** Keine rotierenden Outboxes. |
+| **Asynchrone Dead-Drop, Discovery-Tags, rotierende Outboxes** | Feste `MAILBOX_ID` / Package-IDs; DFs unter Mailbox; Enc/Klartext auch als **Event** (kein DF). Event-Empfang ≠ Mailbox-Inbox (H.22 Rest). | **Nur teilweise.** Keine rotierenden Outboxes. |
 | **Handshake mit Decoys** | Ohne Decoy-Rauschen | **Stimmt nicht.** |
 | **Lokale Schlüsselableitung (HW-Fragment + Passphrase, nur RAM)** | Vault PBKDF2+AES-GCM auf Disk; ECDH im Vault | **Teilweise.** Kein HW-Fragment; Seed kann verschlüsselt auf Disk liegen. |
 | **Burn-on-read / object::delete** | Purge/Rebate; ImageNFT `burn` im Experiment; **Opt-in** „Nach Lesen löschen“ unter **Optionen → Chat · Sicherheit** (nur Modus; Vorschlag + Bestätigung, kein Auto). Echter Burn: Zeilen-⋯ / Auswahl | **Teilweise.** Bewusstes Löschen / Opt-in-Hinweis. |
