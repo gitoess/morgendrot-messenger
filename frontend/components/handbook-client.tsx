@@ -9,6 +9,11 @@ import { HandbookMarkdown } from '@/components/handbook-markdown'
 const DOCS: { file: string; title: string; group?: string }[] = [
   { file: 'MESSENGER-CHAT-HANDBUCH.md', title: '1 · Messenger (Chat)', group: 'Messenger' },
   { file: 'EINSTELLUNGEN-NUTZER-HANDBUCH.md', title: '2 · Einstellungen', group: 'Messenger' },
+  {
+    file: 'ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md',
+    title: '3 · Privacy / Vault / Ratchet',
+    group: 'Messenger',
+  },
   { file: 'EXPORT-ASSISTENT-REFERENZ.md', title: 'Helfer / Handoff-ZIP', group: 'Messenger' },
   { file: 'TELEGRAM-INTEGRATION-ZIELBILD.md', title: 'Telegram (Zielbild)', group: 'Messenger' },
   { file: 'VAULT-EINRICHTEN.md', title: 'Tresor einrichten', group: 'Messenger' },
