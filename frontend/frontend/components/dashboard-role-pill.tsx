@@ -5,8 +5,9 @@ import { roleDisplayDe } from '@/frontend/lib/deployment-profile-theme'
 import { IOTA_MESSENGER_UI } from '@/frontend/lib/product-identity'
 
 export function DashboardRolePill({ role, className }: { role?: string | null; className?: string }) {
-  /** IOTA-Messenger: kein „Boss“-Theater — neutrale Pill. */
-  if (IOTA_MESSENGER_UI.hideBossRolePill) {
+  const r = (role || '').trim().toLowerCase()
+  /** Edition-Build oder ROLE=messenger: kein „Boss“-Theater. */
+  if (IOTA_MESSENGER_UI.hideBossRolePill || r === 'messenger') {
     return (
       <span
         className={cn(
@@ -19,7 +20,6 @@ export function DashboardRolePill({ role, className }: { role?: string | null; c
     )
   }
 
-  const r = (role || '').trim().toLowerCase()
   const label = roleDisplayDe(role || undefined)
   if (!label || label === '—') return null
 
