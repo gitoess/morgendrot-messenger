@@ -16,7 +16,13 @@ import {
 } from '@morgendrot/core/iota'
 import { parseMailboxOutNonceMarker } from '@morgendrot/core'
 import { encryptIotaPeerSessionMessage } from '@morgendrot/shared/morgendrot-crypto-session-wire'
+import { deriveSharedSecret } from '@morgendrot/shared/morgendrot-crypto'
 import { resolveDirectIotaSubmitContext } from '@/frontend/lib/direct-iota-submit-context'
+import {
+  ensureRatchetSessionForPeer,
+  readRatchetExperimentEnabled,
+  tryRatchetExperimentWrapOutgoing,
+} from '@/frontend/lib/ratchet-experiment'
 import {
   canUseDirectEncryptedMailboxDrain,
   getDirectChainFieldIdsFromLs,
@@ -248,8 +254,25 @@ async function encryptPlaintextForDirectSubmit(
   }
   try {
     const nonce = parsedNonce.nonce
+    let plaintextForSession = bodyForE2ee
+    /** C1.6: Opt-in Double Ratchet — innere Lage; Session-Wire (v2) bleibt außen. Kein Composer-Default. */
+    if (readRatchetExperimentEnabled()) {
+      const shared = await deriveSharedSecret(opts.ecdhPrivateKey, opts.peerPubRaw)
+      const ensured = await ensureRatchetSessionForPeer({
+        peerAddress: opts.recipient,
+        ecdhShared: shared,
+      })
+      if (ensured.ok) {
+        const wrapped = await tryRatchetExperimentWrapOutgoing({
+          peerAddress: opts.recipient,
+          plaintext: bodyForE2ee,
+          msgId: String(nonce),
+        })
+        if (wrapped?.wire) plaintextForSession = wrapped.wire
+      }
+    }
     const packed = await encryptIotaPeerSessionMessage({
-      plaintext: bodyForE2ee,
+      plaintext: plaintextForSession,
       myAddress,
       peerAddress: opts.recipient.trim(),
       myPrivKey: opts.ecdhPrivateKey,

@@ -1,6 +1,7 @@
 'use client'
 
 import { decryptIotaPeerSessionMessage } from '@morgendrot/shared/morgendrot-crypto-session-wire'
+import { deriveSharedSecret } from '@morgendrot/shared/morgendrot-crypto'
 import {
   getDirectChatEcdhMaterialForRecipient,
   getDirectChatEcdhPrivateKey,
@@ -13,6 +14,11 @@ import {
 } from '@/frontend/lib/direct-session-keys-archive'
 import { getDirectChainFieldIdsFromLs, getDirectMailboxChainSnapshot } from '@/frontend/lib/direct-iota-chain-context'
 import { ensureDirectChatPeerPubForRecipient } from '@/frontend/lib/direct-iota-encrypted-send-prep'
+import {
+  ensureRatchetSessionForPeer,
+  readRatchetExperimentEnabled,
+  tryRatchetExperimentUnwrapIncoming,
+} from '@/frontend/lib/ratchet-experiment'
 
 function ensurePeerSessionArchive(peerAddr: string): void {
   if (getPeerSessionArchiveForRecipient(peerAddr)) return
@@ -66,6 +72,15 @@ export async function decryptDirectInboxEncryptedPayload(
       peerPubRaw: mat.peerPubRaw,
       sessionArchive: getPeerSessionArchiveForRecipient(peerAddr),
     })
+    if (readRatchetExperimentEnabled()) {
+      const shared = await deriveSharedSecret(mat.ecdhPrivateKey, mat.peerPubRaw)
+      await ensureRatchetSessionForPeer({ peerAddress: peerAddr, ecdhShared: shared })
+      const unwrapped = await tryRatchetExperimentUnwrapIncoming({
+        peerAddress: peerAddr,
+        raw: text,
+      })
+      if (unwrapped) return { ok: true, text: unwrapped.plaintext }
+    }
     return { ok: true, text }
   } catch {
     return { ok: false, error: '[Verschlüsselt] Entschlüsselung fehlgeschlagen.' }

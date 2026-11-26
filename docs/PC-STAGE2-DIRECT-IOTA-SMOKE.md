@@ -27,6 +27,7 @@ Voraussetzungen: `npm run dm` (oder `dev`), Tresor offen, Puls **IOTA-Sendeweg =
 | 3 | Enc **an** + Handshake vorhanden → verschl. Self-Send | Erfolg oder verständlicher Hinweis; kein Klartext-Leak in UI als „verschlüsselt“ | **PASS** 2026-11-22 Enc Self `FfbGxHYU…` |
 | 4 | Optional **Zwei-Wallet:** `npm run dm:b` → http://localhost:3344/ … Handshake → Enc A↔B | Beide Seiten konsistent; **kein** Phase‑4-Anspruch | **PASS** 2026-11-22 + **2026-11-23** User-Inbox `5jqrFnMS…` / `6LcSJTx6…` |
 | 4b | Optional **Peering-QR** statt Tippen (`mp` / Kontakt-QR mit `e`) A↔B | Pub landet, Enc möglich; Vitest `peering-qr` / `install-qr` | **PASS (Vitest)** 2026-11-23 in H.15 88/88. Live-Scan UI = Rest-Ritual bei Touch |
+| 4c | Optional **H.23 C1.6:** Chat-⋮ **Double Ratchet (Experiment)** auf **A und B** an → Enc A↔B | Klartext lesbar beiderseits; Flag aus = weiter Session Keys+. **Kein** Produktiv-Default | **offen** — manuell nach C1.6 |
 | 5 | Puls → **Nur Morgendrot-API** | Klartext geht **nicht** still per RPC | **PASS** Vitest `trySubmit…relay` → Fehler „Nur Morgendrot-API“ (88/88). Live 2026-11-22 Relay-Mailbox `BniNWGBqZzGp…` (API-Pfad, kein stiller Direkt-RPC) |
 | 6 | Nach Test: Session-Signer in Puls **löschen** | Kein Mnemonic in Support-Screenshots | **User-Ritual** (Support/Screenshot) — nicht abnahmeblockierend |
 

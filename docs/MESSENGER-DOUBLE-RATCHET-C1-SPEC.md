@@ -139,9 +139,10 @@ RatchetPeerState {
 | **C1.2b** | DH-Ratchet (Header `dh` = P-256 SPKI) | ✅ `createDhRatchetSessionPair` |
 | **C1.3** | Skipped keys + Out-of-Order (limit) | ✅ in C1.2a enthalten |
 | **C1.4** | Vault-Sidecar Persist Roundtrip (Symmetric) | ✅ `ratchet-session-local-store.ts` + Unlock/Lock/Purge |
-| **C1.5** | Optional: Direct-Send/Decrypt Hook hinter Feature-Flag | ✅ `ratchet-experiment.ts` + ⋮ Opt-in; Composer bleibt v2 |
+| **C1.5** | Optional: Direct-Send/Decrypt Hook hinter Feature-Flag | ✅ `ratchet-experiment.ts` + ⋮ Opt-in |
+| **C1.6** | Opt-in verdrahtet in Direct-Enc Send/Decrypt | ✅ 2026-11-26 — innere `RATCHET_V3`-Lage; außen Session-Wire v2; **kein** Default |
 
-Kein Move-Change. Kein Default-on im Composer (C1.5 Hook nur bei Flag + Session).
+Kein Move-Change. Kein Default-on im Composer (nur Flag + Session + ECDH).
 
 ---
 
@@ -164,4 +165,4 @@ Starkes NFT-Besitz-Gate und Zeitkapsel/Timelock sind **orthogonal** (DEK an Owne
 
 ## 9. Nächster Implementierungsschritt
 
-~~C1.1–C1.5~~ erledigt (DH-PKCS8-Persist optional später). **Als Nächstes:** **B2-P5** (P4a Ist); **2-Geräte-Feldtest verschoben**.
+~~C1.1–C1.6~~ erledigt (Opt-in Send/Decrypt Direct-IOTA). **Als Nächstes:** PC **Zwei-Wallet-Smoke** mit Flag beiderseits (`docs/PC-STAGE2-DIRECT-IOTA-SMOKE.md` ergänzen); **kein** Composer-Default; physisches 2. Gerät / Session C weiter Phase 4.
