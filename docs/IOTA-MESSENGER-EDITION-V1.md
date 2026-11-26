@@ -70,7 +70,7 @@ Während Morgendrot-UI **bleiben** die Einträge sichtbar; für **IOTA-Messenger
 
 | # | Weg (IOTA) | Ist / Notiz | Stand |
 |---|------------|-------------|-------|
-| 1 | Header-Badge **Boss** (Role-Pill) | Morgendrot behalten; Edition: Pill aus oder „Messenger“ | 2026-11-24 |
+| 1 | Header-Badge **Boss** (Role-Pill) | **Ist:** `hideBossRolePill` → Pill **„Messenger“** (Edition-Build) | 2026-11-26 |
 | 2 | Home-Kachel **Einsatzleitung** | schon `hideEinsatzleitung`; Hub/Handoff ebenfalls | 2026-11-24 |
 | 3 | SOS — Hilferuf | schon `hideSos` (v1); Morgendrot behält Button | 2026-11-24 |
 | 4 | Handoff / Helfer / Erststart-Boss-Karten | Caps vorhanden | zuvor |
@@ -80,7 +80,7 @@ Während Morgendrot-UI **bleiben** die Einträge sichtbar; für **IOTA-Messenger
 
 **Onboarding (2026-11-24):** Bei Edition (`hideEinsatzleitung` / `isIotaMessengerProduct`) Vault-Link → **Wanderer/Peer-Wizard** („Messenger einrichten (Freunde)“), nicht Einsatzleitung. Schritte: Wallet → Adresse → Postfach → optional Funk.
 
-**Caps-Ist:** `product-identity.ts` / Overlay — bis Durchgang unverändert lassen außer explizitem Auftrag.
+**Caps-Ist:** Overlay ↔ `product-identity.ts` aligned (Funk/TG an; Boss/Helfer/SOS/Einsatz aus; Role-Pill → Messenger). Weitere weg-Zeilen nur mit User-OK.
 
 ---
 

@@ -2,8 +2,23 @@
 
 import { cn } from '@/lib/utils'
 import { roleDisplayDe } from '@/frontend/lib/deployment-profile-theme'
+import { IOTA_MESSENGER_UI } from '@/frontend/lib/product-identity'
 
 export function DashboardRolePill({ role, className }: { role?: string | null; className?: string }) {
+  /** IOTA-Messenger: kein „Boss“-Theater — neutrale Pill. */
+  if (IOTA_MESSENGER_UI.hideBossRolePill) {
+    return (
+      <span
+        className={cn(
+          'inline-flex shrink-0 items-center rounded-full border border-border bg-muted/80 px-2 py-0.5 text-[11px] font-semibold leading-none text-muted-foreground',
+          className
+        )}
+      >
+        Messenger
+      </span>
+    )
+  }
+
   const r = (role || '').trim().toLowerCase()
   const label = roleDisplayDe(role || undefined)
   if (!label || label === '—') return null

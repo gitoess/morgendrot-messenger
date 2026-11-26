@@ -28,4 +28,6 @@ export const IOTA_MESSENGER_UI = {
   hideActiveProfile: true,
   hideMeshStatus: true,
   hideBossOnboardingChoices: true,
+  /** Header: „Messenger“ statt Boss-Pill (Edition §2.2 #1). */
+  hideBossRolePill: true,
 } as const
