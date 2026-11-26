@@ -38,8 +38,8 @@ Auge im Unlock: `mousedown preventDefault` gegen Dialog-Flackern.
 
 | Aktion in „Ich“ | Inhalt |
 |-----------------|--------|
-| **Visitenkarte teilen** (Button) | Checkboxen: Anzeigename, Wallet-ID, optional TG-/Funk-Feld, optional ECDH/Peering — → bestehendes **Kontakt-QR** (`k:'mc'`) / Text / später Nachricht. Keine dritte QR-Welt. |
-| **Mein Profilbild** (später) | Bild wählen/zuschneiden **hier**; „Mit Visitenkarte anbieten“ = Opt-in. |
+| **Visitenkarte teilen** (Button) | Checkboxen: Anzeigename, Wallet-ID, optional TG / Funk-Node (Klartext) / Mailbox / ECDH — → **Kontakt-QR** (`k:'mc'`) / Text / **Als Nachricht**. Keine dritte QR-Welt. **Kein** klassisches Telefon/E-Mail. |
+| **Mein Profilbild** (später) | Bild wählen/zuschneiden **hier**; „Mit Visitenkarte anbieten“ = Opt-in. **Nicht** Alpha/PC-Jetzt. |
 
 **Ist heute:** „Ich“ = Kontakt-ID + Peering-QR + technische IDs. Empfangen-QR = nur Coins.
 
@@ -58,7 +58,7 @@ Auge im Unlock: `mousedown preventDefault` gegen Dialog-Flackern.
 - Wallet-Empfangen unverändert.
 
 **Reihenfolge Bau:** Visitenkarte-Checkboxen in „Ich“ → Avatar Opt-in → Telefonbuch zeigt empfangenes Bild.  
-**Status 2026-11-26:** Visitenkarte-MVP **Ist** (`ChatViewVisitenkarteShare` — Checkboxen → Kontakt-QR `mc` + Text). Avatar / Telefonbuch-Bild = weiter Backlog.
+**Status 2026-11-26:** Visitenkarte-MVP **Ist** (Ich-Blatt: Checkboxen → `mc` + Text + **Als Nachricht**; optional Funk-Node Klartext). Avatar / Telefonbuch-Bild = weiter Backlog / Roadmap Später (H.16 Rest).
 
 ---
 
@@ -84,8 +84,8 @@ Auge im Unlock: `mousedown preventDefault` gegen Dialog-Flackern.
 ## Gruppe verwalten je Sendepfad (H.16 Skizze)
 
 **Wunsch:** drei Einstiege — **IOTA** (Mitglieder/`0x`/Mailbox), **Funk** (Kanalindex/Name/PSK-Ref), **Telegram** (Alarmgruppen-ID) — ein Datenmodell, drei Fenster.  
-**Ist:** ein Sheet (Morgendrot-Gruppe + optional Funk-Meta).  
-**MVP später (nicht jetzt):** Spec + Wireframe; **kein** UI-Big-Bang parallel zu Alpha. Chat-Handbuch FAQ 5–6.
+**Ist 2026-11-26:** Tabs IOTA/Funk/Telegram im Sheet (`H16` S2); gleiche Stores; TG-Tab = Hinweis.  
+**Spec:** `docs/H16-GRUPPE-JE-SENDEPFAD-SPEC.md`. Chat-Handbuch FAQ 5–6.
 
 ---
 

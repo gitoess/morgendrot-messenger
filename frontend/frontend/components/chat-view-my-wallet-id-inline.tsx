@@ -12,6 +12,8 @@ export type ChatViewMyWalletIdInlineProps = {
   displayName?: string
   /** Eigene Telegram Chat-ID (Telefonbuch). */
   myTelegramChatId?: string | null
+  /** Im Kontakt-Detail „Ich“: TG steht schon unter Sendepfade — hier weglassen. */
+  hideTelegram?: boolean
   onPeeringImported?: (r: {
     address: string
     displayName?: string
@@ -91,10 +93,12 @@ export function ChatViewMyWalletIdInline(p: ChatViewMyWalletIdInlineProps) {
         onStatus={p.onPeeringStatus}
         className={panel ? 'flex flex-col gap-2 [&_button]:min-h-[2.75rem] [&_button]:text-sm [&_button]:font-semibold' : 'flex flex-wrap gap-1.5'}
       />
-      <ChatViewMyTelegramInline
-        myTelegramChatId={p.myTelegramChatId}
-        variant={panel ? 'panel' : 'compact'}
-      />
+      {p.hideTelegram ? null : (
+        <ChatViewMyTelegramInline
+          myTelegramChatId={p.myTelegramChatId}
+          variant={panel ? 'panel' : 'compact'}
+        />
+      )}
     </div>
   )
 }

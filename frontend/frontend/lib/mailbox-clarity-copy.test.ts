@@ -8,12 +8,12 @@ import {
 } from '@/frontend/lib/mailbox-clarity-copy'
 
 describe('mailbox-clarity-copy', () => {
-  it('Titel bleibt; Erklärtexte UI-leer (Handbuch)', () => {
+  it('kurze Klarheit-Zeilen (kein Essay)', () => {
     expect(mainMailboxTitle()).toBe('Hauptpostfach')
-    expect(mainMailboxExplain()).toBe('')
-    expect(myMailboxesSettingsBlurb()).toBe('')
-    expect(privateMailboxesExplain()).toBe('')
-    expect(teamMailboxesExplain(false)).toBe('')
-    expect(teamMailboxesExplain(true)).toBe('')
+    expect(mainMailboxExplain()).toMatch(/Shared|MAILBOX_ID/i)
+    expect(privateMailboxesExplain()).toMatch(/persönlich|Object-ID/i)
+    expect(teamMailboxesExplain(true)).toMatch(/Team-Broadcast/i)
+    expect(teamMailboxesExplain(false)).toMatch(/beitreten|einfügen/i)
+    expect(myMailboxesSettingsBlurb()).toMatch(/Haupt/i)
   })
 })

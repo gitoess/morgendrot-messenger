@@ -38,6 +38,7 @@ import { buildContactInfoSections } from '@/frontend/lib/messenger-entity-info-m
 import { CONTACT_PHONEBOOK_META_CHANGED_EVENT, readContactNotes } from '@/frontend/lib/contact-phonebook-meta-store'
 import { TechnicalIdRow, TechnicalIdSection } from '@/frontend/components/technical-id-row'
 import { ChatViewMediaGallery } from '@/frontend/components/chat-view-media-gallery'
+import { ChatViewVisitenkarteShare } from '@/frontend/components/chat-view-visitenkarte-share'
 
 export type ChatViewContactDetailDialogProps = {
   open: boolean
@@ -60,6 +61,8 @@ export type ChatViewContactDetailDialogProps = {
   onFocusMessage?: (messageId: string) => void
   /** Wenn Adresse = eigene Wallet: Peering-QR / Kontakt-ID wie bisher im Ich-Profil. */
   selfWalletPanel?: ReactNode
+  /** Visitenkarte-Klartext in den Composer legen. */
+  onInsertVisitenkarteMessage?: (plainText: string) => void
 }
 
 function MediaStatRow(p: {
@@ -291,7 +294,7 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
           <DialogTitle>{isSelf ? 'Ich' : displayName}</DialogTitle>
           <DialogDescription>
             {isSelf
-              ? 'Eigene Adresse, Peering, Sendepfade und Medien — gleiches Blatt wie bei Kontakten.'
+              ? 'Peering, Visitenkarte, Sendepfade und Erreichbarkeit — ohne Boss-Alarmgruppe hier.'
               : 'Adresse, Sendepfade und Medien. Technische Mailbox-IDs unter Mehr.'}
           </DialogDescription>
         </DialogHeader>
@@ -302,10 +305,30 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
           </section>
         ) : null}
 
+        {isSelf ? (
+          <ChatViewVisitenkarteShare
+            address={address}
+            displayName={displayName}
+            telegramChatId={entry?.telegramChatId}
+            meshNodeId={entry?.meshNodeId}
+            onSendAsMessage={p.onInsertVisitenkarteMessage}
+          />
+        ) : null}
+
         <section className="space-y-2 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Adresse</p>
-          <p className="break-all font-mono text-xs text-foreground">{address}</p>
-          <p className="pt-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          {isSelf ? null : (
+            <>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Adresse</p>
+              <p className="break-all font-mono text-xs text-foreground">{address}</p>
+            </>
+          )}
+          <p
+            className={
+              isSelf
+                ? 'text-[10px] font-semibold uppercase tracking-wide text-muted-foreground'
+                : 'pt-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground'
+            }
+          >
             Sendepfade
           </p>
           <ul className="space-y-1 text-sm text-foreground">
@@ -340,8 +363,9 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
             onShowQr={p.onShowQr}
             onRemove={p.onRemove}
             onRecordContact={() => undefined}
-            onSelectForMessenger={p.onSelectForMessenger}
+            onSelectForMessenger={isSelf ? undefined : p.onSelectForMessenger}
             hideChannelIds
+            isSelf={isSelf}
             note={localNote}
           />
         ) : (
@@ -349,10 +373,13 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
         )}
 
         <section className="space-y-3 border-t border-border pt-4">
-          <h3 className="text-sm font-semibold text-foreground">Geteilte Medien &amp; Inhalte</h3>
+          <h3 className="text-sm font-semibold text-foreground">
+            {isSelf ? 'Notizen & Medien (an mich)' : 'Geteilte Medien & Inhalte'}
+          </h3>
           <p className="text-xs text-muted-foreground">
             {conversationMessages.length}{' '}
-            {conversationMessages.length === 1 ? 'Nachricht' : 'Nachrichten'} in diesem 1:1-Verlauf.
+            {conversationMessages.length === 1 ? 'Nachricht' : 'Nachrichten'}{' '}
+            {isSelf ? 'im Verlauf mit dir selbst.' : 'in diesem 1:1-Verlauf.'}
           </p>
           <MediaStatsPanel
             stats={mediaStats}

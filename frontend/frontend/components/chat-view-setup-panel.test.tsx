@@ -55,8 +55,9 @@ describe('ChatViewSetupPanel (§ H.1b)', () => {
     expect(screen.getByRole('button', { name: /USB verbinden/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Bluetooth verbinden/i })).toBeInTheDocument()
     const panel = container.querySelector('#chat-partner-setup-panel')
-    expect(panel?.className).toMatch(/max-h-\[min\(32vh,18rem\)\]/)
-    expect(panel?.className).toMatch(/overflow-y-auto/)
+    expect(panel).toBeTruthy()
+    // Kein künstliches max-h mehr — Panel wächst mit Inhalt (PC-Stabilität).
+    expect(panel?.className).not.toMatch(/max-h-\[/)
     expect(screen.queryByText(/Meshtastic-App oder client\.meshtastic/i)).toBeNull()
   })
 

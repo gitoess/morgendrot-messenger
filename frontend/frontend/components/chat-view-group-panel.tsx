@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Check, Copy, Lock, Unlock, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
+import { IOTA_MESSENGER_UI } from '@/frontend/lib/product-identity'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -76,7 +77,9 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     embedded = false,
     handshake = null,
   } = p
-  const showMeshtasticSecondary = forcedTransport === 'mesh'
+  const hideTelegramPath = IOTA_MESSENGER_UI.hideTelegramEinsatzAlarm
+  type GroupPathTab = 'iota' | 'funk' | 'telegram'
+  const [pathTab, setPathTab] = useState<GroupPathTab>('iota')
   const groupCreateBlockedTitle = 'Keine Berechtigung zum Anlegen neuer Gruppen (Handoff-Rechte).'
   const [plainWarnOpen, setPlainWarnOpen] = useState(false)
   const [groups, setGroups] = useState<MessengerGroupDefinition[]>([])
@@ -436,8 +439,38 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
 
       <p className="text-xs leading-relaxed text-muted-foreground">
         Mitglieder → speichern → „Kanal einrichten“. Geheimnis = Schlüssel fürs Team-Postfach (Handoff), kein
-        Nachrichten-Passwort.
+        Nachrichten-Passwort. Sendepfad im Composer wählt den Transport — hier nur Stammdaten je Pfad.
       </p>
+
+      <div
+        className="flex flex-wrap gap-1 rounded-lg border border-border bg-muted/30 p-1"
+        role="tablist"
+        aria-label="Gruppe nach Sendepfad"
+      >
+        {(
+          [
+            { id: 'iota' as const, label: 'IOTA' },
+            { id: 'funk' as const, label: 'Funk' },
+            ...(hideTelegramPath ? [] : [{ id: 'telegram' as const, label: 'Telegram' }]),
+          ] as { id: GroupPathTab; label: string }[]
+        ).map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={pathTab === t.id}
+            onClick={() => setPathTab(t.id)}
+            className={cn(
+              'min-h-9 flex-1 rounded-md px-3 text-xs font-semibold',
+              pathTab === t.id
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
       {groups.length > 0 ? (
         <div className="flex flex-wrap gap-2">
@@ -458,9 +491,60 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
         </div>
       ) : null}
 
+      {pathTab === 'funk' ? (
+        <div className="space-y-2 rounded-lg border border-border bg-background/50 px-3 py-3">
+          <p className="text-xs font-semibold text-foreground">Funk · Meshtastic-Kanal</p>
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            Index/Name/PSK-Ref speichern — PSK und Frequenz bleiben in der <strong className="text-foreground">Meshtastic-App</strong>.
+            Senden: Composer-Sendepfad <strong className="text-foreground">Funk</strong> (Klartext).
+          </p>
+          <label className="block text-[10px] font-medium text-muted-foreground">
+            Secondary-Kanal (optional)
+          </label>
+          <div className="grid max-w-lg gap-2 sm:grid-cols-3">
+            <input
+              type="number"
+              min={0}
+              max={7}
+              step={1}
+              value={secondaryChannelIndex}
+              onChange={(e) => setSecondaryChannelIndex(e.target.value)}
+              placeholder="Index 0-7"
+              className="w-full rounded-md border border-border bg-input px-2 py-1.5 font-mono text-[11px]"
+            />
+            <input
+              type="text"
+              value={secondaryChannelName}
+              onChange={(e) => setSecondaryChannelName(e.target.value)}
+              placeholder="Kanalname"
+              className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-[11px]"
+            />
+            <input
+              type="text"
+              value={secondaryPskRef}
+              onChange={(e) => setSecondaryPskRef(e.target.value)}
+              placeholder="PSK-Ref"
+              className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-[11px]"
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {pathTab === 'telegram' && !hideTelegramPath ? (
+        <div className="space-y-2 rounded-lg border border-border bg-background/50 px-3 py-3">
+          <p className="text-xs font-semibold text-foreground">Telegram · Alarmhinweis</p>
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            Kein Bot-Gruppenchat in Morgendrot. Einsatz-Alarmgruppe (Chat-ID / Beitritt) nur unter{' '}
+            <strong className="text-foreground">Einstellungen → Telegram</strong> — Klingel/Hinweis, kein Verlauf hier.
+          </p>
+        </div>
+      ) : null}
+
+      {pathTab === 'iota' ? (
+      <>
       {/* 1 — Name & Mitglieder */}
       <div className="space-y-2 rounded-lg border border-border bg-background/50 px-3 py-3">
-        <p className="text-xs font-semibold text-foreground">1 · Name & Mitglieder</p>
+        <p className="text-xs font-semibold text-foreground">IOTA · Name & Mitglieder</p>
         <label className="block text-xs font-medium text-muted-foreground">Gruppenname</label>
         <input
           type="text"
@@ -504,44 +588,11 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
             ) : null}
           </div>
         ) : null}
-        {showMeshtasticSecondary ? (
-          <>
-            <label className="block text-[10px] font-medium text-muted-foreground">
-              Funk-Gruppenkanal (Meshtastic Secondary)
-            </label>
-            <div className="grid max-w-lg gap-2 sm:grid-cols-3">
-              <input
-                type="number"
-                min={0}
-                max={7}
-                step={1}
-                value={secondaryChannelIndex}
-                onChange={(e) => setSecondaryChannelIndex(e.target.value)}
-                placeholder="Index 0-7"
-                className="w-full rounded-md border border-border bg-input px-2 py-1.5 font-mono text-[11px]"
-              />
-              <input
-                type="text"
-                value={secondaryChannelName}
-                onChange={(e) => setSecondaryChannelName(e.target.value)}
-                placeholder="Kanalname"
-                className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-[11px]"
-              />
-              <input
-                type="text"
-                value={secondaryPskRef}
-                onChange={(e) => setSecondaryPskRef(e.target.value)}
-                placeholder="PSK-Ref"
-                className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-[11px]"
-              />
-            </div>
-          </>
-        ) : null}
       </div>
 
       {/* 2 — Team-Kanal */}
       <div className="space-y-2 rounded-lg border border-border bg-background/50 px-3 py-3">
-        <p className="text-xs font-semibold text-foreground">2 · Team-Kanal</p>
+        <p className="text-xs font-semibold text-foreground">IOTA · Team-Kanal</p>
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           Team-Postfach = Shared-Object-ID (alle mit derselben ID können Broadcast lesen/schreiben) —{' '}
           <strong className="text-foreground">kein</strong> WhatsApp-artiger Chain-Gruppenraum. Ohne Postfach: oft nur
@@ -675,7 +726,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
       {/* 3 — Handshake nur bei explizitem Pairwise-Enc (useTeamBroadcast === false) */}
       {showPairwiseHandshake ? (
         <div className="space-y-2 rounded-lg border border-border bg-background/50 px-3 py-3">
-          <p className="text-xs font-semibold text-foreground">3 · Handshake je Person</p>
+          <p className="text-xs font-semibold text-foreground">IOTA · Handshake je Person</p>
           <p className="text-[11px] leading-relaxed text-muted-foreground">
             Nur Sonderfall Pairwise (kein Team-Broadcast). Normal: „Klartext · Broadcast“ oder „Enc · Team-Schlüssel“
             + Kanal einrichten — ohne Handshake.
@@ -732,11 +783,12 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
           )}
         </div>
       ) : null}
+      </>
+      ) : null}
 
       <p className="text-[11px] leading-relaxed text-muted-foreground">
-        <strong className="text-foreground">Speichern</strong> = nur Name/Mitglieder/Postfach-Verknüpfung lokal.
-        <strong className="text-foreground"> Kanal einrichten</strong> speichert mit und legt Postfach/Geheimnis an — für
-        reines Umbenennen oder Klartext-Mitgliederliste reicht Speichern allein.
+        <strong className="text-foreground">Speichern</strong> = Name/Mitglieder/Postfach/Funk-Meta lokal.
+        <strong className="text-foreground"> Kanal einrichten</strong> (Tab IOTA) speichert mit und legt Postfach/Geheimnis an.
       </p>
       <div className="flex flex-wrap gap-2">
         <button

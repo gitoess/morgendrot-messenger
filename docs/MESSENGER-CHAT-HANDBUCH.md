@@ -41,7 +41,9 @@ Details + Tabelle: **`EINSTELLUNGEN-NUTZER-HANDBUCH.md`**.
 
 ### Visitenkarte (Ich)
 
-Unter Sidebar / Profil **„Ich“**: Block **Visitenkarte teilen** — Checkboxen (Name, Wallet, optional Mailbox / TG-ID / ECDH) → **Text** oder **QR-JSON** (`k:'mc'`, gleiches Kontakt-QR). Kein Avatar in dieser Stufe.
+Sidebar **„Ich“** (⋯ **Mehr zu Ich** oder Kontakt-Detail der eigenen Adresse): Block **Visitenkarte teilen** — Checkboxen (Name, Wallet, optional Mailbox / TG-ID / Funk-Node / ECDH) → **Als Nachricht** (Composer), **Text** oder **QR-JSON** (`k:'mc'`). Peering-QR = Partner verbinden; Visitenkarte = Kontaktkarte teilen. **Kein** Telefon/E-Mail-Feld (falscher Produktpfad). **Profilbild** = später Backlog (Opt-in, nicht im QR). **Einsatz-Alarmgruppe** → **Einstellungen → Telegram**.
+
+**Caps (Edition):** Kein eigener Dialog — Produkt-Flags (`NEXT_PUBLIC_PRODUCT_ID=iota-messenger`); Kopfzeile zeigt dann Pill **Messenger** statt Boss.
 
 ### Zwei-Wallet am selben PC (E2EE-Surrogat)
 
@@ -667,9 +669,9 @@ Zum Prüfen: Browser-DevTools → Application → localStorage → `morgendrot.m
 
 ### 5–6) „Gruppe verwalten“ pro Sendepfad?
 
-**Ist:** ein Sheet (Morgendrot-Gruppe + optional Funk-Meta). Telegram-Alarm = Einstellungen.
+**Ist:** Sheet mit Tabs **IOTA** / **Funk** / **Telegram** (ein Datensatz). Composer wählt den Transport. Telegram-Tab = Hinweis; Alarm-Setup = Einstellungen → Telegram (kein Bot-Gruppenchat). Edition kann den Telegram-Tab ausblenden.
 
-**Wunsch (Backlog, nach Solo-Wizard):** drei angepasste Einstiege — **IOTA:** Mitglieder/`0x`/Mailbox; **Funk:** Kanalindex/Name/PSK-Ref (+ Link Meshtastic); **Telegram:** Alarmgruppen-ID/Label (kein Bot-Gruppenchat). Ein Datenmodell, drei Fenster — kein Parallel-Chaos.
+**Spec:** `docs/H16-GRUPPE-JE-SENDEPFAD-SPEC.md` (S0–S2 Ist).
 
 ---
 

@@ -28,7 +28,8 @@ export function ChatViewGroupSettingsSheet(p: ChatViewGroupSettingsSheetProps) {
             Gruppe verwalten
           </SheetTitle>
           <SheetDescription>
-            Mitglieder → Kanal. „1:1 je Person“ braucht Handshake mit jedem; „Gemeinsames Postfach“ nicht.
+            Tabs IOTA / Funk / Telegram: ein Gruppen-Datensatz, drei Pfade. Composer wählt den Transport.
+            Telegram-Tab = Hinweis; Alarm-Setup unter Einstellungen → Telegram.
           </SheetDescription>
         </SheetHeader>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">

@@ -17,11 +17,12 @@ describe('visitenkarte-share', () => {
     })
   })
 
-  it('QR ohne Name/TG wenn abgewählt; Wallet immer', () => {
+  it('QR ohne Name/TG wenn abgewählt; Wallet immer; Mesh nur Klartext', () => {
     const r = buildVisitenkarteShare({
       address: addr,
       displayName: 'Ada',
       telegramChatId: '999',
+      meshNodeId: '!abc123',
       ecdhPubB64: 'AAA',
       mailboxObjectId: mb,
       flags: {
@@ -30,6 +31,7 @@ describe('visitenkarte-share', () => {
         includeTelegram: true,
         includeEcdh: false,
         includeMailbox: true,
+        includeMeshNode: true,
       },
     })
     const p = parseContactQrPayload(r.qrJson)
@@ -38,7 +40,9 @@ describe('visitenkarte-share', () => {
     expect(p?.ecdhPubB64).toBeUndefined()
     expect(p?.mailboxObjectId?.toLowerCase()).toBe(mb.toLowerCase())
     expect(r.plainText).toContain('Telegram-Chat-ID: 999')
+    expect(r.plainText).toContain('Funk-Node: !abc123')
     expect(r.plainText).toContain(addr)
     expect(r.plainText).not.toContain('Name: Ada')
+    expect(r.qrJson).not.toContain('!abc123')
   })
 })
