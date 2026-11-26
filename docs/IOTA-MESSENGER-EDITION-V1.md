@@ -62,7 +62,7 @@ Cursor-Regel: `.cursor/rules/iota-messenger-no-auto-execute.mdc`.
 | **Raus (I)** | Handoff-ZIP, Einsatzleitung-Hub, Helfer einrichten, H.36 Einsatz-Wizard, typische Boss-Admin-Move-UI | behalten |
 | **Detail** | Zeile-für-Zeile erst beim **PC-Durchgang** | — |
 
-**Konflikt merken:** Overlay Freeze-Scheibe 1 setzt noch `hideFunk`/`hideTelegram` — **nicht** still umbauen; Abgleich im Durchgang.
+**Caps-Align:** Overlay + `frontend/.../product-identity.ts` — Funk/Telegram an; Boss/Helfer/SOS/Alarmgruppe aus (2026-11-26).
 
 ### 2.2 PC-Durchgang — „weg“-Liste (lebend, nur Edition)
 

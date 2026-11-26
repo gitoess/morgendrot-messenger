@@ -373,10 +373,13 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
         )}
 
         <section className="space-y-3 border-t border-border pt-4">
-          <h3 className="text-sm font-semibold text-foreground">Geteilte Medien &amp; Inhalte</h3>
+          <h3 className="text-sm font-semibold text-foreground">
+            {isSelf ? 'Notizen & Medien (an mich)' : 'Geteilte Medien & Inhalte'}
+          </h3>
           <p className="text-xs text-muted-foreground">
             {conversationMessages.length}{' '}
-            {conversationMessages.length === 1 ? 'Nachricht' : 'Nachrichten'} in diesem 1:1-Verlauf.
+            {conversationMessages.length === 1 ? 'Nachricht' : 'Nachrichten'}{' '}
+            {isSelf ? 'im Verlauf mit dir selbst.' : 'in diesem 1:1-Verlauf.'}
           </p>
           <MediaStatsPanel
             stats={mediaStats}
