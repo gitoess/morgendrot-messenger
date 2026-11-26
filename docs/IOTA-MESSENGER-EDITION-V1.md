@@ -144,6 +144,30 @@ Lokal-Dev zusätzlich: `ENABLE_UI=true`, `API_PORT`/`UI_PORT`, `API_BIND_HOST=12
 
 **Server:** Kernnutzung ohne Pflicht-Node möglich; optional lokal für Komfort — `docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`.
 
+### Caps / Pill sehen (Demo)
+
+| Was | Wo |
+|-----|-----|
+| Pill **Messenger** statt Boss | Build `NEXT_PUBLIC_PRODUCT_ID=iota-messenger` **oder** `.env` `ROLE=messenger` |
+| Titel **IOTA Messenger** | nur mit `NEXT_PUBLIC_PRODUCT_ID=iota-messenger` |
+| Visitenkarte | Sidebar **Ich** → ⋯ **Mehr zu Ich** → Block **Visitenkarte teilen** |
+
+Normales `npm run dm` mit `ROLE=boss` = volles Morgendrot → Boss-Pill. Edition bewusst starten (Overlay / Bootstrap).
+
+### Weg A — HTTPS-Web-Demo (Vercel / Cloudflare Pages)
+
+**Ja, grundsätzlich** — PC + Handy-Browser (PWA, Secure Context).
+
+| Braucht’s | Urteil |
+|-----------|--------|
+| Statisches Next-Frontend + `NEXT_PUBLIC_PRODUCT_ID=iota-messenger` + Testnet-RPC/IDs | Kern-Demo (Tresor, Direct-IOTA, Chat) machbar |
+| Eigener Morgendrot-API-Node auf Pages/Vercel | Oft **nicht** trivial — Demo dann Direkt-RPC / Standalone |
+| „Geschützt“ | Edge-Auth / Cloudflare Access **oder** nur Tresor-PW — nicht dasselbe |
+| Custom Domain | HTTPS Pflicht |
+| Funk USB/BLE | Secure Context; USB am Handy oft nicht |
+
+**Nicht erwarten:** Frontend-Upload allein ersetzt nicht `.env`, Gas, Package/Mailbox-IDs. Seed nie ins Repo/Build-Log. Öffentliche URL = eigene Deploy-Scheibe.
+
 ---
 
 ## 5. Capabilities-Override (Runtime)

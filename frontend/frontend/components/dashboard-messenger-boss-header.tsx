@@ -10,6 +10,7 @@ import {
   type ChatViewVaultBannerActions,
 } from '@/frontend/components/chat-view-chat-header'
 import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
+import { isIotaMessengerProduct, PRODUCT_DISPLAY_NAME } from '@/frontend/lib/product-identity'
 
 export function DashboardMessengerBossHeader(p: {
   role?: string | null
@@ -50,7 +51,9 @@ export function DashboardMessengerBossHeader(p: {
       <div className="mx-auto flex max-w-5xl items-start justify-between gap-4 px-4 py-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-lg font-bold tracking-tight text-foreground">{t('brand.morgendrot')}</h1>
+            <h1 className="text-lg font-bold tracking-tight text-foreground">
+              {isIotaMessengerProduct() ? PRODUCT_DISPLAY_NAME : t('brand.morgendrot')}
+            </h1>
             <DashboardRolePill role={p.role} />
             <ChatNetworkBadge />
             {showVaultBadge ? (
