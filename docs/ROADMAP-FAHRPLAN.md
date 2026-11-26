@@ -28,7 +28,8 @@
 
 **Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
-**Nächste Bau-Zeile (eine):** **Visitenkarte MVP** (nur „Ich“-Dialog Share-Checkboxen, kein Avatar) *oder* Alpha-Checkliste abhaken. Boss/Helfer/H.16-Drei-Fenster/TG-Auto-Sidebar/Ratchet-Default **nicht** parallel.
+**Alpha-PC-Checkliste (Messenger, manuell — 2026-11-26):** Soft-Pause→Weitersprechen · Burn · Solo-Wizard · Visitenkarte in „Ich“ · Caps Pill „Messenger“ (Edition) · Zwei-Wallet-Hinweis im Handbuch.  
+**Nächste Bau-Zeile (eine):** Alpha-Zeilen live abhaken *oder* H.16 „Gruppe je Sendepfad“ **nur Spec/Skizze** (kein UI-Big-Bang). Boss/Helfer/Ratchet-Default/TG-Auto-Sidebar-Bau **nicht** parallel.
 
 **„Jetzt fertig“ ≠ gesamtes H.\*-Universum.** Die Nov-22-Triage-Tabelle am Kopf war **PC-Messenger-Alltag** (Unlock, Desk-Smoke, Labels, Soft-Pause, Burn-Doku, Solo-Wizard). Folgendes bleibt **offen / Später** — bewusst nicht „mitabgehakt“:
 
@@ -58,7 +59,8 @@
 | **Vault-Ziel** | Telefonbuch + ID-Snapshot (Package/Mailbox) | Backlog — Live-IDs weiter unter IOTA |
 | **Nicht in Vault** | ganze `.env`; Chatverlauf; Meshtastic-PSK; TG-Token Default = Runtime-Datei (persönlich, nicht „nur Boss“) | Handbuch § Backup |
 | **iota-messenger `.env`** | Pflichtliste Overlay; Root-`.env.example` = Vollprodukt | `tools/iota-messenger/overlays/.env.example`, Edition §4 |
-| **Profilbild / Visitenkarte** | Ort = Dialog **„Ich“**; Bau **später** (nach Nachrichten+Wizard) | `IDEEN-BACKLOG.md` |
+| **Visitenkarte** | Share-Checkboxen in **„Ich“** → Kontakt-QR `mc` | **Ist MVP 2026-11-26**; Avatar weiter Backlog |
+| **Profilbild** | Opt-in später in „Ich“ | `IDEEN-BACKLOG.md` |
 | **Drehrad-UI** | Handy-Idee merken; **kein** PC-Umbau jetzt | später Phase 2 |
 | **Nachrichten-FAQ** | Funk-Cap 200 / S-ARQ-Kollaps / TG nur Text+Platzhalter / Alarm≠Gruppenchat / Prefix hardcoded | `MESSENGER-CHAT-HANDBUCH.md` FAQ |
 | **Backlog Nachrichten** | Auto-Sidebar wenn Bot in TG-Gruppe; NFT-Chip an Aktionen (opt.) | nach Solo-Wizard |
@@ -96,6 +98,8 @@
 | **Solo-Wizard** | Welcome→Tresor→IOTA→TG→Funk→Checkliste | **erledigt 2026-11-26** |
 | **PC-Durchgang** | Live Soft-Pause / Burn / Solo-Wizard | **PASS 2026-11-26** |
 | **Zwei-Wallet PC** | Handbuch § + Stage‑2 Link | **erledigt Doku 2026-11-26** |
+| **Visitenkarte MVP** | „Ich“ Share-Checkboxen → `mc`-QR/Text | **erledigt 2026-11-26** |
+| **Alpha-Checkliste** | Desk-Smoke + Caps + Soft-Pause + Burn + Wizard + Visitenkarte | **offen** — manuell abhaken |
 
 ### Später machen bzw. nochmals später klären (User-Durchgang ab 2026-11-22)
 

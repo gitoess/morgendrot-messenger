@@ -57,7 +57,8 @@ Auge im Unlock: `mousedown preventDefault` gegen Dialog-Flackern.
 - Empfänger: **lokales Override** (Spitzname/Bild) schlägt fremdes Profilbild.
 - Wallet-Empfangen unverändert.
 
-**Reihenfolge Bau:** Visitenkarte-Checkboxen in „Ich“ → Avatar Opt-in → Telefonbuch zeigt empfangenes Bild. **Status:** Backlog — **nach** Nachrichten-Klarheit + Solo-Wizard, nicht parallel.
+**Reihenfolge Bau:** Visitenkarte-Checkboxen in „Ich“ → Avatar Opt-in → Telefonbuch zeigt empfangenes Bild.  
+**Status 2026-11-26:** Visitenkarte-MVP **Ist** (`ChatViewVisitenkarteShare` — Checkboxen → Kontakt-QR `mc` + Text). Avatar / Telefonbuch-Bild = weiter Backlog.
 
 ---
 
@@ -75,8 +76,16 @@ Auge im Unlock: `mousedown preventDefault` gegen Dialog-Flackern.
 ## NFT-Bezug im Posteingang (optional)
 
 **Idee:** Kompakt anzeigen, **welches NFT** eine Nachricht lesbar macht; optional Chip an Zeilen-Aktionen.  
-**Ist 2026-11-26:** Lange NFT-Gate-/Passphrase-Prosa entfernt; bei NFT-Gate kurze ID-Zeile.  
+**Ist 2026-11-26:** Lange NFT-Gate-/Passphrase-Prosa entfernt; bei NFT-Gate kurze ID-Zeile — **reicht als MVP**; Extra-Chip an ⋯-Menü nur wenn Live-Schmerz.  
 **Nicht:** Essay-Banner; kein Pflicht-NFT an jeder Klartextzeile.
+
+---
+
+## Gruppe verwalten je Sendepfad (H.16 Skizze)
+
+**Wunsch:** drei Einstiege — **IOTA** (Mitglieder/`0x`/Mailbox), **Funk** (Kanalindex/Name/PSK-Ref), **Telegram** (Alarmgruppen-ID) — ein Datenmodell, drei Fenster.  
+**Ist:** ein Sheet (Morgendrot-Gruppe + optional Funk-Meta).  
+**MVP später (nicht jetzt):** Spec + Wireframe; **kein** UI-Big-Bang parallel zu Alpha. Chat-Handbuch FAQ 5–6.
 
 ---
 

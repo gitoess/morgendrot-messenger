@@ -39,6 +39,10 @@
 
 Details + Tabelle: **`EINSTELLUNGEN-NUTZER-HANDBUCH.md`**.
 
+### Visitenkarte (Ich)
+
+Unter Sidebar / Profil **„Ich“**: Block **Visitenkarte teilen** — Checkboxen (Name, Wallet, optional Mailbox / TG-ID / ECDH) → **Text** oder **QR-JSON** (`k:'mc'`, gleiches Kontakt-QR). Kein Avatar in dieser Stufe.
+
 ### Zwei-Wallet am selben PC (E2EE-Surrogat)
 
 Ohne zweites Handy: **zwei Browser-Profile** (oder `npm run dm` + `npm run dm:b`) mit **je eigenem Tresor/Wallet**. Kurzprotokoll: **`docs/PC-STAGE2-DIRECT-IOTA-SMOKE.md`** §1.4.
