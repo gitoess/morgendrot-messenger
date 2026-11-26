@@ -13,6 +13,7 @@ import { ChatViewMyWalletIdInline } from '@/frontend/components/chat-view-my-wal
 import type { ChatViewMyWalletIdInlineProps } from '@/frontend/components/chat-view-my-wallet-id-inline'
 import { TechnicalIdRow, TechnicalIdSection } from '@/frontend/components/technical-id-row'
 import { buildSelfInfoSections } from '@/frontend/lib/messenger-entity-info-model'
+import { ChatViewVisitenkarteShare } from '@/frontend/components/chat-view-visitenkarte-share'
 import { readActiveSendMailbox } from '@/frontend/lib/my-mailbox-active'
 import { readCachedServerMailboxObjectId } from '@/frontend/lib/my-private-mailbox-store'
 
@@ -24,8 +25,8 @@ export type ChatViewSelfProfileDialogProps = ChatViewMyWalletIdInlineProps & {
 }
 
 /**
- * Profil „Ich“ — Kontakt-ID, Peering-QR, technische Mailbox-/Package-IDs.
- * Ziel (Backlog): hier „Visitenkarte teilen“ + optionales Profilbild — siehe docs/IDEEN-BACKLOG.md.
+ * Profil „Ich“ — Kontakt-ID, Peering-QR, Visitenkarte-teilen (MVP), technische IDs.
+ * Avatar später — siehe docs/IDEEN-BACKLOG.md.
  */
 export function ChatViewSelfProfileDialog(p: ChatViewSelfProfileDialogProps) {
   const { open, onOpenChange, packageId, onOpenIotaSettings, ...walletProps } = p
@@ -45,14 +46,22 @@ export function ChatViewSelfProfileDialog(p: ChatViewSelfProfileDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-md gap-4 overflow-y-auto">
+      <DialogContent className="max-w-md gap-4 sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Ich</DialogTitle>
           <DialogDescription>
-            Kontakt-ID, Peering, Telegram und aktive Mailbox-/Package-IDs — ohne in den Einstellungen zu suchen.
+            Kontakt-ID, Peering, Visitenkarte und Mailbox-/Package-IDs — ohne in den Einstellungen zu suchen.
           </DialogDescription>
         </DialogHeader>
         {valid ? <ChatViewMyWalletIdInline {...walletProps} variant="panel" /> : null}
+
+        {valid ? (
+          <ChatViewVisitenkarteShare
+            address={walletProps.myAddressLine}
+            displayName={walletProps.displayName}
+            telegramChatId={walletProps.myTelegramChatId}
+          />
+        ) : null}
 
         {infoSections.map((section) => (
           <TechnicalIdSection key={section.id} title={section.title}>
