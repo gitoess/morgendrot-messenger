@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import { inboxSourceFilterReadAllowed } from '@/frontend/lib/messenger-capability-gates'
+import { formatBurnSuccessUserMessage } from '@/frontend/lib/burn-success-message'
 import { purgeMailboxMessageHybrid, teamBroadcastPurgeHint } from '@/frontend/lib/purge-message-hybrid'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import type { InboxOverviewCategory } from '@/frontend/lib/inbox-overview-filter'
@@ -714,7 +715,13 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
           })
           setMessages((prev) => prev.filter((m) => m.id !== msg.id))
           setStatus('success')
-          setStatusMsg(r.message || 'Nachricht geburnt (Storage-Rebate).')
+          setStatusMsg(
+            r.message ||
+              formatBurnSuccessUserMessage({
+                baseMessage: 'Nachricht geburnt (Storage-Rebate).',
+                storageRebateMist: r.storageRebate,
+              })
+          )
           void loadMessages('reset', undefined, { silent: true })
         } else {
           setStatus('error')
@@ -826,6 +833,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     }
     setSending(true)
     try {
+      let rebateSum = 0n
       for (const msg of list) {
         const r = await purgeMailboxMessageHybrid(msg, { backendReachable: true })
         if (!r.ok) {
@@ -834,11 +842,23 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
           setTimeout(() => setStatus('idle'), 8000)
           return
         }
+        if (r.storageRebate) {
+          try {
+            rebateSum += BigInt(r.storageRebate)
+          } catch {
+            /* ignore */
+          }
+        }
         setHiddenInboxIds((prev) => new Set(prev).add(msg.id))
         setMessages((prev) => prev.filter((x) => x.id !== msg.id))
       }
       setStatus('success')
-      setStatusMsg(`${list.length} Nachricht(en) geburnt (Rebate).`)
+      setStatusMsg(
+        formatBurnSuccessUserMessage({
+          baseMessage: `${list.length} Nachricht(en) geburnt (Rebate).`,
+          storageRebateMist: rebateSum > 0n ? rebateSum.toString() : undefined,
+        })
+      )
       void loadMessages('reset', undefined, { silent: true })
     } finally {
       setSending(false)

@@ -164,10 +164,15 @@ export function DashboardEinsatzParameterPanel(p: EinsatzPanelProps) {
 }
 
 /**
- * Move-Funktions-Probe + In-Place-Upgrade — Einstellungen → IOTA (T23).
+ * Move-Funktions-Probe + In-Place-Upgrade — Einstellungen → IOTA → Expertenmodus (T23).
  * Package / Postfach / Upgrade-Cap stehen schon unter Netz / Chain-IDs — hier nicht nochmal.
  */
-export function DashboardEinsatzChainPanel(p: Pick<EinsatzPanelProps, 'apiStatus' | 'onRefreshStatus' | 'className'>) {
+export function DashboardEinsatzChainPanel(
+  p: Pick<EinsatzPanelProps, 'apiStatus' | 'onRefreshStatus' | 'className'> & {
+    /** Expertenmodus: nur Probe-Pills + Upgrade-Button, kein Essay. */
+    compact?: boolean
+  }
+) {
   const cfg = p.apiStatus?.einsatzConfig
   const packageId = p.apiStatus?.packageId?.trim() || ''
   const move = cfg?.moveFeatures
@@ -216,7 +221,9 @@ export function DashboardEinsatzChainPanel(p: Pick<EinsatzPanelProps, 'apiStatus
   return (
     <section id="einsatz-chain-status" className={cn('scroll-mt-4 space-y-3', p.className)}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-foreground">Move-Funktionen (Package-Probe)</p>
+        <p className="text-sm font-semibold text-foreground">
+          {p.compact ? 'Package & Move-Upgrade' : 'Move-Funktionen (Package-Probe)'}
+        </p>
         {p.onRefreshStatus ? (
           <button
             type="button"
@@ -229,56 +236,30 @@ export function DashboardEinsatzChainPanel(p: Pick<EinsatzPanelProps, 'apiStatus
         ) : null}
       </div>
 
-      <p className="text-[11px] leading-snug text-muted-foreground">
-        Package-ID, Hauptpostfach und Upgrade-Cap stehen schon unter{' '}
-        <strong className="text-foreground">Netz / Chain-IDs</strong> (oben). Hier nur: welche Messenger-Funktionen das
-        aktuelle Move-Package per RPC anbietet — und ob ein In-Place-Upgrade nötig ist.
-      </p>
-
-      <div className="space-y-2 rounded-lg border border-border/60 bg-muted/10 px-3 py-2.5 text-[11px] leading-snug">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">UpgradeCap — was ist das?</p>
-        <p className="text-muted-foreground">
-          Ein <strong className="text-foreground">On-Chain-Objekt</strong> (Object-ID), das beim{' '}
-          <strong className="text-foreground">Erst-Deploy</strong> entsteht und in die Boss-
-          <code className="text-[10px]">.env</code> als <code className="text-[10px]">UPGRADE_CAP_ID</code> geschrieben
-          wird. Es berechtigt den Cap-Besitzer (Boss-Wallet), den Move-Bytecode unter{' '}
-          <strong className="text-foreground">derselben PACKAGE_ID</strong> zu ersetzen — ohne neue Package-/Mailbox-IDs
-          und ohne neues Handoff.
+      {p.compact ? (
+        <p className="text-[11px] leading-snug text-muted-foreground">
+          Grün = Move-Funktion im Package. Upgrade nur Boss, braucht UpgradeCap (Chain-IDs oben). Details: Handbuch.
+          Cap:{' '}
+          {hasUpgradeCap ? (
+            <span className="font-mono text-foreground">
+              ok
+              {cfg?.upgradeCapIdMasked || cfg?.upgradeCapId
+                ? ` · ${cfg.upgradeCapIdMasked ?? formatHandoffAddressShort(cfg.upgradeCapId ?? '')}`
+                : ''}
+            </span>
+          ) : (
+            <span className="text-amber-700 dark:text-amber-300">fehlt</span>
+          )}
         </p>
-        <ul className="list-disc space-y-1 pl-4 text-muted-foreground">
-          <li>
-            <strong className="text-foreground">Nur Boss/Kommandant</strong> — Helfer brauchen es nicht (kein
-            „Helfermodus“-Sonderfall).
-          </li>
-          <li>
-            <strong className="text-foreground">Erzeugen:</strong> automatisch bei{' '}
-            <code className="text-[10px]">deploy:move-package</code> / Mainnet-Deploy. Fehlt der Eintrag: Explorer/Wallet
-            → Cap-ID in <code className="text-[10px]">.env</code> setzen, oder Cap liegt noch in der CLI-Wallet (Suche
-            beim Upgrade).
-          </li>
-          <li>
-            <strong className="text-foreground">Fehlt / verloren:</strong> kein In-Place-Upgrade → nur Neu-Publish
-            (neue PACKAGE_ID, neues Postfach, neues Handoff).
-          </li>
-          <li>
-            Status hier:{' '}
-            {hasUpgradeCap ? (
-              <span className="font-mono text-foreground" title={cfg?.upgradeCapId ?? undefined}>
-                gesetzt
-                {cfg?.upgradeCapIdMasked || cfg?.upgradeCapId
-                  ? ` · ${cfg.upgradeCapIdMasked ?? formatHandoffAddressShort(cfg.upgradeCapId ?? '')}`
-                  : ''}
-                {cfg?.upgradeCapResolvedFromChain ? ' (aus Wallet gefunden)' : ' (aus .env)'}
-              </span>
-            ) : (
-              <span className="text-amber-700 dark:text-amber-300">fehlt</span>
-            )}
-          </li>
-        </ul>
-      </div>
+      ) : (
+        <p className="text-[11px] leading-snug text-muted-foreground">
+          Welche Messenger-Funktionen das aktuelle Move-Package anbietet — und ob ein In-Place-Upgrade nötig ist.
+          Package/Cap: Chain-IDs oben.
+        </p>
+      )}
 
       <div className="rounded-lg border border-border/70 bg-muted/15 p-3">
-        <p className="mb-2 text-[11px] font-medium text-foreground">Was das Package kann (grün = Funktion vorhanden)</p>
+        <p className="mb-2 text-[11px] font-medium text-foreground">Was das Package kann (grün = vorhanden)</p>
         {!packageId ? (
           <p className="text-xs text-muted-foreground">PACKAGE_ID fehlt — Probe unmöglich.</p>
         ) : !moveProbed ? (
@@ -314,14 +295,13 @@ export function DashboardEinsatzChainPanel(p: Pick<EinsatzPanelProps, 'apiStatus
           </p>
         ) : null}
 
-        <p className="mt-3 text-xs text-muted-foreground">
-          <strong className="font-medium text-foreground">Move upgraden</strong> startet sofort nach Bestätigung (kein
-          weiteres Menü) einen In-Place-Upgrade auf dem Boss-PC. Nicht Chat-Alltag — nur wenn Funktionen fehlen oder
-          du bewusst neuen Move-Code ausrollst.
-        </p>
         {upgradeBlockReason ? (
-          <p className="mt-1 text-xs text-muted-foreground">{upgradeBlockReason}</p>
-        ) : null}
+          <p className="mt-2 text-xs text-muted-foreground">{upgradeBlockReason}</p>
+        ) : (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Upgrade = neuer Move-Code auf dieselbe Package-ID (Boss-PC). Danach Backend neu starten.
+          </p>
+        )}
         <button
           type="button"
           disabled={busy || !canUpgrade}

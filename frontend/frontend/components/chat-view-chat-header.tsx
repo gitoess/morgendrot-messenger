@@ -14,7 +14,10 @@ import {
   isPrivacySoftLocked,
   PRIVACY_SOFT_LOCK_CHANGED_EVENT,
 } from '@/frontend/lib/privacy-soft-lock'
-import { hasVaultPasswordSession } from '@/frontend/lib/vault-password-session'
+import {
+  hasVaultPasswordSession,
+  VAULT_PASSWORD_SESSION_CHANGED,
+} from '@/frontend/lib/vault-password-session'
 import { PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT } from '@/frontend/lib/passphrase-message-local-store'
 import type { ReactNode } from 'react'
 import { type MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
@@ -103,60 +106,45 @@ export function TresorSessionBadge({
     sync()
     window.addEventListener(PRIVACY_SOFT_LOCK_CHANGED_EVENT, sync)
     window.addEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, sync)
+    window.addEventListener(VAULT_PASSWORD_SESSION_CHANGED, sync)
     return () => {
       window.removeEventListener(PRIVACY_SOFT_LOCK_CHANGED_EVENT, sync)
       window.removeEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, sync)
+      window.removeEventListener(VAULT_PASSWORD_SESSION_CHANGED, sync)
     }
   }, [])
   const effectivelyLocked = sessionLocked || softLocked
   const ui = tresorSessionUi(effectivelyLocked, hasKeys)
-  /** API/Keys ok, aber Secret-Vault-Passwort fehlt (Reload / Soft-Unlock) — Badge darf nicht „sperren“. */
+  /** F5 / nie getippt: Keys oft da, Browser-PW fehlt — UI = gesperrt, Klick = Unlock. */
   const needsVaultPassword = ui === 'ready' && !vaultSessionOpen
+  /** Nur zwei sichtbare Labels: bereit | gesperrt (Details nur im title). */
+  const showReady = ui === 'ready' && !needsVaultPassword
   const shellClass = cn(
     'inline-flex max-w-[min(100%,16rem)] items-center gap-1.5 truncate rounded-md border px-2.5 py-1.5 text-xs font-bold shadow-sm',
-    ui === 'locked' || needsVaultPassword
-      ? 'border-amber-600/55 bg-amber-100 text-amber-950 dark:border-amber-400/50 dark:bg-amber-950/90 dark:text-amber-50'
-      : ui === 'no-keys'
-        ? 'border-orange-600/55 bg-orange-100 text-orange-950 dark:border-orange-400/50 dark:bg-orange-950/90 dark:text-orange-50'
-        : 'border-emerald-600/55 bg-emerald-100 text-emerald-950 dark:border-emerald-400/50 dark:bg-emerald-950/90 dark:text-emerald-50'
+    showReady
+      ? 'border-emerald-600/55 bg-emerald-100 text-emerald-950 dark:border-emerald-400/50 dark:bg-emerald-950/90 dark:text-emerald-50'
+      : 'border-amber-600/55 bg-amber-100 text-amber-950 dark:border-amber-400/50 dark:bg-amber-950/90 dark:text-amber-50'
   )
-  const passiveTitle = needsVaultPassword
-    ? 'Tresor-Sitzung fehlt — tippen, Tresor-Passwort eingeben (Merken / Passphrasen).'
-    : ui === 'locked'
-      ? softLocked && !sessionLocked
-        ? 'Tresor weich gesperrt — Passphrasen/Signer aus RAM; Chat lesbar. Tippen zum Entsperren.'
-        : 'Tresor gesperrt — Entsperr-Dialog öffnen.'
-      : ui === 'no-keys'
-        ? 'Tresor ist offen — Browser-Signer fehlt (Reload/RAM). Tippen → Passwort → Signer laden (On-Chain/Zeitkapsel).'
-        : 'Schlüssel geladen — Signieren und Mailbox senden möglich.'
-  const activeTitle = needsVaultPassword
-    ? 'Tresor-Passwort eingeben (Session-Signer + Browser-Geheimnisse).'
-    : ui === 'locked'
-      ? softLocked && !sessionLocked
-        ? 'Tresor entsperren (Passwort → Signer + Browser-Geheimnisse).'
-        : 'Dialog „Tresor entsperren“ öffnen.'
-      : ui === 'no-keys'
-        ? 'Signer laden — Tresor-Passwort tippen (Tresor kann schon offen sein; Signer sitzt nur im Browser-RAM).'
-        : 'Tresor weich sperren — Signer/Passphrasen aus dem RAM; Chat bleibt offen (kein Login-Fenster).'
+  const passiveTitle = showReady
+    ? 'Tresor bereit — Keys + Browser-Passwort ok. Tippen = Soft-Pause.'
+    : needsVaultPassword
+      ? 'Gesperrt — Browser-Passwort fehlt (z. B. nach F5). Tippen → Passwort.'
+      : softLocked && !sessionLocked
+        ? 'Gesperrt (Pause) — Keys im RAM. Tippen → Passwort → Weitersprechen.'
+        : ui === 'no-keys'
+          ? 'Gesperrt — Signer fehlt. Tippen → Passwort.'
+          : 'Tresor gesperrt — Tippen → Entsperren.'
+  const activeTitle = showReady
+    ? 'Soft-Pause: ausgrauen, Keys im RAM; Weitersprechen mit Passwort. Abmelden = alles weg.'
+    : 'Tresor-Passwort eingeben (Unlock).'
 
-  const icon =
-    ui === 'ready' && !needsVaultPassword ? (
-      <Unlock className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
-    ) : (
-      <Lock className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
-    )
+  const icon = showReady ? (
+    <Unlock className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
+  ) : (
+    <Lock className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
+  )
   const label = (
-    <span className="truncate font-semibold">
-      {needsVaultPassword
-        ? 'Tresor: Passwort'
-        : ui === 'locked'
-          ? softLocked && !sessionLocked
-            ? 'Tresor: weich'
-            : 'Tresor: gesperrt'
-          : ui === 'no-keys'
-            ? 'Signer laden'
-            : 'Tresor: bereit'}
-    </span>
+    <span className="truncate font-semibold">{showReady ? 'Tresor: bereit' : 'Tresor: gesperrt'}</span>
   )
 
   if (!actions) {
@@ -174,19 +162,9 @@ export function TresorSessionBadge({
       className={cn(shellClass, 'cursor-pointer text-left transition-opacity hover:opacity-90', busy && 'opacity-70')}
       disabled={busy}
       title={activeTitle}
-      aria-label={
-        needsVaultPassword
-          ? 'Tresor-Passwort eingeben'
-          : ui === 'locked'
-            ? 'Tresor-Passwort eingeben'
-            : ui === 'no-keys'
-              ? 'Session-Signer laden'
-              : softLocked && !sessionLocked
-                ? 'Tresor weich sperren'
-                : 'Tresor sperren'
-      }
+      aria-label={showReady ? 'Tresor sperren (Soft-Pause)' : 'Tresor-Passwort eingeben'}
       onClick={() => {
-        if (ui === 'locked' || ui === 'no-keys' || needsVaultPassword) {
+        if (!showReady) {
           actions.onNavigateHomeWhenLocked()
           return
         }

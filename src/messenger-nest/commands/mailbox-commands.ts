@@ -98,11 +98,21 @@ export async function tryHandleMailboxCommand(ctx: MessengerCommandContext): Pro
             const nonceBn = parsePurgeNonce(String(a[2]));
             if (nonceBn === null) return { ok: false, message: 'Ungültige Nonce (Zahl erwartet).' };
             if (isTeamPurgeModeFlag(a[3])) {
-                await purgeTeamPlaintextBroadcast(recipient, sender, nonceBn);
-                return { ok: true, message: 'Team-Broadcast aus Mailbox gepurged (Rebate).' };
+                const teamRes = await purgeTeamPlaintextBroadcast(recipient, sender, nonceBn);
+                return {
+                    ok: true,
+                    message: 'Team-Broadcast aus Mailbox gepurged (Rebate).',
+                    digest: teamRes?.digest,
+                    gasSummary: teamRes?.gasSummary,
+                };
             }
-            await purgeMessage(recipient, sender, nonceBn);
-            return { ok: true, message: 'Nachricht aus Mailbox gepurged.' };
+            const purgeRes = await purgeMessage(recipient, sender, nonceBn);
+            return {
+                ok: true,
+                message: 'Nachricht aus Mailbox gepurged.',
+                digest: purgeRes?.digest,
+                gasSummary: purgeRes?.gasSummary,
+            };
         }
         if (!peerMap?.size) {
             return {

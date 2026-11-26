@@ -365,10 +365,27 @@ export async function createVaultOnChain(encryptedPayload: Uint8Array, ttlDays: 
     const { getClient } = await import('../chain-access.js');
     const existing = await getVaultFromChain(getClient(), CFG.VAULT_REGISTRY_ID!, CFG.PACKAGE_ID, MY_ADDR);
     const g = messengerGasPolicyOpts();
+    const mode = existing && existing.length > 0 ? 'update' : 'create';
     const result =
-        existing && existing.length > 0
+        mode === 'update'
             ? await chainUpdateVaultOnChain(encryptedPayload, ttlDays, MY_ADDR, getWalletPassword(), g)
             : await chainCreateVaultOnChain(encryptedPayload, ttlDays, MY_ADDR, getWalletPassword(), g);
-    if (result?.digest) logger.info(`TX ausgeführt: ${result.digest}`);
+    const digest = result?.digest?.trim();
+    const status = (result?.status || '').toLowerCase();
+    const statusError = (result?.statusError || '').trim();
+    if (digest) logger.info(`TX ausgeführt: ${digest}${status ? ` (${status})` : ''} [vault-${mode}]`);
+    if (!digest || (status && status !== 'success' && status !== 'ok')) {
+        const gasHint = /insufficient\s*gas/i.test(statusError)
+            ? ' Gas-Budget für den Vault-Blob zu knapp (Storage) — Retry mit höherem Budget (automatisch skaliert) oder Blob verkleinern (Seed-Schalter / Notizen).'
+            : '';
+        throw new Error(
+            `On-Chain-Vault ${mode} fehlgeschlagen` +
+                (digest ? ` (digest ${digest}` : '') +
+                (status ? `${digest ? ', ' : ' ('}status ${status}` : '') +
+                (statusError ? `${digest || status ? ', ' : ' ('}${statusError}` : '') +
+                (digest || status || statusError ? ')' : ' — keine TX-Antwort.') +
+                gasHint
+        );
+    }
     return result;
 }

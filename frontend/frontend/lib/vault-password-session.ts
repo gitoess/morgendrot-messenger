@@ -3,7 +3,7 @@
  *
  * - RAM während der Sitzung
  * - zusätzlich Tab-`sessionStorage` (überlebt F5 / HMR im selben Tab)
- * - weg bei Tab schließen, Abmelden / Soft-Lock (`clearVaultPasswordSession`)
+ * - weg bei Tab schließen / Abmelden (`clearVaultPasswordSession`); Soft-Pause lässt sie im RAM (PW-Check)
  *
  * Kein Ersatz für API-`/vault-lock`: Backend-Keys leben im Node-Prozess und
  * bleiben nach Reload offen, solange der API-Prozess läuft.

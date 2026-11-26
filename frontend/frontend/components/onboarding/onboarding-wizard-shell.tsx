@@ -75,7 +75,7 @@ export function OnboardingWizardShell(p: OnboardingWizardShellProps) {
 
   return (
     <Dialog open={p.open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{p.title}</DialogTitle>
           {p.description ? <DialogDescription>{p.description}</DialogDescription> : null}
@@ -151,7 +151,10 @@ export const HELPER_STEP_TITLES: Record<string, string> = {
 }
 
 export const WANDERER_STEP_TITLES: Record<string, string> = {
-  wallet: 'Wallet',
+  welcome: 'Willkommen',
+  wallet: 'Tresor',
+  iota: 'IOTA',
+  telegram: 'Telegram',
   address: 'Adresse',
   'private-mailbox': 'Postfächer',
   meshtastic: 'Funk',

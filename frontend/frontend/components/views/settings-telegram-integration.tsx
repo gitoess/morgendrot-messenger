@@ -17,11 +17,16 @@ import { testTelegramNotify } from '@/frontend/lib/api/telegram-notify'
 
 type SettingsTelegramIntegrationProps = {
   backendOnline: boolean
+  /** false = iota-messenger: kein Sensor-Monitor / Relay. Default true (Morgendrot). */
+  showMonitorControls?: boolean
 }
 
 type FeedbackKind = 'ok' | 'err' | 'info'
 
-export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramIntegrationProps) {
+export function SettingsTelegramIntegration({
+  backendOnline,
+  showMonitorControls = true,
+}: SettingsTelegramIntegrationProps) {
   const [pub, setPub] = useState<TelegramIntegrationPublic | null>(null)
   const [enabled, setEnabled] = useState(false)
   const [savedBotToken, setSavedBotToken] = useState('')
@@ -76,16 +81,21 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
     setBusy('save')
     const tokenToSave = botTokenDraft.trim() || savedBotToken.trim()
     const body: {
-      enabled: boolean
+      enabled?: boolean
       botToken?: string
       adminChatId: string
-      relayBaseUrl: string
+      relayBaseUrl?: string
       inboundMode: 'off' | 'longPoll' | 'webhook'
     } = {
-      enabled,
       adminChatId: adminChatId.trim(),
-      relayBaseUrl: relayBaseUrl.trim(),
       inboundMode,
+    }
+    if (showMonitorControls) {
+      body.enabled = enabled
+      body.relayBaseUrl = relayBaseUrl.trim()
+    } else {
+      /** Produkt ohne Monitor: Schalter nicht anbieten und Sensor-Pfad aus lassen. */
+      body.enabled = false
     }
     if (tokenToSave) body.botToken = tokenToSave
     const res = await saveTelegramIntegration(body)
@@ -113,7 +123,9 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
         kind: 'err',
         text:
           res.error ||
-          'Speichern fehlgeschlagen. Token eintragen; für Monitor-Alarme zusätzlich Chat-ID — oder „System-Alarme“ aus lassen.',
+          (showMonitorControls
+            ? 'Speichern fehlgeschlagen. Token eintragen; für Monitor-Alarme zusätzlich Chat-ID — oder „System-Alarme“ aus lassen.'
+            : 'Speichern fehlgeschlagen. Bot-Token prüfen.'),
       })
     }
     setBusy(null)
@@ -187,16 +199,6 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
             </p>
           ) : null}
 
-          <div className="flex items-center justify-between gap-4">
-            <Label htmlFor="tg-enabled" className="text-sm text-foreground">
-              System-Alarme (Monitor)
-            </Label>
-            <Switch id="tg-enabled" checked={enabled} onCheckedChange={setEnabled} disabled={formDisabled} />
-          </div>
-          <p className="-mt-2 text-[11px] text-muted-foreground">
-            Nur Monitor/Sensor. Chat Senden/Empfang braucht Bot-Token + Long Polling unten — Schalter kann aus bleiben.
-          </p>
-
           <div className="space-y-3">
             <div>
               <Label className="text-xs text-muted-foreground">Bot-Token (@BotFather)</Label>
@@ -266,30 +268,13 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
             </div>
             <div>
               <Label htmlFor="tg-chat" className="text-xs text-muted-foreground">
-                Deine persönliche Chat-ID (Alarme & „Test an mich“)
+                Deine persönliche Chat-ID („Test an mich“)
               </Label>
               <Input
                 id="tg-chat"
                 value={adminChatId}
                 onChange={(e) => setAdminChatId(e.target.value)}
                 placeholder="z. B. 1156058618 von @userinfobot"
-                disabled={formDisabled}
-                className="mt-1 font-mono text-xs"
-              />
-              <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                <strong className="text-foreground">Nicht</strong> die Zahl vor „:“ im Bot-Token — das ist die Bot-ID.
-                Deine ID bekommst du von <strong className="text-foreground">@userinfobot</strong>. Vorher den Bot in
-                Telegram öffnen und <strong className="text-foreground">Start</strong> tippen.
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="tg-relay" className="text-xs text-muted-foreground">
-                Relay-URL (optional, für Monitor)
-              </Label>
-              <Input
-                id="tg-relay"
-                value={relayBaseUrl}
-                onChange={(e) => setRelayBaseUrl(e.target.value)}
                 disabled={formDisabled}
                 className="mt-1 font-mono text-xs"
               />
@@ -313,28 +298,43 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
               <option value="webhook">Webhook (öffentliche HTTPS-URL nötig)</option>
               <option value="off">Aus (nur Senden, keine Antworten in Morgendrot)</option>
             </select>
-            <p className="text-[11px] leading-relaxed text-muted-foreground">
-              Long Polling läuft im API-Server (<span className="font-mono">npm run dev</span>). Nur Chats aus dem{' '}
-              <strong className="text-foreground">Telefonbuch</strong> (Telegram Chat-ID). Nach Speichern Backend
-              neu starten, wenn der Poll nicht startet.
-              {pub?.inboundPollActive ? (
-                <span className="mt-1 block text-emerald-600 dark:text-emerald-400">
-                  Poll aktiv — Partner-Antworten erscheinen im Posteingang (Filter „Eingang“), alle ~20 s.
-                </span>
-              ) : inboundMode === 'longPoll' && (pub?.botTokenConfigured || botTokenDraft.trim()) ? (
-                <span className="mt-1 block text-amber-700 dark:text-amber-300">
-                  Poll noch nicht aktiv — unten <strong className="text-foreground">Speichern</strong>, dann API neu
-                  starten (<span className="font-mono">npm run dev</span>).
-                </span>
-              ) : null}
-            </p>
+            {pub?.inboundPollActive ? (
+              <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+                Poll aktiv — Antworten im Posteingang (Filter „Eingang“), alle ~20 s.
+              </p>
+            ) : inboundMode === 'longPoll' && (pub?.botTokenConfigured || botTokenDraft.trim()) ? (
+              <p className="text-[11px] text-amber-700 dark:text-amber-300">
+                Poll noch nicht aktiv — Speichern, dann API neu starten (<span className="font-mono">npm run dev</span>
+                ). Details: Handbuch.
+              </p>
+            ) : null}
           </div>
 
-          {pub ? (
-            <p className="text-xs text-muted-foreground">
-              Relay: {pub.relayReachable ? 'erreichbar' : 'nicht erreichbar (Test geht oft trotzdem direkt)'} ·
-              Monitor-Webhook: {pub.monitorWebhookActive ? 'aktiv' : 'inaktiv'}
-            </p>
+          {showMonitorControls ? (
+            <div className="space-y-3 rounded-lg border border-border/70 bg-muted/10 p-3">
+              <p className="text-xs font-medium text-foreground">System-Alarme (Monitor)</p>
+              <p className="text-[11px] text-muted-foreground">
+                Sensor/Gerät → deine Chat-ID. Für normalen Chat aus. Handbuch → Telegram.
+              </p>
+              <div className="flex items-center justify-between gap-4">
+                <Label htmlFor="tg-enabled" className="text-sm text-foreground">
+                  Monitor aktiv
+                </Label>
+                <Switch id="tg-enabled" checked={enabled} onCheckedChange={setEnabled} disabled={formDisabled} />
+              </div>
+              <div>
+                <Label htmlFor="tg-relay" className="text-xs text-muted-foreground">
+                  Relay-URL (optional)
+                </Label>
+                <Input
+                  id="tg-relay"
+                  value={relayBaseUrl}
+                  onChange={(e) => setRelayBaseUrl(e.target.value)}
+                  disabled={formDisabled}
+                  className="mt-1 font-mono text-xs"
+                />
+              </div>
+            </div>
           ) : null}
 
           <div className="space-y-2 rounded-lg border border-border/80 bg-muted/10 p-3">

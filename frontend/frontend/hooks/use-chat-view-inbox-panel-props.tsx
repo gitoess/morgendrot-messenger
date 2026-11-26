@@ -113,7 +113,7 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
     [composerDraft.onRecipientChange, inboxViewUi.selectInboxPartnerForSend]
   )
 
-  /** Vertrag/Package-ID nur noch Einstellungen → Expertenmodus (kein Posteingang-Button). */
+  /** Vertrag/Package-ID: Einstellungen → IOTA → Expertenmodus (kein Posteingang-Button). */
   const inboxPackageExpertMenu: ReactNode = null
 
   const inboxPanelProps = {

@@ -57,6 +57,10 @@ function Field({
 export function StandaloneSoloWizardCard(p: {
   apiSnapshot?: ApiStatus | null
   className?: string
+  /** Im Solo-Wizard-Schritt: Form immer zeigen (auch ohne standalone-solo-Pfad-Gate). */
+  forceShow?: boolean
+  /** Kompaktere Einbettung ohne große Sky-Karte. */
+  embedded?: boolean
 }) {
   const { t } = useAppTranslation('standalone')
   const [, bump] = useState(0)
@@ -81,7 +85,7 @@ export function StandaloneSoloWizardCard(p: {
     }
   }, [syncForm])
 
-  if (!needsStandaloneSoloChainWizard()) return null
+  if (!p.forceShow && !needsStandaloneSoloChainWizard()) return null
 
   const bossPrefill = pickSoloChainPrefillFromApiStatus(p.apiSnapshot)
   const canPrefillFromBoss = Boolean(bossPrefill.packageId || bossPrefill.mailboxId || bossPrefill.rpcUrl)
@@ -114,15 +118,29 @@ export function StandaloneSoloWizardCard(p: {
     syncForm()
   }
 
+  const copyId = async (value: string) => {
+    const v = value.trim()
+    if (!v || typeof navigator === 'undefined' || !navigator.clipboard?.writeText) return
+    try {
+      await navigator.clipboard.writeText(v)
+    } catch {
+      /* ignore */
+    }
+  }
+
   return (
     <div
       className={cn(
-        'mb-5 rounded-xl border border-sky-500/35 bg-sky-500/10 px-4 py-4',
+        p.embedded
+          ? 'space-y-4'
+          : 'mb-5 rounded-xl border border-sky-500/35 bg-sky-500/10 px-4 py-4',
         p.className
       )}
     >
-      <div className="flex items-start gap-3">
-        <Network className="mt-0.5 h-5 w-5 shrink-0 text-sky-300" aria-hidden />
+      <div className={cn('flex items-start gap-3', p.embedded && 'gap-0')}>
+        {p.embedded ? null : (
+          <Network className="mt-0.5 h-5 w-5 shrink-0 text-sky-300" aria-hidden />
+        )}
         <div className="min-w-0 flex-1 space-y-4">
           <div>
             <h2 className="text-base font-semibold text-foreground">{t('soloWizard.title')}</h2>
@@ -182,9 +200,24 @@ export function StandaloneSoloWizardCard(p: {
             </p>
           ) : null}
           {saved ? (
-            <p className="text-sm text-emerald-400" role="status">
-              {t('soloWizard.savedOk')}
-            </p>
+            <div className="space-y-2" role="status">
+              <p className="text-sm text-emerald-400">{t('soloWizard.savedOk')}</p>
+              {form.mailboxId.trim() ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <code className="max-w-full truncate font-mono text-xs text-foreground">
+                    {form.mailboxId.trim()}
+                  </code>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void copyId(form.mailboxId)}
+                  >
+                    Mailbox-ID kopieren
+                  </Button>
+                </div>
+              ) : null}
+            </div>
           ) : null}
 
           <Button type="button" onClick={onSave}>

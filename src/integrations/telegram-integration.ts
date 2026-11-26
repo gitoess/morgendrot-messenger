@@ -195,6 +195,63 @@ export async function sendTelegramMessage(
     }
 }
 
+/** Max. Bildbytes für Bot-sendPhoto (unter Telegram-Limit; bewusst klein). */
+export const TELEGRAM_PHOTO_MAX_BYTES = 1_500_000;
+
+/**
+ * sendPhoto — Bild liegt bei Telegram unverschlüsselt (Server sieht Bytes).
+ * Nur mit explizitem User-Ack im Notify-Pfad nutzen.
+ */
+export async function sendTelegramPhoto(
+    botToken: string,
+    chatId: string,
+    photoBytes: Uint8Array,
+    caption?: string
+): Promise<{ ok: boolean; error?: string }> {
+    if (!photoBytes.length) return { ok: false, error: 'Leeres Bild.' };
+    if (photoBytes.length > TELEGRAM_PHOTO_MAX_BYTES) {
+        return {
+            ok: false,
+            error: `Bild zu groß (${photoBytes.length} B, max. ${TELEGRAM_PHOTO_MAX_BYTES} B).`,
+        };
+    }
+    const tgUrl = `https://api.telegram.org/bot${botToken.trim()}/sendPhoto`;
+    try {
+        const form = new FormData();
+        form.append('chat_id', chatId.trim());
+        form.append(
+            'photo',
+            new Blob([Uint8Array.from(photoBytes)], { type: 'image/jpeg' }),
+            'photo.jpg'
+        );
+        const cap = (caption || '').trim();
+        if (cap) form.append('caption', cap.slice(0, 1024));
+        const resp = await fetch(tgUrl, { method: 'POST', body: form });
+        if (!resp.ok) {
+            const body = await resp.text();
+            return { ok: false, error: formatTelegramApiErrorHint(resp.status, body) };
+        }
+        return { ok: true };
+    } catch (e: unknown) {
+        return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+}
+
+export function decodeTelegramPhotoBase64(raw: string): Uint8Array | { error: string } {
+    const t = raw.trim().replace(/^data:image\/[a-z0-9.+-]+;base64,/i, '');
+    if (!t) return { error: 'Kein Bild-Base64.' };
+    try {
+        const buf = Buffer.from(t, 'base64');
+        if (!buf.length) return { error: 'Bild-Base64 leer.' };
+        if (buf.length > TELEGRAM_PHOTO_MAX_BYTES) {
+            return { error: `Bild zu groß (${buf.length} B, max. ${TELEGRAM_PHOTO_MAX_BYTES} B).` };
+        }
+        return new Uint8Array(buf);
+    } catch {
+        return { error: 'Bild-Base64 ungültig.' };
+    }
+}
+
 function relayHeaders(relaySecret: string): Record<string, string> {
     const h: Record<string, string> = { 'Content-Type': 'application/json' };
     if (relaySecret) h['X-Morgendrot-Relay-Secret'] = relaySecret;
@@ -537,6 +594,12 @@ export type TelegramContactNotifyInput = {
     targetChatId?: string;
     /** Kein Journal — z. B. Hinweis nach IOTA-Send (Posteingang hat schon Mailbox-Zeile). */
     skipJournal?: boolean;
+    /**
+     * Optional: echtes Bild per sendPhoto.
+     * Pflicht dazu: acknowledgeUnencryptedMedia === true (Telegram-Server sieht das Bild).
+     */
+    photoBase64?: string;
+    acknowledgeUnencryptedMedia?: boolean;
 };
 
 export type TelegramContactNotifyResult = {
@@ -566,6 +629,32 @@ export async function sendTelegramContactNotify(
         getContactLabel(input.recipientAddress) ||
         'Morgendrot';
     const text = formatTelegramNotifyText(senderLabel, preview);
+
+    const photoRaw = (input.photoBase64 || '').trim();
+    if (photoRaw) {
+        if (input.acknowledgeUnencryptedMedia !== true) {
+            return {
+                ok: false,
+                error:
+                    'Bild an Telegram nur mit Bestätigung: unverschlüsselt auf Telegram-Servern (kein E2EE).',
+            };
+        }
+        const decoded = decodeTelegramPhotoBase64(photoRaw);
+        if ('error' in decoded) return { ok: false, error: decoded.error };
+        const photoSend = await sendTelegramPhoto(cfg.botToken, targetChatId, decoded, text);
+        if (!photoSend.ok) return { ok: false, error: photoSend.error || 'sendPhoto fehlgeschlagen' };
+        if (!input.skipJournal) {
+            const { appendTelegramJournalEntry } = await import('./telegram-journal.js');
+            appendTelegramJournalEntry({
+                direction: 'out',
+                chatId: targetChatId,
+                contactKey: input.recipientAddress,
+                text: preview || '[Bild]',
+                senderLabel,
+            });
+        }
+        return { ok: true, delivered: true };
+    }
 
     const direct = await sendTelegramMessage(cfg.botToken, targetChatId, text);
     if (direct.ok) {

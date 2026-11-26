@@ -104,7 +104,8 @@ import {
   stripDashboardUrlDeeplinkSearch,
 } from '@/frontend/lib/dashboard-url-deeplink'
 import { decideVaultUiLockFromStatusPoll } from '@/frontend/lib/vault-status-poll-lock'
-import { setPrivacySoftLocked } from '@/frontend/lib/privacy-soft-lock'
+import { isPrivacySoftLocked, setPrivacySoftLocked } from '@/frontend/lib/privacy-soft-lock'
+import { getVaultPasswordSession } from '@/frontend/lib/vault-password-session'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { readContactFavorites } from '@/frontend/lib/contact-phonebook-meta-store'
 import { useChatViewPendingHandshakes, OPEN_MESSENGER_INBOX_EVENT } from '@/frontend/hooks/use-chat-view-pending-handshakes'
@@ -657,6 +658,11 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     navigateTo({ type: 'einsatzleitung', variant: 'einsatzleitung-hub' })
   }, [navigateTo])
 
+  /** Home-Kachel „IOTA“ → Wallet + Aktivität (nicht permanent auf dem Home). */
+  const openIotaView = useCallback(() => {
+    navigateTo({ type: 'iota' })
+  }, [navigateTo])
+
   const openMessengerChatView = useCallback(() => {
     navigateTo({ type: 'chat', variant: 'private-chat' })
     // APK: Chat-Mount defaultet auf Posteingang; Event setzt Tab falls Chat schon offen.
@@ -1137,9 +1143,9 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   }, [navigateTo])
 
   /**
-   * `stayInView: true` (Chat): weiches Privacy-Lock — Secrets/Signer weg, API-Tresor bleibt offen,
-   * kein Auto-Login-Dialog; Messenger bleibt lesbar (Ciphertext).
-   * Ohne stayInView: voller API-Lock + Home (wie bisher).
+   * `stayInView: true` (Badge „Tresor sperren“): UI-Pause —
+   * Scrim, Secrets bleiben im RAM, Weitersprechen nur nach Passwort-Check.
+   * Ohne stayInView = Abmelden: RAM/API weg + Unlock-Dialog + Übersicht.
    */
   const lockSession = useCallback(async (opts?: { stayInView?: boolean }) => {
     const stayInView = opts?.stayInView === true
@@ -1147,11 +1153,10 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     sessionUnlockedStableRef.current = false
     lockPollStreakRef.current = 0
     if (stayInView) {
-      clearDirectIotaSessionSignerOnLock()
-      clearDirectChatEcdhKeyMaterial()
-      await wipeLocalPassphraseStoresOnLock()
       setPrivacySoftLocked(true)
-      setMainnetSignerHint(null)
+      /** Kein Extra-CTA unten — direkt Weitersprechen-Dialog. */
+      setSessionSignerSyncError('')
+      setSessionSignerSyncOpen(true)
       window.dispatchEvent(new Event(DIRECT_IOTA_UI_CHANGED))
       return { ok: true as const }
     }
@@ -1249,6 +1254,42 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     }
     setSessionSignerSyncBusy(true)
     setSessionSignerSyncError('')
+
+    // Soft-Pause: Secrets sind noch im RAM — Passwort nur prüfen, nichts wipen.
+    if (isPrivacySoftLocked()) {
+      const sessionPw = getVaultPasswordSession()
+      if (sessionPw && sessionPw.length >= 8) {
+        if (vaultPw !== sessionPw) {
+          setSessionSignerSyncBusy(false)
+          setSessionSignerSyncError('Passwort falsch.')
+          return
+        }
+        setPrivacySoftLocked(false)
+        setPassword('')
+        setSessionSignerSyncBusy(false)
+        closeSessionSignerSync()
+        window.dispatchEvent(new Event(DIRECT_IOTA_UI_CHANGED))
+        return
+      }
+      // Kein Session-PW: gegen Vault/Signer prüfen, ohne Secret-Vaults neu zu laden (würde RAM riskieren).
+      const { mainnetSignerHint: softHint } = await syncMainnetKeysAfterBackendUnlock({
+        vaultPassword: vaultPw,
+        apiSigner: apiSnapshot?.signer,
+        expectedAddress:
+          (apiSnapshot?.myAddressFull || apiSnapshot?.myAddress || myAddress).trim() || undefined,
+      })
+      setSessionSignerSyncBusy(false)
+      if (softHint) {
+        setSessionSignerSyncError(softHint)
+        return
+      }
+      setPrivacySoftLocked(false)
+      setPassword('')
+      closeSessionSignerSync()
+      window.dispatchEvent(new Event(DIRECT_IOTA_UI_CHANGED))
+      return
+    }
+
     const { mainnetSignerHint: hint } = await syncMainnetKeysAfterBackendUnlock({
       vaultPassword: vaultPw,
       apiSigner: apiSnapshot?.signer,
@@ -1317,22 +1358,19 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   const chatVaultBannerActions: ChatViewVaultBannerActions = useMemo(
     () => ({
       onLockSession: async () => {
-        if (
-          !window.confirm(
-            'Privacy sperren? Passphrasen und Signer verlassen den RAM — Chat bleibt offen (Ciphertext). Kein Login-Fenster. Entsperren: Badge tippen → Passwort.'
-          )
-        ) {
-          return
-        }
+        /** Kein Extra-Confirm — Badge-Klick = Soft-Pause; Passwort-Dialog folgt beim Weitersprechen. */
         await lockSession({ stayInView: true })
       },
       onNavigateHomeWhenLocked: () => {
+        // Soft-Pause: Passwort-Dialog (kein freies Weitersprechen).
+        if (isPrivacySoftLocked()) {
+          requestMainnetSessionSignerSync()
+          return
+        }
         if (isStandaloneMessengerWithoutBasis()) {
           requestStandaloneWalletUnlock()
           return
         }
-        // Soft-Lock: Signer nachladen ohne API-Vollsperre / ohne Home.
-        // API wirklich gesperrt: Unlock-Dialog, Chat bleibt (navigateHome false).
         const backendLocked = apiSnapshot?.locked === true
         if (!backendLocked) {
           requestMainnetSessionSignerSync()
@@ -1435,6 +1473,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     openSettingsCategory,
     openConfigView,
     openEinsatzleitungView,
+    openIotaView,
     openMessengerChatView,
     openVaultView,
     openBossModeView,

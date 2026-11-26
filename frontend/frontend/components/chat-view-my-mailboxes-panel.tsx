@@ -55,10 +55,10 @@ function maskMid(id: string): string {
 function TypeBadge(p: { kind: 'server' | 'team' | 'private' }) {
   const cls =
     p.kind === 'server'
-      ? 'bg-sky-500/20 text-sky-900 dark:text-sky-100'
+      ? 'bg-[color-mix(in_oklab,var(--path-online)_22%,transparent)] text-foreground'
       : p.kind === 'team'
-        ? 'bg-amber-500/25 text-amber-950 dark:text-amber-100'
-        : 'bg-violet-500/20 text-violet-950 dark:text-violet-100'
+        ? 'bg-[color-mix(in_oklab,var(--path-telegram)_22%,transparent)] text-foreground'
+        : 'bg-[color-mix(in_oklab,var(--path-mesh)_22%,transparent)] text-foreground'
   const label = p.kind === 'server' ? 'Haupt' : p.kind === 'team' ? 'Team' : 'Privat'
   return (
     <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${cls}`}>{label}</span>
@@ -228,7 +228,9 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
             Hauptpostfach-ID noch nicht konfiguriert (Setup / MAILBOX_ID).
           </p>
         )}
-        <p className="text-[10px] text-muted-foreground">{mainMailboxExplain()}</p>
+        {mainMailboxExplain() ? (
+          <p className="text-[10px] text-muted-foreground">{mainMailboxExplain()}</p>
+        ) : null}
       </section>
 
       <section className="space-y-2">
@@ -257,9 +259,11 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
             ) : null}
           </div>
         </div>
-        <p className="text-[10px] leading-snug text-muted-foreground">
-          {teamMailboxesExplain(Boolean(p.teamMailboxCreateAllowed))}
-        </p>
+        {teamMailboxesExplain(Boolean(p.teamMailboxCreateAllowed)) ? (
+          <p className="text-[10px] leading-snug text-muted-foreground">
+            {teamMailboxesExplain(Boolean(p.teamMailboxCreateAllowed))}
+          </p>
+        ) : null}
         {teamList.length === 0 ? (
           <p className="text-[10px] text-muted-foreground">
             {p.teamMailboxCreateAllowed
@@ -321,7 +325,9 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
             onStatus={p.onStatus}
           />
         </div>
-        <p className="text-[10px] leading-snug text-muted-foreground">{privateMailboxesExplain()}</p>
+        {privateMailboxesExplain() ? (
+          <p className="text-[10px] leading-snug text-muted-foreground">{privateMailboxesExplain()}</p>
+        ) : null}
         {privateList.length === 0 ? (
           <p className="text-[10px] text-muted-foreground">Noch keine private Mailbox.</p>
         ) : (
@@ -445,7 +451,7 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
       ) : null}
 
       {walletValid ? (
-        <>
+        <div className="border-t border-border/50 pt-3">
           <button
             type="button"
             onClick={() => setProfileQrOpen(true)}
@@ -461,7 +467,7 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
             privateMailboxes={privateList}
             teamMailboxes={teamList}
           />
-        </>
+        </div>
       ) : null}
     </div>
   )

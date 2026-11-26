@@ -23,7 +23,10 @@ export type ChatViewSelfProfileDialogProps = ChatViewMyWalletIdInlineProps & {
   onOpenIotaSettings?: () => void
 }
 
-/** Profil „Ich“ — Kontakt-ID, Peering-QR, technische Mailbox-/Package-IDs. */
+/**
+ * Profil „Ich“ — Kontakt-ID, Peering-QR, technische Mailbox-/Package-IDs.
+ * Ziel (Backlog): hier „Visitenkarte teilen“ + optionales Profilbild — siehe docs/IDEEN-BACKLOG.md.
+ */
 export function ChatViewSelfProfileDialog(p: ChatViewSelfProfileDialogProps) {
   const { open, onOpenChange, packageId, onOpenIotaSettings, ...walletProps } = p
   const valid = /^0x[a-fA-F0-9]{64}$/i.test((walletProps.myAddressLine || '').trim())

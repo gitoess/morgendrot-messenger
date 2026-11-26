@@ -13,7 +13,6 @@ import { SettingsTelegramNotifyOnSend } from '@/frontend/components/views/settin
 import { SettingsSystemIdentitySection } from '@/frontend/components/views/settings-system-identity-section'
 import { SettingsNetworkProfilesSection } from '@/frontend/components/settings-network-profiles-section'
 import { SettingsMyMailboxesSection } from '@/frontend/components/views/settings-my-mailboxes-section'
-import { DashboardEinsatzChainPanel } from '@/frontend/components/dashboard-einsatz-konfiguration'
 import { SettingsVaultBackupSection } from '@/frontend/components/views/settings-vault-backup-section'
 import { SettingsVaultPasswordSection } from '@/frontend/components/views/settings-vault-password-section'
 import { SettingsEmergencyPurgeSection } from '@/frontend/components/views/settings-emergency-purge-section'
@@ -34,6 +33,7 @@ import { SettingsProjectDisclaimerSection } from '@/frontend/components/views/se
 import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/standalone-device-mode'
 import { isStandaloneSoloPath } from '@/frontend/lib/standalone-onboarding'
+import { IOTA_MESSENGER_UI } from '@/frontend/lib/product-identity'
 
 interface SettingsViewProps {
   onOpenConfig?: () => void
@@ -163,14 +163,15 @@ export function SettingsView({
         <SettingsLanguageSection />
         <SettingsOnboardingSection apiStatus={advancedIotaStatus} />
         <SettingsAppearanceSection />
-        <SettingsExpertModeSection apiStatus={advancedIotaStatus} />
         <CapacitorApiBaseCard />
-        <div id="settings-handoff-import">
-          <LazyHandoffImportPanel
-            backendOnline={backendOnline}
-            bossEinsatzViewer={slimMessengerEinsatz && isBossRole}
-          />
-        </div>
+        {!IOTA_MESSENGER_UI.hideHandoffImport ? (
+          <div id="settings-handoff-import">
+            <LazyHandoffImportPanel
+              backendOnline={backendOnline}
+              bossEinsatzViewer={slimMessengerEinsatz && isBossRole}
+            />
+          </div>
+        ) : null}
         <SettingsProjectDisclaimerSection />
         {canToggleFullTiles && onShowAllTilesChange ? (
           <div className="rounded-xl border border-border bg-card p-4">
@@ -190,15 +191,23 @@ export function SettingsView({
             onApplied={() => void loadStatus()}
             vaultLocked={vaultLocked}
             onRequestVaultUnlock={onRequestVaultUnlock}
+            showMoveUpgrade={isBossRole || isKommandant}
           />
         ) : (
-          <SettingsSystemIdentitySection
-            apiStatus={advancedIotaStatus}
-            managedNetwork={false}
-            vaultLocked={vaultLocked}
-            onRequestVaultUnlock={onRequestVaultUnlock}
-            onApplied={() => void loadStatus()}
-          />
+          <>
+            <SettingsSystemIdentitySection
+              apiStatus={advancedIotaStatus}
+              managedNetwork={false}
+              vaultLocked={vaultLocked}
+              onRequestVaultUnlock={onRequestVaultUnlock}
+              onApplied={() => void loadStatus()}
+            />
+            <SettingsExpertModeSection
+              apiStatus={advancedIotaStatus}
+              showMoveUpgrade={false}
+              onRefreshStatus={() => void loadStatus()}
+            />
+          </>
         )}
         <p className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-[12px] text-muted-foreground">
           <span className="font-medium text-foreground">Seed, Notizen, Passwörter, Backup</span> → Tab{' '}
@@ -209,7 +218,7 @@ export function SettingsView({
           >
             Tresor
           </button>
-          . Package/Mailbox/RPC bleiben hier unter IOTA.
+          .
         </p>
         <SettingsMyMailboxesSection
           apiStatus={advancedIotaStatus}
@@ -219,20 +228,6 @@ export function SettingsView({
             (advancedIotaStatus?.myAddressFull || advancedIotaStatus?.myAddress || status?.address || '').trim()
           }
         />
-        {isBossRole || isKommandant ? (
-          <div className="rounded-xl border border-border bg-card p-4">
-            <p className="mb-1 text-sm font-semibold text-foreground">Package &amp; Move-Upgrade</p>
-            <p className="mb-3 text-[12px] text-muted-foreground">
-              Prüft, welche Messenger-Move-Funktionen im aktuellen Package liegen, und erlaubt In-Place-Upgrade
-              (gleiche Package-ID, braucht UpgradeCap). Package/Hauptpostfach selbst: Netz / Chain-IDs oben. Nur
-              Boss/Kommandant — nicht Chat-Alltag.
-            </p>
-            <DashboardEinsatzChainPanel
-              apiStatus={advancedIotaStatus}
-              onRefreshStatus={() => void loadStatus()}
-            />
-          </div>
-        ) : null}
       </SettingsCollapsiblePanel>
 
       <SettingsCollapsiblePanel open={activeCategory === 'funk'} title="Funk (Meshtastic)" icon={<Radio className="h-5 w-5" />} onRefresh={() => void loadStatus()}>
@@ -240,27 +235,30 @@ export function SettingsView({
       </SettingsCollapsiblePanel>
 
       <SettingsCollapsiblePanel open={activeCategory === 'telegram'} title="Telegram" icon={<Send className="h-5 w-5" />} onRefresh={() => void loadStatus()}>
-        <p className="rounded-lg border border-border bg-muted/25 px-3 py-2 text-[12px] leading-relaxed text-muted-foreground">
-          <span className="font-medium text-foreground">Scope (T42):</span> Telegram = Klingel / Inbound / Alarm —
-          kein Video, kein NFT, kein E2EE über Telegram. Archiv und Beweis laufen über IOTA / Export+Hash.
+        <p className="text-[11px] text-muted-foreground">
+          {IOTA_MESSENGER_UI.hideTelegramEinsatzAlarm
+            ? 'Bot, Eingang, Klingel: Handbuch → Telegram.'
+            : 'Bot, Klingel, Alarmgruppe: Handbuch → Telegram.'}
         </p>
-        {managedNetwork ? (
-          <>
-            <SettingsTelegramIntegration backendOnline={backendOnline} />
-            <SettingsTelegramEinsatzGroup
-              backendOnline={backendOnline}
-              apiStatus={advancedIotaStatus}
-              isBossRole={isBossRole || isKommandant}
-            />
-            <SettingsTelegramNotifyOnSend />
-          </>
-        ) : (
-          <>
-            <SettingsTelegramAlarmGroupJoin backendOnline={backendOnline} />
-            <SettingsTelegramIntegration backendOnline={backendOnline} />
-            <SettingsTelegramNotifyOnSend />
-          </>
-        )}
+        <div className="space-y-4">
+          {/* 1 Chat-Bot → 2 Klingel → 3 Alarmgruppe (zusammen) */}
+          <SettingsTelegramIntegration
+            backendOnline={backendOnline}
+            showMonitorControls={!IOTA_MESSENGER_UI.hideTelegramMonitor}
+          />
+          <SettingsTelegramNotifyOnSend />
+          {!IOTA_MESSENGER_UI.hideTelegramEinsatzAlarm ? (
+            managedNetwork ? (
+              <SettingsTelegramEinsatzGroup
+                backendOnline={backendOnline}
+                apiStatus={advancedIotaStatus}
+                isBossRole={isBossRole || isKommandant}
+              />
+            ) : (
+              <SettingsTelegramAlarmGroupJoin backendOnline={backendOnline} />
+            )
+          ) : null}
+        </div>
       </SettingsCollapsiblePanel>
 
       <SettingsCollapsiblePanel
@@ -275,7 +273,6 @@ export function SettingsView({
           vaultHasLocal={status?.vaultHasLocal === true}
           backendOnline={backendOnline}
           onAfterReveal={() => void loadStatus()}
-          onOpenIotaCategory={() => selectCategory('iota')}
         />
         <SettingsVaultPasswordSection vaultLocked={vaultLocked} />
         <SettingsVaultBackupSection vaultLocked={vaultLocked} onRequestVaultUnlock={onRequestVaultUnlock} />

@@ -105,7 +105,9 @@ export function BossWalletGasFundingPanel(p: Props) {
   }
 
   const borderClass =
-    p.network === 'testnet' ? 'border-amber-500/40 bg-amber-500/10' : 'border-violet-500/40 bg-violet-500/10'
+    p.network === 'testnet'
+      ? 'border-[color-mix(in_oklab,var(--path-online)_40%,transparent)] bg-[color-mix(in_oklab,var(--path-online)_10%,transparent)]'
+      : 'border-[color-mix(in_oklab,var(--path-iota)_40%,transparent)] bg-[color-mix(in_oklab,var(--path-iota)_10%,transparent)]'
 
   const copyAddress = async () => {
     if (!fullAddress) return

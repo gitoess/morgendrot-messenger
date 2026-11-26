@@ -15,12 +15,14 @@
     "settings": "Einstellungen",
     "bottomNavAria": "Messenger-Navigation",
     "messages": "Nachrichten",
+    "iota": "IOTA Wallet",
     "einsatzleitung": "Einsatzleitung",
     "phonebook": "Telefonbuch"
   },
   "views": {
     "settings": "Einstellungen",
     "config": ".env anpassen",
+    "iota": "IOTA Wallet",
     "einsatzleitung": "Einsatzleitung"
   },
   "settings": {
@@ -48,8 +50,8 @@
   "lock": {
     "button": "Abmelden",
     "buttonTitle": "Sitzung beenden — Tresor voll sperren",
-    "confirmSoft": "Tresor weich sperren?\n\n• Signer und Passphrasen nur aus diesem Browser-RAM\n• Chat bleibt offen (lesbar)\n• Kein Inbox-Cache-Löschen, Tresor-Datei unverändert\n• Tippen aufs Badge = wieder entsperren",
-    "confirmFull": "Sitzung beenden / Tresor voll sperren?\n\n• Keys + Passwort verlassen den Server-RAM\n• Schnell-Cache entschlüsselter Nachrichten (.inbox.enc) wird gelöscht — Privacy, falls jemand die Festplatte liest; Chat kommt von der Chain nach Entsperren zurück\n• Tresor-Datei (.morgendrot-vault) bleibt\n• Seed in der Datei bleibt (wenn gespeichert); nur RAM-Seed ist weg"
+    "confirmSoft": "Tresor sperren?\n\n• Messenger wird ausgegraut — nicht bedienbar\n• Sitzung bleibt im RAM — Weitersprechen nur mit Passwort\n• Abmelden = alles weg + Login-Dialog",
+    "confirmFull": "Abmelden / Sitzung beenden?\n\n• Keys + Passwort verlassen den Server-RAM\n• Schnell-Cache entschlüsselter Nachrichten (.inbox.enc) wird gelöscht — Privacy, falls jemand die Festplatte liest; Chat kommt von der Chain nach Entsperren zurück\n• Tresor-Datei (.morgendrot-vault) bleibt\n• Seed in der Datei bleibt (wenn gespeichert); nur RAM-Seed ist weg"
   },
   "mesh": {
     "internet": "Internet",
@@ -114,6 +116,10 @@
     "messages": {
       "title": "Nachrichten",
       "subtitle": "Chats, Funk, Team-Postfächer"
+    },
+    "iota": {
+      "title": "IOTA Wallet",
+      "subtitle": "Überweisen, Empfangen, Aktivität"
     },
     "einsatzleitung": {
       "title": "Einsatzleitung",
@@ -190,7 +196,7 @@
   },
   "appearance": {
     "incomingTone": "Eingangs-Ton (neue Nachricht)",
-    "incomingToneHint": "Glocken-Chime (nicht Klick-Piep). Nur offener Tab — kein System-Push. Default aus.",
+    "incomingToneHint": "",
     "attachmentPreview": "Anhang-Vorschau im Composer",
     "attachmentPreviewHint": "Bild / LoRa-Luma / .txt vor dem Senden anzeigen. Default an."
   },
@@ -205,6 +211,6 @@
   "telegramNotify": {
     "title": "Nach Online-IOTA: Telegram-Hinweis (Klingel)",
     "aria": "Nach Online-IOTA Telegram-Hinweis",
-    "hint": "Optionaler Kurz-Ping nach erfolgreichem 1:1-IOTA-Send über Online — nicht der Sendepfad „Telegram“. Kein E2EE. Die Einsatz-Alarmgruppe wird hier nicht angeschrieben."
+    "hint": "Optionaler Kurz-Ping nach IOTA-1:1 Online. Details: Handbuch → Telegram."
   }
 }

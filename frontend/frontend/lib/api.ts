@@ -122,6 +122,7 @@ export {
 } from '@/frontend/lib/api/vault-commands'
 
 export { importVaultFileFromDevice } from '@/frontend/lib/api/vault-import'
+export { downloadVaultFileFromServer } from '@/frontend/lib/api/vault-export'
 
 export {
   compactImageEncode,

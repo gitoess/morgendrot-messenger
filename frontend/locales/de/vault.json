@@ -27,7 +27,7 @@
     "noLocalFileChain": "Keine lokale Datei: Wenn der Tresor nur auf der Chain liegt, das gleiche Passwort wie beim On-Chain-Speichern — nach dem Entsperren werden die Schlüssel von der Chain in die Sitzung geladen.",
     "passwordLabel": "Passwort",
     "passwordPlaceholder": "Tresor-Passwort",
-    "sdkSeedHint": "Seed nur nötig, wenn er nicht im Tresor gespeichert ist (Haken „Wallet-Seed merken“). Nach weichem Header-Sperren reicht meist das Passwort.",
+    "sdkSeedHint": "Seed nur nötig, wenn er nicht im Tresor gespeichert ist (Haken „Wallet-Seed merken“). Soft-Pause lässt den Signer im RAM (Weitersprechen mit Passwort); Abmelden braucht wieder Passwort (+ ggf. Seed).",
     "mnemonicOptionalLabel": "Seed / Mnemonic (nur falls nötig)",
     "mnemonicPlaceholder": "12–24 Wörter oder Bech32-Secret …",
     "hideMnemonic": "Ausblenden",
@@ -63,12 +63,12 @@
     "blockedHint": "Noch offen: Passwort mindestens 8 Zeichen, beide Felder identisch, und gültiger Seed (erzeugen oder einfügen)."
   },
   "sdkMnemonicPref": {
-    "label": "Wallet-Seed merken",
-    "hint": "Beim Entsperren/Sichern den Seed aus der Sitzung in die Tresor-Datei schreiben. Ein schon gespeicherter Seed wird beim normalen „Lokal sichern“ nicht mehr gelöscht."
+    "label": "Wallet-Seed in Tresor-Datei",
+    "hint": "Nach Neustart reicht das Tresor-Passwort — Seed nicht neu tippen. Default an (empfohlen)."
   },
   "messengerSetup": {
-    "link": "oder Messenger einrichten",
-    "hint": "Geführter Wizard — Schritt für Schritt, jederzeit unterbrechen",
+    "link": "oder Messenger einrichten (Freunde)",
+    "hint": "Wallet, Chat-Postfach, optional Funk — ohne Helfer/Handoff; jederzeit unterbrechen",
     "linkBoss": "oder Einsatzleitung einrichten",
     "hintBoss": "Wallet, Package, Postfächer und erste Helfer — ohne Passwort jetzt"
   },

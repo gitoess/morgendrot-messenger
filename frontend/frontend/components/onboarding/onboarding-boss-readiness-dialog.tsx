@@ -91,7 +91,7 @@ export function OnboardingBossReadinessDialog(p: {
         p.onOpenChange(open)
       }}
     >
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Einrichtung prüfen</DialogTitle>
           <DialogDescription>

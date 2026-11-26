@@ -63,12 +63,12 @@
     "blockedHint": "Still required: password at least 8 characters, both fields must match, and a valid seed (generate or paste)."
   },
   "sdkMnemonicPref": {
-    "label": "Remember wallet seed",
-    "hint": "On unlock/save, write the session seed into the vault file. A seed already stored is no longer wiped by a normal local save."
+    "label": "Wallet seed in vault file",
+    "hint": "After restart, vault password is enough — no re-typing the seed. Default on (recommended)."
   },
   "messengerSetup": {
-    "link": "or set up messenger",
-    "hint": "Guided wizard — step by step, pause anytime",
+    "link": "or set up messenger (friends)",
+    "hint": "Wallet, chat mailbox, optional radio — no helper handoff; pause anytime",
     "linkBoss": "or set up command post",
     "hintBoss": "Wallet, package, mailboxes and first helpers — skip password for now"
   },

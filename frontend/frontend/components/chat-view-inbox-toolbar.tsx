@@ -2,7 +2,7 @@
 
 /**
  * Posteingang: Kopfzeile — Optionen (Wire/Klartext/Hash/Export/Pakete).
- * Move-Vertrag (Package-ID): Einstellungen → Expertenmodus.
+ * Move-Vertrag (Package-ID): Einstellungen → IOTA → Expertenmodus.
  * NFT-Mint/Galerie: Hauptmenü-Wallet (nicht hier).
  * Aktualisieren liegt im App-Header neben Tresor (nicht hier).
  */
@@ -537,7 +537,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               <button
                 type="button"
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-                title="Optionen: Chain-Text, PWMSG entschlüsseln, Hash, Export. Medien: Export → Galerie. Vertrag: Einstellungen → Expertenmodus."
+                title="Optionen: Chain-Text, PWMSG entschlüsseln, Hash, Export. Medien: Export → Galerie. Vertrag: Einstellungen → IOTA → Expertenmodus."
               >
                 <Settings2 className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
                 Optionen

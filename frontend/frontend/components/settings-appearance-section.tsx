@@ -48,15 +48,21 @@ import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
 const INCOMING_TONE_CHANNELS: IncomingToneChannel[] = ['dialog', 'group', 'pinnwand']
 
-const COLOR_FIELDS: { key: keyof CustomAppearanceColors; label: string }[] = [
-  { key: 'background', label: 'Hintergrund' },
-  { key: 'primary', label: 'Primär' },
-  { key: 'accent', label: 'Akzent' },
-  { key: 'border', label: 'Rahmen' },
-  { key: 'pathOnline', label: 'Online-Pfad' },
-  { key: 'pathMesh', label: 'Funk-Pfad' },
-  { key: 'pathTelegram', label: 'Telegram-Pfad' },
-]
+/** Semantik-Tokens — nicht jedes UI-Widget einzeln (sonst Theme-Chaos). */
+const COLOR_FIELDS: { key: Exclude<keyof CustomAppearanceColors, 'borderWidth'>; label: string; hint: string }[] =
+  [
+    { key: 'background', label: 'Hintergrund', hint: 'Seitenfläche' },
+    { key: 'card', label: 'Karte / Kasten', hint: 'Karten, Panels' },
+    { key: 'primary', label: 'Primär', hint: 'CTAs, Links, Fokus' },
+    { key: 'accent', label: 'Akzent / Mute', hint: 'Nebenflächen, Inputs' },
+    { key: 'border', label: 'Rahmen', hint: 'Linien, Ränder' },
+    { key: 'pathOnline', label: 'Online-Pfad', hint: 'Sendepfad + Chatblasen' },
+    { key: 'pathMesh', label: 'Funk-Pfad', hint: 'Sendepfad + Chatblasen' },
+    { key: 'pathTelegram', label: 'Telegram-Pfad', hint: 'Sendepfad + Chatblasen' },
+    { key: 'pathIota', label: 'IOTA-Pfad', hint: 'Sendepfad + Chatblasen' },
+    { key: 'pathAdhoc', label: 'Ad-hoc-Pfad', hint: 'Sendepfad + Chatblasen' },
+    { key: 'pathSos', label: 'SOS-Pfad', hint: 'Sendepfad-Button' },
+  ]
 
 export function SettingsAppearanceSection() {
   const { t } = useAppTranslation('dashboard')
@@ -135,9 +141,6 @@ export function SettingsAppearanceSection() {
         <Palette className="h-5 w-5 text-primary" aria-hidden />
         <h4 className="font-semibold text-foreground">Erscheinungsbild</h4>
       </div>
-      <p className="mb-3 text-[11px] text-muted-foreground">
-        Rahmen und Überschriften folgen den Tokens Hintergrund / Karte / Rahmen / Primär.
-      </p>
 
       <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
         <Label htmlFor="appearance-custom" className="text-sm text-foreground">
@@ -149,7 +152,7 @@ export function SettingsAppearanceSection() {
       {customOn ? (
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
-            {COLOR_FIELDS.map(({ key, label }) => (
+            {COLOR_FIELDS.map(({ key, label, hint }) => (
               <label key={key} className="flex items-center gap-2 text-sm">
                 <input
                   type="color"
@@ -160,9 +163,13 @@ export function SettingsAppearanceSection() {
                   }
                   onChange={(e) => updateColor(key, e.target.value)}
                   className="h-9 w-12 cursor-pointer rounded border border-border bg-transparent p-0.5"
-                  aria-label={label}
+                  aria-label={`${label} (${hint})`}
+                  title={hint}
                 />
-                <span className="text-muted-foreground">{label}</span>
+                <span className="min-w-0">
+                  <span className="block text-muted-foreground">{label}</span>
+                  <span className="block text-[10px] text-muted-foreground/80">{hint}</span>
+                </span>
               </label>
             ))}
           </div>
@@ -233,10 +240,6 @@ export function SettingsAppearanceSection() {
           <Volume2 className="h-4 w-4 text-primary" aria-hidden />
           <h5 className="text-sm font-semibold text-foreground">Klang &amp; Feedback</h5>
         </div>
-        <p className="text-[11px] text-muted-foreground">
-          Klack = mechanisch beim Antippen. Klick-Ton = kurze Pieptöne (Entsperren/Fehler/Probe). Getrennt
-          schaltbar. Magnet optional.
-        </p>
         <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
           <Label htmlFor="ui-klack" className="text-sm text-foreground">
             Klack (Button)
@@ -265,57 +268,11 @@ export function SettingsAppearanceSection() {
             }}
           />
         </div>
-        <div
-          className={`space-y-2 rounded-lg border border-border bg-muted/20 px-3 py-2 ${soundOn || klackOn ? '' : 'opacity-50'}`}
-        >
-          <div className="flex items-center justify-between gap-3">
-            <Label htmlFor="ui-sound-volume" className="text-sm text-foreground">
-              Lautstärke
-            </Label>
-            <span className="tabular-nums text-xs text-muted-foreground">{soundVolume}%</span>
-          </div>
-          <input
-            id="ui-sound-volume"
-            type="range"
-            min={0}
-            max={100}
-            step={5}
-            value={soundVolume}
-            disabled={!soundOn && !klackOn}
-            data-no-tap-feedback="true"
-            onInput={(e) => {
-              const v = Number((e.target as HTMLInputElement).value)
-              setSoundVolume(v)
-              persistSoundFeedbackVolume(v)
-            }}
-            onChange={(e) => {
-              const v = Number(e.target.value)
-              setSoundVolume(v)
-              persistSoundFeedbackVolume(v)
-            }}
-            onPointerUp={() => {
-              if (readSoundFeedbackVolume() <= 0) return
-              if (klackOn) playKlack()
-              else if (soundOn) playTapClick('soft')
-            }}
-            className="w-full accent-[var(--path-online)]"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={soundVolume}
-          />
-          <p className="text-[11px] text-muted-foreground">
-            Nach dem Loslassen Probe-Ton. 0 = stumm, 100 = laut. Gilt auch für Eingangs-Töne. Hard-Refresh falls
-            der Regler noch stumm wirkt.
-          </p>
-        </div>
         <div className="space-y-2 rounded-lg border border-border bg-muted/20 px-3 py-2">
           <div className="flex items-center justify-between gap-3">
-            <div>
-              <Label htmlFor="ui-incoming-tone" className="text-sm text-foreground">
-                {t('appearance.incomingTone')}
-              </Label>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">{t('appearance.incomingToneHint')}</p>
-            </div>
+            <Label htmlFor="ui-incoming-tone" className="text-sm text-foreground">
+              {t('appearance.incomingTone')}
+            </Label>
             <Switch
               id="ui-incoming-tone"
               checked={incomingMaster}
@@ -359,6 +316,63 @@ export function SettingsAppearanceSection() {
             ))}
           </div>
         </div>
+        <div
+          className={`space-y-2 rounded-lg border border-border bg-muted/20 px-3 py-2 ${
+            soundOn || klackOn || incomingMaster ? '' : 'opacity-50'
+          }`}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="ui-sound-volume" className="text-sm text-foreground">
+              Lautstärke (Klick / Klack / Eingang)
+            </Label>
+            <span className="tabular-nums text-xs text-muted-foreground">{soundVolume}%</span>
+          </div>
+          <input
+            id="ui-sound-volume"
+            type="range"
+            min={0}
+            max={100}
+            step={5}
+            value={soundVolume}
+            disabled={!soundOn && !klackOn && !incomingMaster}
+            data-no-tap-feedback="true"
+            onInput={(e) => {
+              const v = Number((e.target as HTMLInputElement).value)
+              setSoundVolume(v)
+              persistSoundFeedbackVolume(v)
+            }}
+            onChange={(e) => {
+              const v = Number(e.target.value)
+              setSoundVolume(v)
+              persistSoundFeedbackVolume(v)
+            }}
+            onPointerUp={() => {
+              if (readSoundFeedbackVolume() <= 0) return
+              primeAudioFromUserGesture()
+              if (incomingMaster) playIncomingMessageTone('dialog', { force: true })
+              else if (klackOn) playKlack()
+              else if (soundOn) playTapClick('soft')
+            }}
+            className="w-full accent-[var(--path-online)]"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={soundVolume}
+          />
+        </div>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
+          <Label htmlFor="ui-magnet" className="text-sm text-foreground">
+            Magnet beim Darüberfahren (aus, nur Maus)
+          </Label>
+          <Switch
+            id="ui-magnet"
+            checked={magnetOn}
+            onCheckedChange={(on) => {
+              setMagnetOn(on)
+              persistMagnetFeedbackEnabled(on)
+            }}
+          />
+        </div>
+        <p className="pt-1 text-[11px] font-medium text-muted-foreground">Sonstiges</p>
         <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
           <div>
             <Label htmlFor="ui-attachment-preview" className="text-sm text-foreground">
@@ -372,19 +386,6 @@ export function SettingsAppearanceSection() {
             onCheckedChange={(on) => {
               setAttachmentPreview(on)
               persistAttachmentPreviewEnabled(on)
-            }}
-          />
-        </div>
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2">
-          <Label htmlFor="ui-magnet" className="text-sm text-foreground">
-            Magnet beim Darüberfahren (aus, nur Maus)
-          </Label>
-          <Switch
-            id="ui-magnet"
-            checked={magnetOn}
-            onCheckedChange={(on) => {
-              setMagnetOn(on)
-              persistMagnetFeedbackEnabled(on)
             }}
           />
         </div>

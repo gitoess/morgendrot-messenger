@@ -1,6 +1,6 @@
 /**
  * Optional: API-Tresor nach Abwesenheit automatisch sperren.
- * Default 0 = aus — Sperren nur per Abmelden / „Sitzung beenden“.
+ * Default 0 = aus — Sperren nur per Abmelden / Soft-Pause-Badge.
  * Reload (F5) sperrt nicht.
  */
 

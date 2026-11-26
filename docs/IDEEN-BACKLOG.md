@@ -8,9 +8,12 @@ Kurznotizen für spätere Phasen — **kein** Implementierungsversprechen.
 
 **Entscheidung 2026-11-20:** Statt vieler Einzel-Gates: bei `locked` Messenger-Hauptfläche ausgrauen/`pointer-events: none`, **nur** Unlock-Dialog bedienbar. Optional Statusleiste sichtbar; SOS nur mit expliziter Whitelist.
 
-**Ist 2026-11-22 (MVP):** `shouldApplyVaultFailClosedOverlay` + `VaultFailClosedSurface` in `messenger-dashboard` / `projekt-dashboard`. Hard-Lock nur; Wizard/Helper-Seed unterdrücken Scrim wie Unlock-Dialog. Soft-Lock unverändert (Chat lesbar). SOS bleibt bei Hard-Lock ohnehin ausgeblendet.
+**Ist 2026-11-24 / Badge 2026-11-26:** Zwei klare Modi:
+- **Abmelden** = Wipe + Unlock-Dialog + Übersicht.
+- **Tresor sperren** (Badge bereit→Klick) = Soft-Pause (Scrim, **RAM bleibt**); **Weitersprechen nur nach Passwort**.
+- Badge-Text nur **bereit | gesperrt**; Pause/F5 stecken hinter „gesperrt“ + Tooltip.
 
-**Nicht:** Soft-Lock (lesen ok / schreiben gesperrt) als zweites Fail-Closed — verdoppelt Logik.
+Auge im Unlock: `mousedown preventDefault` gegen Dialog-Flackern.
 
 ---
 
@@ -29,12 +32,51 @@ Kurznotizen für spätere Phasen — **kein** Implementierungsversprechen.
 
 ---
 
-## Visitenkarte teilen (QR / Nachricht) — über Empfangen hinaus
+## Visitenkarte + Profilbild (Platzierung & Sicherheit)
 
-**Ist:** Wallet **Empfangen** = IOTA-Adresse-QR; Sidebar **Meine Kontakt-ID** / Peering-QR.  
-**Idee:** Eine „Teilen“-Aktion (Info/Ich): wählbare Felder (IOTA, Funk-Node, Telegram, Label) → QR / `.morg` / Klartext → optional als Nachricht senden.  
-**Status:** Backlog (2026-11-22).  
-**MVP später:** bestehende Peering-/Kontakt-QR erweitern, **nicht** parallele dritte QR-Welt. Wallet-Empfangen unverändert lassen (Freeze).
+**Entscheidung 2026-11-26 (UX-Ort):** **Ein** Hub unter Dialog **„Ich“** (`ChatViewSelfProfileDialog`) — nicht ein zweiter Button in der Sidebar und nicht unter Wallet-Empfangen (Freeze).
+
+| Aktion in „Ich“ | Inhalt |
+|-----------------|--------|
+| **Visitenkarte teilen** (Button) | Checkboxen: Anzeigename, Wallet-ID, optional TG-/Funk-Feld, optional ECDH/Peering — → bestehendes **Kontakt-QR** (`k:'mc'`) / Text / später Nachricht. Keine dritte QR-Welt. |
+| **Mein Profilbild** (später) | Bild wählen/zuschneiden **hier**; „Mit Visitenkarte anbieten“ = Opt-in. |
+
+**Ist heute:** „Ich“ = Kontakt-ID + Peering-QR + technische IDs. Empfangen-QR = nur Coins.
+
+**Profilbild — Stufen (nicht jetzt bauen):**
+
+| Stufe | Was | Telegram-ähnlich? |
+|-------|-----|-------------------|
+| **A lokal** | Empfänger speichert *dein* Bild lokal; du kannst Kontakten auch manuell Bilder zuordnen | Teilweise |
+| **B teilen** | Beim Teilen der Visitenkarte / nach Scan: kleines Bild oder Hash mitliefern | Ja |
+
+**Sicherheit / Logik (Pflicht beim Bau):**
+
+- **Kein Vollbild im QR** — QR bleibt klein; Avatar max. ~2–4 KB Thumbnail **außerhalb** QR (z. B. kurze Folge-Nachricht / Datei nach Scan) oder nur **Hash** + späterer Abruf nach Bestätigung.
+- **Keine stillen Remote-URLs** als Pflicht (Tracking/SSRF) — Opt-in, lokal speichern.
+- Empfänger: **lokales Override** (Spitzname/Bild) schlägt fremdes Profilbild.
+- Wallet-Empfangen unverändert.
+
+**Reihenfolge Bau:** Visitenkarte-Checkboxen in „Ich“ → Avatar Opt-in → Telefonbuch zeigt empfangenes Bild. **Status:** Backlog — **nach** Nachrichten-Klarheit + Solo-Wizard, nicht parallel.
+
+---
+
+## Storage-Rebate-Übersicht („offene Rebates“)
+
+**Entscheidung 2026-11-26:** **Nicht bauen** als eigene Wallet-Karte „Rebate bereit“ (Analog zu NFT-Zurückholen).
+
+**Warum:** Auf IOTA/Sui ist Storage-Rebate **kein** separates abholbares Guthaben. Beim Burn/Purge/Vault-Replace fließt der Rebate **in derselben TX** in die Gas-Abrechnung; der Saldo ändert sich still. Es gibt keine Queue „offen und wartet“.
+
+**Ist 2026-11-26:** Burn-Status „Burn ok · Rebate …“ wenn `gasSummary.storageRebate` kommt (kein Claim-Queue).  
+**Nicht:** Explorer-Scraping aller löschbaren Objekte nur für Theater.
+
+---
+
+## NFT-Bezug im Posteingang (optional)
+
+**Idee:** Kompakt anzeigen, **welches NFT** eine Nachricht lesbar macht; optional Chip an Zeilen-Aktionen.  
+**Ist 2026-11-26:** Lange NFT-Gate-/Passphrase-Prosa entfernt; bei NFT-Gate kurze ID-Zeile.  
+**Nicht:** Essay-Banner; kein Pflicht-NFT an jeder Klartextzeile.
 
 ---
 

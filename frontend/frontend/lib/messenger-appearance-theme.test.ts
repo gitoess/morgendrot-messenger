@@ -1,10 +1,12 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest'
 import {
+  DEFAULT_CUSTOM_APPEARANCE,
   DEFAULT_MESSENGER_APPEARANCE,
   MESSENGER_APPEARANCE_STORAGE_KEY,
   applyMessengerAppearance,
   isMessengerAppearanceId,
   normalizeMessengerAppearanceId,
+  persistCustomAppearance,
   persistMessengerAppearance,
   readMessengerAppearanceId,
 } from '@/frontend/lib/messenger-appearance-theme'
@@ -62,5 +64,28 @@ describe('messenger-appearance-theme', () => {
     applyMessengerAppearance('light')
     expect(document.documentElement.getAttribute('data-appearance')).toBe('light')
     expect(document.documentElement.style.colorScheme).toBe('light')
+  })
+
+  it('Custom: Sendepfad-Farben setzen --path-* (auch für Chatblasen)', () => {
+    persistCustomAppearance(true, {
+      ...DEFAULT_CUSTOM_APPEARANCE,
+      pathOnline: '#112233',
+      pathMesh: '#445566',
+      pathTelegram: '#778899',
+      pathIota: '#aabbcc',
+      pathAdhoc: '#ddeeff',
+      pathSos: '#ff0011',
+      card: '#0a0b0c',
+    })
+    const s = document.documentElement.style
+    expect(document.documentElement.getAttribute('data-appearance')).toBe('custom')
+    expect(s.getPropertyValue('--path-online').trim()).toBe('#112233')
+    expect(s.getPropertyValue('--path-mesh').trim()).toBe('#445566')
+    expect(s.getPropertyValue('--path-telegram').trim()).toBe('#778899')
+    expect(s.getPropertyValue('--path-iota').trim()).toBe('#aabbcc')
+    expect(s.getPropertyValue('--path-adhoc').trim()).toBe('#ddeeff')
+    expect(s.getPropertyValue('--path-sos').trim()).toBe('#ff0011')
+    expect(s.getPropertyValue('--card').trim()).toBe('#0a0b0c')
+    expect(s.getPropertyValue('--card').trim()).not.toBe(s.getPropertyValue('--background').trim())
   })
 })

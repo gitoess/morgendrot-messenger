@@ -1,7 +1,7 @@
 import type { ProjectType, ProjectVariant } from '@/frontend/lib/types'
 
 export type DashboardActiveView = {
-  type: ProjectType | 'settings' | 'config'
+  type: ProjectType | 'settings' | 'config' | 'iota'
   variant?: ProjectVariant
 }
 
@@ -30,7 +30,7 @@ export function parseDashboardActiveView(
     const v = JSON.parse(raw) as unknown
     if (!v || typeof v !== 'object') return null
     const o = v as Record<string, unknown>
-    if (o.type === 'settings' || o.type === 'config') {
+    if (o.type === 'settings' || o.type === 'config' || o.type === 'iota') {
       return { type: o.type }
     }
     /** Tresor-Kachel entfernt — Inhalt liegt unter Einstellungen. */

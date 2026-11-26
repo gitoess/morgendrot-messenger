@@ -11,8 +11,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { UiPasswordInput } from '@/frontend/components/ui-password-input'
 import { VaultUnlockDialog } from '@/frontend/components/vault-unlock-dialog'
 
 export function DashboardSharedDialogs(p: {
@@ -41,6 +41,8 @@ export function DashboardSharedDialogs(p: {
     onPasswordChange: (v: string) => void
     onClose: () => void
     onSync: () => void | Promise<void>
+    /** Soft-Pause: Passwort nur zur Freigabe, Secrets bleiben im RAM. */
+    softResume?: boolean
   }
   unlock: {
     unlockMode: DashboardUnlockMode
@@ -138,15 +140,18 @@ export function DashboardSharedDialogs(p: {
           open={p.sessionSignerSync.open}
           onOpenChange={(open) => !open && p.sessionSignerSync?.onClose()}
         >
-          <DialogContent className="flex max-h-[min(92vh,640px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
-            <DialogHeader className="space-y-1 border-b border-border/60 px-5 pb-4 pt-5 text-left">
-              <DialogTitle>Session-Signer laden</DialogTitle>
+          <DialogContent className="gap-4 p-5 sm:max-w-md">
+            <DialogHeader className="space-y-1 text-left">
+              <DialogTitle>
+                {p.sessionSignerSync.softResume ? 'Weitersprechen' : 'Session-Signer laden'}
+              </DialogTitle>
               <DialogDescription>
-                Der Tresor ist schon offen. Noch einmal Vault-Passwort: lädt den Signer in diesen Browser (RAM) für
-                Direct-Send, On-Chain/NFT und Zeitkapsel — Testnet wie Mainnet. Nach Reload oft nötig.
+                {p.sessionSignerSync.softResume
+                  ? 'Vault-Passwort — danach weiter.'
+                  : 'Der Tresor ist schon offen. Noch einmal Vault-Passwort: lädt den Signer in diesen Browser (RAM) für Direct-Send, On-Chain/NFT und Zeitkapsel — Testnet wie Mainnet. Nach Reload oft nötig.'}
               </DialogDescription>
             </DialogHeader>
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4">
+            <div className="space-y-3">
               {p.vaultContextHint ? (
                 <p className="rounded-md border border-sky-500/35 bg-sky-500/10 px-3 py-2 text-xs leading-relaxed text-sky-950 dark:text-sky-100">
                   {p.vaultContextHint}
@@ -154,15 +159,15 @@ export function DashboardSharedDialogs(p: {
               ) : null}
               <div className="space-y-2">
                 <Label htmlFor="session-signer-vault-password">Vault-Passwort</Label>
-                <Input
+                <UiPasswordInput
                   id="session-signer-vault-password"
-                  type="password"
                   value={p.sessionSignerSync.password}
-                  onChange={(e) => p.sessionSignerSync?.onPasswordChange(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !p.sessionSignerSync?.busy) void p.sessionSignerSync?.onSync()
+                  onChange={(v) => p.sessionSignerSync?.onPasswordChange(v)}
+                  onEnter={() => {
+                    if (!p.sessionSignerSync?.busy) void p.sessionSignerSync?.onSync()
                   }}
                   autoComplete="current-password"
+                  disabled={p.sessionSignerSync.busy}
                 />
               </div>
               {p.sessionSignerSync.error ? (
@@ -177,7 +182,11 @@ export function DashboardSharedDialogs(p: {
                   disabled={p.sessionSignerSync.busy || !p.sessionSignerSync.password.trim()}
                   onClick={() => void p.sessionSignerSync?.onSync()}
                 >
-                  {p.sessionSignerSync.busy ? 'Lade …' : 'Signer laden'}
+                  {p.sessionSignerSync.busy
+                    ? 'Prüfe …'
+                    : p.sessionSignerSync.softResume
+                      ? 'Weitersprechen'
+                      : 'Signer laden'}
                 </Button>
               </div>
             </div>

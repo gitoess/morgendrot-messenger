@@ -97,7 +97,7 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
   return (
     <div
       id="chat-partner-setup-panel"
-      className="shrink-0 max-h-[min(32vh,18rem)] scroll-mt-4 overflow-y-auto overscroll-contain rounded-xl border border-border bg-card p-4"
+      className="shrink-0 scroll-mt-4 rounded-xl border border-border bg-card p-4"
     >
       <h3 className="mb-3 text-base font-semibold text-foreground">Funk & Geräte</h3>
 

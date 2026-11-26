@@ -11,3 +11,13 @@ export function primeSettingsCategory(category: SettingsCategoryId): void {
     /* ignore */
   }
 }
+
+/** Kategorien ausblenden (IOTA-Messenger: kein Funk/Telegram-Tab). */
+export function isSettingsCategoryVisible(
+  id: SettingsCategoryId,
+  caps: { hideFunk?: boolean; hideTelegram?: boolean }
+): boolean {
+  if (id === 'funk' && caps.hideFunk) return false
+  if (id === 'telegram' && caps.hideTelegram) return false
+  return true
+}

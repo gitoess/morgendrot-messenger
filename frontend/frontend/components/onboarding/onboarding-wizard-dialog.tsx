@@ -17,8 +17,11 @@ import {
   OnboardingHelperWalletStep,
   OnboardingMeshtasticStep,
   OnboardingWandererAddressStep,
+  OnboardingWandererIotaStep,
   OnboardingWandererMailboxStep,
+  OnboardingWandererTelegramStep,
   OnboardingWandererWalletStep,
+  OnboardingWandererWelcomeStep,
 } from '@/frontend/components/onboarding/onboarding-inline-step-panels'
 import {
   buildOnboardingSkipContext,
@@ -157,7 +160,7 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
       : path === 'helper'
         ? 'Helfer einrichten'
         : path === 'wanderer'
-          ? 'Privat einrichten'
+          ? 'Solo-Einrichtung'
           : 'Einrichtung'
 
   const renderStepBody = () => {
@@ -187,8 +190,14 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
 
     if (path === 'wanderer') {
       switch (stepId) {
+        case 'welcome':
+          return <OnboardingWandererWelcomeStep />
         case 'wallet':
           return <OnboardingWandererWalletStep {...panelProps} />
+        case 'iota':
+          return <OnboardingWandererIotaStep {...panelProps} />
+        case 'telegram':
+          return <OnboardingWandererTelegramStep {...panelProps} />
         case 'address':
           return <OnboardingWandererAddressStep {...panelProps} />
         case 'private-mailbox':
@@ -254,7 +263,7 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
       nextDisabled={nextDisabled}
       showNextChevron={stepId !== 'done'}
     >
-      <div className="max-h-[min(60vh,32rem)] overflow-y-auto pr-1">{renderStepBody()}</div>
+      <div className="min-w-0">{renderStepBody()}</div>
     </OnboardingWizardShell>
   )
 }

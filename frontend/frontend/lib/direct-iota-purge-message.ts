@@ -50,7 +50,10 @@ async function purgeOnce(opts: {
   nonce: bigint
   variant: PurgeMailboxMessageVariant
   mailboxObjectId: string
-}): Promise<{ ok: true; digest?: string } | { ok: false; error: string }> {
+}): Promise<
+  | { ok: true; digest?: string; gasSummary?: { storageRebate?: string } }
+  | { ok: false; error: string }
+> {
   const ctx = resolveDirectIotaSubmitContext({ requireRecipient: opts.recipient })
   if (!ctx.ok) return ctx
 
@@ -86,7 +89,11 @@ async function purgeOnce(opts: {
     await attachGasPaymentForOwner(client, txb, ctx.snap.senderAddress.trim())
     const out = await signAndExecuteTransactionWithSigner({ client, transaction: txb, signer: ctx.signer })
     if (isDirectChainExecutionSuccess(out.digest, out.status)) {
-      return { ok: true, digest: out.digest }
+      return {
+        ok: true,
+        digest: out.digest,
+        gasSummary: out.gasSummary,
+      }
     }
     return { ok: false, error: `Chain-Status: ${out.status || 'kein Digest'}.` }
   } catch (e) {
@@ -102,7 +109,15 @@ export async function tryPurgeMailboxMessageViaDirectIota(opts: {
   mailboxObjectId?: string
   /** Weitere Mailbox-IDs bei Abort 10 (Shared + aktive Private). */
   mailboxCandidates?: string[]
-}): Promise<{ ok: true; digest?: string; mailboxObjectId?: string } | { ok: false; error: string }> {
+}): Promise<
+  | {
+      ok: true
+      digest?: string
+      mailboxObjectId?: string
+      gasSummary?: { storageRebate?: string }
+    }
+  | { ok: false; error: string }
+> {
   if (!canTryDirectPurgeMessageSubmit()) {
     return { ok: false, error: 'Direkt-Purge: Session, RPC oder Ketten-IDs fehlen.' }
   }

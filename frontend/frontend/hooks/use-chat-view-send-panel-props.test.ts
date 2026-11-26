@@ -9,6 +9,9 @@ vi.mock('@/frontend/hooks/use-chat-view-telegram-composer', () => ({
     handleTelegramOnly: vi.fn(),
     canSendTelegramOnly: false,
     telegramOnlyBusy: false,
+    wantsTelegramPhoto: false,
+    telegramUnencryptedMediaAck: false,
+    setTelegramUnencryptedMediaAck: vi.fn(),
   }),
 }))
 

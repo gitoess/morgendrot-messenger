@@ -112,8 +112,29 @@ describe('onboarding-progress-store', () => {
 
   it('markOnboardingStepComplete erhöht Index', () => {
     startOnboarding('wanderer')
+    markOnboardingStepComplete('welcome')
     markOnboardingStepComplete('wallet')
     expect(readOnboardingProgress()?.completedSteps).toContain('wallet')
+  })
+
+  it('wanderer startet bei Willkommen; legacy address→iota', () => {
+    startOnboarding('wanderer')
+    expect(getWizardViewStep(readOnboardingProgress()!).stepId).toBe('welcome')
+    window.localStorage.setItem(
+      'morgendrot.onboardingProgress.v2',
+      JSON.stringify({
+        path: 'wanderer',
+        currentStepIndex: 1,
+        completedSteps: ['wallet'],
+        skippedSteps: ['address'],
+        dismissed: false,
+      })
+    )
+    const p = readOnboardingProgress()!
+    expect(p.skippedSteps).toContain('iota')
+    expect(p.skippedSteps).toContain('welcome')
+    expect(p.completedSteps).toContain('wallet')
+    expect(p.completedSteps).not.toContain('address')
   })
 
   it('shouldOfferMessengerSetupFromVault bis Wizard fertig', () => {
@@ -133,6 +154,11 @@ describe('onboarding-progress-store', () => {
   it('resolveMessengerSetupOnboardingPath', () => {
     expect(resolveMessengerSetupOnboardingPath('boss')).toBe('boss')
     expect(resolveMessengerSetupOnboardingPath('messenger')).toBe('wanderer')
+    expect(resolveMessengerSetupOnboardingPath('boss', { peerMessengerOnly: true })).toBe('wanderer')
+  })
+
+  it('peerMessengerOnly erzwingt Wanderer-Pfad auch bei ROLE=boss', () => {
+    expect(resolveWizardOnboardingPath({ role: 'boss', peerMessengerOnly: true })).toBe('wanderer')
   })
 
   it('boss wallet skip nur bei Browser-Signer', () => {

@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { SettingsCategoryId } from '@/frontend/lib/settings-navigation'
+import { SETTINGS_NAV_ACTIVE_CLASS } from '@/frontend/lib/messenger-appearance-theme'
 
 export type { SettingsCategoryId }
 
@@ -31,15 +32,21 @@ export function SettingsCategoryNav(p: SettingsCategoryNavProps) {
             aria-selected={selected}
             onClick={() => p.onSelect(cat.id)}
             className={cn(
-              'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors lg:w-full',
+              'inline-flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left text-sm font-bold transition-colors lg:w-full',
               selected
-                ? 'border-[var(--path-online)] bg-[color-mix(in_oklab,var(--path-online)_12%,var(--card))] text-foreground'
-                : 'border-border bg-card text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                ? SETTINGS_NAV_ACTIVE_CLASS[cat.id]
+                : 'border-border/70 bg-card/90 text-foreground hover:bg-muted/60'
             )}
           >
             {cat.icon}
             {cat.label}
-            <ChevronDown className={cn('h-4 w-4 transition-transform lg:hidden', selected ? 'rotate-180' : '')} aria-hidden />
+            <ChevronDown
+              className={cn(
+                'ml-auto h-4 w-4 shrink-0 transition-transform lg:hidden',
+                selected ? 'rotate-180 opacity-90' : 'opacity-70'
+              )}
+              aria-hidden
+            />
           </button>
         )
       })}

@@ -1,6 +1,11 @@
 /**
- * Weiches Privacy-Lock im Chat: Passphrasen/Signer aus RAM,
- * API-Tresor bleibt offen — kein Auto-Login-Dialog über dem Messenger.
+ * Badge „Tresor sperren“ (Soft-Pause):
+ * - Messenger ausgegraut / nicht bedienbar (Fail-closed Scrim)
+ * - Secrets/Signer bleiben im RAM
+ * - Weitersprechen nur nach Passwort-Check (kein freies Tippen)
+ * - Gegenstück: Abmelden = Wipe + Unlock-Dialog + Übersicht
+ *
+ * @see docs/IDEEN-BACKLOG.md „Tresor gesperrt“
  */
 
 export const PRIVACY_SOFT_LOCK_CHANGED_EVENT = 'morgendrot:privacy-soft-lock'

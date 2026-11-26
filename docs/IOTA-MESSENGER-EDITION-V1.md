@@ -1,9 +1,9 @@
 # IOTA Messenger — Minimal-Spec (ohne Boss / Helfer / Handoff)
 
-**Stand:** 2026-11-23  
-**Status:** **Freeze-Scheibe 1** (nach Handy 4b–4d) — Kern drin/raus in Roadmap-Merkliste; Endabnahme erst vor Vertrieb. Eigenständiges Desktop-Projekt (`iota-messenger/`) bleibt getrennt von Morgendrot-Voll.  
-**Zielgruppe:** Nutzer, die **nur** über IOTA chatten und Token senden wollen — **ohne** Einsatz-Organisation  
-**Nicht-Ziel:** Offizieller IOTA-Foundation-Messenger, Signal-Ersatz, Behörden-Zertifizierung, Boss-Werkstatt, Handoff-ZIP-Provisioning, **Funk/Meshtastic** (bleibt Morgendrot)
+**Stand:** 2026-11-24  
+**Status:** **Arbeitsmodell „Boss ohne Helfer“** (User 2026-11-24) — Detail-Schnitt erst beim **PC-Messenger-Durchgang**. Caps-Overlay (`hideFunk` etc.) kann noch von Freeze-Scheibe 1 abweichen → Abgleich im Durchgang.  
+**Zielgruppe:** Peers / „Bosse unter Freunden“ — voller Messenger-Alltag **ohne** Helfer-Provisioning  
+**Nicht-Ziel:** Helfer-Handoff, Einsatzleitung-Hub, Boss-provisioniert-Helfer; kein IOTA-Foundation-Produkt
 
 ---
 
@@ -51,7 +51,39 @@ Cursor-Regel: `.cursor/rules/iota-messenger-no-auto-execute.mdc`.
 
 **Technik:** Derselbe Move-Messenger und dieselbe PWA/APK — nur **Capabilities + UI-Gates** schneiden alles andere weg. Kein Protokoll-Neubau.
 
+### 2.1 Arbeitsmodell — Boss ohne Helfer (2026-11-24, vorläufig)
+
+**Kurz:** **Morgendrot = alles.** **IOTA-Messenger ⊂ Morgendrot:** derselbe Chat-Alltag (IOTA **und** Funk **und** Telegram, Gruppen, Freunde = andere „Bosse“), **ohne** Helfer-/Einsatz-Provisioning.
+
+| | IOTA-Messenger | Morgendrot |
+|--|----------------|------------|
+| **Bild** | Boss **ohne** Helfer; Peers/Freunde | Boss **mit** Helfer + Einsatz-Org |
+| **Transport** | IOTA + Funk + Telegram (Alltag) | dasselbe + Org-Extras |
+| **Raus (I)** | Handoff-ZIP, Einsatzleitung-Hub, Helfer einrichten, H.36 Einsatz-Wizard, typische Boss-Admin-Move-UI | behalten |
+| **Detail** | Zeile-für-Zeile erst beim **PC-Durchgang** | — |
+
+**Konflikt merken:** Overlay Freeze-Scheibe 1 setzt noch `hideFunk`/`hideTelegram` — **nicht** still umbauen; Abgleich im Durchgang.
+
+### 2.2 PC-Durchgang — „weg“-Liste (lebend, nur Edition)
+
+Während Morgendrot-UI **bleiben** die Einträge sichtbar; für **IOTA-Messenger** merken / Caps später setzen. Konvention User: „**weg**“ = nur Liste, Code hier nicht streichen.
+
+| # | Weg (IOTA) | Ist / Notiz | Stand |
+|---|------------|-------------|-------|
+| 1 | Header-Badge **Boss** (Role-Pill) | Morgendrot behalten; Edition: Pill aus oder „Messenger“ | 2026-11-24 |
+| 2 | Home-Kachel **Einsatzleitung** | schon `hideEinsatzleitung`; Hub/Handoff ebenfalls | 2026-11-24 |
+| 3 | SOS — Hilferuf | schon `hideSos` (v1); Morgendrot behält Button | 2026-11-24 |
+| 4 | Handoff / Helfer / Erststart-Boss-Karten | Caps vorhanden | zuvor |
+| … | *(weitere Zeilen im Durchgang)* | | |
+
+**Home-Navig (beide Produkte, 2026-11-24):** Wallet + Aktivität nicht permanent auf dem Home — hinter Kachel **IOTA** (wie Nachrichten).
+
+**Onboarding (2026-11-24):** Bei Edition (`hideEinsatzleitung` / `isIotaMessengerProduct`) Vault-Link → **Wanderer/Peer-Wizard** („Messenger einrichten (Freunde)“), nicht Einsatzleitung. Schritte: Wallet → Adresse → Postfach → optional Funk.
+
+**Caps-Ist:** `product-identity.ts` / Overlay — bis Durchgang unverändert lassen außer explizitem Auftrag.
+
 ---
+
 
 ## 3. Nutzer-Flow (Zielbild)
 
@@ -76,30 +108,41 @@ App installieren → Wallet anlegen/importieren (Mnemonic)
 
 ---
 
-## 4. Env-Preset (ein Gerät, kein Handoff)
+## 4. Env — was braucht IOTA Messenger?
 
-```env
-MESSENGER_EDITION=iota-messenger
-UI_VARIANT=messenger
-ROLE=messenger
-SIMPLE_MODE=true
-TRANSPORT_PROFILE=iota-anchored
+**SSOT-Preset:** `tools/iota-messenger/overlays/.env.example` (Stand 2026-11-26).  
+**Nicht** die Root-`.env.example` 1:1 kopieren — das ist **volles Morgendrot** (Boss/Lock/Shop/Monitor); viele Keys sind für die Edition überflüssig oder **falsch** (z. B. `ENABLE_AUTO_EXECUTE=true` dort vs. Edition-Freeze **`false`**).
 
-SIGNER=sdk
-USE_MAILBOX=true
-MAILBOX_ID=0x…          # Shared-Mailbox des Deployments
-PACKAGE_ID=0x…
-RPC_URL=https://api.testnet.iota.cafe
-NEXT_PUBLIC_DIRECT_IOTA_RPC_URL=https://api.testnet.iota.cafe
+### Pflichtliste
 
-ENABLE_PLAINTEXT_CHANNEL=false
-ENABLE_PURGE=true
-ENABLE_REPLAY_PROTECTION=true
-```
+| Variable | Wofür |
+|----------|--------|
+| `MESSENGER_EDITION` / `PRODUCT_ID` = `iota-messenger` | UI-Gates, Produktclaim |
+| `UI_VARIANT=messenger` · `ROLE=messenger` · `SIMPLE_MODE=true` | schlanke Rolle |
+| `TRANSPORT_PROFILE=iota-anchored` | IOTA-Kern, kein Mesh-Default |
+| `SIGNER=sdk` | Wallet lokal (Mnemonic) |
+| `USE_MAILBOX=true` · `PACKAGE_ID` · `MAILBOX_ID` | Chat on-chain (echte `0x…64`, keine Nullen) |
+| `RPC_URL` · `NEXT_PUBLIC_DIRECT_IOTA_RPC_URL` | Fullnode (Testnet-Default ok) |
+| `ENABLE_AUTO_EXECUTE=false` | kein Coin-Fernsteuern aus dem Posteingang |
+| `ENABLE_PLAINTEXT_CHANNEL=false` · `ENABLE_PURGE` · `ENABLE_REPLAY_PROTECTION` | Sicherheits-Defaults |
 
-**Bewusst weggelassen:** `BOSS_ADDRESS`, `REMOTE_SIGNER_URL`, `API_AUTH_TOKEN`, Handoff-Keys, LoRa/Telegram-Flags.
+Lokal-Dev zusätzlich: `ENABLE_UI=true`, `API_PORT`/`UI_PORT`, `API_BIND_HOST=127.0.0.1`.
 
-**Server:** Nicht nötig für Kernnutzung. Optionaler lokaler Node nur für Komfort (Archiv, schwere Befehle) — siehe `docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`.
+### Nicht in der `.env` (andere Stores)
+
+| Inhalt | Wo |
+|--------|-----|
+| Messaging-Keys / Seed / Notizen | Tresor `.morgendrot-vault` |
+| Telegram-Bot-Token (eigener) | Runtime `.morgendrot-runtime-config.json` |
+| Kontakte | Telefonbuch (localStorage → Ziel: Vault) |
+
+### Bewusst weglassen
+
+`BOSS_ADDRESS`, `REMOTE_SIGNER_*`, `API_AUTH_TOKEN`, `LOCK_*`, `MONITOR_*`, Shop/Voucher, Streams-Open, Handoff-ZIP.
+
+**Kritik Ist:** Overlay hatte lange `0x000…`-Platzhalter — App startet, Chat nicht. Root-`.env.example` „Stand: März 2026“ und Defaults mischen Boss+Messenger → verwirrend. **Verbesserung:** Overlay mit Pflicht/Optional/Weglassen + dieser Abschnitt; echte IDs weiter aus Deploy/UI.
+
+**Server:** Kernnutzung ohne Pflicht-Node möglich; optional lokal für Komfort — `docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`.
 
 ---
 

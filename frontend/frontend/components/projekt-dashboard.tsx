@@ -80,7 +80,11 @@ export function ProjektDashboard() {
         unlock={{ ...s.unlock, apiSnapshot: s.apiSnapshot }}
       />
       {s.activeView ? (
-      <VaultFailClosedSurface active={applyVaultFailClosed} className="min-h-screen bg-background">
+      <VaultFailClosedSurface
+        active={applyVaultFailClosed}
+        onRequestUnlock={() => s.requestVaultUnlock()}
+        className="min-h-screen bg-background"
+      >
         {/* Slim Header */}
         <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
           <div className="flex h-14 items-center gap-4 px-4">
@@ -114,7 +118,9 @@ export function ProjektDashboard() {
                   ? 'Einstellungen'
                   : s.activeView.type === 'config'
                     ? '.env anpassen'
-                    : featureTitle(s.activeView.type, projektFeatures)}
+                    : s.activeView.type === 'iota'
+                      ? 'IOTA'
+                      : featureTitle(s.activeView.type, projektFeatures)}
               </span>
             )}
           </div>
@@ -184,7 +190,11 @@ export function ProjektDashboard() {
       </VaultFailClosedSurface>
       ) : (
     <DeploymentProfileBackdrop status={s.apiSnapshot}>
-    <VaultFailClosedSurface active={applyVaultFailClosed} className="min-h-screen bg-background/80">
+    <VaultFailClosedSurface
+      active={applyVaultFailClosed}
+      onRequestUnlock={() => s.requestVaultUnlock()}
+      className="min-h-screen bg-background/80"
+    >
       {/* Header */}
       <header className="border-b border-border bg-card/90 backdrop-blur-sm">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">

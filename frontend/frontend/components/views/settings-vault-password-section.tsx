@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Lock } from 'lucide-react'
 import { toast } from 'sonner'
-import { fetchStatus, vaultChangePassword, vaultLockCommand } from '@/frontend/lib/api'
-import { wipeLocalPassphraseStoresOnLock } from '@/frontend/lib/privacy-lock-wipe'
+import { fetchStatus, vaultChangePassword } from '@/frontend/lib/api'
 import { setVaultPasswordSession } from '@/frontend/lib/vault-password-session'
 import {
   readVaultIdleLockMinutes,
@@ -18,14 +17,16 @@ type SettingsVaultPasswordSectionProps = {
   vaultLocked?: boolean
 }
 
+/**
+ * Passwort ändern + optionales Idle-Lock.
+ * Voll sperren = Chat-Header „Abmelden“ (nicht hier — Doppel zu Soft-Pause-Badge).
+ */
 export function SettingsVaultPasswordSection({ vaultLocked = false }: SettingsVaultPasswordSectionProps) {
   const [changePwCurrent, setChangePwCurrent] = useState('')
   const [changePwNew, setChangePwNew] = useState('')
   const [changePwConfirm, setChangePwConfirm] = useState('')
   const [changePwBusy, setChangePwBusy] = useState(false)
-  const [sessionBusy, setSessionBusy] = useState(false)
   const [hasKeys, setHasKeys] = useState<boolean | undefined>(undefined)
-  const [signerKind, setSignerKind] = useState<string | undefined>(undefined)
   const [idleMinutes, setIdleMinutes] = useState<VaultIdleLockMinutes>(0)
 
   useEffect(() => {
@@ -39,7 +40,6 @@ export function SettingsVaultPasswordSection({ vaultLocked = false }: SettingsVa
       const s = await fetchStatus()
       if ('pollClockHint' in s) {
         setHasKeys(s.hasKeys)
-        setSignerKind(typeof s.signer === 'string' ? s.signer : undefined)
       }
     } catch {
       setHasKeys(undefined)
@@ -78,59 +78,14 @@ export function SettingsVaultPasswordSection({ vaultLocked = false }: SettingsVa
     setChangePwBusy(false)
   }
 
-  const handleVaultLock = async () => {
-    if (
-      !window.confirm(
-        'Sitzung beenden / Tresor voll sperren?\n\n' +
-          'Das ist nicht das weiche Badge-Sperren im Chat.\n\n' +
-          '• Keys + Passwort verlassen den Server-RAM (wie Abmelden)\n' +
-          '• Schnell-Cache entschlüsselter Nachrichten (.inbox.enc neben dem Tresor) wird gelöscht — damit Klartext nicht auf der Platte liegt, während alles gesperrt ist. Nachrichten bleiben on-chain und laden nach Entsperren wieder\n' +
-          '• Tresor-Datei (.morgendrot-vault) bleibt unangetastet\n' +
-          '• Browser-Geheimnisse nur sperren (Ciphertext bleibt), nicht löschen' +
-          (signerKind === 'sdk'
-            ? '\n• Seed: nur aus dem RAM weg; in der Datei bleibt er, wenn gespeichert'
-            : '')
-      )
-    ) {
-      return
-    }
-    setSessionBusy(true)
-    const res = await vaultLockCommand()
-    if (res.ok) {
-      await wipeLocalPassphraseStoresOnLock()
-      toast.message('Sitzung beendet — Tresor-Passwort zum Entsperren eingeben', { duration: 14_000 })
-    } else {
-      toast.error(res.error || res.message || 'Fehler')
-    }
-    await refreshVaultStatus()
-    setSessionBusy(false)
-  }
-
   return (
     <div className="rounded-xl border border-border bg-card p-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Lock className="h-5 w-5 text-primary" />
-          <h4 className="font-semibold text-foreground">Tresor-Passwort ändern</h4>
-        </div>
-        <button
-          type="button"
-          disabled={sessionBusy}
-          onClick={() => void handleVaultLock()}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-600/40 bg-amber-500/15 px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-500/25 disabled:opacity-50 dark:text-amber-200"
-        >
-          <Lock className="h-3.5 w-3.5" />
-          Sitzung beenden
-        </button>
+      <div className="mb-3 flex items-center gap-2">
+        <Lock className="h-5 w-5 text-primary" />
+        <h4 className="font-semibold text-foreground">Tresor-Passwort ändern</h4>
       </div>
-      <p className="mb-3 text-[12px] leading-relaxed text-muted-foreground">
-        <strong className="text-foreground">Sitzung beenden</strong> = volles Sperren wie Abmelden (Keys aus RAM,
-        Inbox-Schnellcache weg). <strong className="text-foreground">Badge im Chat</strong> = nur weich (Chat bleibt
-        offen, kein Cache-Löschen). <strong className="text-foreground">Neu laden (F5)</strong> sperrt den API-Tresor
-        nicht — nur Abmelden / Sitzung beenden / optional Idle. Notfall-Löschung ist darunter separat.
-      </p>
       <label className="mb-4 flex max-w-md flex-col gap-1.5 text-[12px] text-muted-foreground">
-        <span className="font-medium text-foreground">Auto-Sperren nach Abwesenheit</span>
+        <span className="font-medium text-foreground">Auto-Sperren nach Abwesenheit (Idle)</span>
         <select
           className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
           value={idleMinutes}
@@ -141,14 +96,24 @@ export function SettingsVaultPasswordSection({ vaultLocked = false }: SettingsVa
               : 0
             setIdleMinutes(allowed as VaultIdleLockMinutes)
             writeVaultIdleLockMinutes(allowed as VaultIdleLockMinutes)
+            toast.message(
+              allowed === 0
+                ? 'Idle-Sperre aus — nur Abmelden / Soft-Pause / F5 / PWA-Hintergrund.'
+                : `Idle-Sperre: nach ${allowed} Min. ohne Maus/Tastatur → voll sperren.`
+            )
           }}
         >
-          <option value={0}>Aus (nur Knopf)</option>
+          <option value={0}>Aus (empfohlen — nur Abmelden / Badge Soft-Pause)</option>
           <option value={5}>Nach 5 Minuten</option>
           <option value={15}>Nach 15 Minuten</option>
           <option value={30}>Nach 30 Minuten</option>
           <option value={60}>Nach 60 Minuten</option>
         </select>
+        <span className="text-[11px] leading-snug">
+          Default aus. Unabhängig davon: <strong className="font-medium text-foreground">F5</strong> = Browser-PW weg;
+          installierte <strong className="font-medium text-foreground">PWA</strong> im Hintergrund ≈45 s → Hard-Lock.
+          Soft-Pause (Badge) lässt Keys im RAM.
+        </span>
       </label>
       {!canUseVault ? (
         <p className="mb-3 text-[12px] text-amber-800 dark:text-amber-200">
