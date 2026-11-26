@@ -118,7 +118,7 @@ Wenn **an**, erscheinen **in derselben Karte**: **Mainnet-Setup** (Deploy / IDs)
 
 **Mein Kontakt-QR:** Messenger-Identität für Telefonbuch — nicht IOTA-Hub „Empfangen“ (Coins). Funk/Telegram-IDs bleiben in ihren Tabs / Kontakt-Erweitert.
 
-**Visitenkarte / Profilbild (Ziel, nicht Ist):** Teilen und eigenes Profilbild leben unter Dialog **„Ich“** (eine Aktion „Visitenkarte teilen“ + später Bild Opt-in) — nicht unter Empfangen, keine zweite QR-Welt. Details: `docs/IDEEN-BACKLOG.md`.
+**Visitenkarte (Ist MVP):** Sidebar **Ich** → Kontakt-Detail / **Mehr zu Ich** → Block **Visitenkarte teilen**. Profilbild weiter Ziel/Backlog. Details: `docs/IDEEN-BACKLOG.md`.
 
 ### Passwort / Backup / Mailboxen / Schatten
 
