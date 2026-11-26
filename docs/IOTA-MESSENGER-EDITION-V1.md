@@ -178,8 +178,8 @@ Normales `npm run dm` mit `ROLE=boss` = volles Morgendrot → Boss-Pill. Edition
     "simpleMode": true,
     "transport": {
       "iota": { "read": true, "write": true },
-      "lora": { "read": false, "write": false },
-      "telegram": { "read": false, "write": false },
+      "lora": { "read": true, "write": true },
+      "telegram": { "read": true, "write": true },
       "ble": { "read": false, "write": false },
       "streams": { "read": false, "write": false }
     },
@@ -197,8 +197,8 @@ Normales `npm run dm` mit `ROLE=boss` = volles Morgendrot → Boss-Pill. Edition
 }
 ```
 
-**UI sichtbar:** Chats · Posteingang · Kontakte · Gruppen · **IOTA senden** · Status (Wallet, RPC, Queue).  
-**UI versteckt:** Handoff-Import, Boss-Bootstrap, LoRa, Telegram, SOS (v1), Expert-Config, Lock, Shop, Einsatzleitung.
+**UI sichtbar (Align 2026-11-26):** Chats · Posteingang · Kontakte · Gruppen · IOTA · optional Funk/Telegram (Settings) · Status.  
+**UI versteckt:** Handoff/Helfer · SOS · Einsatzleitung · Sensor-Monitor · Einsatz-Alarmgruppe · Shop/Lock.
 
 ### Nicht brauchen (Checkliste Edition / Solo-Test)
 
