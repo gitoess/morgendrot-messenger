@@ -1,6 +1,7 @@
 /**
  * Visitenkarte teilen — Checkboxen → bestehendes Kontakt-QR (`k:'mc'`) + Klartext.
- * Kein Avatar / keine dritte QR-Welt. @see docs/IDEEN-BACKLOG.md
+ * Kein Avatar / keine dritte QR-Welt / kein klassisches Telefon.
+ * @see docs/IDEEN-BACKLOG.md
  */
 
 import { buildContactQrPayload } from '@/frontend/lib/contact-qr'
@@ -12,12 +13,15 @@ export type VisitenkarteShareFlags = {
   includeTelegram: boolean
   includeEcdh: boolean
   includeMailbox: boolean
+  /** Nur Klartext — Mesh-Node-ID ist kein Feld im `mc`-QR. */
+  includeMeshNode: boolean
 }
 
 export type VisitenkarteShareInput = {
   address: string
   displayName?: string | null
   telegramChatId?: string | null
+  meshNodeId?: string | null
   ecdhPubB64?: string | null
   mailboxObjectId?: string | null
   flags: VisitenkarteShareFlags
@@ -33,6 +37,7 @@ export function defaultVisitenkarteShareFlags(opts?: {
   hasTelegram?: boolean
   hasEcdh?: boolean
   hasMailbox?: boolean
+  hasMeshNode?: boolean
 }): VisitenkarteShareFlags {
   return {
     includeDisplayName: opts?.hasDisplayName !== false,
@@ -40,6 +45,7 @@ export function defaultVisitenkarteShareFlags(opts?: {
     includeTelegram: Boolean(opts?.hasTelegram),
     includeEcdh: Boolean(opts?.hasEcdh),
     includeMailbox: Boolean(opts?.hasMailbox),
+    includeMeshNode: Boolean(opts?.hasMeshNode),
   }
 }
 
@@ -50,6 +56,7 @@ export function buildVisitenkarteShare(input: VisitenkarteShareInput): Visitenka
   }
   const name = (input.displayName ?? '').trim()
   const tg = (input.telegramChatId ?? '').trim()
+  const mesh = (input.meshNodeId ?? '').trim()
   const ecdh = (input.ecdhPubB64 ?? '').trim().replace(/\s+/g, '')
   const mb = (input.mailboxObjectId ?? '').trim()
 
@@ -67,6 +74,7 @@ export function buildVisitenkarteShare(input: VisitenkarteShareInput): Visitenka
     lines.push(`Mailbox: ${mb}`)
   }
   if (input.flags.includeTelegram && tg) lines.push(`Telegram-Chat-ID: ${tg}`)
+  if (input.flags.includeMeshNode && mesh) lines.push(`Funk-Node: ${mesh}`)
   if (input.flags.includeEcdh && ecdh) lines.push('ECDH-Pub: im QR enthalten (Feld e)')
   lines.push('')
   lines.push(qrJson)

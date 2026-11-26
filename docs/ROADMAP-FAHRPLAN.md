@@ -28,8 +28,8 @@
 
 **Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
-**Alpha-PC-Checkliste (Messenger, manuell — 2026-11-26):** Soft-Pause→Weitersprechen · Burn · Solo-Wizard · Visitenkarte in „Ich“ · Caps Pill „Messenger“ (Edition) · Zwei-Wallet-Hinweis im Handbuch.  
-**Nächste Bau-Zeile (eine):** Alpha-Zeilen live abhaken *oder* H.16 „Gruppe je Sendepfad“ **nur Spec/Skizze** (kein UI-Big-Bang). Boss/Helfer/Ratchet-Default/TG-Auto-Sidebar-Bau **nicht** parallel.
+**Alpha-PC-Checkliste (Messenger, manuell — 2026-11-26):** Soft-Pause→Weitersprechen · Burn · Solo-Wizard · Visitenkarte in „Ich“ · Caps Pill „Messenger“ (Edition) · Zwei-Wallet-Hinweis im Handbuch — **User: soweit ok**.  
+**Nächste Bau-Zeile (eine):** kleine Messenger-UX-Reste / Spec H.16 „Gruppe je Sendepfad“ (kein UI-Big-Bang). **Profilbild** = Später/Backlog. Boss/Helfer/Ratchet-Default **nicht** parallel.
 
 **„Jetzt fertig“ ≠ gesamtes H.\*-Universum.** Die Nov-22-Triage-Tabelle am Kopf war **PC-Messenger-Alltag** (Unlock, Desk-Smoke, Labels, Soft-Pause, Burn-Doku, Solo-Wizard). Folgendes bleibt **offen / Später** — bewusst nicht „mitabgehakt“:
 
@@ -41,9 +41,9 @@
 | **IOTA↔LoRa / Delayed Upload** | Spec `LORA-IOTA-DELAYED-UPLOAD-SPEC`; **keine** volle IOTA-TX über LoRa (`H.3m`) | **Phase 3 Funk** (+ Gateway) |
 | **Handy / 2. Gerät / H.36 / Shop** | Später-Tabelle | Phasen 2–4 |
 
-**Nicht parallel:** Profilbild/Visitenkarte-Bau, Drehrad/Handy-UI, EXE, Cap/Gap-Experimente, Blind-Big-Bang an Mailbox-Indexer, Ratchet-Default ohne Live-2-Geräte.
+**Nicht parallel:** Profilbild-Bau (Backlog), Drehrad/Handy-UI, EXE, Cap/Gap-Experimente, Blind-Big-Bang an Mailbox-Indexer, Ratchet-Default ohne Live-2-Geräte.
 
-1. **Fokus jetzt:** Alpha-Checkliste / kleine Caps-Reste → **kein** Boss/Helfer-Bau.  
+1. **Fokus jetzt:** Alpha-Checkliste manuell abhaken (Soft-Pause, Burn, Wizard, Visitenkarte im Ich-Blatt, Caps-Pill Edition) → **kein** Boss/Helfer-Bau.  
 2. **Erledigt Phase 1–3 Desk:** Messenger-Kern, 4b–4d, H.25a STABIL. Burn/Solo-Wizard/PC-Durchgang/Soft-Pause-Live + Caps Role-Pill **Ist 2026-11-26**.  
 3. **Scope-Arbeitsmodell (vorläufig):** IOTA-Messenger = **Boss ohne Helfer** + Freunde; Transporte IOTA/Funk/Telegram **drin**; Helfer/Handoff/Einsatz-Hub **raus**. Morgendrot = **alles**. Detail erst im Durchgang — Caps nicht blind flippen.  
 4. **Nicht parallel:** EXE vor Wizard/Durchgang; Cap/Gap-Experimente; WhatsApp/Paywall; Drehrad-Mock.  
@@ -99,7 +99,9 @@
 | **PC-Durchgang** | Live Soft-Pause / Burn / Solo-Wizard | **PASS 2026-11-26** |
 | **Zwei-Wallet PC** | Handbuch § + Stage‑2 Link | **erledigt Doku 2026-11-26** |
 | **Visitenkarte MVP** | „Ich“ Share-Checkboxen → `mc`-QR/Text | **erledigt 2026-11-26** |
-| **Alpha-Checkliste** | Desk-Smoke + Caps + Soft-Pause + Burn + Wizard + Visitenkarte | **offen** — manuell abhaken |
+| **Ich-Blatt UX** | Visitenkarte im Kontakt-Detail; Alarmgruppe raus; kein Chat-öffnen auf Self | **erledigt 2026-11-26** |
+| **Visitenkarte +** | Als Nachricht; TG-Dedupe; Funk-Node optional Klartext; kein Telefon | **erledigt 2026-11-26** |
+| **Alpha-Checkliste** | Desk-Smoke + Caps + Soft-Pause + Burn + Wizard + Visitenkarte | **soweit ok** (User 2026-11-26) |
 
 ### Später machen bzw. nochmals später klären (User-Durchgang ab 2026-11-22)
 

@@ -41,7 +41,9 @@ Details + Tabelle: **`EINSTELLUNGEN-NUTZER-HANDBUCH.md`**.
 
 ### Visitenkarte (Ich)
 
-Unter Sidebar / Profil **„Ich“**: Block **Visitenkarte teilen** — Checkboxen (Name, Wallet, optional Mailbox / TG-ID / ECDH) → **Text** oder **QR-JSON** (`k:'mc'`, gleiches Kontakt-QR). Kein Avatar in dieser Stufe.
+Sidebar **„Ich“** (⋯ **Mehr zu Ich** oder Kontakt-Detail der eigenen Adresse): Block **Visitenkarte teilen** — Checkboxen (Name, Wallet, optional Mailbox / TG-ID / Funk-Node / ECDH) → **Als Nachricht** (Composer), **Text** oder **QR-JSON** (`k:'mc'`). Peering-QR = Partner verbinden; Visitenkarte = Kontaktkarte teilen. **Kein** Telefon/E-Mail-Feld (falscher Produktpfad). **Profilbild** = später Backlog (Opt-in, nicht im QR). **Einsatz-Alarmgruppe** → **Einstellungen → Telegram**.
+
+**Caps (Edition):** Kein eigener Dialog — Produkt-Flags (`NEXT_PUBLIC_PRODUCT_ID=iota-messenger`); Kopfzeile zeigt dann Pill **Messenger** statt Boss.
 
 ### Zwei-Wallet am selben PC (E2EE-Surrogat)
 

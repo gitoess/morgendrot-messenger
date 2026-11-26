@@ -1819,8 +1819,19 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           contactDetailAddress &&
           myAddress.trim() &&
           contactDetailAddress.trim().toLowerCase() === myAddress.trim().toLowerCase() ? (
-            <ChatViewMyWalletIdInline {...myDataPanelProps} variant="panel" />
+            <ChatViewMyWalletIdInline {...myDataPanelProps} variant="panel" hideTelegram />
           ) : undefined
+        }
+        onInsertVisitenkarteMessage={
+          contactDetailAddress &&
+          myAddress.trim() &&
+          contactDetailAddress.trim().toLowerCase() === myAddress.trim().toLowerCase()
+            ? (text) => {
+                setMessage(text)
+                setContactDetailOpen(false)
+                toast.message('Visitenkarte im Composer — Empfänger prüfen und senden.')
+              }
+            : undefined
         }
         isFavorite={
           contactDetailAddress ? readContactFavorites().has(contactDetailAddress.trim().toLowerCase()) : false

@@ -41,6 +41,8 @@ export type ContactPhonebookCardProps = {
   note?: string
   /** Kontakt-Info: Adresse und Kanal-IDs nur unter „Mehr“. */
   hideChannelIds?: boolean
+  /** Eigene Adresse: kein „Chat öffnen“, schlankere Karte. */
+  isSelf?: boolean
 }
 
 function contactInitial(name: string): string {
@@ -96,9 +98,11 @@ export function ContactPhonebookCard(props: ContactPhonebookCardProps) {
     onSelectForMessenger,
     note,
     hideChannelIds,
+    isSelf,
   } = props
 
   void teamRemoveTick
+  const messengerAction = isSelf ? undefined : onSelectForMessenger
 
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -139,71 +143,77 @@ export function ContactPhonebookCard(props: ContactPhonebookCardProps) {
       onMouseLeave={clearLongPress}
     >
       <div className="flex items-start gap-2">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            onToggleFavorite()
-          }}
-          className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg hover:bg-muted"
-          aria-label={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten'}
-        >
-          <Star
-            className={cn('h-5 w-5', isFavorite ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground')}
-          />
-        </button>
+        {isSelf ? null : (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggleFavorite()
+            }}
+            className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg hover:bg-muted"
+            aria-label={isFavorite ? 'Aus Favoriten entfernen' : 'Zu Favoriten'}
+          >
+            <Star
+              className={cn('h-5 w-5', isFavorite ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground')}
+            />
+          </button>
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <div className="flex min-w-0 items-start gap-2">
-              <span
-                className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary"
-                aria-hidden
-              >
-                {contactInitial(displayName)}
-              </span>
-              <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="truncate text-lg font-bold leading-tight text-foreground">{displayName}</h3>
-                {showTeamBadge ? (
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-900 dark:text-sky-100">
-                    <Users className="h-3 w-3" aria-hidden />
-                    Team
-                  </span>
-                ) : null}
-              </div>
-              {roleTags.length > 0 ? (
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {roleTags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border border-violet-500/35 bg-violet-500/10 px-2 py-0.5 text-[10px] font-medium text-violet-950 dark:text-violet-100"
+            {isSelf ? (
+              <div className="min-w-0 flex-1" aria-hidden />
+            ) : (
+              <div className="flex min-w-0 items-start gap-2">
+                <span
+                  className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary"
+                  aria-hidden
+                >
+                  {contactInitial(displayName)}
+                </span>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="truncate text-lg font-bold leading-tight text-foreground">{displayName}</h3>
+                    {showTeamBadge ? (
+                      <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-900 dark:text-sky-100">
+                        <Users className="h-3 w-3" aria-hidden />
+                        Team
+                      </span>
+                    ) : null}
+                  </div>
+                  {roleTags.length > 0 ? (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {roleTags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-full border border-violet-500/35 bg-violet-500/10 px-2 py-0.5 text-[10px] font-medium text-violet-950 dark:text-violet-100"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                  {hideChannelIds ? null : (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onToggleExpand()
+                      }}
+                      className="mt-0.5 font-mono text-xs text-muted-foreground hover:text-foreground"
                     >
-                      {tag}
-                    </span>
-                  ))}
+                      {expanded ? address : maskWalletAddress(address)}
+                    </button>
+                  )}
                 </div>
-              ) : null}
-              {hideChannelIds ? null : (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onToggleExpand()
-                }}
-                className="mt-0.5 font-mono text-xs text-muted-foreground hover:text-foreground"
-              >
-                {expanded ? address : maskWalletAddress(address)}
-              </button>
-              )}
-            </div>
-            </div>
+              </div>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
                   onClick={(e) => e.stopPropagation()}
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border hover:bg-muted"
-                  aria-label="Kontakt-Menü"
+                  aria-label={isSelf ? 'Ich-Menü' : 'Kontakt-Menü'}
                 >
                   <MoreVertical className="h-5 w-5" />
                 </button>
@@ -225,7 +235,7 @@ export function ContactPhonebookCard(props: ContactPhonebookCardProps) {
                 >
                   Bearbeiten / Mailbox
                 </DropdownMenuItem>
-                {onRemoveFromTeam ? (
+                {isSelf ? null : onRemoveFromTeam ? (
                   <DropdownMenuItem
                     className="text-rose-600 focus:text-rose-600 dark:text-rose-400"
                     onSelect={(e) => {
@@ -241,16 +251,20 @@ export function ContactPhonebookCard(props: ContactPhonebookCardProps) {
                     Aus Team entfernt
                   </DropdownMenuItem>
                 ) : null}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onSelect={(e) => {
-                    e.preventDefault()
-                    onRemove()
-                  }}
-                >
-                  Aus Telefonbuch entfernen
-                </DropdownMenuItem>
+                {isSelf ? null : (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive focus:text-destructive"
+                      onSelect={(e) => {
+                        e.preventDefault()
+                        onRemove()
+                      }}
+                    >
+                      Aus Telefonbuch entfernen
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -263,7 +277,7 @@ export function ContactPhonebookCard(props: ContactPhonebookCardProps) {
 
           <div className="mt-3 flex flex-wrap gap-2">
             <span className="w-full text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Erreichbarkeit
+              {isSelf ? 'Erreichbarkeit & Telefonbuch' : 'Erreichbarkeit'}
             </span>
             <ReachBadge
               active={hasLora}
@@ -303,13 +317,13 @@ export function ContactPhonebookCard(props: ContactPhonebookCardProps) {
             Zuletzt: <span className="text-foreground/90">{formatContactLastSeen(lastSeen)}</span>
           </p>
 
-          {onSelectForMessenger ? (
+          {messengerAction ? (
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation()
                 onRecordContact()
-                onSelectForMessenger()
+                messengerAction()
               }}
               className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 text-sm font-medium text-primary hover:bg-primary/15"
             >

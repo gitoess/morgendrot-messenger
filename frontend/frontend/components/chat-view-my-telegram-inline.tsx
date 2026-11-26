@@ -1,6 +1,5 @@
 'use client'
 
-import { TelegramAlarmGroupJoinCard } from '@/frontend/components/telegram-alarm-group-join-card'
 import { cn } from '@/lib/utils'
 
 export type ChatViewMyTelegramInlineProps = {
@@ -31,6 +30,10 @@ function IdRow(p: { label: string; value: string; hint?: string; panel: boolean 
   )
 }
 
+/**
+ * Nur eigene 1:1-Telegram-Chat-ID. Einsatz-Alarmgruppe bleibt unter Einstellungen → Telegram
+ * (nicht im Ich-/Peering-Blatt — zu laut und fachlich falsch dort).
+ */
 export function ChatViewMyTelegramInline(p: ChatViewMyTelegramInlineProps) {
   const panel = p.variant === 'panel'
   const myTg = p.myTelegramChatId?.trim() || ''
@@ -50,7 +53,6 @@ export function ChatViewMyTelegramInline(p: ChatViewMyTelegramInlineProps) {
         <p className="text-[10px] text-muted-foreground">
           Meine Chat-ID: nicht im Telefonbuch — unter Kontakt „Ich“ eintragen für 1:1-Hinweise.
         </p>
-        <TelegramAlarmGroupJoinCard variant="inline" />
       </div>
     )
   }
@@ -67,7 +69,6 @@ export function ChatViewMyTelegramInline(p: ChatViewMyTelegramInlineProps) {
         Telegram
       </span>
       <IdRow label="Meine Telegram Chat-ID" value={myTg} panel={panel} />
-      <TelegramAlarmGroupJoinCard variant="inline" />
     </div>
   )
 }

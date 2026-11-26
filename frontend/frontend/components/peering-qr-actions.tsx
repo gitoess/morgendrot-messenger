@@ -198,6 +198,7 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
           variant="ghost"
           className="h-8 text-xs"
           disabled={disabled}
+          title="Ohne Kamera: Peering-QR als Text (JSON) oder nur die 0x-Adresse einfügen"
           onClick={() => setPasteOpen(true)}
         >
           QR-Text einfügen

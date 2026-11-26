@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Check, Copy } from 'lucide-react'
+import { Check, Copy, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   buildVisitenkarteShare,
@@ -41,10 +41,14 @@ export function ChatViewVisitenkarteShare(p: {
   address: string
   displayName?: string | null
   telegramChatId?: string | null
+  meshNodeId?: string | null
+  /** Klartext in den Composer legen (Empfänger bleibt). */
+  onSendAsMessage?: (plainText: string) => void
 }) {
   const addrOk = /^0x[a-fA-F0-9]{64}$/i.test(p.address.trim())
   const name = (p.displayName ?? '').trim()
   const tg = (p.telegramChatId ?? '').trim()
+  const mesh = (p.meshNodeId ?? '').trim()
   const ecdh = typeof window !== 'undefined' ? getDirectChatEcdhOwnPubRawBase64() : null
   const activeMb = readActiveSendMailbox()
   const mailboxId = activeMb.kind === 'private' ? activeMb.objectId : ''
@@ -55,6 +59,7 @@ export function ChatViewVisitenkarteShare(p: {
       hasTelegram: Boolean(tg),
       hasEcdh: Boolean(ecdh),
       hasMailbox: Boolean(mailboxId),
+      hasMeshNode: Boolean(mesh),
     })
   )
   const [copied, setCopied] = useState<'text' | 'qr' | null>(null)
@@ -68,9 +73,10 @@ export function ChatViewVisitenkarteShare(p: {
         hasTelegram: Boolean(tg),
         hasEcdh: Boolean(getDirectChatEcdhOwnPubRawBase64()),
         hasMailbox: Boolean(mailboxId),
+        hasMeshNode: Boolean(mesh),
       })
     )
-  }, [p.address, name, tg, mailboxId])
+  }, [p.address, name, tg, mesh, mailboxId])
 
   const built = useMemo(() => {
     if (!addrOk) return null
@@ -79,6 +85,7 @@ export function ChatViewVisitenkarteShare(p: {
         address: p.address,
         displayName: name || undefined,
         telegramChatId: tg || undefined,
+        meshNodeId: mesh || undefined,
         ecdhPubB64: getDirectChatEcdhOwnPubRawBase64() || undefined,
         mailboxObjectId: mailboxId || undefined,
         flags,
@@ -86,7 +93,7 @@ export function ChatViewVisitenkarteShare(p: {
     } catch (e) {
       return { error: e instanceof Error ? e.message : String(e) }
     }
-  }, [addrOk, p.address, name, tg, mailboxId, flags])
+  }, [addrOk, p.address, name, tg, mesh, mailboxId, flags])
 
   const copy = useCallback(async (kind: 'text' | 'qr') => {
     if (!built || 'error' in built) return
@@ -101,6 +108,11 @@ export function ChatViewVisitenkarteShare(p: {
     }
   }, [built])
 
+  const sendAsMessage = useCallback(() => {
+    if (!built || 'error' in built || !p.onSendAsMessage) return
+    p.onSendAsMessage(built.plainText)
+  }, [built, p])
+
   if (!addrOk) return null
 
   return (
@@ -108,7 +120,7 @@ export function ChatViewVisitenkarteShare(p: {
       <div>
         <p className="text-sm font-semibold text-foreground">Visitenkarte teilen</p>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          Bestehendes Kontakt-QR (`mc`) — kein Avatar, keine zweite QR-Welt.
+          Kontakt-QR (`mc`) + Klartext. Profilbild später (Backlog). Kein Telefon/E-Mail — nur Messenger-Pfade.
         </p>
       </div>
       <div className="space-y-2">
@@ -145,6 +157,14 @@ export function ChatViewVisitenkarteShare(p: {
           onChange={(v) => setFlags((f) => ({ ...f, includeTelegram: v }))}
         />
         <FlagRow
+          id="vk-mesh"
+          label="Funk-Node-ID"
+          checked={flags.includeMeshNode}
+          disabled={!mesh}
+          hint={mesh ? 'Nur im Klartext' : 'Keine Node-ID im Telefonbuch'}
+          onChange={(v) => setFlags((f) => ({ ...f, includeMeshNode: v }))}
+        />
+        <FlagRow
           id="vk-ecdh"
           label="ECDH / Peering-Pub"
           checked={flags.includeEcdh}
@@ -158,6 +178,12 @@ export function ChatViewVisitenkarteShare(p: {
       ) : null}
       {err ? <p className="text-xs text-destructive">{err}</p> : null}
       <div className="flex flex-wrap gap-2">
+        {p.onSendAsMessage ? (
+          <Button type="button" size="sm" onClick={sendAsMessage}>
+            <Send className="mr-1 h-3.5 w-3.5" aria-hidden />
+            Als Nachricht
+          </Button>
+        ) : null}
         <Button type="button" size="sm" variant="secondary" onClick={() => void copy('text')}>
           {copied === 'text' ? (
             <>
