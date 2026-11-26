@@ -29,7 +29,7 @@
 **Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
 **Alpha-PC-Checkliste (Messenger, manuell — 2026-11-26):** Soft-Pause→Weitersprechen · Burn · Solo-Wizard · Visitenkarte in „Ich“ · Caps Pill „Messenger“ (Edition) · Zwei-Wallet-Hinweis im Handbuch — **User: soweit ok**.  
-**Nächste Bau-Zeile:** PC-Jetzt **Ist** (#39–#42). Halten: Claims/Handbuch/Ratchet nur 1:1. 2-Wallet-Smoke später. **Kein** Ratchet-Default. Phase 2/Funk/2. Gerät/Boss = Später.
+**Nächste Bau-Zeile:** PC-Jetzt **Ist** (#39–#43). Halten: Hygiene/Claims. Offen nur User-Live: **2-Wallet-Smoke** (+ optional C1.6 4c). **Kein** Ratchet-Default. Phase 2/Funk/2. Gerät/Boss = Später.
 
 **„Jetzt fertig“ ≠ gesamtes H.\*-Universum.** Die Nov-22-Triage-Tabelle am Kopf war **PC-Messenger-Alltag** (Unlock, Desk-Smoke, Labels, Soft-Pause, Burn-Doku, Solo-Wizard). Folgendes bleibt **offen / Später** — bewusst nicht „mitabgehakt“:
 
