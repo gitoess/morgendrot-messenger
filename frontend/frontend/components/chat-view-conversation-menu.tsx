@@ -133,15 +133,15 @@ export function ChatConversationMenuItems(p: ChatViewConversationMenuProps) {
             <DropdownMenuItem
               title={
                 ratchetExp
-                  ? 'Experiment an — Direct-IOTA Enc nutzt innere RATCHET_V3-Lage (beide Seiten Flag + Handshake). Default bleibt Session Keys+.'
-                  : 'Opt-in H.23 C1 — Direct-Enc mit Double Ratchet (Experiment). Beide Seiten brauchen Flag; kein Produktiv-Default.'
+                  ? 'Experiment an — nur 1:1 Direct-IOTA Enc mit innerer RATCHET_V3-Lage (beide Seiten Flag + Handshake). Default bleibt Session Keys+.'
+                  : 'Opt-in H.23 C1 — nur 1:1 Direct-Enc Double Ratchet (Experiment). Beide Seiten Flag; Gruppen ohne Toggle; kein Produktiv-Default.'
               }
               onSelect={() => {
                 const next = !ratchetExp
                 writeRatchetExperimentEnabled(next)
                 setRatchetExp(next)
                 if (next) {
-                  toast.message('Double Ratchet an — Partner braucht dasselbe Flag; Handshake nötig. Kein Default.')
+                  toast.message('Double Ratchet an (1:1) — Partner braucht dasselbe Flag; Handshake nötig. Kein Default.')
                 } else {
                   toast.message('Double Ratchet aus — wieder Session Keys+ (v2).')
                 }

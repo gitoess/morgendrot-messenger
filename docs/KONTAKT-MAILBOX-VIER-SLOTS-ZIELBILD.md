@@ -45,4 +45,4 @@ Pro Kontakt (Wallet `0x…`) vier **optionale** IOTA-Object-IDs (0x + 64 Hex):
 3. `resolveOutboundMailboxObjectId` + Send-Panel: explizite Zielwahl  
 4. Vitest + `docs/SENDEWEGE-KANAL-MAILBOX-UEBERSICHT.md` aktualisieren  
 
-**Ist heute:** ein Feld „Private Mailbox des Kontakts“ — siehe `contact-phonebook-contact-dialog.tsx`.
+**Ist (Stand 2026-11):** vier Slot-Felder + Send-Zielwahl + Composer „Speicher auf der Chain“ — siehe `contact-phonebook-contact-dialog.tsx` / `contact-mailbox-slots.ts`. (Ältere „ein Feld“-Zeile war Pre-M4e.)

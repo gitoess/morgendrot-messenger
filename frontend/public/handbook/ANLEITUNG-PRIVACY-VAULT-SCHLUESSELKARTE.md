@@ -91,7 +91,7 @@ Begriffe Datei vs Sidecar: `docs/VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md` §8. **Ke
 
 ### Double Ratchet (Experiment, C1.6)
 
-Chat ⋮ → **Double Ratchet (Experiment)** = Opt-in. **Default bleibt Session Keys+.** Mit Flag an: Direct-Enc legt innere `RATCHET_V3`-Lage (beide Seiten Flag + Handshake). Composer-Hinweis zeigt den Modus. State im Sidecar `ratchet.enc.v1`. **Kein** Produktiv-Default / kein FS-pro-Msg-Marketing ohne Feld-PASS.
+**Nur 1:1-Direktchat** (IOTA Enc). Chat ⋮ → **Double Ratchet (Experiment)** = Opt-in. **Gruppenchat:** kein Eintrag (weiter Team-Key). **Default bleibt Session Keys+.** Mit Flag an: Direct-Enc legt innere `RATCHET_V3`-Lage (beide Seiten Flag + Handshake). Composer-Hinweis zeigt den Modus. State im Sidecar `ratchet.enc.v1`. **Kein** Produktiv-Default / kein FS-pro-Msg-Marketing ohne Feld-PASS.
 
 **Grenze:** XSS/Malware mit Vault-Passwort kann Sidecars lesen. Kein Hardware-Fragment, kein „nur RAM, nie Disk“ für den Seed (Vault-Blob liegt verschlüsselt auf Disk/LS). Session Keys+ (`directSessionKeys.v1`) sind noch nicht vault-wrapped (bekanntes Backlog).
 
@@ -275,7 +275,7 @@ Intern heißt der Chain-Call weiter `/purge-msg` — in der UI nur noch **Burn**
 
 | Wunsch | Roadmap-Ort | Status |
 |--------|-------------|--------|
-| Double Ratchet Default / FS **pro Nachricht** | § H.23 C1 | Opt-in C1.6 Ist; Default + Feld offen |
+| Double Ratchet Default / FS **pro Nachricht** | § H.23 C1 | Opt-in C1.6 Ist (nur 1:1); Default + 2-Wallet/Feld offen |
 | Starkes NFT-Besitz-Gate | B2-P4a | Ist (App-Gate Capsule); optional **Wallet + NFT (Dual)** |
 | Dual Wallet∧NFT | P4a-dual | Composer unter Starkes Gate; Klartext danach kopierbar |
 | Pubkey-Wrap | P4a2 | Checkbox unter Dual; ECDH-Peer-Pub der erlaubten Wallet nötig |

@@ -1,12 +1,12 @@
 # Security-Claims-Check (Ist vs. Marketing-Text)
 
-**Stand:** 2026-11-26 (C1.6 Opt-in; Vault-Sidecars + H.23 B2 + Lock/Purge)  
+**Stand:** 2026-11-26 (C1.6 Opt-in **nur 1:1**; Vault-Sidecars + H.23 B2 + Lock/Purge)  
 **Kontext:** ImageNFT-/Chat-Passphrase + Session-Epoch + Team-Key + NFT-Schlüsselkarte + optional Double Ratchet.  
 **Nutzer-Anleitung:** `docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md` · Spec `docs/MESSENGER-DOUBLE-RATCHET-C1-SPEC.md`
 
 | Claim | Morgendrot Ist | Urteil |
 |-------|----------------|--------|
-| **Double Ratchet / Forward Secrecy** | **Default:** Session Keys+ (ECDH → AES-GCM, `keyEpoch`). **Opt-in (C1.6):** Chat-⋮ Double Ratchet → innere `RATCHET_V3` bei Direct-Enc (beide Seiten Flag). **Kein** Produktiv-Default; FS-pro-Msg **nicht** als Marketing-Claim. | **Teilweise** — Experiment verdrahtet; Default unverändert Session Keys+. |
+| **Double Ratchet / Forward Secrecy** | **Default:** Session Keys+ (ECDH → AES-GCM, `keyEpoch`). **Opt-in (C1.6):** nur **1:1**-Direktchat-⋮ → innere `RATCHET_V3` bei Direct-Enc (beide Seiten Flag). **Gruppen:** kein Toggle (Team-Key). **Kein** Produktiv-Default; FS-pro-Msg **nicht** als Marketing-Claim. | **Teilweise** — Experiment verdrahtet; Default unverändert Session Keys+. |
 | **Asynchrone Dead-Drop, Discovery-Tags, rotierende Outboxes** | Feste `MAILBOX_ID` / Package-IDs; DFs unter Mailbox; Events | **Nur teilweise.** Keine rotierenden Outboxes. |
 | **Handshake mit Decoys** | Ohne Decoy-Rauschen | **Stimmt nicht.** |
 | **Lokale Schlüsselableitung (HW-Fragment + Passphrase, nur RAM)** | Vault PBKDF2+AES-GCM auf Disk; ECDH im Vault | **Teilweise.** Kein HW-Fragment; Seed kann verschlüsselt auf Disk liegen. |
@@ -32,7 +32,7 @@
 
 | Thema | Roadmap | Hinweis |
 |-------|---------|---------|
-| Double Ratchet Default / FS-Marketing | § H.23 C1 | C1.1–C1.6 Opt-in **Ist**; Default + Feld/2. Gerät offen |
+| Double Ratchet Default / FS-Marketing | § H.23 C1 | C1.1–C1.6 Opt-in **Ist** (nur 1:1); Default + 2-Wallet-Smoke / Feld offen |
 | Starkes NFT-Besitz-Gate | P4a/dual/P4a2/P4b-PoC Ist; **einzelner API-Broker ≠ Mysten-Seal** | „Unter Zwang“ nur bei remote/unabhängigem Broker; Klartext kopierbar |
 | NFT-Zeitkapsel / Timelock | B2-P5a/b Ist (Move+UI); NFT=Gate, Ciphertext getrennt | Kein Auto-Rücklauf ohne reclaim-TX; NFT allein ≠ Nachrichten |
 | MeshSleepyChannel / Offline-Zahlung Mesh | Phase-C Backlog | Nicht Ist; kein Watchtower-Claim |
@@ -47,4 +47,4 @@ Double Ratchet, Decoys, rotierende Outboxes, HW-Fragment — großer Architektur
 
 ## Kurzfassung
 
-Der zitierte Text ist **Zielbild**. Ehrliche Ist-Stärken: getrenntes Messaging-ECDH, Vault, AES-GCM, Direkt-RPC, Purge, Passphrase-Kanäle, **manuelle Session-Epoch**, **opt-in Double Ratchet (C1.6)**, Lock-Wipe lokaler Passphrase-Merker. Größte Lücke zum Text: **kein** Ratchet-Default / kein FS-pro-Msg-Marketing ohne Feld-PASS.
+Der zitierte Text ist **Zielbild**. Ehrliche Ist-Stärken: getrenntes Messaging-ECDH, Vault, AES-GCM, Direkt-RPC, Purge, Passphrase-Kanäle, **manuelle Session-Epoch**, **opt-in Double Ratchet (C1.6, nur 1:1)**, Lock-Wipe lokaler Passphrase-Merker. Größte Lücke zum Text: **kein** Ratchet-Default / kein FS-pro-Msg-Marketing ohne Feld-PASS.
