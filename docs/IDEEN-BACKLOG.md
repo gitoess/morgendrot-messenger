@@ -81,6 +81,14 @@ Auge im Unlock: `mousedown preventDefault` gegen Dialog-Flackern.
 
 ---
 
+## Gruppe verwalten je Sendepfad (H.16 Skizze)
+
+**Wunsch:** drei Einstiege — **IOTA** (Mitglieder/`0x`/Mailbox), **Funk** (Kanalindex/Name/PSK-Ref), **Telegram** (Alarmgruppen-ID) — ein Datenmodell, drei Fenster.  
+**Ist:** ein Sheet (Morgendrot-Gruppe + optional Funk-Meta).  
+**MVP später (nicht jetzt):** Spec + Wireframe; **kein** UI-Big-Bang parallel zu Alpha. Chat-Handbuch FAQ 5–6.
+
+---
+
 ## Telegram: kein Bot-Gruppenchat
 
 **Entscheidung 2026-11-22:** **Keinen** Morgendrot-Gruppenchat über den Telegram-Bot bauen (kein Thread/Composer in die Bot-API-Gruppe spiegeln).
