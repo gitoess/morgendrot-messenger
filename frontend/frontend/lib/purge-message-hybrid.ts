@@ -16,6 +16,10 @@ import type { Message } from '@/frontend/lib/types'
 import { canUseMessengerApiRelay } from '@/frontend/lib/messenger-standalone-relay'
 import { getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { recordMsgBurnActivity } from '@/frontend/lib/iota-activity-local-log'
+import {
+  formatBurnSuccessUserMessage,
+  storageRebateMistFromGasSummary,
+} from '@/frontend/lib/burn-success-message'
 
 export type PurgeMailboxMessageHybridResult = {
   ok: boolean
@@ -23,6 +27,22 @@ export type PurgeMailboxMessageHybridResult = {
   error?: string
   path?: 'direct' | 'api'
   digest?: string
+  storageRebate?: string
+}
+
+function burnOkMessage(base: string, gasSummary: unknown, digest?: string): {
+  message: string
+  storageRebate?: string
+  digest?: string
+} {
+  const storageRebate = storageRebateMistFromGasSummary(gasSummary)
+  const digestNote = digest ? ` Digest: ${digest.slice(0, 18)}…` : ''
+  const withDigest = digest && !base.includes('Digest:') ? `${base}${digestNote}` : base
+  return {
+    message: formatBurnSuccessUserMessage({ baseMessage: withDigest, storageRebateMist: storageRebate }),
+    storageRebate,
+    digest,
+  }
 }
 
 export { resolveMailboxPurgeTarget, teamBroadcastPurgeHint }
@@ -133,12 +153,17 @@ async function purgePairwiseHybrid(
     }
     if (direct.ok) {
       noteBurnSuccess(target, direct.digest, usedPlain, direct.mailboxObjectId)
-      const digest = direct.digest ? ` Digest: ${direct.digest.slice(0, 18)}…` : ''
+      const okMsg = burnOkMessage(
+        'Nachricht geburnt (Direkt-RPC).',
+        direct.gasSummary,
+        direct.digest
+      )
       return {
         ok: true,
         path: 'direct',
-        digest: direct.digest,
-        message: `Nachricht geburnt (Direkt-RPC).${digest}`,
+        digest: okMsg.digest,
+        storageRebate: okMsg.storageRebate,
+        message: okMsg.message,
       }
     }
     if (!allowApiRelay) {
@@ -149,15 +174,24 @@ async function purgePairwiseHybrid(
     })
     if (api.ok) {
       const dig =
-        typeof (api as { txDigest?: unknown }).txDigest === 'string'
-          ? (api as { txDigest: string }).txDigest
-          : undefined
+        typeof (api as { digest?: unknown }).digest === 'string'
+          ? (api as { digest: string }).digest
+          : typeof (api as { txDigest?: unknown }).txDigest === 'string'
+            ? (api as { txDigest: string }).txDigest
+            : undefined
       noteBurnSuccess(target, dig, usedPlain)
       const m =
         typeof (api as { message?: unknown }).message === 'string'
           ? (api as { message: string }).message
           : 'Nachricht geburnt (Morgendrot-API).'
-      return { ok: true, path: 'api', digest: dig, message: m }
+      const okMsg = burnOkMessage(m, (api as { gasSummary?: unknown }).gasSummary, dig)
+      return {
+        ok: true,
+        path: 'api',
+        digest: okMsg.digest,
+        storageRebate: okMsg.storageRebate,
+        message: okMsg.message,
+      }
     }
     const apiErr = formatPurgeRelayError(
       (typeof (api as { error?: unknown }).error === 'string' ? (api as { error: string }).error : '') ||
@@ -178,15 +212,24 @@ async function purgePairwiseHybrid(
   })
   if (api.ok) {
     const dig =
-      typeof (api as { txDigest?: unknown }).txDigest === 'string'
-        ? (api as { txDigest: string }).txDigest
-        : undefined
+      typeof (api as { digest?: unknown }).digest === 'string'
+        ? (api as { digest: string }).digest
+        : typeof (api as { txDigest?: unknown }).txDigest === 'string'
+          ? (api as { txDigest: string }).txDigest
+          : undefined
     noteBurnSuccess(target, dig, target.variant === 'plaintext')
     const m =
       typeof (api as { message?: unknown }).message === 'string'
         ? (api as { message: string }).message
         : 'Nachricht geburnt.'
-    return { ok: true, path: 'api', digest: dig, message: m }
+    const okMsg = burnOkMessage(m, (api as { gasSummary?: unknown }).gasSummary, dig)
+    return {
+      ok: true,
+      path: 'api',
+      digest: okMsg.digest,
+      storageRebate: okMsg.storageRebate,
+      message: okMsg.message,
+    }
   }
   return {
     ok: false,

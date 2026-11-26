@@ -211,7 +211,7 @@ Telegram = **optionaler Push/Hinweis**, kein Chat-Ersatz für IOTA/Funk.
 | **Abmelden** | Vollsperre |
 | **API-Neustart** | Keys weg → gesperrt |
 
-**Storage-Rebate (On-Chain-Vault / Burn):** **keine** Wallet-Karte „Rebate offen“ (anders als NFT-Leihe „zurückholen“) — bewusst nicht gebaut. Rebate fließt **in derselben TX** zurück; optional später nur Toast nach Burn.
+**Storage-Rebate (On-Chain-Vault / Burn):** **keine** Wallet-Karte „Rebate offen“ (anders als NFT-Leihe „zurückholen“) — bewusst nicht gebaut. Rebate fließt **in derselben TX** zurück. **Burn** im Posteingang (Zeilen-⋯ / Auswahl → „Von Chain löschen“); bei Erfolg Status ggf. **„Burn ok · Rebate …“** wenn `gasSummary.storageRebate` kommt. Details: `MESSENGER-CHAT-HANDBUCH.md` § *Burn*.
 
 Toast **„Tresor sichern?“** nach relevanten Änderungen (Notizen/Safe o. Ä.).
 

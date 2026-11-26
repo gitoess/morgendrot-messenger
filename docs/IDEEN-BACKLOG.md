@@ -67,7 +67,7 @@ Auge im Unlock: `mousedown preventDefault` gegen Dialog-Flackern.
 
 **Warum:** Auf IOTA/Sui ist Storage-Rebate **kein** separates abholbares Guthaben. Beim Burn/Purge/Vault-Replace fließt der Rebate **in derselben TX** in die Gas-Abrechnung; der Saldo ändert sich still. Es gibt keine Queue „offen und wartet“.
 
-**Sinnvoll stattdessen (klein, optional später):** Nach erfolgreichem Burn Toast mit `storageRebate` aus der TX-Antwort — Feedback, keine Warteschlange.  
+**Ist 2026-11-26:** Burn-Status „Burn ok · Rebate …“ wenn `gasSummary.storageRebate` kommt (kein Claim-Queue).  
 **Nicht:** Explorer-Scraping aller löschbaren Objekte nur für Theater.
 
 ---

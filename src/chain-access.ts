@@ -2381,7 +2381,7 @@ export async function purgeMessage(
     signingAddress: string,
     walletPassword?: string,
     signOptions?: SignAndExecuteOptions
-): Promise<{ digest?: string; status?: string }> {
+): Promise<SignAndExecuteResult> {
     if (!isMessengerMailboxModeActive() || !CFG.MAILBOX_ID) throw new Error('Mailbox nicht konfiguriert.');
     assertSafeAddress(recipient);
     assertSafeAddress(sender);
@@ -2416,7 +2416,7 @@ export async function purgeTeamPlaintextBroadcast(
     signingAddress: string,
     walletPassword?: string,
     signOptions?: SignAndExecuteOptions
-): Promise<{ digest?: string; status?: string }> {
+): Promise<SignAndExecuteResult> {
     const teamMb = teamMailboxObjectId.trim();
     const broadcaster = broadcastSender.trim();
     if (!/^0x[a-fA-F0-9]{64}$/i.test(teamMb)) {

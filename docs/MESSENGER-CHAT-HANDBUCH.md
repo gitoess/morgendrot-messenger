@@ -50,6 +50,20 @@ Details + Tabelle: **`EINSTELLUNGEN-NUTZER-HANDBUCH.md`**.
 
 **Echter Burn** = Zeilen-⋯ oder Auswahl → „Von Chain löschen“. **Nach Lesen löschen** in Optionen ist nur der Modus (Vorschlag nach Lesen).
 
+### Burn — Von Chain löschen (Posteingang)
+
+Nur **IOTA/Mailbox**-Zeilen (nicht Funk-/Telegram-Rohzeilen).
+
+| Wo | Was |
+|----|-----|
+| Nachrichten-Zeile **⋯** | **„Von Chain löschen (Burn)“** — Confirm, dann Hybrid-Purge |
+| Mehrfachauswahl | Toolbar → Burn (gleiche Logik, nacheinander) |
+| Badge **Burnbar** | Hinweis bei Burn-on-Read / `chainPurgeable` — **kein** Auto-Burn ohne Confirm |
+
+**Voraussetzungen:** `ENABLE_PURGE`, Mailbox-Nachricht mit Nonce; Sender oder Empfänger (Team-Broadcast: Sender). Ohne Nonce/`chainPurgeable` → Hinweis, kein Burn.
+
+**Lokal ausblenden ≠ Burn.** Ausblenden betrifft nur diesen Browser; die Chain bleibt. Burn entfernt den Mailbox-Eintrag on-chain (Storage-Rebate in **derselben** TX). Explorer behält die frühere **Send**-TX. Keine Wallet-Karte „offene Rebates“ — bei Erfolg Statuszeile ggf. **„Burn ok · Rebate … IOTA“**, wenn die API/`gasSummary` den Rebate liefert.
+
 Badge **Eingang/Ausgang**, **Verschlüsselt**, **PWMSG** oder **NFT-Gate** anklicken → Liste filtern (wie die Chips). Senden bleibt im Composer.
 
 ### Drei „Entschlüsseln“ — Lernpfad
@@ -643,4 +657,4 @@ Zum Prüfen: Browser-DevTools → Application → localStorage → `morgendrot.m
 
 ---
 
-*Stand: 2026-11-26 — FAQ Funk/Telegram/Gruppen; zuvor Zeilen-⋯ / Handoff / NFT.*
+*Stand: 2026-11-26 — Burn-Abschnitt + FAQ Funk/Telegram/Gruppen; zuvor Zeilen-⋯ / Handoff / NFT.*

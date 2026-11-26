@@ -28,14 +28,12 @@
 
 **Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
-**Nächste Gesprächs-/Bau-Reihenfolge (User 2026-11-26 — ja, sinnvoll):**
-1. **Nachrichten** (Copy/UX/Klarheit am Desk) — kleine Scheiben.  
-2. **Solo-Wizard** (Edition-Onboarding / „Neu anfangen“-Assistent, **nicht** § H.36 Team-Helfer-Wizard).  
-3. **Roadmap-Durchgang** weiter (Zeile-für-Zeile PC-Scope).  
-**Nicht dazwischen:** Profilbild/Visitenkarte-Bau, Drehrad/Handy-UI, EXE, Cap/Gap-Experimente.
+**Nächste Bau-Zeile (eine):** **Solo-Wizard MVP** — nur Spec-Schritte **0–2** in `docs/IOTA-MESSENGER-SOLO-WIZARD-VORSCHLAG.md` (**kein** UI-Code in der Burn/Roadmap-Triage-Scheibe).
 
-1. **Fokus jetzt:** Nachrichten abschließen → Solo-Wizard nach `IOTA-MESSENGER-SOLO-WIZARD-VORSCHLAG.md` → **PC-Durchgang** → Alpha.  
-2. **Erledigt Phase 1–3 Desk:** Messenger-Kern, 4b–4d, H.25a STABIL. Encode/Tempo Freeze.  
+**Nicht parallel:** Profilbild/Visitenkarte-Bau, Drehrad/Handy-UI, EXE, Cap/Gap-Experimente, Später-Tabelle (Funk-Feld, Handy, 2. Gerät, H.36, Shop, …).
+
+1. **Fokus jetzt:** Solo-Wizard MVP (0–2) → **PC-Durchgang** → Alpha.  
+2. **Erledigt Phase 1–3 Desk:** Messenger-Kern, 4b–4d, H.25a STABIL. Encode/Tempo Freeze. Nachrichten-Copy/Burn-Doku/Rebate-Toast **Ist 2026-11-26**.  
 3. **Scope-Arbeitsmodell (vorläufig):** IOTA-Messenger = **Boss ohne Helfer** + Freunde; Transporte IOTA/Funk/Telegram **drin**; Helfer/Handoff/Einsatz-Hub **raus**. Morgendrot = **alles**. Detail erst im Durchgang — Caps nicht blind flippen.  
 4. **Nicht parallel:** EXE vor Wizard/Durchgang; Cap/Gap-Experimente; WhatsApp/Paywall; Drehrad-Mock.  
 5. **Wallet/IOTA-Aktivität:** Freeze.  
@@ -58,31 +56,33 @@
 | **TG-Bild** | Composer: `sendPhoto` + Ack (Cap ~1,5 MB) **Ist**; Klingel weiter Text. Feinschliff/Tests → merken | `MESSENGER-CHAT-HANDBUCH` FAQ |
 | **Vault on-chain** | create→update ein Blob; Insufficient Gas → skaliertes Budget | Härte |
 | **Vault Soft-Pause UX** | Scrim aus während PW-Dialog; Home-Badge → PW nicht Mega-Unlock; kein Confirm vor Soft-Pause | Ist 2026-11-26 |
-| **Solo-Wizard** | Vorschlag ausgearbeitet: `docs/IOTA-MESSENGER-SOLO-WIZARD-VORSCHLAG.md` — Bau nach Nachrichten | H.30 / Edition |
-| **Storage-Rebate UI** | **Nicht bauen** „offene Rebates“ (kein Claim-Queue). Optional später: Burn-Toast mit `storageRebate` | `IDEEN-BACKLOG` |
+| **Solo-Wizard** | **Nächste Bau-Zeile:** MVP Schritte 0–2 — `docs/IOTA-MESSENGER-SOLO-WIZARD-VORSCHLAG.md` (Spec Ist; UI noch offen) | H.30 / Edition |
+| **Storage-Rebate UI** | **Keine** Claim-Queue. Burn-Status mit `storageRebate` **Ist 2026-11-26** | Chat-Handbuch § Burn |
 
-### Jetzt machen (IOTA-Messenger — User-Durchgang 2026-11-22)
+### Jetzt machen (IOTA-Messenger — triage 2026-11-26)
 
-| ID | Thema | Notiz |
+| ID | Thema | Status |
 |----|--------|--------|
-| **H.0** (Teil) | Unlock / Lite / PWA-Realität | **Ist 2026-11-23:** Tab-PW + Idle-Pref (#20); Prefer-vault (#21); Deeplink Chat (#22). Ohne Einsatz-Handoff-Pflicht |
-| **H.1 / H.1a / H.1b** | Qualität bei Touch | Kein Big-Bang-Refactor; Vitest/ESLint bei Messenger-Scheiben |
-| **H.2** | PWA-Checks + Status/Fehler | **Ist Desk:** `check:pwa-desk` + `:full` 2026-11-23 OK; L1–L5 Gerät = Phase 2 |
-| **H.4 / H.5** | Merge-Check / Git-Hygiene | Bei jedem Lieferpaket |
-| **H.8** | Dienst vs. privat (Doku) | Zwei Installationen merken; kein Soft-Switch-Bau |
-| **H.10** (Teil) | Ehrliche Claims / schlanke Härtung | Kein „Regierungs-Niveau“-Theater |
-| **H.13 / H.14** | Schlankheit / Hardening | Nur bei Bedarf mit Messenger-Scheibe |
-| **H.15** | Direct-IOTA / Desk-Smoke | **PC Stage‑2 zu**; **4b–4d PASS** (2026-11-23). **4e/4f** = Phase 4 |
-| **H.16** (Teil) | Telefonbuch + QR | **Ist PC:** Telefonbuch/Kontakt-QR/`mp` Peering (#Vitest). Boss-LAN = später |
-| **H.20** | Signer `sdk` | **Ist:** `.env.example` Default `sdk` (2026-11-22) |
-| **H.21** (Teil) | Empfänger-Auswahl Ist | Kurier-Umschlag → später |
-| **H.22** | Mailbox-Klarheit | **Ist 2026-11-22** Copy/Labels/Handbuch |
-| **H.23** (Ist halten) | ECDH + Passphrase/NFT | kein neues Großfeature |
-| **H.26** (Teil) | Telegram Klingel/Notify Ist | Alarmgruppe → später |
-| **H.27** | Handshake-UX Labels | **Ist** (Partner=0x; Annehmen-Copy) |
-| **H.34** | Port-Refactor bei Touch | kein Parallel-Epik |
-| **Split** | product-identity Caps | Arbeitsmodell Boss-ohne-Helfer; Caps-Abgleich im PC-Durchgang |
-| **Ideen** | Fail-closed Overlay | Soft-Pause/Abmelden Ist; Badge 2 Labels Ist |
+| **H.0** (Teil) | Unlock / Lite / PWA-Realität | **erledigt/halten** — Tab-PW + Idle (#20); Prefer-vault (#21); Deeplink (#22) |
+| **H.1 / H.1a / H.1b** | Qualität bei Touch | **halten** — Vitest/ESLint bei Scheiben; kein Big-Bang |
+| **H.2** | PWA-Checks + Status/Fehler | **erledigt Desk** — `check:pwa-desk` OK; L1–L5 = Phase 2 |
+| **H.4 / H.5** | Merge-Check / Git-Hygiene | **halten** — bei Lieferpaket |
+| **H.8** | Dienst vs. privat (Doku) | **halten** — kein Soft-Switch-Bau |
+| **H.10** (Teil) | Ehrliche Claims | **halten** |
+| **H.13 / H.14** | Schlankheit / Hardening | **halten** — nur bei Bedarf |
+| **H.15** | Direct-IOTA / Desk-Smoke | **erledigt PC** Stage‑2 / 4b–4d; **4e/4f** = Phase 4 |
+| **H.16** (Teil) | Telefonbuch + QR | **erledigt PC** — Boss-LAN = später |
+| **H.20** | Signer `sdk` | **erledigt** |
+| **H.21** (Teil) | Empfänger-Auswahl | **erledigt** — Kurier → später |
+| **H.22** | Mailbox-Klarheit | **erledigt** |
+| **H.23** | ECDH + Passphrase/NFT | **halten** — kein Großfeature |
+| **H.26** (Teil) | Telegram Klingel/Notify | **erledigt** — Alarmgruppe → später |
+| **H.27** | Handshake-UX Labels | **erledigt** |
+| **H.34** | Port-Refactor bei Touch | **halten** |
+| **Split** | product-identity Caps | **halten** — Caps im PC-Durchgang |
+| **Ideen** | Fail-closed / Soft-Pause / Badge | **erledigt** |
+| **Burn-Doku + Rebate-Toast** | Posteingang Burn sichtbar; Status mit Rebate | **erledigt 2026-11-26** |
+| **Solo-Wizard MVP** | Spec 0–2 → UI (nächste Bau-Zeile) | **offen** — `IOTA-MESSENGER-SOLO-WIZARD-VORSCHLAG.md` |
 
 ### Später machen bzw. nochmals später klären (User-Durchgang ab 2026-11-22)
 

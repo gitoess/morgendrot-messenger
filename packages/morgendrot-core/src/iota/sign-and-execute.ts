@@ -7,6 +7,8 @@ export type DirectSignAndExecuteResult = {
   status?: string
   /** Bei failure: MoveAbort / InsufficientGas / … aus effects.status.error */
   errorDetail?: string
+  /** Aus effects.gasUsed — z. B. Burn-Toast Storage-Rebate. */
+  gasSummary?: { storageRebate?: string; storageCost?: string; computationCost?: string }
 }
 
 function parseEffectsStatus(resp: unknown): string | undefined {
@@ -45,6 +47,17 @@ export function isDirectChainExecutionSuccess(digest: string | undefined, status
   return st === 'success' || st === 'submitted'
 }
 
+function parseEffectsGasSummary(resp: unknown): DirectSignAndExecuteResult['gasSummary'] | undefined {
+  const gu = (resp as { effects?: { gasUsed?: Record<string, unknown> } })?.effects?.gasUsed
+  if (!gu || typeof gu !== 'object') return undefined
+  const out: NonNullable<DirectSignAndExecuteResult['gasSummary']> = {}
+  if (gu.storageRebate != null) out.storageRebate = String(gu.storageRebate)
+  if (gu.storageCost != null) out.storageCost = String(gu.storageCost)
+  if (gu.computationCost != null) out.computationCost = String(gu.computationCost)
+  if (out.storageRebate == null && out.storageCost == null && out.computationCost == null) return undefined
+  return out
+}
+
 export async function signAndExecuteTransactionWithSigner(opts: {
   client: IotaClient
   transaction: Transaction
@@ -58,9 +71,11 @@ export async function signAndExecuteTransactionWithSigner(opts: {
   const digest = (resp as { digest?: string })?.digest
   const status = parseEffectsStatus(resp)
   const errorDetail = parseEffectsErrorDetail(resp)
+  const gasSummary = parseEffectsGasSummary(resp)
   return {
     digest,
     status: status || (digest ? 'success' : undefined),
     ...(errorDetail ? { errorDetail } : {}),
+    ...(gasSummary ? { gasSummary } : {}),
   }
 }
