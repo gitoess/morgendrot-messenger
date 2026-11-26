@@ -84,8 +84,8 @@ Auge im Unlock: `mousedown preventDefault` gegen Dialog-Flackern.
 ## Gruppe verwalten je Sendepfad (H.16 Skizze)
 
 **Wunsch:** drei Einstiege — **IOTA** (Mitglieder/`0x`/Mailbox), **Funk** (Kanalindex/Name/PSK-Ref), **Telegram** (Alarmgruppen-ID) — ein Datenmodell, drei Fenster.  
-**Ist:** ein Sheet (Morgendrot-Gruppe + optional Funk-Meta).  
-**MVP später (nicht jetzt):** Spec + Wireframe; **kein** UI-Big-Bang parallel zu Alpha. Chat-Handbuch FAQ 5–6.
+**Ist:** ein Sheet (Morgendrot-Gruppe + optional Funk-Meta); Sheet-Copy S1 ehrlich (2026-11-26).  
+**Spec S0:** `docs/H16-GRUPPE-JE-SENDEPFAD-SPEC.md`. **S2 Tabs** erst nach User-OK — kein UI-Big-Bang. Chat-Handbuch FAQ 5–6.
 
 ---
 

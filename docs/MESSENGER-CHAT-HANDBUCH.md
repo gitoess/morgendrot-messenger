@@ -669,9 +669,9 @@ Zum Prüfen: Browser-DevTools → Application → localStorage → `morgendrot.m
 
 ### 5–6) „Gruppe verwalten“ pro Sendepfad?
 
-**Ist:** ein Sheet (Morgendrot-Gruppe + optional Funk-Meta). Telegram-Alarm = Einstellungen.
+**Ist:** ein Sheet (IOTA-Kern + optional Funk-Meta). Telegram-Alarm = Einstellungen → Telegram (kein Bot-Gruppenchat).
 
-**Wunsch (Backlog, nach Solo-Wizard):** drei angepasste Einstiege — **IOTA:** Mitglieder/`0x`/Mailbox; **Funk:** Kanalindex/Name/PSK-Ref (+ Link Meshtastic); **Telegram:** Alarmgruppen-ID/Label (kein Bot-Gruppenchat). Ein Datenmodell, drei Fenster — kein Parallel-Chaos.
+**Spec:** `docs/H16-GRUPPE-JE-SENDEPFAD-SPEC.md` (S0 Spec + S1 Copy Ist; S2 Tabs später). Drei Fenster = ein Datenmodell, kein Parallel-Chaos.
 
 ---
 
