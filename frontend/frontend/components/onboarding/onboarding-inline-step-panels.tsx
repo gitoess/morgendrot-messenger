@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { ApiStatus } from '@/frontend/lib/api/status'
 import { SettingsMyMailboxesSection } from '@/frontend/components/views/settings-my-mailboxes-section'
+import { StandaloneSoloWizardCard } from '@/frontend/components/standalone-solo-wizard-card'
 import { OnboardingBossTelegramStep } from '@/frontend/components/onboarding/onboarding-boss-telegram-step'
 import { OnboardingBossMailboxesStep } from '@/frontend/components/onboarding/onboarding-boss-mailboxes-step'
 import { OnboardingFunkStep } from '@/frontend/components/onboarding/onboarding-funk-step'
@@ -917,11 +918,32 @@ export function OnboardingHelperPeeringStep(p: PanelProps) {
   )
 }
 
+export function OnboardingWandererWelcomeStep() {
+  return (
+    <div className="space-y-3 text-sm text-muted-foreground">
+      <p className="text-foreground">
+        <strong className="font-medium">Solo-Einrichtung</strong> — Tresor, dann IOTA-IDs. Optional später Funk.
+      </p>
+      <ul className="list-disc space-y-1.5 pl-5">
+        <li>Kein Chatverlauf-Backup in diesem Assistenten</li>
+        <li>Kein Team-/Helfer-Wizard (das ist ein anderer Pfad)</li>
+        <li>Telegram folgt in einer späteren Scheibe — hier überspringbar über Funk/Fertig</li>
+      </ul>
+      <p className="text-xs">Weiter / Überspringen pro Schritt. Erneut starten: Einstellungen → Einrichtung.</p>
+    </div>
+  )
+}
+
 export function OnboardingWandererWalletStep(p: PanelProps) {
   return (
-    <Button type="button" className="w-full sm:w-auto" onClick={() => p.onActivateWallet?.()}>
-      Wallet einrichten
-    </Button>
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Öffnet denselben Tresor-Dialog wie der Messenger (anlegen, importieren oder entsperren).
+      </p>
+      <Button type="button" className="w-full sm:w-auto" onClick={() => p.onActivateWallet?.()}>
+        Tresor öffnen
+      </Button>
+    </div>
   )
 }
 
@@ -944,6 +966,26 @@ export function OnboardingWandererMailboxStep(p: PanelProps) {
       backendOnline={p.backendOnline}
       onReload={p.onReload}
     />
+  )
+}
+
+/** Spec-Schritt 2: Absender + Package/Mailbox (reuse Solo-Chain-Form). */
+export function OnboardingWandererIotaStep(p: PanelProps) {
+  const addr = (p.apiSnapshot?.myAddressFull || p.apiSnapshot?.myAddress || '').trim()
+  return (
+    <div className="space-y-4">
+      <AddressBlock address={addr} />
+      <StatusRow ok={Boolean(addr)} label="Absender (Wallet)" />
+      <StandaloneSoloWizardCard
+        forceShow
+        embedded
+        apiSnapshot={p.apiSnapshot}
+        className="border-0 bg-transparent p-0 shadow-none"
+      />
+      <p className="text-xs text-muted-foreground">
+        Private Zusatz-Postfächer optional unter Einstellungen → Postfächer — nicht dasselbe wie die Haupt-Mailbox-ID.
+      </p>
+    </div>
   )
 }
 

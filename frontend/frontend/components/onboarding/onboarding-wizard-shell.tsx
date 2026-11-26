@@ -151,7 +151,9 @@ export const HELPER_STEP_TITLES: Record<string, string> = {
 }
 
 export const WANDERER_STEP_TITLES: Record<string, string> = {
-  wallet: 'Wallet',
+  welcome: 'Willkommen',
+  wallet: 'Tresor',
+  iota: 'IOTA',
   address: 'Adresse',
   'private-mailbox': 'Postfächer',
   meshtastic: 'Funk',

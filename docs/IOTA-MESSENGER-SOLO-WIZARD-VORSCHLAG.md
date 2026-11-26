@@ -1,7 +1,7 @@
 # IOTA-Messenger Solo-Wizard — Vorschlag (kritisch, 2026-11-26)
 
-**Status:** Spez-Vorschlag — **noch nicht bauen** (nach Nachrichten-Klarheit; PC-Stabilität).  
-**Nicht:** § H.36 Team/Helfer-Wizard. **Schon da:** Unlock-Dialog, Einstellungen-Kanäle, Onboarding-Host (Boss-lastig).
+**Status:** Spec + **MVP 0–2 Ist** (2026-11-26) — Wanderer-Pfad: Willkommen → Tresor → IOTA (Package/Mailbox-Form + ID kopieren). TG-Schritt noch offen; Funk weiter optional Skip.  
+**Nicht:** § H.36 Team/Helfer-Wizard. **Reuse:** Unlock-Dialog, `StandaloneSoloWizardCard`, Onboarding-Host (`peerMessengerOnly` → wanderer).
 
 ---
 

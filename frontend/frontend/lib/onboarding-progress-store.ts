@@ -34,7 +34,15 @@ export type BossStepId =
   | 'meshtastic'
   | 'helpers'
   | 'done'
-export type WandererStepId = 'wallet' | 'address' | 'private-mailbox' | 'meshtastic' | 'done'
+/** Solo/IOTA-Messenger: Welcome → Tresor → IOTA-IDs → optional Funk. Legacy-IDs nur Migration. */
+export type WandererStepId =
+  | 'welcome'
+  | 'wallet'
+  | 'iota'
+  | 'meshtastic'
+  | 'done'
+  | 'address'
+  | 'private-mailbox'
 /** Legacy — nicht mehr im Wizard angeboten; nur für alte localStorage-Einträge. */
 export type HelperStepId = 'handoff' | 'telegram' | 'wallet' | 'team-self' | 'peering' | 'done'
 
@@ -65,7 +73,14 @@ export const BOSS_STEP_ORDER: BossStepId[] = [
   'done',
 ]
 export const HELPER_STEP_ORDER: HelperStepId[] = ['handoff', 'telegram', 'wallet', 'team-self', 'peering', 'done']
-export const WANDERER_STEP_ORDER: WandererStepId[] = ['wallet', 'address', 'private-mailbox', 'meshtastic', 'done']
+/** Solo-Wizard MVP 0–2 + optional Funk (Spec TG erst später). */
+export const WANDERER_STEP_ORDER: WandererStepId[] = [
+  'welcome',
+  'wallet',
+  'iota',
+  'meshtastic',
+  'done',
+]
 
 export function stepOrderForPath(path: OnboardingPath): OnboardingStepId[] {
   if (path === 'boss') return BOSS_STEP_ORDER
@@ -113,7 +128,7 @@ export function resolveWizardOnboardingPath(opts: {
   role?: string | null
   standalonePath?: 'boss' | 'einsatz' | 'solo' | null
   /**
-   * Boss ohne Helfer / IOTA-Messenger: Peer-Pfad (Wallet→Adresse→Mailbox→Funk),
+   * Boss ohne Helfer / IOTA-Messenger: Peer-Pfad (Welcome→Tresor→IOTA→Funk),
    * kein Einsatzleitungs-Wizard — auch wenn ROLE=boss.
    */
   peerMessengerOnly?: boolean
@@ -222,7 +237,55 @@ function stripRemovedBossSteps(o: OnboardingProgress): OnboardingProgress {
   })
 }
 
+function migrateWandererStepId(stepId: OnboardingStepId): OnboardingStepId {
+  if (stepId === 'address' || stepId === 'private-mailbox') return 'iota'
+  return stepId
+}
+
+function wandererProgressCursor(
+  completed: OnboardingStepId[],
+  skipped: OnboardingStepId[]
+): number {
+  const order = WANDERER_STEP_ORDER
+  for (let i = 0; i < order.length; i++) {
+    const sid = order[i]!
+    if (!completed.includes(sid) && !skipped.includes(sid)) return i
+  }
+  return order.length - 1
+}
+
+/** Welcome voran + address/private-mailbox → iota; laufende Sessions nicht auf Welcome zurückwerfen. */
+export function migrateWandererProgress(o: OnboardingProgress): OnboardingProgress {
+  if (o.path !== 'wanderer') return o
+  const completed = [...new Set(o.completedSteps.map(migrateWandererStepId))]
+  let skipped = [...new Set(o.skippedSteps.map(migrateWandererStepId))]
+  const pastStart =
+    completed.includes('wallet') ||
+    skipped.includes('wallet') ||
+    completed.includes('iota') ||
+    skipped.includes('iota') ||
+    completed.includes('meshtastic') ||
+    skipped.includes('meshtastic') ||
+    completed.includes('done') ||
+    o.currentStepIndex > 0
+  if (
+    pastStart &&
+    !completed.includes('welcome') &&
+    !skipped.includes('welcome')
+  ) {
+    skipped = [...skipped, 'welcome']
+  }
+  const cursor = wandererProgressCursor(completed, skipped)
+  return {
+    ...o,
+    completedSteps: completed,
+    skippedSteps: skipped,
+    currentStepIndex: Math.max(0, Math.min(cursor, WANDERER_STEP_ORDER.length - 1)),
+  }
+}
+
 function normalizeOnboardingProgress(o: OnboardingProgress): OnboardingProgress {
+  if (o.path === 'wanderer') return migrateWandererProgress(o)
   if (o.path !== 'boss') return o
 
   const hadServer = bossStepTouched('server-mailbox', o.completedSteps, o.skippedSteps)
@@ -586,12 +649,14 @@ export function shouldSkipOnboardingStep(
   }
 
   switch (stepId as WandererStepId) {
+    case 'welcome':
+      return false
     case 'wallet':
       return hasMnemonic
+    case 'iota':
     case 'address':
-      return Boolean(ctx.role?.trim())
     case 'private-mailbox':
-      return Boolean(ctx.hasMailboxId)
+      return Boolean(ctx.hasPackageId && ctx.hasMailboxId)
     case 'meshtastic':
       return Boolean(ctx.hasMeshNodeId)
     case 'done':

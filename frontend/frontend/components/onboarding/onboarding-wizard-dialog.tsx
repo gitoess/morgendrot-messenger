@@ -17,8 +17,10 @@ import {
   OnboardingHelperWalletStep,
   OnboardingMeshtasticStep,
   OnboardingWandererAddressStep,
+  OnboardingWandererIotaStep,
   OnboardingWandererMailboxStep,
   OnboardingWandererWalletStep,
+  OnboardingWandererWelcomeStep,
 } from '@/frontend/components/onboarding/onboarding-inline-step-panels'
 import {
   buildOnboardingSkipContext,
@@ -157,7 +159,7 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
       : path === 'helper'
         ? 'Helfer einrichten'
         : path === 'wanderer'
-          ? 'Messenger einrichten (Freunde)'
+          ? 'Solo-Einrichtung'
           : 'Einrichtung'
 
   const renderStepBody = () => {
@@ -187,8 +189,12 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
 
     if (path === 'wanderer') {
       switch (stepId) {
+        case 'welcome':
+          return <OnboardingWandererWelcomeStep />
         case 'wallet':
           return <OnboardingWandererWalletStep {...panelProps} />
+        case 'iota':
+          return <OnboardingWandererIotaStep {...panelProps} />
         case 'address':
           return <OnboardingWandererAddressStep {...panelProps} />
         case 'private-mailbox':

@@ -112,8 +112,29 @@ describe('onboarding-progress-store', () => {
 
   it('markOnboardingStepComplete erhöht Index', () => {
     startOnboarding('wanderer')
+    markOnboardingStepComplete('welcome')
     markOnboardingStepComplete('wallet')
     expect(readOnboardingProgress()?.completedSteps).toContain('wallet')
+  })
+
+  it('wanderer startet bei Willkommen; legacy address→iota', () => {
+    startOnboarding('wanderer')
+    expect(getWizardViewStep(readOnboardingProgress()!).stepId).toBe('welcome')
+    window.localStorage.setItem(
+      'morgendrot.onboardingProgress.v2',
+      JSON.stringify({
+        path: 'wanderer',
+        currentStepIndex: 1,
+        completedSteps: ['wallet'],
+        skippedSteps: ['address'],
+        dismissed: false,
+      })
+    )
+    const p = readOnboardingProgress()!
+    expect(p.skippedSteps).toContain('iota')
+    expect(p.skippedSteps).toContain('welcome')
+    expect(p.completedSteps).toContain('wallet')
+    expect(p.completedSteps).not.toContain('address')
   })
 
   it('shouldOfferMessengerSetupFromVault bis Wizard fertig', () => {

@@ -44,14 +44,18 @@ export function onboardingStepHint(path: OnboardingPath, stepId: OnboardingStepI
     }
   }
   switch (stepId) {
+    case 'welcome':
+      return 'Kurz: Tresor → Package/Mailbox-ID → optional Funk. Kein Chatverlauf-Backup.'
     case 'wallet':
-      return 'Wallet anlegen — bleibt nur auf diesem Gerät.'
+      return 'Tresor anlegen, importieren oder entsperren — bleibt auf diesem Gerät.'
+    case 'iota':
+      return 'RPC + Package-ID + Mailbox-ID eintragen (Testnet-Vorlage ok) — ID danach kopierbar.'
     case 'address':
       return 'Adresse bestätigen.'
     case 'private-mailbox':
       return 'Optional — Postfächer für dich allein.'
     case 'meshtastic':
-      return 'Optional — Funk-Stick.'
+      return 'Optional — Funk-Stick (PSK bleibt in der Meshtastic-App).'
     case 'done':
       return 'Mit Fertig schließt du den Wizard — jederzeit wieder unter Einstellungen.'
     default:
