@@ -15,6 +15,11 @@ describe('ChatViewChainPersistenceBadge (§ H.1a)', () => {
     expect(screen.getByRole('status')).toHaveTextContent(/Verschlüsselt · persistent \(Mailbox\)/)
   })
 
+  it('Enc-Event: Detail nennt Event-Abhol', () => {
+    render(<ChatViewChainPersistenceBadge mode="event" encrypted />)
+    expect(screen.getByRole('status')).toHaveTextContent(/Event-Abhol/)
+  })
+
   it('nutzt violet-Styling für Mailbox', () => {
     const { container } = render(<ChatViewChainPersistenceBadge mode="mailbox" encrypted={false} />)
     expect(container.querySelector('.border-violet-500\\/35')).toBeTruthy()
