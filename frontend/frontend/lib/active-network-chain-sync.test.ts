@@ -10,6 +10,7 @@ import {
     recoverWrongNetworkPackageSendFailure,
 } from './active-network-chain-sync'
 import { getDirectChainFieldIdsFromLs } from '@/frontend/lib/direct-iota-chain-context'
+import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
 import { saveOfflineMailboxQueue } from '@/frontend/lib/api/offline-queue'
 
 const TESTNET_PKG = '0x' + '6'.repeat(64)
@@ -85,6 +86,29 @@ describe('active-network-chain-sync', () => {
             myAddressFull: '0x' + 'd'.repeat(64),
         })
         expect(getDirectChainFieldIdsFromLs().packageId.toLowerCase()).toBe(TESTNET_PKG.toLowerCase())
+    })
+
+    it('Status-Fallback ohne Profil-Package setzt auch Direct-RPC wenn LS leer', () => {
+        localStorage.setItem(
+            'morgendrot.einsatz.networkProfiles.v1',
+            JSON.stringify({
+                active: 'testnet',
+                testnet: {
+                    rpcUrl: 'https://api.testnet.iota.cafe',
+                    packageId: '',
+                    mailboxId: '',
+                },
+                mainnet: { rpcUrl: 'https://api.mainnet.iota.cafe', packageId: '', mailboxId: '' },
+            })
+        )
+        expect(getConfiguredDirectIotaRpcUrl()).toBeNull()
+        applyDirectChainSnapshotFromStatusOrNetworkProfile({
+            packageId: TESTNET_PKG,
+            mailboxId: '0x' + 'a'.repeat(64),
+            myAddressFull: '0x' + 'd'.repeat(64),
+        })
+        expect(getDirectChainFieldIdsFromLs().packageId.toLowerCase()).toBe(TESTNET_PKG.toLowerCase())
+        expect(getConfiguredDirectIotaRpcUrl()).toBe('https://api.testnet.iota.cafe')
     })
 
     it('ensureDirectChainAlignedWithActiveProfile korrigiert veraltete LS-Package-ID', () => {
