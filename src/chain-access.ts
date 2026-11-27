@@ -4179,10 +4179,36 @@ export async function findAnyIncomingMailboxHandshake(
     return null;
 }
 
-/** Handshake in Events suchen (recipient = myAddress, sender beliebig). */
+/** Handshake suchen (recipient = myAddress): Mailbox-HsKey zuerst, dann EcdhInit-Events. */
 export async function findPeerHandshake(myAddress: string): Promise<{ pubKeyRaw: Uint8Array; sender: string; nonce: bigint } | null> {
     if (!CFG.PACKAGE_ID) return null;
     const me = normalizeAddress(myAddress);
+    if (isMessengerMailboxModeActive()) {
+        const mbSeen = new Set<string>();
+        const mailboxIds: string[] = [];
+        const addMb = (raw: string) => {
+            const id = raw.trim();
+            const n = id.toLowerCase();
+            if (!/^0x[a-fA-F0-9]{64}$/.test(id) || mbSeen.has(n)) return;
+            mbSeen.add(n);
+            mailboxIds.push(id);
+        };
+        for (const id of getInboxUnionIdsForStatus().mailboxIds) addMb(id);
+        if (CFG.MAILBOX_ID) addMb(CFG.MAILBOX_ID);
+        for (const parentId of mailboxIds) {
+            try {
+                const incomingSenders = await collectIncomingHsSenderNormsFromMailbox(parentId, me);
+                for (const sn of incomingSenders) {
+                    const hs = await getHandshakeFromMailbox(myAddress, sn, parentId);
+                    if (hs?.pubKeyRaw?.length) {
+                        return { pubKeyRaw: hs.pubKeyRaw, sender: hs.sender, nonce: hs.nonce };
+                    }
+                }
+            } catch {
+                // ignore
+            }
+        }
+    }
     try {
         const events = await queryMessagingEvents({ eventStruct: 'EcdhInit', limit: 100, order: 'descending' });
         const rows = events.data as Array<{
@@ -4434,6 +4460,30 @@ export async function findPeerHandshakeFrom(myAddress: string, peerAddress: stri
     if (!CFG.PACKAGE_ID) return null;
     const me = normalizeAddress(myAddress);
     const peer = normalizeAddress(peerAddress);
+    /** Mailbox-HsKey zuerst (wie Direct-RPC `findPeerHandshakeFromRpc`) — Events allein reichen oft nicht. */
+    if (isMessengerMailboxModeActive()) {
+        const mbSeen = new Set<string>();
+        const mailboxIds: string[] = [];
+        const addMb = (raw: string) => {
+            const id = raw.trim();
+            const n = id.toLowerCase();
+            if (!/^0x[a-fA-F0-9]{64}$/.test(id) || mbSeen.has(n)) return;
+            mbSeen.add(n);
+            mailboxIds.push(id);
+        };
+        for (const id of getInboxUnionIdsForStatus().mailboxIds) addMb(id);
+        if (CFG.MAILBOX_ID) addMb(CFG.MAILBOX_ID);
+        for (const parentId of mailboxIds) {
+            try {
+                const hs = await getHandshakeFromMailbox(myAddress, peerAddress, parentId);
+                if (hs?.pubKeyRaw?.length) {
+                    return { pubKeyRaw: hs.pubKeyRaw, sender: hs.sender, nonce: hs.nonce };
+                }
+            } catch {
+                // ignore
+            }
+        }
+    }
     try {
         const events = await queryMessagingEvents({ eventStruct: 'EcdhInit', limit: 100, order: 'descending' });
         const rows = events.data as Array<{

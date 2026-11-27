@@ -228,6 +228,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     isPinnwandChannel = false,
   } = p
   const cancelRequestedRef = useRef(false)
+  /** Doppelklick / parallele handleSend → zwei On-Chain-TXs (sichtbar als Doppel-Ausgang). */
+  const sendInFlightRef = useRef(false)
   /** Hook-Ebene: immer definiert (kein ReferenceError in älteren/minifizierten Bundles). */
   const encryptedMailboxRecipient = useMemo(
     () => resolveEncryptedMailboxRecipient(recipient, partner),
@@ -255,6 +257,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
   }, [setSending, setStatus, setStatusMsg])
 
   const handleSend = useCallback(async (opts?: ChatSendHandleOptions) => {
+    if (sendInFlightRef.current) return
+    sendInFlightRef.current = true
+    try {
     cancelRequestedRef.current = false
     const throwIfCancelled = () => {
       if (cancelRequestedRef.current) throw new Error(CHAT_SEND_CANCELLED_MSG)
@@ -1491,6 +1496,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       if (!userCancelledMain) clearCompactAttachment()
       setSending(false)
       setTimeout(() => setStatus('idle'), userCancelledMain ? 2500 : 4000)
+    }
+    } finally {
+      sendInFlightRef.current = false
     }
   }, [
     appendMeshMessage,

@@ -160,8 +160,16 @@ export async function encryptIotaPeerSessionMessage(
   };
 }
 
-/** Entschlüsselt v2 (MG2-Wire) oder fällt auf v1 Legacy zurück. */
-export async function decryptIotaPeerSessionMessage(params: IotaPeerSessionDecryptParams): Promise<string> {
+export type IotaPeerSessionDecryptResult = {
+  plaintext: string
+  /** Peer-Pub, mit dem Outer-Decrypt gelang — für Ratchet-Root (nicht nur Live-Pub). */
+  peerPubUsed: Uint8Array
+}
+
+/** Entschlüsselt v2 (MG2-Wire) oder fällt auf v1 Legacy zurück; liefert genutztes Peer-Pub. */
+export async function decryptIotaPeerSessionMessageDetailed(
+  params: IotaPeerSessionDecryptParams
+): Promise<IotaPeerSessionDecryptResult> {
   const ivB64 = uint8ToBase64(params.iv);
 
   if (isSessionWireV2Ciphertext(params.ciphertext)) {
@@ -179,7 +187,8 @@ export async function decryptIotaPeerSessionMessage(params: IotaPeerSessionDecry
           params.peerAddress,
           envelope.epoch
         );
-        return await decryptSessionMessage(aesKey, ivB64, combined, aad);
+        const plaintext = await decryptSessionMessage(aesKey, ivB64, combined, aad);
+        return { plaintext, peerPubUsed: peerPub };
       } catch (e) {
         lastErr = e;
       }
@@ -190,5 +199,12 @@ export async function decryptIotaPeerSessionMessage(params: IotaPeerSessionDecry
   const sharedSecret = await deriveSharedSecret(params.myPrivKey, params.peerPubRaw);
   const aesKey = await deriveAesGcmKey(sharedSecret);
   const combined = uint8ToBase64(new Uint8Array([...params.ciphertext, ...params.tag]));
-  return await decryptMessage(aesKey, ivB64, combined);
+  const plaintext = await decryptMessage(aesKey, ivB64, combined);
+  return { plaintext, peerPubUsed: params.peerPubRaw };
+}
+
+/** Entschlüsselt v2 (MG2-Wire) oder fällt auf v1 Legacy zurück. */
+export async function decryptIotaPeerSessionMessage(params: IotaPeerSessionDecryptParams): Promise<string> {
+  const r = await decryptIotaPeerSessionMessageDetailed(params);
+  return r.plaintext;
 }

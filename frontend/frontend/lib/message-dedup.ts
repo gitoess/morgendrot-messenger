@@ -7,7 +7,8 @@ import {
 const DEFAULT_WINDOW_MS = 120_000
 
 function isEncryptedPlaceholderContent(s: string): boolean {
-  return s.trimStart().startsWith('[Verschlüsselt]')
+  const t = s.trimStart()
+  return t.startsWith('[Verschlüsselt]') || t.startsWith('[Double Ratchet')
 }
 
 function looksLikeEncryptedWire(s: string): boolean {
@@ -16,22 +17,87 @@ function looksLikeEncryptedWire(s: string): boolean {
     t.startsWith('MORG_PWMSG_V1:') ||
     t.startsWith('MORG_NFTGATE_V1:') ||
     t.startsWith('[[MORG_ENV') ||
-    isEncryptedPlaceholderContent(t)
+    /** API-Inbox: Session-Decrypt liefert RATCHET_V3-JSON — Merge bevorzugt Klartext. */
+    (t.startsWith('{') && t.includes('RATCHET_V3'))
   )
 }
 
-/** Beim Dedup-Merge: Klartext vor Wire/Platzhalter (Wire ist oft länger als Klartext). */
+/**
+ * Exakte Doppel-Zeilen (gleicher Absender/Empfänger/Text, ≤2 s) — z. B. Event+Optimistic
+ * oder Doppelklick vor Send-Lock. Bevorzugt Mailbox/Chain.
+ */
+export function collapseNearDuplicateThreadRows(rows: Message[], windowMs = 2000): Message[] {
+  if (rows.length < 2) return rows
+  const ranked = [...rows].sort((a, b) => b.timestamp - a.timestamp)
+  const kept: Message[] = []
+  const seen = new Set<string>()
+  const score = (m: Message): number => {
+    let s = 0
+    if (m.chainPurgeable === true) s += 4
+    if (m.chainNonce) s += 2
+    if (typeof m.id === 'string' && m.id.startsWith('optimistic:')) s -= 3
+    const c = m.content ?? ''
+    if (c.includes('RATCHET_V3')) s -= 2
+    if (c.trimStart().startsWith('[Double Ratchet')) s -= 5
+    if (c.trimStart().startsWith('[Verschlüsselt]')) s -= 4
+    return s
+  }
+  for (const m of ranked) {
+    const from = (m.from ?? '').trim().toLowerCase()
+    const to = (m.recipient ?? '').trim().toLowerCase()
+    const text = (m.content ?? '').trim()
+    if (!text) {
+      kept.push(m)
+      continue
+    }
+    const bucket = Math.floor((Number(m.timestamp) || 0) / windowMs)
+    /** Empfänger fehlt oft bei Fragment-/Optimistic-Duplikat — dann nur from+text. */
+    const key = `${from || '_'}|${to || '*'}|${text}|${bucket}`
+    if (seen.has(key)) continue
+    const peers = ranked.filter((o) => {
+      const ob = Math.floor((Number(o.timestamp) || 0) / windowMs)
+      if (ob !== bucket) return false
+      if ((o.content ?? '').trim() !== text) return false
+      const of = (o.from ?? '').trim().toLowerCase()
+      const ot = (o.recipient ?? '').trim().toLowerCase()
+      if (from && of && from !== of) return false
+      if (to && ot && to !== ot) return false
+      return true
+    })
+    peers.sort((a, b) => score(b) - score(a))
+    const best = peers[0]!
+    for (const p of peers) {
+      const pf = (p.from ?? '').trim().toLowerCase()
+      const pt = (p.recipient ?? '').trim().toLowerCase()
+      seen.add(`${pf || '_'}|${pt || '*'}|${text}|${bucket}`)
+    }
+    kept.push(best)
+  }
+  return kept.sort((a, b) => b.timestamp - a.timestamp)
+}
+
+/**
+ * Dedup-Merge-Priorität:
+ * 1) Klartext  2) Hint/Platzhalter  3) Roh-Wire (RATCHET_V3 …)
+ * Sonst gewinnt sonst oft der lange API-Hint gegen kurzen Direct-Klartext.
+ */
 export function pickMergedInboxContent(a: string, b: string): string {
   const aa = a ?? ''
   const bb = b ?? ''
   const aWire = looksLikeEncryptedWire(aa)
   const bWire = looksLikeEncryptedWire(bb)
-  if (aWire && !bWire) return bb
-  if (bWire && !aWire) return aa
   const aPh = isEncryptedPlaceholderContent(aa)
   const bPh = isEncryptedPlaceholderContent(bb)
+  const aPlain = !aWire && !aPh
+  const bPlain = !bWire && !bPh
+  if (aPlain && !bPlain) return aa
+  if (bPlain && !aPlain) return bb
+  if (aPh && bWire) return aa
+  if (bPh && aWire) return bb
   if (aPh && !bPh) return bb
   if (bPh && !aPh) return aa
+  if (aWire && !bWire) return bb
+  if (bWire && !aWire) return aa
   return bb.length >= aa.length ? bb : aa
 }
 

@@ -2,6 +2,17 @@ import type { Message } from '../types'
 import { mapInboxApiRowsToMessages, type InboxApiRow } from '@/frontend/features/inbox/inbox-map-messages'
 import { pickInboxRawMessages, pickInboxHasMore } from '@/frontend/lib/inbox-pick-raw-messages'
 import { executeCommand } from '@/frontend/lib/api/execute-command'
+import { getDirectChainFieldIdsFromLs } from '@/frontend/lib/direct-iota-chain-context'
+import { getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
+import { unwrapRatchetV3InInboxApiRows } from '@/frontend/lib/ratchet-after-outer-decrypt'
+
+function inboxMyAddressForRatchet(): string {
+  return (
+    getDirectIotaSessionSignerAddress()?.trim() ||
+    getDirectChainFieldIdsFromLs().senderAddress.trim() ||
+    ''
+  )
+}
 
 /** limit, optional senderFilter (0x…), optional packageId, optional bossView, optional offset (ältere Seiten). */
 const INBOX_FETCH_TIMEOUT_MS = 45_000
@@ -89,7 +100,11 @@ export async function fetchAllPagesFromOneMailbox(p: FetchAllPagesFromOneMailbox
       )
       const raw = pickInboxRawMessages(res as { data?: unknown; messages?: unknown })
       if (res.ok && raw != null && raw.length > 0) {
-        let mapped = mapInboxApiRowsToMessages(raw as InboxApiRow[])
+        const unwrapped = await unwrapRatchetV3InInboxApiRows(
+          raw as InboxApiRow[],
+          inboxMyAddressForRatchet()
+        )
+        let mapped = mapInboxApiRowsToMessages(unwrapped)
         if (p.mailboxObjectId) mapped = stampChainMailboxObjectId(mapped, p.mailboxObjectId)
         pageChunks.push(...mapped)
         apiStride = raw.length

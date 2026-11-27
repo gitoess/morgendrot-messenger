@@ -1,11 +1,12 @@
 'use client'
 
-import { decryptIotaPeerSessionMessage } from '@morgendrot/shared/morgendrot-crypto-session-wire'
+import { decryptIotaPeerSessionMessageDetailed } from '@morgendrot/shared/morgendrot-crypto-session-wire'
 import { deriveSharedSecret } from '@morgendrot/shared/morgendrot-crypto'
 import {
   getDirectChatEcdhMaterialForRecipient,
   getDirectChatEcdhPrivateKey,
   getDirectChatEcdhPeerPubBase64,
+  restoreDirectChatEcdhPrivateFromLocalStorage,
 } from '@/frontend/lib/direct-chat-ecdh-session'
 import { base64ToUint8 } from '@morgendrot/shared/bytes-base64'
 import {
@@ -14,11 +15,8 @@ import {
 } from '@/frontend/lib/direct-session-keys-archive'
 import { getDirectChainFieldIdsFromLs, getDirectMailboxChainSnapshot } from '@/frontend/lib/direct-iota-chain-context'
 import { ensureDirectChatPeerPubForRecipient } from '@/frontend/lib/direct-iota-encrypted-send-prep'
-import {
-  ensureRatchetSessionForPeer,
-  readRatchetExperimentEnabled,
-  tryRatchetExperimentUnwrapIncoming,
-} from '@/frontend/lib/ratchet-experiment'
+import { tryAutoRestoreDirectChatEcdhPrivateKey } from '@/frontend/lib/direct-iota-vault-unlock-sync'
+import { resolveRatchetLayerAfterOuterDecrypt } from '@/frontend/lib/ratchet-after-outer-decrypt'
 
 function ensurePeerSessionArchive(peerAddr: string): void {
   if (getPeerSessionArchiveForRecipient(peerAddr)) return
@@ -31,16 +29,33 @@ function ensurePeerSessionArchive(peerAddr: string): void {
   }
 }
 
+function normAddr(a: string): string {
+  return a.trim().toLowerCase()
+}
+
 export type EncryptedInboxPayload = {
   iv: Uint8Array
   ciphertext: Uint8Array
   tag: Uint8Array
 }
 
+export type DecryptDirectInboxMeta = {
+  /** Chain-Absender — für Ausgangs-Echo. */
+  sender?: string
+  recipient?: string
+}
+
 export async function decryptDirectInboxEncryptedPayload(
   peerAddr: string,
-  payload: EncryptedInboxPayload
+  payload: EncryptedInboxPayload,
+  meta?: DecryptDirectInboxMeta
 ): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
+  if (!getDirectChatEcdhPrivateKey()) {
+    await tryAutoRestoreDirectChatEcdhPrivateKey()
+  }
+  if (!getDirectChatEcdhPrivateKey()) {
+    await restoreDirectChatEcdhPrivateFromLocalStorage()
+  }
   let mat = getDirectChatEcdhMaterialForRecipient(peerAddr)
   if (!mat && getDirectChatEcdhPrivateKey()) {
     await ensureDirectChatPeerPubForRecipient(peerAddr)
@@ -62,7 +77,7 @@ export async function decryptDirectInboxEncryptedPayload(
   }
   try {
     ensurePeerSessionArchive(peerAddr)
-    const text = await decryptIotaPeerSessionMessage({
+    const outer = await decryptIotaPeerSessionMessageDetailed({
       iv: payload.iv,
       ciphertext: payload.ciphertext,
       tag: payload.tag,
@@ -72,16 +87,17 @@ export async function decryptDirectInboxEncryptedPayload(
       peerPubRaw: mat.peerPubRaw,
       sessionArchive: getPeerSessionArchiveForRecipient(peerAddr),
     })
-    if (readRatchetExperimentEnabled()) {
-      const shared = await deriveSharedSecret(mat.ecdhPrivateKey, mat.peerPubRaw)
-      await ensureRatchetSessionForPeer({ peerAddress: peerAddr, ecdhShared: shared })
-      const unwrapped = await tryRatchetExperimentUnwrapIncoming({
-        peerAddress: peerAddr,
-        raw: text,
-      })
-      if (unwrapped) return { ok: true, text: unwrapped.plaintext }
-    }
-    return { ok: true, text }
+    /** Ratchet-Root muss zum Outer-Pub passen (Archiv kann ≠ Live-Pub sein). */
+    const ecdhShared = await deriveSharedSecret(mat.ecdhPrivateKey, outer.peerPubUsed)
+    const iAmSender = Boolean(meta?.sender && normAddr(meta.sender) === normAddr(myAddress))
+    const resolved = await resolveRatchetLayerAfterOuterDecrypt({
+      text: outer.plaintext,
+      peerAddress: peerAddr,
+      myAddress,
+      iAmSender,
+      ecdhShared,
+    })
+    return { ok: true, text: resolved }
   } catch {
     return { ok: false, error: '[Verschlüsselt] Entschlüsselung fehlgeschlagen.' }
   }

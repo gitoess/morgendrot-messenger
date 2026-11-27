@@ -12,6 +12,8 @@ import {
     applyDirectMailboxChainSnapshotFromNetworkIds,
 } from '@/frontend/lib/direct-iota-chain-context'
 import { setBrowserDirectIotaRpcUrlOverride, getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
+import { DEFAULT_TESTNET_RPC_URL } from '@morgendrot/shared/einsatz-chain-mode'
+import { looksLikeHttpRpcUrl } from '@/frontend/lib/einsatz-manifest-rpc'
 import { clearOfflineMailboxQueue, loadOfflineMailboxQueue, purgeInsecureEncryptedQueueItems } from '@/frontend/lib/api/offline-queue'
 import { formatDirectIotaSubmitError } from '@/frontend/lib/direct-iota-error-messages'
 import {
@@ -106,6 +108,16 @@ export function applyDirectChainSnapshotFromStatusOrNetworkProfile(status: ApiSt
         mailboxId: mb,
         myAddress: sender,
     })
+    /**
+     * Status-Fallback setzt oft nur Package/Mailbox — ohne RPC bleibt Direct-Handshake aus
+     * (Peer-Pub nur über Nest-API). Profil-Default oder Lab-Testnet-RPC nachziehen, wenn LS leer.
+     */
+    if (!getConfiguredDirectIotaRpcUrl()) {
+        const rpcCandidate = state.testnet.rpcUrl.trim() || DEFAULT_TESTNET_RPC_URL
+        if (looksLikeHttpRpcUrl(rpcCandidate)) {
+            setBrowserDirectIotaRpcUrlOverride(rpcCandidate)
+        }
+    }
     return true
 }
 

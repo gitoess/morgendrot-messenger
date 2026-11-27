@@ -112,9 +112,20 @@ export function messageMatchesContactConversation(
   const hasMesh = match.meshNodeIds.length > 0
   if (!hasIota && !hasTg && !hasMesh) return false
 
+  const meN = norm(myAddress)
+  const peerN = match.iotaAddress ? norm(match.iotaAddress) : ''
+  const fromN = norm(msg.from ?? '')
+  const toN = norm(msg.recipient ?? '')
+
+  /** Explizit: Eingang vom Peer ODER eigener Send an Peer (nicht nur Counterparty-Helfer). */
+  if (hasIota && peerN) {
+    if (fromN === peerN) return true
+    if (meN && fromN === meN && toN === peerN) return true
+  }
+
   const cp = messageCounterpartyAddress(msg, myAddress)
   if (cp) {
-    if (hasIota && match.iotaAddress && norm(cp) === norm(match.iotaAddress)) return true
+    if (hasIota && peerN && norm(cp) === peerN) return true
     if (hasTg && telegramIdMatches(cp, match.telegramChatIds)) return true
   }
 
@@ -123,7 +134,7 @@ export function messageMatchesContactConversation(
     for (const node of match.meshNodeIds) {
       if (from.includes(node)) return true
     }
-    if (hasIota && match.iotaAddress && cp && norm(cp) === norm(match.iotaAddress)) return true
+    if (hasIota && peerN && cp && norm(cp) === peerN) return true
   }
 
   return false

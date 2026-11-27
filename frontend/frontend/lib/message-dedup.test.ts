@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  collapseNearDuplicateThreadRows,
   contentDedupKey,
   mergeMessageByDedup,
   mergeAllMessages,
@@ -83,6 +84,23 @@ describe('pickMergedInboxContent', () => {
     expect(pickMergedInboxContent(wire, 'ok')).toBe('ok')
     expect(pickMergedInboxContent('ok', wire)).toBe('ok')
   })
+
+  it('wählt Klartext/Hint statt RATCHET_V3-JSON (API+Direct-Merge)', () => {
+    const wire =
+      '{"morg":"RATCHET_V3","header":{"v":3,"cs":1,"dh":"x","pn":0,"n":0,"msgId":"1","ts":1},"bodyB64":"YWJj"}'
+    expect(pickMergedInboxContent(wire, 'double ratchet')).toBe('double ratchet')
+    expect(pickMergedInboxContent('double ratchet', wire)).toBe('double ratchet')
+    expect(pickMergedInboxContent(wire, '[Double Ratchet] Opt-in aus')).toBe(
+      '[Double Ratchet] Opt-in aus'
+    )
+  })
+
+  it('wählt kurzen Klartext statt langem Double-Ratchet-Hint (API-Fail + Direct-OK)', () => {
+    const hint =
+      '[Double Ratchet] Innere Lage nicht lesbar — Flag beiderseits an, Experiment aus→an, dann neue Enc.'
+    expect(pickMergedInboxContent(hint, 'und')).toBe('und')
+    expect(pickMergedInboxContent('und', hint)).toBe('und')
+  })
 })
 
 describe('inboxMessageListSignature', () => {
@@ -101,5 +119,32 @@ describe('mergeAllMessages', () => {
       msg({ id: 'c', timestamp: 2, dedupKey: '3' }),
     ])
     expect(r.map((m) => m.id)).toEqual(['b', 'c', 'a'])
+  })
+})
+
+describe('collapseNearDuplicateThreadRows', () => {
+  it('lässt eine von zwei identischen Ausgangs-Zeilen (gleicher Text/Zeit)', () => {
+    const me = '0x' + 'a'.repeat(64)
+    const peer = '0x' + 'b'.repeat(64)
+    const ts = 1_000_000
+    const a = msg({
+      id: 'optimistic:dm:1',
+      from: me,
+      recipient: peer,
+      content: 'abba jetzt',
+      timestamp: ts,
+    })
+    const b = msg({
+      id: 'event:1',
+      from: me,
+      recipient: peer,
+      content: 'abba jetzt',
+      timestamp: ts,
+      chainPurgeable: true,
+      chainNonce: '99',
+    })
+    const r = collapseNearDuplicateThreadRows([a, b])
+    expect(r).toHaveLength(1)
+    expect(r[0]!.id).toBe('event:1')
   })
 })

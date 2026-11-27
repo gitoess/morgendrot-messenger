@@ -114,11 +114,15 @@ async function mapEventRowsToInboxApi(
       continue
     }
     const peerAddr = normalizeMailboxAddress(r.sender) === myNorm ? r.recipient : r.sender
-    const dec = await decryptDirectInboxEncryptedPayload(peerAddr, {
-      iv: r.iv,
-      ciphertext: r.ciphertext,
-      tag: r.tag,
-    })
+    const dec = await decryptDirectInboxEncryptedPayload(
+      peerAddr,
+      {
+        iv: r.iv,
+        ciphertext: r.ciphertext,
+        tag: r.tag,
+      },
+      { sender: r.sender, recipient: r.recipient }
+    )
     apiRows.push({
       sender: r.sender,
       recipient: r.recipient,
@@ -134,11 +138,15 @@ async function mapEventRowsToInboxApi(
 }
 
 async function resolvePendingEncryptedRow(pending: PendingEncryptedRow): Promise<InboxApiRow> {
-  const dec = await decryptDirectInboxEncryptedPayload(pending.peerAddr, {
-    iv: pending.iv,
-    ciphertext: pending.ciphertext,
-    tag: pending.tag,
-  })
+  const dec = await decryptDirectInboxEncryptedPayload(
+    pending.peerAddr,
+    {
+      iv: pending.iv,
+      ciphertext: pending.ciphertext,
+      tag: pending.tag,
+    },
+    { sender: pending.sender, recipient: pending.recipient }
+  )
   return {
     sender: pending.sender,
     recipient: pending.recipient,

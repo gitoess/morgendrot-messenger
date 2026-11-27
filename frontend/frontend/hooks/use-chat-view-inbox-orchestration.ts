@@ -536,6 +536,12 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
       setInboxPartnerFiltersArmed(true)
       setInboxChannelFiltersArmed(false)
       setInboxSourceFilter('all')
+      /**
+       * Wie Gruppe/Alle: Richtung zurücksetzen. Sonst bleibt „Eingang“ sticky —
+       * eigene Sends an den Partner verschwinden (sichtbar nur unter „Alle“).
+       */
+      setInboxDirectionFilter('all')
+      setInboxOverviewCategory('alle')
     },
     [
       setInboxPartnerKey,
@@ -543,6 +549,8 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
       setInboxPartnerFiltersArmed,
       setInboxChannelFiltersArmed,
       setInboxSourceFilter,
+      setInboxDirectionFilter,
+      setInboxOverviewCategory,
     ]
   )
 
