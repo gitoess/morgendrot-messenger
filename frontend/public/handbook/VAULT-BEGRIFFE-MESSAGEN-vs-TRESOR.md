@@ -131,7 +131,7 @@ Unter „Tresor/Privacy“ laufen **drei** Mechanismen — nicht drei Passwörte
 
 **Policy (kurz):** Secrets und Merken nur bei C; Schreiben bei Soft/Hard gesperrt; **Frei-/Gesichert-Saldo und NFT-Galerie** bleiben sichtbar (on-chain/öffentlich). Einstellungen browsen offen; Exports/Emergency/Keys nur entsperrt oder maskiert. **Kein zweiter Passwort-Tresor.**
 
-**Double Ratchet (Experiment):** Menü ⋮ setzt nur `morgendrot.experiment.doubleRatchet.v1`. **Composer sendet weiter Envelope v2** (Session Keys+) — der Toggle ändert den Wire heute nicht. Echte Ist-FS: **Schlüssel erneuern** (`keyEpoch`). Ratchet-State liegt in Sidecar C (`ratchet.enc.v1`), das Flag nicht.
+**Double Ratchet (Experiment, C1.6):** Menü ⋮ (nur **1:1**) setzt `morgendrot.experiment.doubleRatchet.v1`. Flag **an** + Handshake/Peer-Pub: Direct-Enc legt innere `RATCHET_V3` (außen weiter Session-Wire v2). Flag **aus** = nur Session Keys+. Zusätzliche Ist-FS: **Schlüssel erneuern** (`keyEpoch`). Ratchet-State in Sidecar C (`ratchet.enc.v1`). **Kein** Produktiv-Default.
 
 Details Nutzer: `docs/ANLEITUNG-PRIVACY-VAULT-SCHLUESSELKARTE.md` §1.
 

@@ -277,7 +277,7 @@ Intern heißt der Chain-Call weiter `/purge-msg` — in der UI nur noch **Burn**
 
 | Wunsch | Roadmap-Ort | Status |
 |--------|-------------|--------|
-| Double Ratchet Default / FS **pro Nachricht** | § H.23 C1 | Opt-in C1.6 Ist (nur 1:1); Default + 2-Wallet/Feld offen |
+| Double Ratchet Default / FS **pro Nachricht** | § H.23 C1 | Opt-in C1.6 Ist (nur 1:1); PC 4c PASS; Default/Feld weiter offen |
 | Starkes NFT-Besitz-Gate | B2-P4a | Ist (App-Gate Capsule); optional **Wallet + NFT (Dual)** |
 | Dual Wallet∧NFT | P4a-dual | Composer unter Starkes Gate; Klartext danach kopierbar |
 | Pubkey-Wrap | P4a2 | Checkbox unter Dual; ECDH-Peer-Pub der erlaubten Wallet nötig |
