@@ -178,7 +178,8 @@
     "dev:with-seed": "concurrently --names \"api,next,seed\" -c \"cyan,magenta,green\" \"npm run start:secrets\" \"npm run dev:frontend\" \"tsx scripts/wait-and-seed-ui.ts\"",
     "clean": "node scripts/clean-cache.mjs",
     "clean:deep": "node scripts/clean-cache.mjs --deep",
-    "pack:deploy": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pack-deploy-bundles.ps1"
+    "pack:deploy": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pack-deploy-bundles.ps1",
+    "desktop:exe": "npm run dist:win-portable --prefix morgendrot-messenger-desktop"
   },
   "license": "AGPL-3.0-or-later",
   "devDependencies": {

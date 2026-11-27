@@ -22,6 +22,16 @@ npm start
 
 Unter Windows geht auch ein Doppelklick auf **`Start-Messenger.bat`** (nach `npm install`).
 
+### Portable `.exe` (Alpha Scheibe A/B)
+
+```bash
+npm install
+npm run dist:win-portable
+```
+
+Artefakt: `../exports/messenger-desktop-exe/Morgendrot-Messenger-Portable.exe`  
+Voraussetzungen und Grenzen: **`docs/ALPHA-EXE-MESSENGER.md`** (braucht weiterhin **Node** + Repo/Standalone-Root).
+
 ## Verknüpfung unter Windows
 
 1. Rechtsklick auf `morgendrot-messenger-desktop` → **Verknüpfung erstellen**.

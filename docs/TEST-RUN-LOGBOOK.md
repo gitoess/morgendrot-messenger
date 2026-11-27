@@ -21,6 +21,8 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-11-27** | PC, **B geschlossen Live** | Avatar Sidebar OK; Lokal-STT → DE-Whisper `cv11-german` + Roh-PCM (tiny unbrauchbar; language/task-Fix). Vitest `local-whisper-stt`. | **PASS (Live)** — Transkript ok, etwas Latenz ok |
+| **2026-11-27** | PC, **Top-10 Freigabe → Schritte 1–3** | Visitenkarte-Übernehmen+Profilbild A; H.18 Web-Speech STT; Portable EXE ~98 MB (`desktop:exe`). H.20/H.22 geschlossen; H.19/H.21/Codec2/Vault-ID geparkt. | **CODE** — EXE Live-Doppelklick User |
 | **2026-11-27** | PC, **PC-Rest H.22 Enc-Event + Edition** | Direct+Nest: Indexer∪Package-`queryEvents` (kein Early-Exit bei Teiltreffer); Dedup Event↔Mailbox/Event. Vitest `messaging-events-inbox-rpc`. Edition: Auto-Execute-Default + §6 Claims nachgezogen. Surrogat = Zwei-Wallet PC (C1.6 4c schon PASS). | **CODE+DOCS** — Live Enc+Event optional Retest |
 | **2026-11-24** | PC, **Solo/Peer-Wizard Scheibe** | `peerMessengerOnly` (IOTA-Edition/`hideEinsatzleitung`) → Wanderer-Pfad statt Einsatzleitung; Copy „Messenger einrichten (Freunde)“. Vitest onboarding 20 PASS. | **CODE** |
 | **2026-11-24** | PC, **Hard-Lock Live-Check** | Abmelden → Unlock-Dialog + Scrim „Tresor gesperrt“; Einstellungen `pointer-events: none` (Browser-Click refused); Fallback „Tresor öffnen“ sichtbar. | **PASS (Live)** |

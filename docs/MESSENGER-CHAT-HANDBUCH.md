@@ -41,7 +41,7 @@ Details + Tabelle: **`EINSTELLUNGEN-NUTZER-HANDBUCH.md`**.
 
 ### Visitenkarte (Ich)
 
-Sidebar **„Ich“** (⋯ **Mehr zu Ich** oder Kontakt-Detail der eigenen Adresse): Block **Visitenkarte teilen** — Checkboxen (Name, Wallet, optional Mailbox / TG-ID / Funk-Node / ECDH) → **Als Nachricht** (Composer), **Text** oder **QR-JSON** (`k:'mc'`). Peering-QR = Partner verbinden; Visitenkarte = Kontaktkarte teilen. **Kein** Telefon/E-Mail-Feld (falscher Produktpfad). **Profilbild** = später Backlog (Opt-in, nicht im QR). **Einsatz-Alarmgruppe** → **Einstellungen → Telegram**.
+Sidebar **„Ich“** (⋯ **Mehr zu Ich** oder Kontakt-Detail): **Profilbild** lokal (Stufe A — erscheint im Chat neben Blasen; **Teilen mit Partnern = Stufe B, noch nicht**). **Visitenkarte teilen** — Checkboxen → **Als Nachricht** / Text / QR; Empfänger sieht eine lesbare Karte (ohne Roh-JSON) und **Als Kontakt übernehmen**. Maschinen-JSON bleibt im Wire für den Parser, wird in der Blase ausgeblendet. Peering-QR = Partner verbinden. **Kein** Telefon/E-Mail.
 
 **Caps (Edition):** Kein eigener Dialog — Produkt-Flags (`NEXT_PUBLIC_PRODUCT_ID=iota-messenger`); Kopfzeile zeigt dann Pill **Messenger** statt Boss.
 
@@ -222,7 +222,7 @@ Spezifikation: **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** (**§9** Zivil-SOS).
 
 **Sprachmemo:** Maximal **ca. 35 s**, nur bei **Online/IOTA** (Opus; nicht über Meshtastic-Funk wie normales Memo). Datei per **Drag & Drop**, **Datei importieren** oder **Kamera/Webcam** — danach **Senden**.
 
-**Einsatzmodus Diktat:** Textfeld fokussieren und **OS-Diktat** nutzen — **Windows:** **Win+H** | **Android:** **Mikrofon** in der Tastaturleiste.
+**Diktat (STT):** Plus → **Lokal-Diktat** (DE-Whisper on-device; erstes Mal Modell-Download ~150 MB). Sprechen, erneut tippen → Text im Composer. Fallback: **Windows Win+H** / **Android:** Mikrofon in der Tastatur.
 
 ---
 

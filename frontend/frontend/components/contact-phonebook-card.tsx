@@ -12,6 +12,7 @@ import {
 import { cn } from '@/lib/utils'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { formatContactLastSeen, maskWalletAddress, normalizeContactRoleTags } from '@/frontend/lib/contact-phonebook-format'
+import { ContactAvatarThumb } from '@/frontend/components/contact-avatar-thumb'
 
 export type ContactPhonebookCardProps = {
   address: string
@@ -164,12 +165,20 @@ export function ContactPhonebookCard(props: ContactPhonebookCardProps) {
               <div className="min-w-0 flex-1" aria-hidden />
             ) : (
               <div className="flex min-w-0 items-start gap-2">
-                <span
-                  className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary"
-                  aria-hidden
-                >
-                  {contactInitial(displayName)}
-                </span>
+                {/^0x[a-fA-F0-9]{64}$/i.test(address) ? (
+                  <ContactAvatarThumb
+                    address={address}
+                    fallbackLabel={displayName}
+                    className="mt-0.5 h-10 w-10"
+                  />
+                ) : (
+                  <span
+                    className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary"
+                    aria-hidden
+                  >
+                    {contactInitial(displayName)}
+                  </span>
+                )}
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <h3 className="truncate text-lg font-bold leading-tight text-foreground">{displayName}</h3>

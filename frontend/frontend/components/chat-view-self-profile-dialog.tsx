@@ -14,6 +14,7 @@ import type { ChatViewMyWalletIdInlineProps } from '@/frontend/components/chat-v
 import { TechnicalIdRow, TechnicalIdSection } from '@/frontend/components/technical-id-row'
 import { buildSelfInfoSections } from '@/frontend/lib/messenger-entity-info-model'
 import { ChatViewVisitenkarteShare } from '@/frontend/components/chat-view-visitenkarte-share'
+import { ContactAvatarEditor } from '@/frontend/components/contact-avatar-editor'
 import { readActiveSendMailbox } from '@/frontend/lib/my-mailbox-active'
 import { readCachedServerMailboxObjectId } from '@/frontend/lib/my-private-mailbox-store'
 
@@ -25,12 +26,12 @@ export type ChatViewSelfProfileDialogProps = ChatViewMyWalletIdInlineProps & {
 }
 
 /**
- * Profil „Ich“ — Kontakt-ID, Peering-QR, Visitenkarte-teilen (MVP), technische IDs.
- * Avatar später — siehe docs/IDEEN-BACKLOG.md.
+ * Profil „Ich“ — Kontakt-ID, Peering-QR, Visitenkarte, Profilbild A (lokal), technische IDs.
  */
 export function ChatViewSelfProfileDialog(p: ChatViewSelfProfileDialogProps) {
   const { open, onOpenChange, packageId, onOpenIotaSettings, ...walletProps } = p
   const valid = /^0x[a-fA-F0-9]{64}$/i.test((walletProps.myAddressLine || '').trim())
+  const myAddr = (walletProps.myAddressLine || '').trim()
 
   const infoSections = useMemo(() => {
     const active = readActiveSendMailbox()
@@ -54,6 +55,8 @@ export function ChatViewSelfProfileDialog(p: ChatViewSelfProfileDialogProps) {
           </DialogDescription>
         </DialogHeader>
         {valid ? <ChatViewMyWalletIdInline {...walletProps} variant="panel" /> : null}
+
+        {valid ? <ContactAvatarEditor address={myAddr} label="Ich" /> : null}
 
         {valid ? (
           <ChatViewVisitenkarteShare

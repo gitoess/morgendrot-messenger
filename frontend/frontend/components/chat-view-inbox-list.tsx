@@ -41,6 +41,7 @@ import {
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { ChatMessageBody } from '@/frontend/components/chat-message-body'
+import { ContactAvatarThumb } from '@/frontend/components/contact-avatar-thumb'
 import { isNftGateMessageWire } from '@/frontend/lib/nft-gate-dek-capsule'
 import { isPassphraseMessageWire } from '@/frontend/lib/passphrase-message-crypto'
 import { parseHandoffZipWire } from '@/frontend/lib/handoff-iota-wire'
@@ -408,6 +409,13 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     outgoingRowEarly ? 'justify-end' : 'justify-start'
                   )}
                 >
+                  {!outgoingRowEarly ? (
+                    <ContactAvatarThumb
+                      address={row.msg.from}
+                      fallbackLabel={senderLabel}
+                      className="mt-0.5"
+                    />
+                  ) : null}
                   <div
                     className={cn(
                       'max-w-[min(100%,28rem)] rounded-2xl px-3 py-2 shadow-sm',
@@ -486,6 +494,13 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                       </DropdownMenu>
                     </div>
                   </div>
+                  {outgoingRowEarly && myAddress.trim() ? (
+                    <ContactAvatarThumb
+                      address={myAddress}
+                      fallbackLabel="Ich"
+                      className="mt-0.5"
+                    />
+                  ) : null}
                 </li>
               </Fragment>
             )

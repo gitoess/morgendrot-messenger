@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react'
 import { BookUser, Check, Megaphone, MessageCircle, MoreVertical, Plus, Settings2, User, Users } from 'lucide-react'
+import { ContactAvatarThumb } from '@/frontend/components/contact-avatar-thumb'
 import { cn } from '@/lib/utils'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { InboxPartnerOption } from '@/frontend/components/chat-view-inbox-partner-strip'
@@ -96,12 +97,16 @@ function SidebarRow(p: {
   unreadCount?: number
   handshakeBadge?: ContactHandshakeBadgeKind
   icon?: React.ReactNode
+  /** Wallet → lokales Profilbild (Stufe A); sonst icon/Buchstabe. */
+  avatarAddress?: string
   onClick: () => void
   onToggleRecipient?: () => void
   recipientSelected?: boolean
   onOpenMore?: () => void
   moreLabel?: string
 }) {
+  const avatarOk =
+    Boolean(p.avatarAddress) && /^0x[a-fA-F0-9]{64}$/i.test((p.avatarAddress || '').trim())
   return (
     <div
       className={cn(
@@ -117,7 +122,13 @@ function SidebarRow(p: {
           p.active ? '' : 'hover:bg-muted/60'
         )}
       >
-        {p.icon ? (
+        {avatarOk ? (
+          <ContactAvatarThumb
+            address={p.avatarAddress!}
+            fallbackLabel={p.title}
+            className="mt-0.5 h-10 w-10"
+          />
+        ) : p.icon ? (
           <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted/60 text-muted-foreground">
             {p.icon}
           </span>
@@ -368,6 +379,7 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
               title="Ich"
               subtitle={selfSubtitle}
               active={p.activeSelfSelected === true}
+              avatarAddress={(p.myAddress ?? p.selfProfile?.myAddressLine ?? '').trim()}
               icon={<User className="h-5 w-5" />}
               onClick={handleSelectSelf}
               onOpenMore={() => {
@@ -505,6 +517,7 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
                   active={p.activePartnerKey != null && p.activePartnerKey.toLowerCase() === c.address.toLowerCase()}
                   unreadCount={c.unreadCount}
                   handshakeBadge={handshakeKindFor(c.address)}
+                  avatarAddress={c.address}
                   onClick={() => p.onSelectContact(c.address)}
                   onToggleRecipient={
                     canToggleRecipient ? () => p.onToggleRecipientContact?.(c.address) : undefined

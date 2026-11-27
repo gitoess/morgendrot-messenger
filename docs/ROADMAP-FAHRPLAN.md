@@ -26,28 +26,21 @@
 
 ### A · Erledigt halten (nicht neu bauen)
 
-PC-Jetzt (#39–#46), Soft-Pause/Burn/Solo-Wizard/Visitenkarte-**Share**-MVP, H.16 S2 Tabs, H.15 4b–4d, H.20 `sdk`, H.21 Empfänger-Dropdown, H.22 Copy+Enc-Event-Merge, H.23 ECDH+C1.6 Opt-in (4c PASS), H.25a Desk STABIL, H.26 Klingel/Notify, H.27 Handshake-UX, Caps Pill Messenger.
+PC-Jetzt (#39–#46), Soft-Pause/Burn/Solo-Wizard/Visitenkarte-**Share**-MVP, H.16 S2 Tabs, H.15 4b–4d, **H.20 `sdk` (geschlossen)**, H.21 Empfänger-Dropdown, **H.22 Kern** Copy+Enc-Event-Merge (**Slot-Feinschliff gestrichen**), H.23 ECDH+C1.6 Opt-in (4c PASS), H.25a Desk STABIL, H.26 Klingel/Notify, H.27 Handshake-UX, Caps Pill Messenger.
 
-### B · Top ~10 — **erst diskutieren**, dann bauen (User 2026-11-27)
+### B · Arbeitsauftrag (User 2026-11-27) — **geschlossen** (Live OK)
 
-| # | Thema | Kritik (ehrlich) | Vorgeschlagener MVP |
-|---|--------|------------------|---------------------|
-| 1 | **H.18** STT/TTS Feinschliff | Vorlesen/Diktat **Teil-Ist**; Cloud-STT riskant | PC: Vorlesen-Button + Diktat mit Bestätigung; **kein** Cloud-Zwang |
-| 2 | **H.18** Codec2 Funk/IOTA-Spar | Sinnvoll **Später**; Airtime ≠ Inhaltsdauer | Nur Spec-Freeze jetzt; Bau nach Outdoor/OK — `IDEEN-BACKLOG` |
-| 3 | **H.19** Forensic Capture | Großes Produkt; LoRa-Anker spekulativ | Entweder **parken** oder Mini: SHA-256 Badge Online-only |
-| 4 | **H.20** | **Ist** | Abhaken — nichts bauen |
-| 5 | **H.21** Kurier-Umschlag | Empfänger **Ist**; Umschlag = neuer Kryptopfad | Default **parken** bis klarer Bedarf |
-| 6 | **H.22** Slot-Feinschliff | M4e Code **Ist**; UX-Politur optional | Kleine Copy/Default-Scheibe oder schließen |
-| 7 | **H.16** Visitenkarte **Übernehmen**-CTA | Share Ist; Inbox-CTA fehlt | Knopf → Prefill+Merge; **ohne** Bild |
-| 8 | **H.16** Profilbild Stufe A | Nur Spec | Lokal Avatar in „Ich“; Teilen = Stufe B später |
-| 9 | **Alpha-EXE / Installer** | Bundle Ist; `.exe` offen | NSIS/eine Start-EXE — Scope klären |
-| 10 | **Vault ID-Snapshot** | Live-IDs unter IOTA ok | Telefonbuch+Package/Mailbox in Vault — ja/nein |
+| Schritt | Thema | Stand |
+|---------|--------|--------|
+| **1** | Visitenkarte-**Übernehmen** + **Profilbild A** | **Ist** — Inbox-CTA; Avatar Sidebar/Inbox/Telefonbuch |
+| **2** | **H.18** STT/TTS Feinschliff | **Ist** — DE-Whisper lokal (cv11-german); Roh-PCM; Fallback Win+H; **kein** Codec2 |
+| **3** | **Alpha-EXE** Scheibe A/B | **Ist Build** — `npm run desktop:exe`; Doku `ALPHA-EXE-MESSENGER.md` |
 
-**H.18–H.22 „bald erledigt“ — Urteil:** **H.20 + H.22 Kern = fertig.** H.18/H.19/H.21 Rest sind **nicht** „kurz abhaken“ ohne die Tabelle B. Codec2 **nicht** in denselben Sprint wie STT-Feinschliff.
+**Weiter:** Code **stabil halten** (Freezes, kleine Scheiben). **C** nur mit User-OK — kein Big-Bang.
 
-### C · Danach umsetzbar (nach Freigabe B / nicht blockierend)
+### C · Geparkt (nach B / nicht jetzt)
 
-H.12 Doku↔Queue Feinschliff · H.24 Package-Profile UI · H.26 Alarmgruppe nur Morgendrot-Voll · H.30 „Neu anfangen“ UI · H.37 Multi-Profil · H.23 C1-Default erst nach 2. Gerät · IOTA↔LoRa Delayed-Upload Gateway · H.25a Outdoor · H.3 Mesh-Kern · Linkify/Zauberstab — jeweils **kleine Scheiben**, Freeze beachten.
+**H.19** Forensic · **H.21** Kurier · **H.18 Codec2** (nur Spec in Backlog) · **Vault ID-Snapshot** · H.12 Feinschliff · H.24 · H.26 Alarmgruppe · H.30 · H.37 · C1-Default · Delayed-Upload Gateway · H.25a Outdoor · H.3 Mesh · Linkify/Zauberstab.
 
 ### D · Ganz hinten (User 2026-11-27 — nicht anfassen)
 
@@ -1728,14 +1721,14 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 ### H.18 TTS / STT — Text-to-Speech & Speech-to-Text (**Produkt / § H.0**)
 
-**Stand 2026-11-27:** **Teil-Ist** (Vorlesen/Diktat/Sprachnachricht Online-Opus). **Nächste Scheibe** = Top‑10 #1 (Feinschliff, kein Cloud-Zwang). **Codec2 Funk/IOTA-Spar** = Top‑10 #2 Spec / Bau **ganz später** (`IDEEN-BACKLOG`).  
+**Stand 2026-11-27:** **Teil-Ist** — **Lokal-Whisper** (Transformers.js / tiny q8) als Composer-Diktat; Web-Speech-Cloud verworfen (oft `network`); TTS-Vorlesen; Sprachnachricht Online-Opus. **Codec2** = später (`IDEEN-BACKLOG`).  
 **Sinnvoll?** **Ja, bedingt** — Freihand / Barrierefreiheit; **nicht** Ersatz für SOS oder LoRa-Priorität. Ergänzt **`docs/MESSENGER-SPRACHAUFNAHME.md`**.
 
 | Aspekt | Kurz |
 |--------|------|
 | **Nutzen** | Barrierefreiheit; Freihand; kürzere Bedienkette neben **Opus-Memo** (weiterhin kanonisch für Funk-taugliche Sprache). |
-| **Risiken** | **STT:** Daten an Drittanbieter (Cloud) vs. **on-device** (Qualität, Modellgröße). **TTS:** gleiches Thema + Latenz. **Offline:** Browser-**Web Speech API** oft eingeschränkt ohne Netz. |
-| **Technik (Idee)** | PWA: `SpeechRecognition` / `speechSynthesis` wo verfügbar; native Schicht (**§ H.6f**) für zuverlässigeres STT/TTS; **kein** automatisches Senden ohne Nutzerbestätigung. |
+| **Risiken** | **STT:** Erst-Download DE-Modell (~150 MB); CPU/WASM-Latenz. **TTS:** Cloud vs. on-device. |
+| **Technik (Ist)** | `@huggingface/transformers` + `onnx-community/whisper-small-cv11-german-ONNX` (WebGPU/fp16 oder wasm/q8), Roh-PCM → Composer; Fallback **Win+H**. |
 | **Priorität** | **Nach** stabiler Phase-A-Sendepfad und klarer **SOS-/Notfall-Doku**; **parallel** zu **§ H.16** möglich, **nicht** vor kritischem Mesh-Kern (**§ C.0b**) großflächig kreuzen. |
 
 ### H.19 Forensic Capture (Bild-Beweis) — **Idee / Backlog**

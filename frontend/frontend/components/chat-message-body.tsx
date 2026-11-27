@@ -25,6 +25,8 @@ import {
 } from '@/frontend/lib/lora-progressive-image-client'
 import { messageLooksLikePath4ImageTransferWire } from '@/frontend/lib/lora-sarq-parser'
 import { MorgSegV1ChatSink } from '@/frontend/components/morg-seg-v1-chat-sink'
+import { VisitenkarteMessageCard } from '@/frontend/components/visitenkarte-message-card'
+import { looksLikeVisitenkarteMessage } from '@/frontend/lib/visitenkarte-ingest'
 import {
   decryptPassphraseMessageWire,
   isPassphraseMessageWire,
@@ -1368,6 +1370,23 @@ export function ChatMessageBody({
     )
   }
 
+  if (looksLikeVisitenkarteMessage(raw)) {
+    return (
+      <div className={hidePlainTextActions ? 'space-y-1' : 'space-y-2'}>
+        <VisitenkarteMessageCard content={raw} />
+        {!hidePlainTextActions ? (
+          <button
+            type="button"
+            onClick={() => void copyRaw()}
+            className="text-xs font-medium text-primary hover:underline"
+          >
+            {copied === 'raw' ? 'Kopiert' : 'Rohtext kopieren'}
+          </button>
+        ) : null}
+      </div>
+    )
+  }
+
   const looksLikeWire =
     wire.startsWith('[[') ||
     (wire.length > 200 && /^[A-Za-z0-9+/=\s]+$/.test(wire.slice(0, 400)))
@@ -1431,7 +1450,6 @@ export function ChatMessageBody({
       <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">{wire}</p>
       {!hidePlainTextActions ? (
         <div className="flex flex-wrap gap-2">
-          {/* Vorlesen auch bei Wire-ähnlichem Text — Nutzer entscheidet; Button fehlt sonst bei langen Zeilen. */}
           {wire.trim() ? <TextToSpeechButton text={wire} /> : null}
           <button
             type="button"

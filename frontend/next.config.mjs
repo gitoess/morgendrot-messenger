@@ -116,6 +116,9 @@ const nextConfig = {
       config.resolve.alias = {
         ...(typeof prev === 'object' && prev && !Array.isArray(prev) ? prev : {}),
         util: nodeUtilClientShim,
+        /** H.18 Lokal-Whisper: nur Browser-WASM, keine Node-Backends. */
+        sharp: false,
+        'onnxruntime-node': false,
       }
     }
     return config

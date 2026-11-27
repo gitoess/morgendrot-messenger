@@ -39,6 +39,7 @@ import { CONTACT_PHONEBOOK_META_CHANGED_EVENT, readContactNotes } from '@/fronte
 import { TechnicalIdRow, TechnicalIdSection } from '@/frontend/components/technical-id-row'
 import { ChatViewMediaGallery } from '@/frontend/components/chat-view-media-gallery'
 import { ChatViewVisitenkarteShare } from '@/frontend/components/chat-view-visitenkarte-share'
+import { ContactAvatarEditor } from '@/frontend/components/contact-avatar-editor'
 
 export type ChatViewContactDetailDialogProps = {
   open: boolean
@@ -303,6 +304,10 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
           <section className="space-y-2 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
             {p.selfWalletPanel}
           </section>
+        ) : null}
+
+        {/^0x[a-fA-F0-9]{64}$/i.test(address) ? (
+          <ContactAvatarEditor address={address} label={displayName || address.slice(0, 10)} />
         ) : null}
 
         {isSelf ? (

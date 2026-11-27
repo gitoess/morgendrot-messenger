@@ -103,5 +103,6 @@ exports/**/move-test/build/
 
 # Vollständiger Messenger-Build (npm run bundle:messenger) – nicht ins Repo committen
 exports/Morgendrot-Messenger-standalone/
+exports/messenger-desktop-exe/
 # Next.js Smartphone-Bundle (npm run bundle:standalone-smartphone)
 exports/morgendrot-standalone-smartphone/

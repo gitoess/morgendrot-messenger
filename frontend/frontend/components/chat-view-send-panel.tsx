@@ -84,6 +84,14 @@ import {
 } from '@/frontend/lib/chat-view-messenger-transport'
 import { MORG_LORA_RETRY_EVENT } from '@/frontend/lib/morg-lora-retry-wire'
 import { toast } from 'sonner'
+import { osDictationHint } from '@/frontend/lib/speech-recognition-de'
+import {
+  canUseLocalWhisperStt,
+  LOCAL_STT_MAX_MS,
+  startLocalSttRecording,
+  transcribeGermanPcm,
+  type LocalSttRecordingHandle,
+} from '@/frontend/lib/local-whisper-stt'
 import { parseMeshtasticNodeIdToNumber } from '@/frontend/lib/meshtastic-node-id'
 import {
   meshtasticVisibleNodeLabel,
@@ -801,15 +809,107 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     })
   }
 
+  /** Lokal-Whisper (H.18) — Browser-Cloud-STT fällt hier oft mit „network“ aus. */
+  const localSttRef = useRef<LocalSttRecordingHandle | null>(null)
+  const localSttMaxTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const localSttBusyRef = useRef(false)
+  const [sttListening, setSttListening] = useState(false)
+
+  useEffect(() => {
+    return () => {
+      if (localSttMaxTimerRef.current) clearTimeout(localSttMaxTimerRef.current)
+      localSttRef.current?.abort()
+      localSttRef.current = null
+    }
+  }, [])
+
   const prepareSttDictation = () => {
     const composer = document.getElementById('chat-composer-message') as HTMLTextAreaElement | null
     composer?.focus()
-    composer?.click()
-    window.alert(
-      'Sprach-zu-Text: OS-Diktat jetzt manuell starten.\n\n' +
-        'Windows: Win+H manuell drücken\n' +
-        'Android: Mikrofon in der Tastaturleiste manuell tippen'
-    )
+
+    const append = (piece: string) => {
+      const t = piece.trim()
+      if (!t) return
+      const el = document.getElementById('chat-composer-message') as HTMLTextAreaElement | null
+      const cur = (el?.value ?? message).trimEnd()
+      onMessageChange(cur ? `${cur} ${t}` : t)
+    }
+
+    const guideOsDictation = (why?: string) => {
+      composer?.focus()
+      toast.message(why ? `${why} ${osDictationHint()}` : osDictationHint(), { duration: 8_000 })
+    }
+
+    const finishLocalRecording = async () => {
+      const rec = localSttRef.current
+      localSttRef.current = null
+      if (localSttMaxTimerRef.current) {
+        clearTimeout(localSttMaxTimerRef.current)
+        localSttMaxTimerRef.current = null
+      }
+      setSttListening(false)
+      if (!rec || localSttBusyRef.current) return
+      localSttBusyRef.current = true
+      const toastId = toast.loading('Transkribiere (Deutsch)…')
+      try {
+        const { samples, sampleRate } = await rec.stop()
+        if (!samples.length) {
+          toast.error('Keine Aufnahme — erneut versuchen oder Win+H.', { id: toastId })
+          return
+        }
+        const text = await transcribeGermanPcm(samples, sampleRate, (msg) => {
+          toast.loading(msg, { id: toastId })
+        })
+        if (!text) {
+          toast.message('Kein Text erkannt — klarer sprechen oder Win+H.', { id: toastId })
+          return
+        }
+        append(text)
+        toast.success('Text eingefügt.', { id: toastId })
+        composer?.focus()
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Lokal-STT fehlgeschlagen.'
+        toast.error(msg, { id: toastId })
+        guideOsDictation('Lokal-Diktat nicht möglich.')
+      } finally {
+        localSttBusyRef.current = false
+      }
+    }
+
+    if (localSttRef.current) {
+      void finishLocalRecording()
+      return
+    }
+
+    if (localSttBusyRef.current) {
+      toast.message('Transkription läuft noch…')
+      return
+    }
+
+    if (!canUseLocalWhisperStt()) {
+      guideOsDictation('Lokal-Diktat nicht verfügbar.')
+      return
+    }
+
+    void (async () => {
+      try {
+        const handle = await startLocalSttRecording()
+        localSttRef.current = handle
+        setSttListening(true)
+        toast.message('Lokal-Diktat: sprechen — Plus → „Diktat stoppen“.', { duration: 5_000 })
+        localSttMaxTimerRef.current = setTimeout(() => {
+          if (localSttRef.current) void finishLocalRecording()
+        }, LOCAL_STT_MAX_MS)
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Mikrofon nicht verfügbar.'
+        if (/permission|notallowed|denied|mikrofon/i.test(msg)) {
+          toast.error('Mikrofon-Zugriff verweigert.')
+          return
+        }
+        toast.error(msg)
+        guideOsDictation()
+      }
+    })()
   }
 
 
@@ -1114,6 +1214,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                   forcedTransport === 'internet' || forcedTransport === 'mesh' || isTelegramDelivery
                 }
                 onStt={prepareSttDictation}
+                sttLabel={sttListening ? 'Diktat stoppen' : 'Lokal-Diktat (STT)'}
                 extraItems={(closePlus) => (
                   <>
                     <div className="px-1 py-1">

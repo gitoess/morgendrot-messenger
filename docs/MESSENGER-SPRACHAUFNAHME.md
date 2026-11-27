@@ -49,7 +49,7 @@ Ohne ffmpeg liefert der Endpoint einen Fehler – weiterhin **Opus-Datei importi
 
 ## TTS / STT (Roadmap **§ H.18**)
 
-**Text-to-Speech** (Nachrichten vorlesen) und **Speech-to-Text** (Diktat statt Tippen) sind **sinnvoll** als spätere Ergänzung (Barrierefreiheit, Freihand), stehen aber **nicht** im gleichen Pfad wie **Opus-Sprachmemo** oder **SOS-Wire**. Abwägung: Cloud-Dienste vs. **On-Device**, Offline, Datenschutz — siehe **`docs/ROADMAP-FAHRPLAN.md`** **§ H.18**.
+**Speech-to-Text (Ist):** Composer **Lokal-Diktat** — DE-Fine-Tune Whisper (`onnx-community/whisper-small-cv11-german-ONNX`) on-device, Roh-PCM. **Text-to-Speech:** Vorlesen wo Browser es anbietet. Steht **nicht** im gleichen Pfad wie **Opus-Sprachmemo** / **SOS-Wire** — siehe **`docs/ROADMAP-FAHRPLAN.md`** **§ H.18**.
 
 ## Einordnung (Deployment)
 

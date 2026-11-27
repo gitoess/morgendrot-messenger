@@ -6,9 +6,36 @@
   "main": "main.cjs",
   "scripts": {
     "start": "electron .",
+    "dist:win-portable": "electron-builder --win portable --x64",
     "postinstall": "node -e \"const fs=require('fs');const p=require('path');const r=p.resolve(__dirname,'..');if(!fs.existsSync(p.join(r,'package.json'))){console.error('Erwartet wird das Morgendrot-Repo als übergeordneten Ordner (../package.json fehlt).');process.exit(1)}\""
   },
+  "build": {
+    "appId": "app.morgendrot.messenger",
+    "productName": "Morgendrot-Messenger",
+    "directories": {
+      "output": "../exports/messenger-desktop-exe"
+    },
+    "files": [
+      "main.cjs",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "Morgendrot-Messenger-Portable.exe"
+    }
+  },
   "devDependencies": {
-    "electron": "^41.0.3"
+    "electron": "^41.0.3",
+    "electron-builder": "^26.0.12"
   }
 }

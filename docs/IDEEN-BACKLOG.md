@@ -39,7 +39,7 @@ Auge im Unlock: `mousedown preventDefault` gegen Dialog-Flackern.
 | Aktion in „Ich“ | Inhalt |
 |-----------------|--------|
 | **Visitenkarte teilen** (Button) | Checkboxen: Anzeigename, Wallet-ID, optional TG / Funk-Node (Klartext) / Mailbox / ECDH — → **Kontakt-QR** (`k:'mc'`) / Text / **Als Nachricht**. Keine dritte QR-Welt. **Kein** klassisches Telefon/E-Mail. |
-| **Mein Profilbild** (später) | Bild wählen/zuschneiden **hier**; „Mit Visitenkarte anbieten“ = Opt-in. **Nicht** Alpha/PC-Jetzt. |
+| **Mein Profilbild** | **Stufe A Ist 2026-11-27** (lokal in „Ich“/Kontakt); Stufe B teilen = später Opt-in. |
 
 **Ist heute:** „Ich“ = Kontakt-ID + Peering-QR + technische IDs. Empfangen-QR = nur Coins.
 
@@ -57,27 +57,13 @@ Auge im Unlock: `mousedown preventDefault` gegen Dialog-Flackern.
 - Empfänger: **lokales Override** (Spitzname/Bild) schlägt fremdes Profilbild.
 - Wallet-Empfangen unverändert.
 
-**Reihenfolge Bau:** Visitenkarte-Checkboxen in „Ich“ → **Übernehmen-CTA** (unten) → Avatar Opt-in → Telefonbuch zeigt empfangenes Bild.  
-**Status 2026-11-26:** Visitenkarte-MVP **Ist** (Ich-Blatt: Checkboxen → `mc` + Text + **Als Nachricht**; optional Funk-Node Klartext). Avatar / Telefonbuch-Bild = weiter Backlog / Roadmap Später (H.16 Rest).
+**Status 2026-11-27:** Share-MVP **Ist**; **Übernehmen-CTA Ist**; **Profilbild A Ist** (lokal + Chat-Thumb). Visitenkarte-Blase zeigt **lesbare Karte** (JSON nur Wire). Stufe B teilen = Backlog.
 
-### Visitenkarte empfangen → Kontakt übernehmen (kritisch 2026-11-27)
+### Visitenkarte empfangen → Kontakt übernehmen
 
-**Wunsch:** Nach Knopfdruck Visitenkarte „öffnen“ → Kontakt inkl. Bild und allen Daten automatisch eintragen.
+**Ist 2026-11-27:** Inbox-Button **Als Kontakt übernehmen** → Parse + `saveContactEntry` + optional Peer-Pub; Merge-Confirm wenn Kontakt existiert. Bild kommt **nicht** mit der Karte (nur lokales Profilbild A).
 
-**Ist:** Absender baut Klartext + eingebettetes `mc`-JSON (`visitenkarte-share.ts`). Empfänger hat `parseContactQrPayload` / Peering-Scan — **keinen** Inbox-CTA „Als Kontakt übernehmen“ und **kein** Profilbild im Payload.
-
-**Kritik / streichen:**
-- **Kein** stilles Auto-Anlegen ohne Knopf (Spam, Überschreiben bestehender Kontakte).
-- **Kein** „Bild mit allem“ in derselben Scheibe wie Daten — Avatar hängt an Profilbild-Stufen A/B.
-- Klartext-Visitenkarte ≠ Peering-Handshake; ECDH-Pub im QR ist **Angebot**, kein Connect.
-
-**Verbesserter MVP (sinnvoll, bauen wenn Block 2):**
-1. Inbox erkennt Visitenkarte (Header + `mc`-JSON).
-2. Button **„Als Kontakt übernehmen“** → Prefill Name / Wallet / Mailbox / TG / Funk-Node / optional ECDH.
-3. Bei existierendem Kontakt: **Merge-Confirm** (lokales Override bleibt stärker).
-4. **Bild später:** erst nach Profilbild Stufe B (Thumbnail/Hash Folge-Nachricht); CTA ohne Bild trotzdem nützlich.
-
-**Nicht-Ziel:** dritte QR-Welt; Wallet-Empfangen-QR anfassen (Freeze).
+**Nicht-Ziel:** stille Auto-Anlage; Bild in QR; Wallet-Empfangen-QR (Freeze).
 
 ---
 

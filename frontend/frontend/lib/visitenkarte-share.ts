@@ -67,6 +67,7 @@ export function buildVisitenkarteShare(input: VisitenkarteShareInput): Visitenka
     ecdhPubB64: input.flags.includeEcdh && ecdh ? ecdh : undefined,
   })
 
+  /** Menschenlesbar oben; Maschinen-JSON unten (Parser/CTA) — UI blendet JSON aus. */
   const lines: string[] = ['Morgendrot Visitenkarte']
   if (input.flags.includeDisplayName && name) lines.push(`Name: ${name}`)
   lines.push(`Wallet: ${address}`)
@@ -75,7 +76,9 @@ export function buildVisitenkarteShare(input: VisitenkarteShareInput): Visitenka
   }
   if (input.flags.includeTelegram && tg) lines.push(`Telegram-Chat-ID: ${tg}`)
   if (input.flags.includeMeshNode && mesh) lines.push(`Funk-Node: ${mesh}`)
-  if (input.flags.includeEcdh && ecdh) lines.push('ECDH-Pub: im QR enthalten (Feld e)')
+  if (input.flags.includeEcdh && ecdh) {
+    lines.push('Verschlüsselung: Schlüssel dabei (wird beim Übernehmen gemerkt)')
+  }
   lines.push('')
   lines.push(qrJson)
 

@@ -43,6 +43,24 @@ describe('visitenkarte-share', () => {
     expect(r.plainText).toContain('Funk-Node: !abc123')
     expect(r.plainText).toContain(addr)
     expect(r.plainText).not.toContain('Name: Ada')
+    expect(r.plainText).not.toContain('Feld e')
     expect(r.qrJson).not.toContain('!abc123')
+  })
+
+  it('ECDH-Hinweis ohne QR-Prosa', () => {
+    const r = buildVisitenkarteShare({
+      address: addr,
+      ecdhPubB64: 'AAA',
+      flags: {
+        includeDisplayName: false,
+        includeWallet: true,
+        includeTelegram: false,
+        includeEcdh: true,
+        includeMailbox: false,
+        includeMeshNode: false,
+      },
+    })
+    expect(r.plainText).toMatch(/Verschlüsselung: Schlüssel dabei/)
+    expect(r.plainText).not.toContain('im QR enthalten')
   })
 })

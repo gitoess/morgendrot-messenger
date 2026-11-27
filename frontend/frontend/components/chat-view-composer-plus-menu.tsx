@@ -15,6 +15,8 @@ export type ChatViewComposerPlusMenuProps = {
   onPickCamera: () => void
   onStt?: () => void
   showStt?: boolean
+  /** z. B. „Diktat stoppen“ während Web-Speech läuft */
+  sttLabel?: string
   /** Statisch oder `(close) => …` — close schließt das +-Menü (nach Checkbox/Bildwahl). */
   extraItems?: ReactNode | ((close: () => void) => ReactNode)
   className?: string
@@ -99,7 +101,7 @@ export function ChatViewComposerPlusMenu(p: ChatViewComposerPlusMenuProps) {
         {p.showStt && p.onStt ? (
           <MenuRow
             icon={<Mic className="h-4 w-4" />}
-            label="Sprache zu Text (STT)"
+            label={p.sttLabel?.trim() || 'Sprache zu Text (STT)'}
             disabled={p.disabled}
             onClick={() => {
               close()
