@@ -141,7 +141,9 @@ export function ChatConversationMenuItems(p: ChatViewConversationMenuProps) {
                 writeRatchetExperimentEnabled(next)
                 setRatchetExp(next)
                 if (next) {
-                  toast.message('Double Ratchet an (1:1) — Partner braucht dasselbe Flag; Handshake nötig. Kein Default.')
+                  toast.message(
+                    'Double Ratchet an (1:1) — lokale Ratchet-Sessions geleert. Partner: Flag ebenfalls an, dann eine neue Enc. Kein Default.'
+                  )
                 } else {
                   toast.message('Double Ratchet aus — wieder Session Keys+ (v2).')
                 }

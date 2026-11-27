@@ -16,9 +16,15 @@ import { getDirectChainFieldIdsFromLs, getDirectMailboxChainSnapshot } from '@/f
 import { ensureDirectChatPeerPubForRecipient } from '@/frontend/lib/direct-iota-encrypted-send-prep'
 import {
   ensureRatchetSessionForPeer,
+  looksLikeRatchetV3Wire,
+  lookupRatchetOutgoingPlaintext,
+  peekRatchetWireMsgId,
   readRatchetExperimentEnabled,
   tryRatchetExperimentUnwrapIncoming,
 } from '@/frontend/lib/ratchet-experiment'
+
+const RATCHET_UNWRAP_FAIL_HINT =
+  '[Double Ratchet] Innere Lage nicht lesbar — Flag beiderseits an, Experiment aus→an, dann neue Enc. Eigene Ausgangs-Zeile: Klartext nur wenn dieser Tab die Sendung erzeugt hat.'
 
 function ensurePeerSessionArchive(peerAddr: string): void {
   if (getPeerSessionArchiveForRecipient(peerAddr)) return
@@ -31,15 +37,26 @@ function ensurePeerSessionArchive(peerAddr: string): void {
   }
 }
 
+function normAddr(a: string): string {
+  return a.trim().toLowerCase()
+}
+
 export type EncryptedInboxPayload = {
   iv: Uint8Array
   ciphertext: Uint8Array
   tag: Uint8Array
 }
 
+export type DecryptDirectInboxMeta = {
+  /** Chain-Absender — für Ausgangs-Echo. */
+  sender?: string
+  recipient?: string
+}
+
 export async function decryptDirectInboxEncryptedPayload(
   peerAddr: string,
-  payload: EncryptedInboxPayload
+  payload: EncryptedInboxPayload,
+  meta?: DecryptDirectInboxMeta
 ): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
   let mat = getDirectChatEcdhMaterialForRecipient(peerAddr)
   if (!mat && getDirectChatEcdhPrivateKey()) {
@@ -72,14 +89,41 @@ export async function decryptDirectInboxEncryptedPayload(
       peerPubRaw: mat.peerPubRaw,
       sessionArchive: getPeerSessionArchiveForRecipient(peerAddr),
     })
-    if (readRatchetExperimentEnabled()) {
+    if (looksLikeRatchetV3Wire(text)) {
+      if (!readRatchetExperimentEnabled()) {
+        return {
+          ok: true,
+          text: '[Double Ratchet] Opt-in aus — Chat-⋮ „Double Ratchet (Experiment)“ an, dann Aktualisieren.',
+        }
+      }
+
+      const msgId = peekRatchetWireMsgId(text)
+      const iAmSender = Boolean(meta?.sender && normAddr(meta.sender) === normAddr(myAddress))
+      if (iAmSender && msgId) {
+        const remembered = lookupRatchetOutgoingPlaintext(peerAddr, msgId)
+        if (remembered) return { ok: true, text: remembered }
+      }
+
       const shared = await deriveSharedSecret(mat.ecdhPrivateKey, mat.peerPubRaw)
-      await ensureRatchetSessionForPeer({ peerAddress: peerAddr, ecdhShared: shared })
+      await ensureRatchetSessionForPeer({
+        peerAddress: peerAddr,
+        ecdhShared: shared,
+        localAddress: myAddress,
+      })
       const unwrapped = await tryRatchetExperimentUnwrapIncoming({
         peerAddress: peerAddr,
         raw: text,
+        ecdhShared: shared,
+        localAddress: myAddress,
       })
       if (unwrapped) return { ok: true, text: unwrapped.plaintext }
+      if (iAmSender) {
+        return {
+          ok: true,
+          text: '[Double Ratchet · eigene Sendung] Klartext-Echo nur in der Session, die gesendet hat — Empfänger braucht Flag + frische Session.',
+        }
+      }
+      return { ok: true, text: RATCHET_UNWRAP_FAIL_HINT }
     }
     return { ok: true, text }
   } catch {

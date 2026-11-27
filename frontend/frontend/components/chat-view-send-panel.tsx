@@ -433,11 +433,14 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
       !!attachmentBarProps.attachedAudioBase64 ||
       attachmentBarProps.attachedTxtFile != null)
 
-  /** Funk-Sondermodus: nur Kurztext + LoRa-Bild, keine IOTA-Blobs/Audio/.txt. */
+  /**
+   * Funk-Sondermodus: nur Kurztext + LoRa-Bild, keine IOTA-Blobs/Audio/.txt.
+   * Nur bei Sendepfad Funk — sonst blockieren sticky LS-Flags (Bilder/Verankern) fälschlich IOTA.
+   */
   const meshPath4Blocked =
+    forcedTransport === 'mesh' &&
     meshFunkSpecialMode &&
     (!isPrivate ||
-      forcedTransport !== 'mesh' ||
       !!attachmentBarProps.attachedBlobBase64 ||
       !!attachmentBarProps.attachedAudioBase64 ||
       attachmentBarProps.attachedTxtFile != null)

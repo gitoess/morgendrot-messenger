@@ -516,6 +516,22 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
     expect(onSend).toHaveBeenCalledTimes(1)
   })
 
+  it('IOTA: sticky Funk-Flags blockieren Senden nicht', () => {
+    const { container } = render(
+      <ChatViewSendPanel
+        {...baseSendPanel({
+          encrypted: false,
+          forcedTransport: 'internet',
+          meshLoRaImagesEnabled: true,
+          meshSelfArchiveAfterLoRa: true,
+          message: 'iota ok',
+          recipient: `0x${'ab'.repeat(32)}`,
+        })}
+      />
+    )
+    expect(primarySend(container)).toBeEnabled()
+  })
+
   it('LoRa-Online-Fallback: Bestätigen und Abbrechen', () => {
     const onConfirmLoraOnline = vi.fn()
     const onDismissLoraOnlineFallback = vi.fn()

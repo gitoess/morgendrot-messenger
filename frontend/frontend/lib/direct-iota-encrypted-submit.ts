@@ -261,6 +261,7 @@ async function encryptPlaintextForDirectSubmit(
       const ensured = await ensureRatchetSessionForPeer({
         peerAddress: opts.recipient,
         ecdhShared: shared,
+        localAddress: myAddress,
       })
       if (ensured.ok) {
         const wrapped = await tryRatchetExperimentWrapOutgoing({
