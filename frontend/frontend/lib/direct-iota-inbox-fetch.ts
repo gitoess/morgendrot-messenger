@@ -448,8 +448,23 @@ export async function tryFetchDirectMailboxInboxViaIota(
           })
         }
       }
-      /** Indexer FromOrToAddress zuerst; Package-queryEvents nur Fallback. */
-      let indexerScanned = 0
+      /**
+       * H.22 Rest: Indexer (FromOrToAddress) **und** Package-queryEvents mergen.
+       * Früher: bei indexerScanned>0 kein Package-Fallback → Lücken wenn Indexer
+       * Teiltreffer liefert, EncryptedMessage aber nur noch über queryEvents erreichbar.
+       * Dedup: Logical-Key vs. Mailbox + inboxKey zwischen Event-Quellen.
+       */
+      const eventInboxKeys = new Set<string>()
+      const pushEventRowsDeduped = async (eventRows: MessagingEventInboxRpcRow[]) => {
+        const fresh = eventRows.filter((r) => {
+          const k = (r.inboxKey || '').trim()
+          if (!k) return true
+          if (eventInboxKeys.has(k)) return false
+          eventInboxKeys.add(k)
+          return true
+        })
+        await pushEventRows(fresh)
+      }
       const indexerUrl = resolveIotaIndexerRpcUrl(rpc)
       const addrClient = indexerUrl ? createDirectIotaClient({ rpcUrl: indexerUrl }) : client
       try {
@@ -459,24 +474,21 @@ export async function tryFetchDirectMailboxInboxViaIota(
           offset: 0,
           maxTxPages: Math.min(100, Math.max(25, Math.ceil(eventNeed / 5) + 20)),
         })
-        indexerScanned = addrRows.length
-        await pushEventRows(addrRows)
+        await pushEventRowsDeduped(addrRows)
       } catch {
-        indexerScanned = 0
+        /* Indexer optional — Package-Pfad folgt */
       }
-      if (indexerScanned === 0) {
-        const packageIds = await resolveDirectInboxPackageIds(pkg)
-        const maxEventPages = Math.min(200, Math.max(40, Math.ceil(fetchWindow / 5) + 20))
-        for (const packageId of packageIds) {
-          const eventRows = await fetchMessagingEventInboxRpcRows(client, {
-            packageId,
-            myAddress: my,
-            limit: eventNeed,
-            offset: 0,
-            maxEventPages,
-          })
-          await pushEventRows(eventRows)
-        }
+      const packageIds = await resolveDirectInboxPackageIds(pkg)
+      const maxEventPages = Math.min(200, Math.max(40, Math.ceil(fetchWindow / 5) + 20))
+      for (const packageId of packageIds) {
+        const eventRows = await fetchMessagingEventInboxRpcRows(client, {
+          packageId,
+          myAddress: my,
+          limit: eventNeed,
+          offset: 0,
+          maxEventPages,
+        })
+        await pushEventRowsDeduped(eventRows)
       }
     }
 

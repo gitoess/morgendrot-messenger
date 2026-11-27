@@ -36,7 +36,7 @@
 | **Flüchtig (Event)** | `PlaintextMessage` / `EncryptedMessage` Events | anders als Mailbox-DF; **kein** Rebate wie Mailbox-Zeile |
 | **Persistent (Mailbox)** | Dynamic Fields unter Mailbox-Object-ID | Mailbox-Purge möglich |
 
-**Direct-IOTA:** Enc geht in **beide** Modi (`trySubmitEncryptedEventViaDirectIota` / Mailbox). **Empfang Enc-Event** braucht Event-Abhol/Indexer — nicht dieselbe Union wie Mailbox-DFs (H.22 Rest). Alltag: Enc eher **Mailbox**.
+**Direct-IOTA:** Enc geht in **beide** Modi (`trySubmitEncryptedEventViaDirectIota` / Mailbox). **Empfang Enc-Event** (H.22 Rest **Ist 2026-11-27**): Indexer `FromOrToAddress` **∪** Package-`queryEvents`, Dedup vs. Mailbox-DFs — nicht dieselbe Quelle, aber eine Inbox-Union. Alltag: Enc eher **Mailbox**.
 
 Umschalter **„Speicher auf der Chain“** erscheint bei **1:1 Privat** und **Gruppenchat** (online), **nicht** bei Pinnwand (dort Klartext-Hinweise).
 

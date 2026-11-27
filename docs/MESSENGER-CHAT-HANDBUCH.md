@@ -311,7 +311,7 @@ Weiter: **`docs/HANDSHAKE-PERSISTENZ-UND-H23.md`**, Abschnitt **Handshake Vertra
 
 **Posteingang:** Haupt + bekannte Privat/Team (+ Team-Broadcast verknüpfter Gruppen).
 
-**Speicher (online):** **Flüchtig (Event)** = kein Mailbox-DF (Klartext **oder** Enc). **Persistent (Mailbox)** = Eintrag im Postamt; danach **Aktualisieren** im App-Header neben Tresor. Klartext vs. verschlüsselt = Schloss im Composer — **unabhängig** von Event/Mailbox. **Hinweis:** Enc-Events erscheinen nicht als Mailbox-Zeile; Partner braucht Event-Abhol/Indexer (H.22 Rest), Mailbox-Pfad ist der zuverlässigere Alltag.
+**Speicher (online):** **Flüchtig (Event)** = kein Mailbox-DF (Klartext **oder** Enc). **Persistent (Mailbox)** = Eintrag im Postamt; danach **Aktualisieren** im App-Header neben Tresor. Klartext vs. verschlüsselt = Schloss im Composer — **unabhängig** von Event/Mailbox. **Hinweis:** Enc-Events sind keine Mailbox-DFs; der Posteingang mergt Indexer + Package-Events (H.22 Rest Ist 2026-11-27). Alltag weiter oft **Mailbox** (zuverlässiger bei Offline/Historie).
 
 | Kanal / Ziel | Persistenz | Wer sieht was? |
 |--------------|------------|----------------|

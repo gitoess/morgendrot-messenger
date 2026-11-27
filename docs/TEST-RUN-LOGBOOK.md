@@ -21,6 +21,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-11-27** | PC, **PC-Rest H.22 Enc-Event + Edition** | Direct+Nest: Indexer∪Package-`queryEvents` (kein Early-Exit bei Teiltreffer); Dedup Event↔Mailbox/Event. Vitest `messaging-events-inbox-rpc`. Edition: Auto-Execute-Default + §6 Claims nachgezogen. Surrogat = Zwei-Wallet PC (C1.6 4c schon PASS). | **CODE+DOCS** — Live Enc+Event optional Retest |
 | **2026-11-24** | PC, **Solo/Peer-Wizard Scheibe** | `peerMessengerOnly` (IOTA-Edition/`hideEinsatzleitung`) → Wanderer-Pfad statt Einsatzleitung; Copy „Messenger einrichten (Freunde)“. Vitest onboarding 20 PASS. | **CODE** |
 | **2026-11-24** | PC, **Hard-Lock Live-Check** | Abmelden → Unlock-Dialog + Scrim „Tresor gesperrt“; Einstellungen `pointer-events: none` (Browser-Click refused); Fallback „Tresor öffnen“ sichtbar. | **PASS (Live)** |
 | **2026-11-24** | PC, **Tresor fail-closed Härte** | Scrim stärker + Hinweis; Fallback „Tresor öffnen“ (pointer-events Insel). | **CODE** |

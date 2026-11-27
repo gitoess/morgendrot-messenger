@@ -57,8 +57,27 @@ Auge im Unlock: `mousedown preventDefault` gegen Dialog-Flackern.
 - Empfänger: **lokales Override** (Spitzname/Bild) schlägt fremdes Profilbild.
 - Wallet-Empfangen unverändert.
 
-**Reihenfolge Bau:** Visitenkarte-Checkboxen in „Ich“ → Avatar Opt-in → Telefonbuch zeigt empfangenes Bild.  
+**Reihenfolge Bau:** Visitenkarte-Checkboxen in „Ich“ → **Übernehmen-CTA** (unten) → Avatar Opt-in → Telefonbuch zeigt empfangenes Bild.  
 **Status 2026-11-26:** Visitenkarte-MVP **Ist** (Ich-Blatt: Checkboxen → `mc` + Text + **Als Nachricht**; optional Funk-Node Klartext). Avatar / Telefonbuch-Bild = weiter Backlog / Roadmap Später (H.16 Rest).
+
+### Visitenkarte empfangen → Kontakt übernehmen (kritisch 2026-11-27)
+
+**Wunsch:** Nach Knopfdruck Visitenkarte „öffnen“ → Kontakt inkl. Bild und allen Daten automatisch eintragen.
+
+**Ist:** Absender baut Klartext + eingebettetes `mc`-JSON (`visitenkarte-share.ts`). Empfänger hat `parseContactQrPayload` / Peering-Scan — **keinen** Inbox-CTA „Als Kontakt übernehmen“ und **kein** Profilbild im Payload.
+
+**Kritik / streichen:**
+- **Kein** stilles Auto-Anlegen ohne Knopf (Spam, Überschreiben bestehender Kontakte).
+- **Kein** „Bild mit allem“ in derselben Scheibe wie Daten — Avatar hängt an Profilbild-Stufen A/B.
+- Klartext-Visitenkarte ≠ Peering-Handshake; ECDH-Pub im QR ist **Angebot**, kein Connect.
+
+**Verbesserter MVP (sinnvoll, bauen wenn Block 2):**
+1. Inbox erkennt Visitenkarte (Header + `mc`-JSON).
+2. Button **„Als Kontakt übernehmen“** → Prefill Name / Wallet / Mailbox / TG / Funk-Node / optional ECDH.
+3. Bei existierendem Kontakt: **Merge-Confirm** (lokales Override bleibt stärker).
+4. **Bild später:** erst nach Profilbild Stufe B (Thumbnail/Hash Folge-Nachricht); CTA ohne Bild trotzdem nützlich.
+
+**Nicht-Ziel:** dritte QR-Welt; Wallet-Empfangen-QR anfassen (Freeze).
 
 ---
 
@@ -174,3 +193,39 @@ Auge im Unlock: `mousedown preventDefault` gegen Dialog-Flackern.
 Geführter Erststart + spontaner Helfer-Beitritt mit boss-signiertem Update und Empfänger-Bestätigung. Transport: IOTA speichert, LAN liefert schnell (wenn Boss erreichbar). **Nicht** Ad-hoc/BLE.
 
 **Siehe auch:** `docs/HANDOFF-UND-MODUS-ZIELBILD.md` (Wanderer außerhalb), `docs/ROADMAP-FAHRPLAN.md` § H.16 (Boss-LAN Ist)
+
+---
+
+## Codec2 / Funk-Audio + IOTA-Sparmodus (kritisch 2026-11-27)
+
+**Status:** Vision / Backlog — **nicht** Alpha-PC, **nicht** parallel zu H.25a-Encode-Freeze. Roadmap: Später (**H.18** ∩ **H.25**/Funk, nach Outdoor-Desk-Stabilität).
+
+### Zielbild (verbessert)
+
+| Sendepfad | Standard | Optional | Budget (Nutzlast) | Ehrliche Grenze |
+|-----------|----------|----------|-------------------|-----------------|
+| **Funk** (`MORG_SEG_V1`) | Codec2 **1200 bit/s** | Codec2 **700** bei schlechtem Link | ≤ **~3,0 KB** Roh → ~**15–20 s** Sprache | Passt unter Bild-Cap **3,6 KB**; **Airtime ≠ Inhalt**: bei Gap ~580 ms und ~93 B/Seg ≈ **viele Segmente** → Wanduhr oft **~20–40 s+** inkl. NAK — Mesh blockiert währenddessen |
+| **Online/IOTA** | Opus **~12 kbit/s** (Ist-Richtung) | Codec2 1200 „Spar-/Lang“ | Opus ~10–40 s (größer); Codec2 länger möglich | Opus bleibt Default-Klang; Codec2 nur Opt-in (Deposit/Gas) |
+
+### Behalten (sinnvoll)
+
+1. **Auto-Trim Stille** Anfang/Ende — billige Byte-Ersparnis, Melodie bleibt.
+2. **Einheitlicher Encode:** bevorzugt **Browser-WASM** (`codec2.wasm`) für Standalone/PWA; Server-ffmpeg **nur wenn Build wirklich `libcodec2` hat** (viele Distros: **nicht** „oft nativ“ — vor Bau prüfen, sonst WASM-only).
+3. **Abspielen:** Empfänger **muss** Codec2→PCM/WAV (WASM) → Blob; kein natives `<audio>` auf `.c2`.
+
+### Streichen / nicht behaupten
+
+- „15 s Audio = 15 s Sendezeit“ — falsch unter S-ARQ/Gap.
+- Cap/Gap am **Bild-Anker** ändern für Audio — **verboten** ohne Live-OK (`lora-h25a-stable-anchor`).
+- Audio als Mesh-v2-E2E-Burst — Produkt-Funk bleibt Klartext/Kanal-PSK; Codec2 = Klartext-Nutzlast wie Bild.
+- Online-Codec2 als Default — Opus bleibt Standard.
+
+### Bau-Reihenfolge (wenn gebucht)
+
+1. Spec-Scheibe Wire-Tag (z. B. SEG-Phase/`MORG_AUD_V1`) + Budget-Tests — **ohne** Bild-Encode anzufassen.  
+2. Encode/Decode WASM + Trim + Inbox-Play.  
+3. Funk Live MediumFast Desk; dann Outdoor.  
+4. Optional Online-Sparmodus.  
+5. 700-bit-Modus erst nach stabilem 1200.
+
+**Vorbedingung:** H.25a Desk weiter STABIL; Outdoor-Feld oder explizites User-OK für Funk-Audio-Scheibe. Parallel bleibt STT/Kurztext die robuste Feld-Alternative (Fahrplan H.18 Phase 1).

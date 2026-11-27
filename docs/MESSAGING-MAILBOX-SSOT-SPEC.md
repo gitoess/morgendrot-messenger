@@ -1,7 +1,7 @@
 # Messaging: IOTA-Mailbox als Speicher — Event vs. Persistent (unabhängig von Verschlüsselung)
 
 **Zweck:** Architektur- und UX-Vorgabe für on-chain Nachrichten: **zwei unabhängige Nutzerentscheidungen** (Verschlüsselung × Persistenz) und die daraus resultierenden Move-Pfade. Abgeglichen mit Ist-Code.  
-**Stand:** 2026-05-15  
+**Stand:** 2026-11-27 (H.22 Enc-Event Empfang Merge; Achsen/Phase A unverändert seit 2026-05)  
 **Verknüpft:** `docs/ROADMAP-FAHRPLAN.md` (**§ H.12**, **§ H.15**, **§ H.22** / **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** M1–M4), `docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`, `docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`, `docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`, `move-test/sources/messaging.move`, `src/chain-access.ts`, `src/messaging-persistence-resolve.ts`, `src/messenger-nest/messenger-fetch.ts`, `src/messenger-nest/messenger-chain-wrap.ts`, `frontend/frontend/lib/mailbox-send-hybrid.ts`, `frontend/frontend/hooks/use-chat-view-handle-send.ts`, `frontend/frontend/components/chat-view-transport-card.tsx`
 
 ---
@@ -167,7 +167,7 @@ Begleittext in der Transport-Card: z. B. „Verschlüsseltes Event“ vs. „V
 1. **Produkt:** Default **`event`** vs. **`mailbox`** pro Rolle/Kanal — aktuell **global** (`localStorage`); optional feinere Defaults (z. B. Boss → mailbox).  
 2. **Ist:** `resolveForceLegacyPlaintext` + **`resolveForceLegacyEncrypted`**; `storeEncryptedMessage` mit `forceLegacyEncrypted` (`chain-access.ts`).  
 3. **Ist:** API `/send` + `/send-plain` mit **`messagingPersistenceMode`**; Frontend Transport-Card + Hybrid + Offline-Retry.  
-4. **Offen:** Posteingang/Indexer — **verschlüsselte Events** zuverlässig neben Mailbox-DFs anzeigen (Phase B).  
+4. **Teil-Ist 2026-11-27 (H.22 Rest):** Posteingang mergt **Indexer** (`FromOrToAddress`) **und** Package-`queryEvents` (Direct + Nest); Dedup Event↔Mailbox + Event↔Event. Alltag weiter oft Mailbox; Enc-Event Desk ohne Mailbox-Pflicht. Outdoor/Prune-Edge weiter beobachten.
 5. **Tests:** Vitest `messaging-persistence-mode.test.ts`, `execute-command.test.ts`; Root `run-tests.ts` → `messaging-persistence-resolve`; manuell: alle vier Zellen der 2×2-Matrix (siehe § 1.1).  
 6. **Doku:** `CHANGELOG` / `TEST-RUN-LOGBOOK` bei Release nachziehen.
 

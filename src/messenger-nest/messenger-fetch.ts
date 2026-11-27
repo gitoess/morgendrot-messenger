@@ -375,7 +375,11 @@ async function appendMessagingEventsFromAddressTxs(
     return { scanned: rows.length };
 }
 
-/** Indexer zuerst; Package-queryEvents nur Fallback wenn Indexer leer/unnutzbar. */
+/**
+ * H.22 Rest: Indexer **und** Package-queryEvents mergen (Dedup über keySeen / Logical-Key).
+ * Früher: bei scanned>0 kein Package-Pfad — Teiltreffer am Indexer konnten Enc-Events
+ * auslassen, die nur noch über queryEvents sichtbar waren.
+ */
 async function appendMessagingEventsPreferIndexerThenPackages(
     packageIdForQuery: string,
     mailboxPackageId: string,
@@ -387,7 +391,7 @@ async function appendMessagingEventsPreferIndexerThenPackages(
     keySeen: Set<string>,
     fetchWindow: number
 ): Promise<void> {
-    const { scanned } = await appendMessagingEventsFromAddressTxs(
+    await appendMessagingEventsFromAddressTxs(
         myAddress,
         myNorm,
         items,
@@ -396,7 +400,6 @@ async function appendMessagingEventsPreferIndexerThenPackages(
         keySeen,
         fetchWindow
     );
-    if (scanned > 0) return;
     const primaryPkg = mailboxPackageId.trim().toLowerCase();
     for (const pkg of packageIdsForInboxUnion(packageIdForQuery)) {
         const isPrimary = pkg.trim().toLowerCase() === primaryPkg;

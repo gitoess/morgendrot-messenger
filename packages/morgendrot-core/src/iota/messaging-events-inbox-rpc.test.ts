@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
-import { fetchMessagingEventInboxRpcRows } from './messaging-events-inbox-rpc'
+import {
+  fetchMessagingEventInboxRpcRows,
+  fetchMessagingEventInboxViaAddressTxs,
+} from './messaging-events-inbox-rpc'
 
 describe('fetchMessagingEventInboxRpcRows', () => {
   const pkg = '0x' + '11'.repeat(32)
@@ -92,5 +95,62 @@ describe('fetchMessagingEventInboxRpcRows', () => {
     expect(client.queryEvents).toHaveBeenCalledTimes(2)
     expect(rows).toHaveLength(1)
     if (rows[0]?.kind === 'plain') expect(rows[0].text).toBe('OK')
+  })
+})
+
+describe('fetchMessagingEventInboxViaAddressTxs', () => {
+  const pkg = '0x' + '11'.repeat(32)
+  const me = '0x' + '22'.repeat(32)
+  const peer = '0x' + '33'.repeat(32)
+
+  it('zieht EncryptedMessage aus FromOrToAddress-TXs (Indexer-Pfad)', async () => {
+    const discovered = new Set<string>()
+    const client = {
+      queryTransactionBlocks: vi.fn().mockResolvedValue({
+        data: [
+          {
+            timestampMs: '1700000000002',
+            events: [
+              {
+                id: 'tx-ev-enc',
+                type: `${pkg}::messaging::EncryptedMessage`,
+                parsedJson: {
+                  sender: peer,
+                  recipient: me,
+                  nonce: '99',
+                  iv: Array.from({ length: 12 }, (_, i) => i),
+                  ciphertext: [9, 8, 7],
+                  tag: Array.from({ length: 16 }, () => 1),
+                },
+              },
+            ],
+          },
+        ],
+        hasNextPage: false,
+        nextCursor: null,
+      }),
+    }
+
+    const rows = await fetchMessagingEventInboxViaAddressTxs(client as never, {
+      myAddress: me,
+      limit: 10,
+      offset: 0,
+      discoveredPackageIds: discovered,
+    })
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.kind).toBe('encrypted')
+    expect(discovered.has(pkg.toLowerCase())).toBe(true)
+  })
+
+  it('bricht soft ab wenn FromOrToAddress am Fullnode fehlt', async () => {
+    const client = {
+      queryTransactionBlocks: vi.fn().mockRejectedValue(new Error('filter not supported')),
+    }
+    const rows = await fetchMessagingEventInboxViaAddressTxs(client as never, {
+      myAddress: me,
+      limit: 5,
+      offset: 0,
+    })
+    expect(rows).toEqual([])
   })
 })

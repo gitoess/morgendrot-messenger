@@ -28,6 +28,7 @@ Voraussetzungen: `npm run dm` (oder `dev`), Tresor offen, Puls **IOTA-Sendeweg =
 | 4 | Optional **Zwei-Wallet:** `npm run dm:b` → http://localhost:3344/ … Handshake → Enc A↔B | Beide Seiten konsistent; **kein** Phase‑4-Anspruch | **PASS** 2026-11-22 + **2026-11-23** User-Inbox `5jqrFnMS…` / `6LcSJTx6…` |
 | 4b | Optional **Peering-QR** statt Tippen (`mp` / Kontakt-QR mit `e`) A↔B | Pub landet, Enc möglich; Vitest `peering-qr` / `install-qr` | **PASS (Vitest)** 2026-11-23 in H.15 88/88. Live-Scan UI = Rest-Ritual bei Touch |
 | 4c | Optional **H.23 C1.6:** in **1:1**-Chat-⋮ **Double Ratchet (Experiment)** auf **A und B** an → Enc A↔B (Gruppe hat keinen Toggle) | Klartext lesbar beiderseits; Flag aus = weiter Session Keys+. **Kein** Produktiv-Default | **PASS** 2026-11-27 User-Live A↔B Klartext (nach Peer-Pub/HsKey-Fix) |
+| 4d | Optional **H.22 Enc-Event:** Persistenz **Flüchtig (Event)** + Enc A→B → Partner **Aktualisieren** | Inbox zeigt Enc-Event (Indexer∪`queryEvents`); kein Mailbox-DF nötig; kein Doppel zu Mailbox-Zeile | **CODE** 2026-11-27 Merge Direct+Nest + Vitest `messaging-events-inbox-rpc`; Live Retest bei Touch |
 | 5 | Puls → **Nur Morgendrot-API** | Klartext geht **nicht** still per RPC | **PASS** Vitest `trySubmit…relay` → Fehler „Nur Morgendrot-API“ (88/88). Live 2026-11-22 Relay-Mailbox `BniNWGBqZzGp…` (API-Pfad, kein stiller Direkt-RPC) |
 | 6 | Nach Test: Session-Signer in Puls **löschen** | Kein Mnemonic in Support-Screenshots | **User-Ritual** (Support/Screenshot) — nicht abnahmeblockierend |
 
@@ -48,6 +49,7 @@ Voraussetzungen: `npm run dm` (oder `dev`), Tresor offen, Puls **IOTA-Sendeweg =
 | §0 + §1.1–1.3 PASS | PC Stage‑2 Kern ok → weiter PC-UX-Rest / Vitest bei Touch |
 | §1.4 PASS | E2EE-Surrogat ok — **trotzdem** Phase 4 später mit echtem 2. Gerät |
 | **2026-11-23** §0 + §1.1–1.5 + §4b Vitest | **PC Stage‑2 geschlossen** → Phase 2 Handy (`docs/STANDALONE-SMOKE-CHECKLIST.md` 4b–4d) |
+| **2026-11-27** PC-Rest (H.22 4d Code + Edition-Hygiene + 4c Live) | PC halten; **Phase 3 Funk** nur mit OK; Merge auf Auftrag |
 | Fail reproduzierbar | Fix in kleiner Scheibe + Retest; **kein** Big-Bang |
 
 Siehe Stabilitätsregel: `.cursor/rules/pc-phase-stability.mdc`.

@@ -1,7 +1,7 @@
 # IOTA Messenger — Minimal-Spec (ohne Boss / Helfer / Handoff)
 
-**Stand:** 2026-11-24  
-**Status:** **Arbeitsmodell „Boss ohne Helfer“** — PC-Messenger-Durchgang + Caps-Align **Ist 2026-11-26** (Funk/TG an; Boss/Helfer/SOS/Alarmgruppe aus; Role-Pill Messenger).  
+**Stand:** 2026-11-27  
+**Status:** **Arbeitsmodell „Boss ohne Helfer“** — PC-Messenger-Durchgang + Caps-Align **Ist 2026-11-26** (Funk/TG an; Boss/Helfer/SOS/Alarmgruppe aus; Role-Pill Messenger). `ENABLE_AUTO_EXECUTE` Edition-Default **aus** (`config.ts` + Overlay).
 **Zielgruppe:** Peers / „Bosse unter Freunden“ — voller Messenger-Alltag **ohne** Helfer-Provisioning  
 **Nicht-Ziel:** Helfer-Handoff, Einsatzleitung-Hub, Boss-provisioniert-Helfer; kein IOTA-Foundation-Produkt
 
@@ -27,10 +27,10 @@
 
 ### 1.1 Sicherheit — Auto-Execute / Coins (Entscheidung 2026-11-17, verbindlich)
 
-**Merken / bei Edition-Umsetzung:**
+**Ist (Edition):**
 
 - Chat-Produkt = **Nachrichten**. Fernsteuerungs-Coins und Auto-Befehle aus dem Posteingang sind **kein** Kern.
-- `ENABLE_AUTO_EXECUTE=false` als **Default** der Edition (besser aus als Lock-/Morgendrot-Default).
+- `ENABLE_AUTO_EXECUTE=false` als **Default** der Edition (`MESSENGER_EDITION=iota-messenger` in `src/config.ts`; Overlay `tools/iota-messenger/overlays/.env.example`). Vollprodukt-Root-`.env.example` bleibt historisch `true` (Lock).
 - **Kein** Auto-Execute empfangener Chat-Befehle („sende X coins“ o. Ä.).
 - **Lock-Fernsteuerung** weglassen oder nur separates Boss/Lock-Produkt — nicht im schlanken IOTA-Messenger.
 - Optional später nur als **explizites** Spezialfeature (Whitelist/Limits) — nie stiller Default.
@@ -227,13 +227,15 @@ Normales `npm run dm` mit `ROLE=boss` = volles Morgendrot → Boss-Pill. Edition
 
 | Feature | Code / Doku |
 |---------|-------------|
+| Edition-Flag + Caps | `MESSENGER_EDITION=iota-messenger`, `product-identity.ts`, Role-Pill **Messenger**, Solo/Peer-Wizard |
+| Auto-Execute aus | Default `ENABLE_AUTO_EXECUTE=false` bei Edition (`src/config.ts` + Overlay) |
 | Direkt-RPC Send (Mailbox) | `mailbox-send-hybrid.ts`, `@morgendrot/core` |
 | Peering ohne Server | `peering-qr.ts`, `direct-iota-handshake-submit.ts` |
 | Gruppen pairwise | `group-mailbox-pairwise-send.ts`, `messenger-group-store` |
 | APK ohne Pflicht-Node | `docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`, Variante B in `WANDERER-STANDALONE-BUNDLE.md` |
 | IOTA-Transfer | `boss-transfer.ts` / `/transfer-coins` (auch im Messenger-UI) |
 
-**Lücke:** Onboarding und UI sind noch auf **Boss/Handoff** ausgelegt; Edition-Flag `iota-messenger` fehlt; Testnet-`PACKAGE_ID`/`MAILBOX_ID` nicht als App-Default gebündelt.
+**Offen (bewusst später):** Testnet-Starter mit festen `PACKAGE_ID`/`MAILBOX_ID` im Bundle (Phase 2); 2-Seiten-Nutzeranleitung (Phase 0 Rest); weitere „weg“-Caps nur mit User-OK. Onboarding ist **nicht** mehr Boss-only — Edition nutzt Wanderer/Peer-Wizard.
 
 ---
 
