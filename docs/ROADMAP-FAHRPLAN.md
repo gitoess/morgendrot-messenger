@@ -29,7 +29,7 @@
 **Kritisch ehrlich:** Messenger-E2EE ohne zweites Handy → 2 Browser/Wallets am PC. Funk braucht Hardware (Phase 3). Zweites **physisches** Messenger-Gerät erst Phase 4. **Code stabil halten** — kleine Scheiben, testen, keine Big-Bang-Refactors solange PC „gut läuft“.
 
 **Alpha-PC-Checkliste (Messenger, manuell — 2026-11-26):** Soft-Pause→Weitersprechen · Burn · Solo-Wizard · Visitenkarte in „Ich“ · Caps Pill „Messenger“ (Edition) · Zwei-Wallet-Hinweis im Handbuch — **User: soweit ok**.  
-**Nächste Bau-Zeile:** PC-Jetzt **Ist** (#39–#45 gemerged). C1.6 Smoke **4c PASS** 2026-11-27. Halten: Hygiene/Claims (kleine Scheiben). **Kein** Ratchet-Default. Als Nächstes Richtung **Phase 2 Handy** nur mit User-OK; bis dahin PC-Stabilität.
+**Nächste Bau-Zeile:** PC-Jetzt **geschlossen** (#39–#46). C1.6 **4c PASS** + Claims/Handbuch. Phase 2 **4b–4d** schon **PASS 2026-11-23** (1 Gerät) — bei Touch: frische APK + optional C1.6 auf Handy nachtesten. **Kein** Ratchet-Default. Danach **Phase 3 Funk** (Outdoor; Desk H.25a schon STABIL) nur mit User-OK.
 
 **„Jetzt fertig“ ≠ gesamtes H.\*-Universum.** Die Nov-22-Triage-Tabelle am Kopf war **PC-Messenger-Alltag** (Unlock, Desk-Smoke, Labels, Soft-Pause, Burn-Doku, Solo-Wizard). Folgendes bleibt **offen / Später** — bewusst nicht „mitabgehakt“:
 
@@ -43,7 +43,7 @@
 
 **Nicht parallel:** Profilbild-Bau (Backlog), Drehrad/Handy-UI, EXE, Cap/Gap-Experimente, Blind-Big-Bang an Mailbox-Indexer, Ratchet-Default ohne Live-2-Geräte.
 
-1. **Fokus jetzt:** PC-Jetzt **halten** (C1.6 Opt-in + 4c Smoke + `#45` auf `main`) → **kein** Ratchet-Default / kein Boss/Helfer; Phase 2 Handy nur mit OK.  
+1. **Fokus jetzt:** PC **halten**; Phase‑2-Kern (4b–4d) Ist — Retest/APK nur bei Bedarf; **Phase 3 Funk** nächster großer Block mit OK. **Kein** Ratchet-Default / kein Boss-Druck.  
 2. **Erledigt Phase 1–3 Desk:** Messenger-Kern, 4b–4d, H.25a STABIL. Burn/Solo-Wizard/PC-Durchgang/Soft-Pause-Live + Caps Role-Pill **Ist 2026-11-26**.  
 3. **Scope-Arbeitsmodell (vorläufig):** IOTA-Messenger = **Boss ohne Helfer** + Freunde; Transporte IOTA/Funk/Telegram **drin**; Helfer/Handoff/Einsatz-Hub **raus**. Morgendrot = **alles**. Detail erst im Durchgang — Caps nicht blind flippen.  
 4. **Nicht parallel:** EXE vor Wizard/Durchgang; Cap/Gap-Experimente; WhatsApp/Paywall; Drehrad-Mock.  
