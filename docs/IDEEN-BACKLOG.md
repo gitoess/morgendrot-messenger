@@ -57,7 +57,7 @@ Auge im Unlock: `mousedown preventDefault` gegen Dialog-Flackern.
 - Empfänger: **lokales Override** (Spitzname/Bild) schlägt fremdes Profilbild.
 - Wallet-Empfangen unverändert.
 
-**Status 2026-11-27:** Share-MVP **Ist**; **Übernehmen-CTA Ist**; **Profilbild A Ist** (lokal + Chat-Thumb). Visitenkarte-Blase zeigt **lesbare Karte** (JSON nur Wire). Stufe B teilen = Backlog.
+**Status 2026-11-27:** Share-MVP **Ist**; **Übernehmen-CTA Ist**; **Profilbild A Ist** (lokal + Chat-Thumb). Visitenkarte-Blase zeigt **lesbare Karte** (JSON nur Wire). **Stufe B** = einziger Komfort-C-Kandidat (opt-in Hash/Thumb neben Share, nicht blind im QR) — **nur nach explizitem „los“** (`ROADMAP` Komfort-Triage).
 
 ### Visitenkarte empfangen → Kontakt übernehmen
 
@@ -145,7 +145,7 @@ Auge im Unlock: `mousedown preventDefault` gegen Dialog-Flackern.
 ## Chat: klickbare Links (Linkify) — Zukunftsidee
 
 **Idee:** `https://`-URLs in Posteingangszeilen als Links öffnen (`rel="noopener"`, ggf. Bestätigung).  
-**Status:** nur merken — **kein** nächster Schritt, keine Pflicht. (Kein eigener Feature-Ordner im Repo; ggf. später `lib/`-Helfer.)  
+**Status:** nur merken — **kein** nächster Schritt (Komfort-Triage 2026-11-27: Phishing-UX).  
 **Nicht:** WhatsApp-Verknüpfung, Paywall/Mikrozahlung pro Nachricht — **gestrichen** (2026-11-17).
 
 ---
