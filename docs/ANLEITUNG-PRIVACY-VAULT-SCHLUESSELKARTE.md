@@ -91,7 +91,7 @@ Begriffe Datei vs Sidecar: `docs/VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md` §8. **Ke
 
 ### Double Ratchet (Experiment, C1.6)
 
-**Nur 1:1-Direktchat** (IOTA Enc). Chat ⋮ → **Double Ratchet (Experiment)** = Opt-in. **Gruppenchat:** kein Eintrag (weiter Team-Key). **Default bleibt Session Keys+.** Mit Flag an: Direct-Enc legt innere `RATCHET_V3`-Lage (beide Seiten Flag + Handshake). Composer-Hinweis zeigt den Modus. State im Sidecar `ratchet.enc.v1`. **Kein** Produktiv-Default / kein FS-pro-Msg-Marketing ohne Feld-PASS.
+**Nur 1:1-Direktchat** (IOTA Enc). Chat ⋮ → **Double Ratchet (Experiment)** = Opt-in. **Gruppenchat:** kein Eintrag (weiter Team-Key). **Default bleibt Session Keys+.** Mit Flag an: Direct-Enc legt innere `RATCHET_V3`-Lage (beide Seiten Flag + **Handshake/Peer-Pub**). Composer-Hinweis zeigt den Modus. State im Sidecar `ratchet.enc.v1`. Ohne Peer-Pub (HsKey/Connect) kann eine Richtung Hint zeigen — dann Flag aus→an und **neue** Enc. **Kein** Produktiv-Default / kein FS-pro-Msg-Marketing ohne Feld-PASS.
 
 **Speicher (Enc):** Schloss und „Speicher auf der Chain“ sind getrennt. Enc **kann** flüchtig (Event) oder Mailbox — Event landet **nicht** als Mailbox-Zeile; Partner braucht Event-Abhol. Alltag: Enc eher Mailbox (burnbar / Postamt).
 

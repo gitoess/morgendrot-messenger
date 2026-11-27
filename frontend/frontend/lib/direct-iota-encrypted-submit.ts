@@ -257,6 +257,10 @@ async function encryptPlaintextForDirectSubmit(
     let plaintextForSession = bodyForE2ee
     /** C1.6: Opt-in Double Ratchet — innere Lage; Session-Wire (v2) bleibt außen. Kein Composer-Default. */
     if (readRatchetExperimentEnabled()) {
+      /**
+       * Gleicher Peer-Pub wie Outer-Session-Encrypt — sonst A→B/B→A asymmetrisch
+       * (Empfänger outer via Archiv-Pub, Ratchet nur Live-Pub).
+       */
       const shared = await deriveSharedSecret(opts.ecdhPrivateKey, opts.peerPubRaw)
       const ensured = await ensureRatchetSessionForPeer({
         peerAddress: opts.recipient,

@@ -52,4 +52,11 @@ describe('contact-conversation-filter', () => {
     const rows = messagesForContactConversation([other, mine], me, alice, { label: 'Alice' })
     expect(rows.map((x) => x.id)).toEqual(['a'])
   })
+
+  it('zeigt eigene Sends an den Kontakt (nicht nur Eingang)', () => {
+    const incoming = m({ id: 'in', from: alice, recipient: me, content: 'hi', timestamp: 1 })
+    const outgoing = m({ id: 'out', from: me, recipient: alice, content: 'yo', timestamp: 2 })
+    const rows = messagesForContactConversation([incoming, outgoing], me, alice, { label: 'Alice' })
+    expect(rows.map((x) => x.id).sort()).toEqual(['in', 'out'])
+  })
 })

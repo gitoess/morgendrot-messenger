@@ -22,7 +22,24 @@ const HEX64 = /^0x[a-fA-F0-9]{64}$/i
 
 /** Kurzlebiger Klartext für eigene Ausgangs-Zeilen (Empfangs-Chain kann eigene Sends nicht öffnen). */
 const outgoingPlainByMsgId = new Map<string, { text: string; at: number }>()
-const OUTGOING_PLAIN_TTL_MS = 1000 * 60 * 60 * 12
+/** API+Direct entpacken dieselbe Wire zweimal — Cache verhindert Replay-Fail + forceNew-Desync. */
+const incomingPlainByMsgId = new Map<string, { text: string; at: number }>()
+/** ECDH-Shared-Fingerprint pro Peer — Live-Pub ≠ Archiv-Pub → Session neu. */
+const sessionSharedFpByPeer = new Map<string, string>()
+const PLAIN_TTL_MS = 1000 * 60 * 60 * 12
+
+/** Kurz-Fingerprint des ECDH-Shared (nicht geheim; Wire-Auswahl welches Peer-Pub). */
+export function sharedSecretFingerprint(shared: Uint8Array): string {
+  const n = Math.min(8, shared.length)
+  let s = ''
+  for (let i = 0; i < n; i++) s += shared[i]!.toString(16).padStart(2, '0')
+  return s
+}
+
+function isRatchetReplayError(err: string): boolean {
+  const e = err.toLowerCase()
+  return e.includes('zu alt') || e.includes('verbrauch') || e.includes('bereits')
+}
 
 export function readRatchetExperimentEnabled(): boolean {
   if (typeof window === 'undefined') return false
@@ -41,6 +58,8 @@ export function writeRatchetExperimentEnabled(on: boolean): void {
     if (on) {
       purgeRatchetSessionVault()
       outgoingPlainByMsgId.clear()
+      incomingPlainByMsgId.clear()
+      sessionSharedFpByPeer.clear()
     }
     window.dispatchEvent(new CustomEvent(RATCHET_EXPERIMENT_CHANGED, { detail: { enabled: on } }))
   } catch {
@@ -59,14 +78,17 @@ function norm(a: string): string {
   return a.trim().toLowerCase()
 }
 
-function outgoingKey(peer: string, msgId: string): string {
+function plainCacheKey(peer: string, msgId: string): string {
   return `${norm(peer)}|${String(msgId).trim()}`
 }
 
-function pruneOutgoingPlain(): void {
-  const cut = Date.now() - OUTGOING_PLAIN_TTL_MS
+function prunePlainMaps(): void {
+  const cut = Date.now() - PLAIN_TTL_MS
   for (const [k, v] of outgoingPlainByMsgId) {
     if (v.at < cut) outgoingPlainByMsgId.delete(k)
+  }
+  for (const [k, v] of incomingPlainByMsgId) {
+    if (v.at < cut) incomingPlainByMsgId.delete(k)
   }
 }
 
@@ -74,13 +96,26 @@ export function rememberRatchetOutgoingPlaintext(peerAddress: string, msgId: str
   const id = String(msgId).trim()
   const text = plaintext.trim()
   if (!id || !text) return
-  pruneOutgoingPlain()
-  outgoingPlainByMsgId.set(outgoingKey(peerAddress, id), { text, at: Date.now() })
+  prunePlainMaps()
+  outgoingPlainByMsgId.set(plainCacheKey(peerAddress, id), { text, at: Date.now() })
 }
 
 export function lookupRatchetOutgoingPlaintext(peerAddress: string, msgId: string): string | null {
-  pruneOutgoingPlain()
-  return outgoingPlainByMsgId.get(outgoingKey(peerAddress, msgId))?.text ?? null
+  prunePlainMaps()
+  return outgoingPlainByMsgId.get(plainCacheKey(peerAddress, msgId))?.text ?? null
+}
+
+export function rememberRatchetIncomingPlaintext(peerAddress: string, msgId: string, plaintext: string): void {
+  const id = String(msgId).trim()
+  const text = plaintext.trim()
+  if (!id || !text) return
+  prunePlainMaps()
+  incomingPlainByMsgId.set(plainCacheKey(peerAddress, id), { text, at: Date.now() })
+}
+
+export function lookupRatchetIncomingPlaintext(peerAddress: string, msgId: string): string | null {
+  prunePlainMaps()
+  return incomingPlainByMsgId.get(plainCacheKey(peerAddress, msgId))?.text ?? null
 }
 
 export function peekRatchetWireMsgId(raw: string): string | null {
@@ -88,6 +123,22 @@ export function peekRatchetWireMsgId(raw: string): string | null {
   if (!decoded.ok) return null
   const id = String(decoded.packet.header.msgId ?? '').trim()
   return id || null
+}
+
+/** Optionaler Shared-Fingerprint aus dem Wire (Sender markiert, welches ECDH). */
+export function peekRatchetWireRkFp(raw: string): string | null {
+  try {
+    const j = JSON.parse(raw.trim()) as { morg?: string; rkFp?: unknown }
+    if (j.morg !== 'RATCHET_V3') return null
+    const fp = typeof j.rkFp === 'string' ? j.rkFp.trim().toLowerCase() : ''
+    return fp || null
+  } catch {
+    return null
+  }
+}
+
+export function getRatchetSessionSharedFingerprint(peerAddress: string): string | null {
+  return sessionSharedFpByPeer.get(norm(peerAddress)) ?? null
 }
 
 /**
@@ -108,7 +159,22 @@ export async function ensureRatchetSessionForPeer(opts: {
   }
   const peer = norm(opts.peerAddress)
   if (!HEX64.test(peer)) return { ok: false, error: 'Peer-Adresse ungültig.' }
-  if (opts.forceNew) removeRatchetSessionForPeer(peer)
+  let forceNew = Boolean(opts.forceNew)
+  if (
+    !forceNew &&
+    opts.ecdhShared &&
+    opts.ecdhShared.length >= 16 &&
+    getRatchetSessionForPeer(peer)
+  ) {
+    const prev = sessionSharedFpByPeer.get(peer)
+    const now = sharedSecretFingerprint(opts.ecdhShared)
+    if (!prev) sessionSharedFpByPeer.set(peer, now)
+    else if (prev !== now) forceNew = true
+  }
+  if (forceNew) {
+    removeRatchetSessionForPeer(peer)
+    sessionSharedFpByPeer.delete(peer)
+  }
   if (getRatchetSessionForPeer(peer)) return { ok: true }
 
   const meRaw = (opts.localAddress || getDirectIotaSessionSignerAddress() || '').trim()
@@ -122,6 +188,7 @@ export async function ensureRatchetSessionForPeer(opts: {
   const [aliceAddr, bobAddr] = me < peer ? [me, peer] : [peer, me]
   const { alice, bob } = await createRatchetSessionPair(opts.ecdhShared, aliceAddr, bobAddr)
   putRatchetSessionForPeer(peer, me === aliceAddr ? alice : bob)
+  sessionSharedFpByPeer.set(peer, sharedSecretFingerprint(opts.ecdhShared))
   return { ok: true }
 }
 
@@ -174,15 +241,17 @@ export async function tryRatchetExperimentWrapOutgoing(opts: {
   msgId: string
 }): Promise<{ wire: string } | null> {
   if (!readRatchetExperimentEnabled()) return null
-  if (!getRatchetSessionForPeer(norm(opts.peerAddress))) return null
+  const peer = norm(opts.peerAddress)
+  if (!getRatchetSessionForPeer(peer)) return null
   const enc = await ratchetExperimentEncrypt(opts)
   if (!enc.ok) return null
-  return { wire: encodeRatchetPacketWire(enc.packet) }
+  const rkFp = sessionSharedFpByPeer.get(peer) ?? undefined
+  return { wire: encodeRatchetPacketWire(enc.packet, rkFp) }
 }
 
 /**
  * Decrypt-Hook: erkennt RATCHET_V3-Wire und entschlüsselt bei Flag+Session; sonst `null`.
- * Bei Fail einmal Session aus ECDH neu aufbauen (divergente States nach Opt-in).
+ * Bei Auth/Drift-Fail einmal Session aus ECDH neu (nicht bei Replay — sonst A↔B-Desync).
  */
 export async function tryRatchetExperimentUnwrapIncoming(opts: {
   peerAddress: string
@@ -194,6 +263,12 @@ export async function tryRatchetExperimentUnwrapIncoming(opts: {
   const decoded = decodeRatchetPacketWire(opts.raw)
   if (!decoded.ok) return null
 
+  const msgId = String(decoded.packet.header.msgId ?? '').trim()
+  if (msgId) {
+    const cached = lookupRatchetIncomingPlaintext(opts.peerAddress, msgId)
+    if (cached) return { plaintext: cached }
+  }
+
   const attempt = async () =>
     ratchetExperimentDecrypt({
       peerAddress: opts.peerAddress,
@@ -201,7 +276,19 @@ export async function tryRatchetExperimentUnwrapIncoming(opts: {
     })
 
   let dec = await attempt()
-  if (dec.ok) return { plaintext: dec.plaintext }
+  if (dec.ok) {
+    if (msgId) rememberRatchetIncomingPlaintext(opts.peerAddress, msgId, dec.plaintext)
+    return { plaintext: dec.plaintext }
+  }
+
+  /** Replay (API+Direct / Poll): Session nicht forceNew-zerstören. */
+  if (isRatchetReplayError(dec.error)) {
+    if (msgId) {
+      const cached = lookupRatchetIncomingPlaintext(opts.peerAddress, msgId)
+      if (cached) return { plaintext: cached }
+    }
+    return null
+  }
 
   if (opts.ecdhShared && opts.ecdhShared.length >= 16) {
     const ensured = await ensureRatchetSessionForPeer({
@@ -212,21 +299,26 @@ export async function tryRatchetExperimentUnwrapIncoming(opts: {
     })
     if (ensured.ok) {
       dec = await attempt()
-      if (dec.ok) return { plaintext: dec.plaintext }
+      if (dec.ok) {
+        if (msgId) rememberRatchetIncomingPlaintext(opts.peerAddress, msgId, dec.plaintext)
+        return { plaintext: dec.plaintext }
+      }
     }
   }
   return null
 }
 
 /** Packet → transportierbarer JSON-String (noch kein IOTA-Send). */
-export function encodeRatchetPacketWire(packet: RatchetCipherPacket): string {
+export function encodeRatchetPacketWire(packet: RatchetCipherPacket, rkFp?: string): string {
   let body = ''
   for (let i = 0; i < packet.body.length; i++) body += String.fromCharCode(packet.body[i]!)
   const bodyB64 = btoa(body)
+  const fp = rkFp?.trim().toLowerCase()
   return JSON.stringify({
     morg: 'RATCHET_V3',
     header: packet.header,
     bodyB64,
+    ...(fp ? { rkFp: fp } : {}),
   })
 }
 

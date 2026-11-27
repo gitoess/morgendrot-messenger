@@ -185,4 +185,48 @@ describe('ratchet-experiment C1.5/C1.6', () => {
     })
     expect(getRatchetSessionForPeer(BOB)).not.toBeNull()
   })
+
+  it('B→A dann A→B: Doppel-Unwrap (Replay) zerstört Session nicht', async () => {
+    writeRatchetExperimentEnabled(true)
+    setVaultPasswordSession('vault-pass-99')
+    const shared = crypto.getRandomValues(new Uint8Array(32))
+
+    signerAddress.current = BOB
+    await ensureRatchetSessionForPeer({ peerAddress: ALICE, ecdhShared: shared, localAddress: BOB })
+    const bToA = await tryRatchetExperimentWrapOutgoing({
+      peerAddress: ALICE,
+      plaintext: 'from bob',
+      msgId: 'b1',
+    })
+    expect(bToA?.wire).toContain('RATCHET_V3')
+
+    signerAddress.current = ALICE
+    await ensureRatchetSessionForPeer({ peerAddress: BOB, ecdhShared: shared, localAddress: ALICE })
+    expect(
+      (await tryRatchetExperimentUnwrapIncoming({ peerAddress: BOB, raw: bToA!.wire, ecdhShared: shared, localAddress: ALICE }))
+        ?.plaintext
+    ).toBe('from bob')
+    /** Zweiter Pfad (API+Direct): Replay — kein forceNew-Desync. */
+    expect(
+      (await tryRatchetExperimentUnwrapIncoming({ peerAddress: BOB, raw: bToA!.wire, ecdhShared: shared, localAddress: ALICE }))
+        ?.plaintext
+    ).toBe('from bob')
+
+    const aToB = await tryRatchetExperimentWrapOutgoing({
+      peerAddress: BOB,
+      plaintext: 'from alice',
+      msgId: 'a1',
+    })
+    expect(aToB?.wire).toContain('RATCHET_V3')
+
+    signerAddress.current = BOB
+    expect(
+      (await tryRatchetExperimentUnwrapIncoming({
+        peerAddress: ALICE,
+        raw: aToB!.wire,
+        ecdhShared: shared,
+        localAddress: BOB,
+      }))?.plaintext
+    ).toBe('from alice')
+  })
 })

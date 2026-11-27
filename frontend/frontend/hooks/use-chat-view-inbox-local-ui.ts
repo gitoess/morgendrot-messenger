@@ -36,6 +36,7 @@ import {
   uniqueCounterpartyAddresses,
   type InboxDirectionFilter,
 } from '@/frontend/features/inbox/inbox-partner-filter'
+import { collapseNearDuplicateThreadRows } from '@/frontend/lib/message-dedup'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import type { Message } from '@/frontend/lib/types'
 import { messageMatchesInboxWireFilter, type InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
@@ -399,7 +400,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
   )
 
   const partnerFilteredMessages = useMemo(() => {
-    let rows = displayMessages
+    let rows = collapseNearDuplicateThreadRows(displayMessages)
     /**
      * Sendepfad zuerst. Wenn der Pfad (z. B. Funk) alles ausblendet, soft-fallback:
      * sonst wirkt der Posteingang „weg“ (Quelle-Chips sind aus, kein Weg zu „Alle“).

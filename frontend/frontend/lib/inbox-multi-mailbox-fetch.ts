@@ -9,12 +9,23 @@ import {
   type InboxApiRow,
 } from '@/frontend/features/inbox/inbox-map-messages'
 import { tryFetchDirectMailboxInboxViaIota } from '@/frontend/lib/direct-iota-inbox-fetch'
+import { getDirectChainFieldIdsFromLs } from '@/frontend/lib/direct-iota-chain-context'
+import { getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { pickInboxHasMore } from '@/frontend/lib/inbox-pick-raw-messages'
 import { shouldSkipMessengerApiRelayFallback } from '@/frontend/lib/messenger-standalone-relay'
 import { mergeAllMessages } from '@/frontend/lib/message-dedup'
 import { readActiveSendMailboxObjectId } from '@/frontend/lib/my-mailbox-active'
 import { readMyPrivateMailboxes } from '@/frontend/lib/my-private-mailbox-store'
+import { unwrapRatchetV3InInboxApiRows } from '@/frontend/lib/ratchet-after-outer-decrypt'
 import type { Message } from '@/frontend/lib/types'
+
+function inboxMyAddressForRatchet(): string {
+  return (
+    getDirectIotaSessionSignerAddress()?.trim() ||
+    getDirectChainFieldIdsFromLs().senderAddress.trim() ||
+    ''
+  )
+}
 
 export type FetchInboxUnionResult = {
   ok: boolean
@@ -114,7 +125,11 @@ export async function fetchInboxFromAllOwnedMailboxes(p: {
       const resHasMore = pickInboxHasMore(resLoose)
       if (res.ok && raw != null) {
         anyOk = true
-        let mapped = mapInboxApiRowsToMessages(raw as InboxApiRow[])
+        const unwrapped = await unwrapRatchetV3InInboxApiRows(
+          raw as InboxApiRow[],
+          inboxMyAddressForRatchet()
+        )
+        let mapped = mapInboxApiRowsToMessages(unwrapped)
         const stampMb = mailboxObjectId || p.serverMailboxId
         if (stampMb) mapped = stampChainMailboxObjectId(mapped, stampMb)
         if (isServer) {
