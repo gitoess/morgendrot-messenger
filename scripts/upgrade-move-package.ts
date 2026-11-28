@@ -42,14 +42,23 @@ async function main() {
         );
         process.exit(1);
     }
-    console.log(`Upgrade Move-Paket ${packageDir} (Package ${packageId.slice(0, 10)}…, Cap ${cap.slice(0, 10)}…)…`);
+    console.log(`Upgrade Move-Paket ${packageDir} (Stamm ${packageId.slice(0, 10)}…, Cap ${cap.slice(0, 10)}…)…`);
     const result = await upgradePackageCli(cap, packageDir);
-    console.log('\nOK — Package upgraded (gleiche ID):', result.packageId);
+    // Stamm-PACKAGE_ID (Mailbox-Typen) unverändert — neues Bytecode-Package für MoveCall neuer Funs.
+    const { savePackageIdToFile } = await import('../src/config.js');
+    try {
+        savePackageIdToFile(result.packageId);
+    } catch {
+        /* history optional */
+    }
+    console.log('\nOK — Package upgraded.');
+    console.log('  Stamm PACKAGE_ID (Typen/Mailbox):', packageId);
+    console.log('  Call-Package (neue Funs / published-at):', result.packageId);
     console.log(
         '\nNächste Schritte:\n' +
             '  1. Backend neu starten (npm run dev)\n' +
-            '  2. Einstellungen → IOTA → Package & Move-Upgrade: Move-Funktionen prüfen\n' +
-            '  3. Kein neues Handoff nötig (PACKAGE_ID + MAILBOX_ID unverändert)\n' +
+            '  2. MoveCall neuer Funktionen mit Call-Package-ID (nicht Stamm ersetzen)\n' +
+            '  3. Kein neues Handoff (MAILBOX_ID unverändert)\n' +
             '  Siehe docs/DEPLOY-MOVE-UPGRADE-VS-PUBLISH.md'
     );
 }

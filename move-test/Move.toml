@@ -4,7 +4,8 @@ version = "0.0.1"
 # Letzte Upgrade-Version (nft_gate_seal P4b; inkl. bearer/purse/lease).
 # Chat-Mailbox bleibt am Stamm-PACKAGE_ID 0x06e099… .
 # Neu-Publish: published-at entfernen + messaging = "0x0".
-published-at = "0x1fb0e9b723328a8c3b99be717958d5da6aff8ace5cc94a37d1da060c038595c7"
+# Stealth store/purge (2026-11-28 upgrade). Stamm-Mailbox-Typen bleiben 0x06e099… .
+published-at = "0xa3e70f179178054b565788d49ad34df9a9ffecdcda9e92fdde173b404e800c51"
 
 [dependencies]
 Iota = { git = "https://github.com/iotaledger/iota.git", subdir = "crates/iota-framework/packages/iota-framework", rev = "testnet" }

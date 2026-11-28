@@ -90,6 +90,15 @@ export {
 } from './mailbox-encrypted-txb'
 export type { BuildStoreEncryptedMailboxTxInput } from './mailbox-encrypted-txb'
 export {
+  buildStoreStealthEntryTransaction,
+  buildPurgeStealthEntryTransaction,
+  STEALTH_MAILBOX_MAX_PURE_U8,
+} from './mailbox-stealth-txb'
+export type {
+  BuildStoreStealthEntryTxInput,
+  BuildPurgeStealthEntryTxInput,
+} from './mailbox-stealth-txb'
+export {
   fetchPlaintextMailboxInboxRows,
   normalizeMailboxAddress,
   messagingStructType,

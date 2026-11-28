@@ -152,9 +152,17 @@ purge_stealth_bucket(mailbox, slot_tag, delete_secret)
 
 1. ~~User: Spec grün~~ **PASS 2026-11-28** (+ Multi-Msg Queue + Gas-Hinweis).  
 2. ~~Mini-Lib Vitest~~ **Ist** — `frontend/frontend/lib/stealth-slot-tag.ts` (+ Test): Blake2b-256 Ableitung, Epoch-u64-BE, Stunden-Epoch, Lookahead ±W; Cap-Konstante 32; `deriveStealthDeleteCommit`.  
-3. ~~Move-MVP Source~~ **Ist** (2026-11-28) — `store_stealth_entry` / `purge_stealth_entry` / `purge_stealth_bucket` in `move-test/sources/messaging.move`; Move-Tests PASS. **Package-Publish/Upgrade ausstehend** (User-OK). Client Opt-in „Diskret“ = eigene Scheibe.  
-4. 1-Gerät-Smoke (zwei Wallets am PC), dann Logbuch-Zeile — nach Publish.  
-5. Optional später: Sponsor/Relayer-Pfad für „Diskret + fremder Gas-Zahler“.
+3. ~~Move-MVP Source + Upgrade~~ **Ist** (2026-11-28) — Source + on-chain Upgrade; Call-Package `0xa3e70f…` (Stamm-Mailbox-Typen `0x06e099…` unverändert). TXB: `mailbox-stealth-txb.ts` (`callPackageId`).  
+4. Client Opt-in „Diskret“ (Composer) — **nächste** UI-Scheibe.  
+5. 1-Gerät-Smoke (zwei Wallets am PC), dann Logbuch-Zeile.  
+6. Optional später: Sponsor/Relayer-Pfad für „Diskret + fremder Gas-Zahler“.
+
+### Call-Package vs. Stamm (Upgrade)
+
+| ID | Rolle |
+|----|--------|
+| Stamm `PACKAGE_ID` (`0x06e099…`) | Typ der Mailbox-Objects; **nicht** ersetzen nach Upgrade |
+| Call-Package / `published-at` (`0xa3e70f…`) | MoveCall-Target für `store_stealth_*` / `purge_stealth_*` |
 
 ---
 

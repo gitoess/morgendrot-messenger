@@ -80,10 +80,11 @@ UPGRADE_CAP_ID=0x… npm run upgrade:move-package
 
 **Ergebnis:**
 
-- **Gleiche** `PACKAGE_ID`
-- **Gleiche** `MAILBOX_ID` / Team-Mailbox-IDs
-- **Kein** neues Handoff nötig
-- Backend neu starten; Einsatzleitung → **Einsatz-Konfiguration** → Move-Funktionen prüfen (z. B. Team-Purge ✓)
+- **Stamm-`PACKAGE_ID`** (Mailbox-Objekt-Typen) bleibt — **nicht** mit der neuen Call-Package-ID überschreiben  
+- Upgrade erzeugt ein **neues Call-Package** (`published-at` / History); **neue** Entry-Funs nur dort (z. B. Stealth `0xa3e70f…`)  
+- **Gleiche** `MAILBOX_ID` / Team-Mailbox-IDs  
+- **Kein** neues Handoff nötig  
+- Backend neu starten; MoveCall neuer Funs mit **Call-Package-ID**
 
 CLI-Equivalent:
 

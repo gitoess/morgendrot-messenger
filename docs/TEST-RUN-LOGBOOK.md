@@ -21,7 +21,8 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
-| **2026-11-28** | PC, **Stealth Move-MVP Source** | `store/purge_stealth_*` in messaging.move; Cap/Append/delete_commit. `iota move test stealth` **4 PASS**. Publish ausstehend. | **PASS (Move)** |
+| **2026-11-28** | PC, **Stealth Upgrade + TXB** | `upgrade:move-package` → Call-Pkg `0xa3e70f…` (Stamm `0x06e099…`); `mailbox-stealth-txb` + Vitest. Composer Diskret noch offen. | **PASS** |
+| **2026-11-28** | PC, **Stealth Move-MVP Source** | `store/purge_stealth_*` in messaging.move; Cap/Append/delete_commit. `iota move test stealth` **4 PASS**. | **PASS (Move)** |
 | **2026-11-28** | PC, **Stealth Mini-Lib** | `stealth-slot-tag.ts`: Blake2b slot_tag, Epoch-BE, Lookahead; Vitest. Kein Move/UI. | **PASS (Vitest)** |
 | **2026-11-28** | PC, **Stealth Spec grün** | User OK; Nachzug: Epoch-Bucket + Queue (kein Replace); Gas-Zahler ≠ Empfänger-Tarnung (Sponsor/Relayer Hinweis). | **DOCS** — Gate Move/UI |
 | **2026-11-28** | PC, **Alpha-EXE A/B Live** | Portable Next-UI (`6aef1f9`): Repo-Root via `PORTABLE_EXECUTABLE_DIR`, API+Next spawn, Unlock → normale Messenger-UI. Scheibe C (Standalone-Verteilen) User **warten**. | **PASS (Live)** |
