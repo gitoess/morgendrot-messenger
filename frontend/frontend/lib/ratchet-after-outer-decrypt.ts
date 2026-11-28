@@ -17,12 +17,14 @@ import {
   ensureRatchetSessionForPeer,
   looksLikeRatchetV3Wire,
   lookupRatchetOutgoingPlaintext,
+  lookupRatchetOutgoingPlaintextByWire,
   peekRatchetWireMsgId,
   peekRatchetWireRkFp,
   readRatchetExperimentEnabled,
   sharedSecretFingerprint,
   tryRatchetExperimentUnwrapIncoming,
 } from '@/frontend/lib/ratchet-experiment'
+import { lookupOutgoingSendEcho } from '@/frontend/lib/outgoing-send-echo'
 
 const RATCHET_UNWRAP_FAIL_HINT =
   '[Double Ratchet] Innere Lage nicht lesbar — Flag beiderseits an, Experiment aus→an, dann neue Enc. Eigene Ausgangs-Zeile: Klartext nur wenn dieser Tab die Sendung erzeugt hat.'
@@ -75,7 +77,11 @@ export async function resolveRatchetLayerAfterOuterDecrypt(opts: {
     if (msgId) {
       const remembered = lookupRatchetOutgoingPlaintext(peerAddr, msgId)
       if (remembered) return remembered
+      const byNonce = lookupOutgoingSendEcho(peerAddr, msgId)
+      if (byNonce) return byNonce
     }
+    const byWire = lookupRatchetOutgoingPlaintextByWire(peerAddr, text)
+    if (byWire) return byWire
     /**
      * Eigene Sendung nie über Empfangs-Chain + forceNew versuchen —
      * sonst wird nach B→A die Bob-Session genullt und A→B scheitert asymmetrisch.
@@ -159,6 +165,7 @@ export type RatchetInboxApiRow = {
   text?: string
   content?: string
   recipient?: string
+  innerEnc?: 'ratchet_v3'
 }
 
 /** API liefert oft Session-Klartext = RATCHET_V3-JSON — hier clientseitig nachziehen. */
@@ -200,6 +207,7 @@ export async function unwrapRatchetV3InInboxApiRows<T extends RatchetInboxApiRow
       ...(rawT ? { text: resolved } : {}),
       ...(rawC ? { content: resolved } : {}),
       ...(!rawT && !rawC ? { text: resolved } : {}),
+      innerEnc: 'ratchet_v3',
     })
   }
   return out

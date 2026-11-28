@@ -57,9 +57,7 @@ export function ChatViewDiskretToggle(p: {
             Tarnmodus
           </span>
           <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">
-            Empfänger im Blockchain-Logbuch tarnen (Absender bleibt sichtbar). Nutzt das bestehende
-            Hauptpostfach — kein Extra-Postfach nötig. Opt-in nur fürs Senden; Empfang läuft bei
-            Direct-Inbox mit bekanntem ECDH-Peer.
+            Empfänger im Blockchain-Logbuch tarnen (Absender bleibt sichtbar).
           </span>
         </span>
       </label>

@@ -1,6 +1,8 @@
 /**
  * Beim Vault-/Session-Lock: Chat-/ImageNFT-Passphrasen, Team-Keys und
  * NFT-Schlüsselkarte aus RAM (+ Tab-Backups). Enc-Sidecars bleiben.
+ * Sender-Klartext-Echo bleibt auf dem Ursprungsgerät (DR-Ausgänge lesbar nach Relogin) —
+ * Gerätewechsel/Backup = Backlog (`IDEEN-BACKLOG.md`).
  * ECDH-Material: clearDirectChatEcdhKeyMaterial separat.
  *
  * Vor dem RAM-Wipe immer Flush — sonst gehen frische „merken“-Einträge

@@ -33,6 +33,8 @@ export type InboxApiRow = {
   mailboxObjectId?: string
   /** Backend Dedup (evid:… / mb:…) — trennt gleiche nonce=1. */
   inboxKey?: string
+  /** Client: nach Decrypt erkannt (RATCHET_V3-Wire). */
+  innerEnc?: 'ratchet_v3'
 }
 
 /** Re-Export: Implementierung in `lib/inbox-pick-raw-messages.ts` (**§ H.1b** — reine Inbox-Helfer unter `lib/`). */
@@ -95,7 +97,9 @@ export function mapInboxApiRowsToMessages(raw: InboxApiRow[]): Message[] {
         m.isPlain === false ||
         (m.isPlain !== true && isEncryptedPlaceholderContent(content)) ||
         isPassphraseMessageWire(content) ||
-        isNftGateMessageWire(content),
+        isNftGateMessageWire(content) ||
+        m.innerEnc === 'ratchet_v3',
+      ...(m.innerEnc === 'ratchet_v3' ? { innerEnc: 'ratchet_v3' as const } : {}),
       recipient: m.recipient,
       source: 'mailbox' as const,
       transports: ['internet'] as ('internet' | 'mesh' | 'adhoc')[],

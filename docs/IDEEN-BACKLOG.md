@@ -156,6 +156,19 @@ Auge im Unlock: `mousedown preventDefault` gegen Dialog-Flackern.
 
 ---
 
+## Double Ratchet: Gerätewechsel / „walletgebundenes“ Backup (C1 Backlog)
+
+**User 2026-11-28:** Alte DR-Nachrichten sollen auf dem **Ursprungsgerät** immer lesbar bleiben (Ist: Sender-Echo + Ratchet-Sidecar lokal). Auf **neuem PC/Handy** nach Tresor-Login allein **nicht** lesbar — State ist gerätegebunden.
+
+**Idee (nicht jetzt):** Opt-in **verschlüsseltes Backup** des Ratchet-States (+ optional Sender-Echo) — geschützt mit Tresor-Passwort / Wallet-Key (nicht „nur Adresse“). Wiederherstellen auf Gerät B nach Unlock. Alternativ Sneakernet-Export.
+
+**Warum nicht „Wallet-Adresse = lesbar überall“:** ohne State kryptografisch unmöglich; Adresse allein entschlüsselt nichts.
+
+**Nicht:** stiller Cloud-Sync; kein Composer-Default; kein Big-Bang vor PC-Stabilität.  
+**Siehe:** `docs/MESSENGER-DOUBLE-RATCHET-C1-SPEC.md` · Ist-Echo `outgoing-send-echo` / Ratchet-Vault-Sidecar.
+
+---
+
 ## Seal / Key-Broker (P4b) — Composer später
 
 **Idee:** DEK nicht im Wire; Boss-API gibt Schlüssel nur nach Chain-Beweis „Wallet besitzt NFT“. Umbenennung z. B. **Boss-Schlüsseldienst**.  

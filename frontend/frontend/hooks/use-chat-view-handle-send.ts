@@ -101,6 +101,8 @@ import {
   resolveSingleWireSuccessMessage,
 } from '@/frontend/features/send/chat-view-handle-send-group'
 import { buildPrivateDmOptimisticInboxRow } from '@/frontend/lib/group-inbox-optimistic'
+import { rememberOutgoingSendEcho } from '@/frontend/lib/outgoing-send-echo'
+import { readRatchetExperimentEnabled } from '@/frontend/lib/ratchet-experiment'
 import { createChatViewSendOnePart } from '@/frontend/features/send/chat-view-handle-send-one-part'
 import {
   emergencyFanOutAnyOk,
@@ -1495,13 +1497,25 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           ''
         const to =
           (recipient || plainMailboxRecipient || encryptedMailboxRecipient || myAddress).trim()
+        const nonceU64 = lastOk.mailboxCapture?.messageNonceU64
+        if (encrypted && preview && nonceU64 != null) {
+          rememberOutgoingSendEcho({
+            peerAddress: to,
+            nonce: nonceU64.toString(),
+            plaintext: preview,
+          })
+        }
         const dmOpt = buildPrivateDmOptimisticInboxRow({
           myAddress,
           recipient: to,
           text: preview,
           encrypted: lastOk.mailboxCapture?.encrypted ?? encrypted,
-          messageNonceU64: lastOk.mailboxCapture?.messageNonceU64,
+          messageNonceU64: nonceU64,
           mailboxPersisted: messagingPersistenceMode === 'mailbox',
+          chainTxDigest: lastOk.mailboxCapture?.txDigest,
+          chainMailboxObjectId: composerMailboxObjectId || undefined,
+          innerEnc:
+            encrypted && readRatchetExperimentEnabled() ? 'ratchet_v3' : undefined,
         })
         if (dmOpt) {
           setMessages((prev) => applyGroupOptimisticInboxMerge(prev, [dmOpt]))

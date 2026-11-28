@@ -168,3 +168,5 @@ Starkes NFT-Besitz-Gate und Zeitkapsel/Timelock sind **orthogonal** (DEK an Owne
 ~~C1.1–C1.6~~ erledigt (Opt-in Send/Decrypt Direct-IOTA). ~~**PC Zwei-Wallet-Smoke 4c**~~ **PASS 2026-11-27** (User-Live A↔B Klartext; Ritual in `docs/PC-STAGE2-DIRECT-IOTA-SMOKE.md`). **Als Nächstes:** PC halten / Merge des Fix-Pakets; **kein** Composer-Default; physisches 2. Gerät / Session C weiter Phase 4.
 
 **Live-Hinweise (2026-11-27):** Ratchet-Root muss zum Outer-Session-Pub passen (Archiv ≠ Live möglich). Empfänger-Session nicht durch eigenes Ausgangs-Replay `forceNew`-löschen. API-Zeilen clientseitig entpacken. UI: Partner-Thread zeigt Sends nur wenn Richtung ≠ nur „Eingang“. Peer-Pub: `findPeerHandshake(From)` muss **Mailbox-HsKey** (nicht nur EcdhInit-Events) finden — sonst asymmetrisch A→B Hint.
+
+**Gerätewechsel (Backlog 2026-11-28):** Ursprungsgerät = lesbar halten (Sender-Echo lokal). Neues Gerät ohne State-Backup ≠ lesbar. Idee „walletgebundenes“ verschlüsseltes State-Backup → `docs/IDEEN-BACKLOG.md` (kein Default, kein Cloud-Zwang).

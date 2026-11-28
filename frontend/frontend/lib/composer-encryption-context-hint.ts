@@ -12,6 +12,14 @@ export type ComposerEncryptionHintInput = {
   groupTeamBroadcastReady?: boolean
 }
 
+/** Composer: Double Ratchet greift nur bei 1:1 Online+Enc+Flag. */
+export function composerWillUseDoubleRatchet(input: ComposerEncryptionHintInput): boolean {
+  if (input.isGroupChannel) return false
+  if (input.forcedTransport !== 'internet' || !input.encrypted) return false
+  if (typeof window === 'undefined') return false
+  return readRatchetExperimentEnabled()
+}
+
 /**
  * § H.3o.6 (3): Abgrenzung Meshtastic-Kanal-PSK vs. Online-Schloss (IOTA/ECDH).
  * G2: Gruppe — Online/Team-Postfach vs. Funk klar trennen.

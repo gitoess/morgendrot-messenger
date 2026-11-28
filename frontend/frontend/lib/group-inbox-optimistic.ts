@@ -118,6 +118,11 @@ export function buildPrivateDmOptimisticInboxRow(p: {
   messageNonceU64?: bigint
   /** false = flüchtiges Event (kein Mailbox-DF). */
   mailboxPersisted?: boolean
+  /** Nach Direct-Send: Explorer-Badge sofort. */
+  chainTxDigest?: string
+  chainMailboxObjectId?: string
+  /** Opt-in Double Ratchet beim Send. */
+  innerEnc?: 'ratchet_v3'
 }): Message | null {
   const me = p.myAddress.trim()
   const to = p.recipient.trim().toLowerCase()
@@ -126,6 +131,8 @@ export function buildPrivateDmOptimisticInboxRow(p: {
   const ts = Date.now()
   const nonce = p.messageNonceU64 != null ? p.messageNonceU64.toString() : `t${ts}`
   const mailbox = p.mailboxPersisted !== false
+  const digest = (p.chainTxDigest ?? '').trim()
+  const mbOid = (p.chainMailboxObjectId ?? '').trim()
   return {
     id: `optimistic:dm:${to}:${nonce}`,
     from: me,
@@ -133,10 +140,13 @@ export function buildPrivateDmOptimisticInboxRow(p: {
     content,
     timestamp: ts,
     encrypted: p.encrypted,
+    ...(p.innerEnc === 'ratchet_v3' ? { innerEnc: 'ratchet_v3' as const } : {}),
     source: mailbox ? 'mailbox' : undefined,
     transports: ['internet'],
     chainNonce: nonce,
     chainPurgeable: mailbox,
     dedupKey: `dm|${me.toLowerCase()}|${to}|${nonce}`,
+    ...(digest ? { chainTxDigest: digest } : {}),
+    ...(mbOid && /^0x[a-fA-F0-9]{64}$/i.test(mbOid) ? { chainMailboxObjectId: mbOid } : {}),
   }
 }

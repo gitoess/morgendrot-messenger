@@ -1,13 +1,24 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ChatViewEncryptionContextHint } from '@/frontend/components/chat-view-encryption-context-hint'
+import { writeRatchetExperimentEnabled } from '@/frontend/lib/ratchet-experiment'
 
 describe('ChatViewEncryptionContextHint (§ H.1a)', () => {
+  beforeEach(() => {
+    writeRatchetExperimentEnabled(false)
+  })
+
   it('rendert nichts wenn kein Hinweis', () => {
     const { container } = render(
       <ChatViewEncryptionContextHint forcedTransport="mesh" encrypted={false} />
     )
     expect(container.firstChild).toBeNull()
+  })
+
+  it('zeigt Double-Ratchet-Badge bei Opt-in Enc Online', () => {
+    writeRatchetExperimentEnabled(true)
+    render(<ChatViewEncryptionContextHint forcedTransport="internet" encrypted />)
+    expect(screen.getByRole('note')).toHaveTextContent(/Double Ratchet aktiv/)
   })
 
   it('zeigt Funk-Schloss-Warnung', () => {

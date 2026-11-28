@@ -18,6 +18,10 @@ import {
 } from '@/frontend/lib/passphrase-message-local-store'
 import { purgeNftKeycardVault } from '@/frontend/lib/nft-keycard-local-store'
 import { wipeLocalPassphraseStoresOnLock } from '@/frontend/lib/privacy-lock-wipe'
+import {
+  lookupOutgoingSendEcho,
+  rememberOutgoingSendEcho,
+} from '@/frontend/lib/outgoing-send-echo'
 import { purgeTeamBroadcastKeyVault } from '@/frontend/lib/team-broadcast-key-store'
 import { hasVaultPasswordSession, setVaultPasswordSession } from '@/frontend/lib/vault-password-session'
 
@@ -54,9 +58,16 @@ describe('wipeLocalPassphraseStoresOnLock', () => {
 
     // Nach erneutem Remember ohne manuellen Flush: wipe muss selbst flushen, dann RAM leeren.
     rememberPassphraseMessagePassphrase(wire, 'test-pass-99xx')
+    rememberOutgoingSendEcho({
+      peerAddress: '0x' + 'cd'.repeat(32),
+      nonce: '42',
+      plaintext: 'VISITENKARTE',
+    })
     expect(window.sessionStorage.getItem('morgendrot.passphraseMsg.tab.v1')).toBeTruthy()
     await wipeLocalPassphraseStoresOnLock()
 
+    /** Ursprungsgerät: Sender-Echo überlebt Abmelden (Gerätewechsel = Backlog). */
+    expect(lookupOutgoingSendEcho('0x' + 'cd'.repeat(32), '42')).toBe('VISITENKARTE')
     expect(lookupPassphraseMessagePassphrase(wire)).toBeNull()
     expect(lookupEvidencePassphrase({ objectId: '0x' + 'ab'.repeat(32) })).toBeNull()
     expect(hasVaultPasswordSession()).toBe(false)

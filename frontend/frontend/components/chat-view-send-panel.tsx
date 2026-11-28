@@ -55,6 +55,11 @@ import {
   shouldBlockSendForMissingSessionKeys,
 } from '@/frontend/lib/messenger-session-keys-ready'
 import { ChatViewContactSendMailboxSelect } from '@/frontend/components/chat-view-contact-send-mailbox-select'
+import { getDirectMailboxChainSnapshot } from '@/frontend/lib/direct-iota-chain-context'
+import {
+  cacheServerMailboxObjectId,
+  readCachedServerMailboxObjectId,
+} from '@/frontend/lib/my-private-mailbox-store'
 import { ChatViewEncryptedRecipientHandshakeBar } from '@/frontend/components/chat-view-encrypted-recipient-handshake-bar'
 import {
   ChatViewActiveConversationBar,
@@ -1084,7 +1089,19 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 <ChatViewContactSendMailboxSelect
                   recipientWallet={composerIota}
                   contactDirectory={contactDirectory ?? {}}
-                  serverMailboxId={apiStatus?.mailboxId}
+                  serverMailboxId={(() => {
+                    const fromApi = (apiStatus?.mailboxId ?? '').trim()
+                    if (/^0x[a-fA-F0-9]{64}$/i.test(fromApi)) {
+                      cacheServerMailboxObjectId(fromApi)
+                      return fromApi
+                    }
+                    const fromSnap = (getDirectMailboxChainSnapshot()?.mailboxId ?? '').trim()
+                    if (/^0x[a-fA-F0-9]{64}$/i.test(fromSnap)) {
+                      cacheServerMailboxObjectId(fromSnap)
+                      return fromSnap
+                    }
+                    return readCachedServerMailboxObjectId() || undefined
+                  })()}
                   onTargetChange={(_target, resolvedObjectId) =>
                     onComposerMailboxObjectIdChange?.(resolvedObjectId)
                   }
@@ -1204,15 +1221,13 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             dropHover && !dropDisabled && 'border-primary/50 bg-primary/5 ring-2 ring-primary/25'
           )}
         >
-          {isGroupChannel ? (
-            <ChatViewEncryptionContextHint
-              className="mb-2"
-              forcedTransport={forcedTransport}
-              encrypted={encrypted}
-              isGroupChannel
-              groupTeamBroadcastReady={groupTeamBroadcastReady}
-            />
-          ) : null}
+          <ChatViewEncryptionContextHint
+            className="mb-2"
+            forcedTransport={forcedTransport}
+            encrypted={encrypted}
+            isGroupChannel={isGroupChannel}
+            groupTeamBroadcastReady={groupTeamBroadcastReady}
+          />
           {!encrypted && forcedTransport === 'mesh' ? (
             <div className="mb-2 rounded-md border border-orange-600/45 bg-orange-950/35 px-3 py-2 text-xs tabular-nums text-orange-50">
               <span className="font-semibold">Klartext-Funk</span> · {[...message].length}/{MESH_PLAINTEXT_MAX_CHARS}{' '}

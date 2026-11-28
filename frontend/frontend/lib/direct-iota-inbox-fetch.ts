@@ -133,6 +133,7 @@ async function mapEventRowsToInboxApi(
       ts: r.tsMs,
       chainPurgeable: false,
       inboxKey: r.inboxKey,
+      ...(dec.ok && dec.innerEnc ? { innerEnc: dec.innerEnc } : {}),
     })
   }
   return apiRows
@@ -160,6 +161,7 @@ async function resolvePendingEncryptedRow(pending: PendingEncryptedRow): Promise
       ? { chainMailboxObjectId: pending.chainMailboxObjectId }
       : {}),
     inboxKey: pending.inboxKey,
+    ...(dec.ok && dec.innerEnc ? { innerEnc: dec.innerEnc } : {}),
   }
 }
 

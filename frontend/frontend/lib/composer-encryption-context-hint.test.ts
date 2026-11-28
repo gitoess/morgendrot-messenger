@@ -1,5 +1,8 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { getComposerEncryptionContextHint } from './composer-encryption-context-hint'
+import {
+  composerWillUseDoubleRatchet,
+  getComposerEncryptionContextHint,
+} from './composer-encryption-context-hint'
 import { writeRatchetExperimentEnabled } from '@/frontend/lib/ratchet-experiment'
 
 describe('getComposerEncryptionContextHint (H.3o.6)', () => {
@@ -47,6 +50,24 @@ describe('getComposerEncryptionContextHint (H.3o.6)', () => {
     expect(getComposerEncryptionContextHint({ forcedTransport: 'internet', encrypted: true })).toMatch(
       /Double Ratchet/
     )
+  })
+
+  it('composerWillUseDoubleRatchet nur 1:1 Online+Enc+Flag', () => {
+    writeRatchetExperimentEnabled(false)
+    expect(
+      composerWillUseDoubleRatchet({ forcedTransport: 'internet', encrypted: true })
+    ).toBe(false)
+    writeRatchetExperimentEnabled(true)
+    expect(
+      composerWillUseDoubleRatchet({ forcedTransport: 'internet', encrypted: true })
+    ).toBe(true)
+    expect(
+      composerWillUseDoubleRatchet({
+        forcedTransport: 'internet',
+        encrypted: true,
+        isGroupChannel: true,
+      })
+    ).toBe(false)
   })
 
   it('online klartext', () => {

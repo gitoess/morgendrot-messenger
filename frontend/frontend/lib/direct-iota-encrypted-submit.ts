@@ -276,6 +276,17 @@ async function encryptPlaintextForDirectSubmit(
         if (wrapped?.wire) plaintextForSession = wrapped.wire
       }
     }
+    /** Sender-Postausgang: Klartext unter Nonce (Ratchet-Echo / Visitenkarte nach Reload). */
+    try {
+      const { rememberOutgoingSendEcho } = await import('@/frontend/lib/outgoing-send-echo')
+      rememberOutgoingSendEcho({
+        peerAddress: opts.recipient,
+        nonce: String(nonce),
+        plaintext: bodyForE2ee,
+      })
+    } catch {
+      /* ignore */
+    }
     const packed = await encryptIotaPeerSessionMessage({
       plaintext: plaintextForSession,
       myAddress,

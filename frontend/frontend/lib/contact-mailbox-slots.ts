@@ -3,6 +3,8 @@
  * § H.24b P3: Send-Slot-Präferenz + Slot-Overrides pro Einsatzprofil (Spec §3.3).
  */
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
+import { getDirectMailboxChainSnapshot } from '@/frontend/lib/direct-iota-chain-context'
+import { readCachedServerMailboxObjectId } from '@/frontend/lib/my-private-mailbox-store'
 import {
   activeProfileId,
   readScoped,
@@ -217,6 +219,16 @@ export function firstNonEventSendTarget(
   return hit ? hit.value : null
 }
 
+function resolveHauptpostfachObjectId(explicit?: string): string {
+  const a = (explicit ?? '').trim()
+  if (HEX_64.test(a.toLowerCase())) return a.toLowerCase()
+  const b = readCachedServerMailboxObjectId().trim()
+  if (HEX_64.test(b.toLowerCase())) return b.toLowerCase()
+  const c = (getDirectMailboxChainSnapshot()?.mailboxId ?? '').trim()
+  if (HEX_64.test(c.toLowerCase())) return c.toLowerCase()
+  return ''
+}
+
 export function buildSendMailboxTargetOptions(
   entry: ContactMeshEntryClient | undefined,
   serverMailboxId?: string,
@@ -242,12 +254,13 @@ export function buildSendMailboxTargetOptions(
     value: 'own',
     label: 'Eigene Mailbox (nur wenn Sende-Fokus gesetzt, sonst Haupt)',
   })
-  const srv = serverMailboxId?.trim()
-  if (srv && HEX_64.test(srv.toLowerCase())) {
+  const srv = resolveHauptpostfachObjectId(serverMailboxId)
+  if (srv) {
+    /** Immer wählbar: Deployment-Hauptpostfach (Tarnmodus / Alltag Shared). */
     opts.push({
       value: 'server',
-      label: `Server-Einsatz (Shared) · ${srv.slice(0, 10)}…`,
-      objectId: srv.toLowerCase(),
+      label: `Hauptpostfach (Messenger/Shared) · ${srv.slice(0, 10)}…`,
+      objectId: srv,
     })
   }
   return opts

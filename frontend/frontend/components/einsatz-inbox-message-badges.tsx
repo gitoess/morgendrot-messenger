@@ -1,28 +1,21 @@
 'use client'
 
-import { Anchor, Layers, Link2 } from 'lucide-react'
-import {
-    einsatzInboxBadgesVisible,
-    type EinsatzInboxMessageBadges,
-} from '@/frontend/lib/einsatz-inbox-badges'
+import { Anchor, Layers } from 'lucide-react'
+import { type EinsatzInboxMessageBadges } from '@/frontend/lib/einsatz-inbox-badges'
 import { shortTxDigestLabel } from '@/frontend/lib/einsatz-explorer-url'
 
 export function EinsatzInboxMessageBadges({ badges }: { badges: EinsatzInboxMessageBadges }) {
-    if (!einsatzInboxBadgesVisible(badges)) return null
+    /**
+     * „On-chain (Mainnet)“-Label absichtlich nicht mehr: doppelt/missverständlich neben dem
+     * klickbaren Explorer-Badge „On-chain (Testnet|Mainnet)“ (`inbox-message-explorer`).
+     * Forensic-Batch + Einsatz-Anker bleiben.
+     */
+    if (!badges.inForensicBatch && !badges.inEinsatzAnchor) return null
     const batchDigestLabel = badges.forensicBatchDigest
         ? shortTxDigestLabel(badges.forensicBatchDigest)
         : ''
     return (
         <>
-            {badges.onChainMainnet ? (
-                <span
-                    className="inline-flex items-center gap-0.5 rounded-full bg-cyan-500/15 px-2 py-0.5 text-[10px] font-medium text-cyan-900 dark:text-cyan-200"
-                    title="Nachricht liegt on-chain auf Mainnet (Mailbox / Team-Broadcast)"
-                >
-                    <Link2 className="h-3 w-3 shrink-0" aria-hidden />
-                    On-chain (Mainnet)
-                </span>
-            ) : null}
             {badges.inForensicBatch ? (
                 <span
                     className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-900 dark:text-emerald-200"

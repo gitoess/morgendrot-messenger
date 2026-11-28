@@ -27,6 +27,43 @@ const incomingPlainByMsgId = new Map<string, { text: string; at: number }>()
 /** ECDH-Shared-Fingerprint pro Peer — Live-Pub ≠ Archiv-Pub → Session neu. */
 const sessionSharedFpByPeer = new Map<string, string>()
 const PLAIN_TTL_MS = 1000 * 60 * 60 * 12
+/** Persistenz: Sender sieht Visitenkarte/Klartext nach Reload (opt-in Ratchet). */
+const OUTGOING_PLAIN_LS_KEY = 'morgendrot.ratchet.outgoingPlain.v1'
+const OUTGOING_PLAIN_LS_MAX = 80
+
+function hydrateOutgoingPlainFromLs(): void {
+  if (typeof window === 'undefined') return
+  if (outgoingPlainByMsgId.size > 0) return
+  try {
+    const raw = window.localStorage.getItem(OUTGOING_PLAIN_LS_KEY)?.trim()
+    if (!raw) return
+    const j = JSON.parse(raw) as Record<string, { text?: string; at?: number }>
+    const cut = Date.now() - PLAIN_TTL_MS
+    for (const [k, v] of Object.entries(j)) {
+      if (!v || typeof v.text !== 'string' || typeof v.at !== 'number') continue
+      if (v.at < cut || !v.text.trim()) continue
+      outgoingPlainByMsgId.set(k, { text: v.text, at: v.at })
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+function persistOutgoingPlainToLs(): void {
+  if (typeof window === 'undefined') return
+  try {
+    const cut = Date.now() - PLAIN_TTL_MS
+    const entries = [...outgoingPlainByMsgId.entries()]
+      .filter(([, v]) => v.at >= cut && v.text.trim())
+      .sort((a, b) => b[1].at - a[1].at)
+      .slice(0, OUTGOING_PLAIN_LS_MAX)
+    const obj: Record<string, { text: string; at: number }> = {}
+    for (const [k, v] of entries) obj[k] = v
+    window.localStorage.setItem(OUTGOING_PLAIN_LS_KEY, JSON.stringify(obj))
+  } catch {
+    /* ignore */
+  }
+}
 
 /** Kurz-Fingerprint des ECDH-Shared (nicht geheim; Wire-Auswahl welches Peer-Pub). */
 export function sharedSecretFingerprint(shared: Uint8Array): string {
@@ -50,6 +87,17 @@ export function readRatchetExperimentEnabled(): boolean {
   }
 }
 
+/** Abmelden / hartes Lock: Ratchet-Sender-Echo weg (nicht Soft-Pause). */
+export function clearRatchetOutgoingPlainOnLock(): void {
+  outgoingPlainByMsgId.clear()
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.removeItem(OUTGOING_PLAIN_LS_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
 export function writeRatchetExperimentEnabled(on: boolean): void {
   if (typeof window === 'undefined') return
   try {
@@ -57,7 +105,7 @@ export function writeRatchetExperimentEnabled(on: boolean): void {
     /** Beim Einschalten Sessions verwerfen — sonst A/B mit divergenten States → Roh-JSON im Chat. */
     if (on) {
       purgeRatchetSessionVault()
-      outgoingPlainByMsgId.clear()
+      clearRatchetOutgoingPlainOnLock()
       incomingPlainByMsgId.clear()
       sessionSharedFpByPeer.clear()
     }
@@ -92,17 +140,86 @@ function prunePlainMaps(): void {
   }
 }
 
+function rememberOutgoingPlainEntry(key: string, text: string): void {
+  if (!key || !text) return
+  outgoingPlainByMsgId.set(key, { text, at: Date.now() })
+}
+
+/** Sekundär-Index: bodyB64-Präfix — Fallback wenn msgId/Peer nach Reload divergieren. */
+export function ratchetOutgoingBodyCacheKey(peerAddress: string, ratchetWire: string): string | null {
+  try {
+    const j = JSON.parse(ratchetWire.trim()) as { morg?: string; bodyB64?: unknown }
+    if (j.morg !== 'RATCHET_V3' || typeof j.bodyB64 !== 'string' || !j.bodyB64) return null
+    return `${norm(peerAddress)}|body:${j.bodyB64.slice(0, 48)}`
+  } catch {
+    return null
+  }
+}
+
 export function rememberRatchetOutgoingPlaintext(peerAddress: string, msgId: string, plaintext: string): void {
   const id = String(msgId).trim()
   const text = plaintext.trim()
   if (!id || !text) return
+  hydrateOutgoingPlainFromLs()
   prunePlainMaps()
-  outgoingPlainByMsgId.set(plainCacheKey(peerAddress, id), { text, at: Date.now() })
+  rememberOutgoingPlainEntry(plainCacheKey(peerAddress, id), text)
+  persistOutgoingPlainToLs()
+}
+
+/** Nach Wrap: msgId + Wire-Body-Index (Sender-Echo nach Chain-Reload). */
+export function rememberRatchetOutgoingPlaintextFromWire(
+  peerAddress: string,
+  msgId: string,
+  plaintext: string,
+  ratchetWire: string
+): void {
+  const text = plaintext.trim()
+  if (!text) return
+  hydrateOutgoingPlainFromLs()
+  prunePlainMaps()
+  const id = String(msgId).trim()
+  if (id) rememberOutgoingPlainEntry(plainCacheKey(peerAddress, id), text)
+  const bodyKey = ratchetOutgoingBodyCacheKey(peerAddress, ratchetWire)
+  if (bodyKey) rememberOutgoingPlainEntry(bodyKey, text)
+  persistOutgoingPlainToLs()
 }
 
 export function lookupRatchetOutgoingPlaintext(peerAddress: string, msgId: string): string | null {
+  hydrateOutgoingPlainFromLs()
   prunePlainMaps()
-  return outgoingPlainByMsgId.get(plainCacheKey(peerAddress, msgId))?.text ?? null
+  const id = String(msgId).trim()
+  if (!id) return null
+  const direct = outgoingPlainByMsgId.get(plainCacheKey(peerAddress, id))?.text
+  if (direct) return direct
+  /** Peer in Inbox-Meta manchmal leer/anders — msgId allein reicht für Echo. */
+  const suffix = `|${id}`
+  for (const [k, v] of outgoingPlainByMsgId) {
+    if (k.endsWith(suffix) && !k.includes('|body:')) return v.text
+  }
+  return null
+}
+
+export function lookupRatchetOutgoingPlaintextByWire(peerAddress: string, ratchetWire: string): string | null {
+  hydrateOutgoingPlainFromLs()
+  prunePlainMaps()
+  const bodyKey = ratchetOutgoingBodyCacheKey(peerAddress, ratchetWire)
+  if (bodyKey) {
+    const hit = outgoingPlainByMsgId.get(bodyKey)?.text
+    if (hit) return hit
+  }
+  /** body-Präfix ohne Peer-Match (Meta fehlte beim Merken andersherum). */
+  try {
+    const j = JSON.parse(ratchetWire.trim()) as { bodyB64?: unknown }
+    if (typeof j.bodyB64 === 'string' && j.bodyB64) {
+      const needle = `|body:${j.bodyB64.slice(0, 48)}`
+      for (const [k, v] of outgoingPlainByMsgId) {
+        if (k.endsWith(needle)) return v.text
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return null
 }
 
 export function rememberRatchetIncomingPlaintext(peerAddress: string, msgId: string, plaintext: string): void {
@@ -206,7 +323,8 @@ export async function ratchetExperimentEncrypt(opts: {
   try {
     const packet = await session.encrypt(opts.plaintext, opts.msgId)
     putRatchetSessionForPeer(peer, session)
-    rememberRatchetOutgoingPlaintext(peer, opts.msgId, opts.plaintext)
+    const wire = encodeRatchetPacketWire(packet, sessionSharedFpByPeer.get(peer) ?? undefined)
+    rememberRatchetOutgoingPlaintextFromWire(peer, opts.msgId, opts.plaintext, wire)
     return { ok: true, packet }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }

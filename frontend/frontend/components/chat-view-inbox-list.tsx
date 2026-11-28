@@ -19,6 +19,7 @@
 import {
   Copy,
   Download,
+  ExternalLink,
   Forward,
   Inbox,
   Link2,
@@ -75,9 +76,12 @@ import { openProtokollAnchorDialogFromPrefill, openR1CourierDialogFromPrefill } 
 import { isTeamBroadcastInboxMessage, teamBroadcastPurgeHint } from '@/frontend/lib/mailbox-purge-routing'
 import { BURN_EVENT_NOT_PURGEABLE_HINT, BURN_ON_READ_CONFIRM } from '@/frontend/lib/inbox-burn-on-read'
 import { useInboxBurnOnRead } from '@/frontend/hooks/use-inbox-burn-on-read'
-import { EinsatzInboxExplorerLink } from '@/frontend/components/einsatz-inbox-explorer-link'
 import { EinsatzInboxMessageBadges } from '@/frontend/components/einsatz-inbox-message-badges'
 import { useEinsatzInboxBadges } from '@/frontend/hooks/use-einsatz-inbox-badges'
+import {
+  inboxExplorerBadgeLabel,
+  resolveInboxMessageExplorerTarget,
+} from '@/frontend/lib/inbox-message-explorer'
 import {
   formatInboxDayHeading,
   formatInboxMessageTime,
@@ -202,14 +206,12 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
     inboxVisibilityHint = null,
     isInboxMessageUnread,
     isPinnwandInboxMessage,
-    einsatzRpcHint = '',
     sending = false,
     onApplyDirectionFilter,
     onApplyWireFilter,
   } = p
 
-  const { getBadgesForMessage, getTxDigestForMessage, chainMode: einsatzChainMode } =
-    useEinsatzInboxBadges(messages)
+  const { getBadgesForMessage } = useEinsatzInboxBadges(messages)
 
   const visibilityHintBanner = inboxVisibilityHint ? (
     <div className="p-3 pb-0">
@@ -651,27 +653,31 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                       )
                     }
                     if (row.msg.encrypted) {
-                      const encClass =
-                        'inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400'
-                      const encTitle =
-                        'Verschlüsselt empfangen/gesendet. Klick: Liste nur Verschlüsselte. Senden stellst du im Composer ein.'
+                      const isRatchet = row.msg.innerEnc === 'ratchet_v3'
+                      const encClass = isRatchet
+                        ? 'inline-flex items-center gap-0.5 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-medium text-amber-950 dark:text-amber-100'
+                        : 'inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400'
+                      const encTitle = isRatchet
+                        ? 'Double Ratchet (Experiment) — innere Lage. Gerätegebunden; anderer PC braucht frische Session. Klick: nur Verschlüsselte.'
+                        : 'Verschlüsselt empfangen/gesendet (Session Keys+). Klick: Liste nur Verschlüsselte. Senden stellst du im Composer ein.'
+                      const encLabel = isRatchet ? 'Ratchet' : 'Verschlüsselt'
                       if (onApplyWireFilter) {
                         return (
                           <button
                             type="button"
-                            className={cn(encClass, 'hover:bg-emerald-500/25')}
+                            className={cn(encClass, isRatchet ? 'hover:bg-amber-500/30' : 'hover:bg-emerald-500/25')}
                             title={encTitle}
                             onClick={() => onApplyWireFilter('encrypted')}
                           >
                             <Lock className="h-3 w-3" aria-hidden />
-                            Verschlüsselt
+                            {encLabel}
                           </button>
                         )
                       }
                       return (
                         <span className={encClass} title={encTitle}>
                           <Lock className="h-3 w-3" aria-hidden />
-                          Verschlüsselt
+                          {encLabel}
                         </span>
                       )
                     }
@@ -699,13 +705,27 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     </span>
                   ) : null}
                   <EinsatzInboxMessageBadges badges={getBadgesForMessage(row.msg)} />
-                  {getTxDigestForMessage(row.msg) ? (
-                    <EinsatzInboxExplorerLink
-                      txDigest={getTxDigestForMessage(row.msg)!}
-                      chainMode={einsatzChainMode}
-                      rpcHint={einsatzRpcHint}
-                    />
-                  ) : null}
+                  {(() => {
+                    const ex = resolveInboxMessageExplorerTarget(row.msg)
+                    if (!ex) return null
+                    /** Sichtbarer On-chain-Button (auch Testnet; TX oder Mailbox-Objekt). */
+                    return (
+                      <a
+                        href={ex.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-0.5 rounded-full bg-cyan-500/15 px-2 py-0.5 text-[10px] font-medium text-cyan-900 hover:bg-cyan-500/25 dark:text-cyan-200"
+                        title={
+                          ex.kind === 'tx'
+                            ? `Transaktion im ${ex.networkLabel}-Explorer öffnen`
+                            : `Haupt-/Ziel-Postfach im ${ex.networkLabel}-Explorer öffnen`
+                        }
+                      >
+                        <ExternalLink className="h-3 w-3 shrink-0" aria-hidden />
+                        {inboxExplorerBadgeLabel(ex)}
+                      </a>
+                    )
+                  })()}
                   {protokollMarkedIds.has(row.msg.id) && (
                     <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-900 dark:text-amber-100">
                       <Star className="h-3 w-3 fill-amber-400 text-amber-600 dark:text-amber-300" aria-hidden />
@@ -815,6 +835,25 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     Operativ pro Zeile. Nicht hier: Kopieren/Vorlesen (unter dem Text),
                     Hash/Medien/.morg-pkg (Optionen), Massenaktionen (Auswahl).
                   */}
+                  {(() => {
+                    const ex = resolveInboxMessageExplorerTarget(row.msg)
+                    if (!ex) return null
+                    return (
+                      <DropdownMenuItem
+                        onSelect={() => {
+                          window.open(ex.href, '_blank', 'noopener,noreferrer')
+                        }}
+                        title={
+                          ex.kind === 'tx'
+                            ? 'Send-TX im Explorer'
+                            : 'Postfach-Objekt im Explorer (ohne einzelne TX)'
+                        }
+                      >
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        {ex.kind === 'tx' ? 'Im Explorer (TX)…' : 'Postfach im Explorer…'}
+                      </DropdownMenuItem>
+                    )
+                  })()}
                   <DropdownMenuItem
                     disabled={!canAddContact}
                     title={

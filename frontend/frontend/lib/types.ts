@@ -21,6 +21,11 @@ export interface Message {
   content: string
   timestamp: number
   encrypted?: boolean
+  /**
+   * Innere Crypto-Lage (nach Outer Session Keys+).
+   * `ratchet_v3` = Opt-in Double Ratchet — Badge im Postein-/ausgang; gerätegebunden.
+   */
+  innerEnc?: 'ratchet_v3'
   /** Bei Boss-Übersicht: an welche Adresse die Nachricht ging („An mich“ vs „An Kommandant“). */
   recipient?: string
   /** Standard: Mailbox/IOTA; LAN-Relay; lokal vom Funk-Stick; Telegram-Journal (§ H.26) */

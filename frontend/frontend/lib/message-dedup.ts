@@ -151,6 +151,7 @@ export function mergeMessageByDedup(prev: Message[], msg: Message): Message[] {
     transports: [...tr],
     content: pickMergedInboxContent(cc, mc),
     encrypted: Boolean(msg.encrypted || cur.encrypted),
+    innerEnc: msg.innerEnc === 'ratchet_v3' || cur.innerEnc === 'ratchet_v3' ? 'ratchet_v3' : undefined,
     pinnwandPost: cur.pinnwandPost === true || msg.pinnwandPost === true ? true : undefined,
     chainMailboxObjectId: msg.chainMailboxObjectId || cur.chainMailboxObjectId,
     chainNonce: msg.chainNonce || cur.chainNonce,

@@ -10,6 +10,10 @@ import {
   resolveRatchetLayerAfterOuterDecrypt,
   unwrapRatchetV3InInboxApiRows,
 } from '@/frontend/lib/ratchet-after-outer-decrypt'
+import {
+  clearOutgoingSendEchoForTests,
+  rememberOutgoingSendEcho,
+} from '@/frontend/lib/outgoing-send-echo'
 import { purgeRatchetSessionVault } from '@/frontend/lib/ratchet-session-local-store'
 import { clearVaultPasswordSession, setVaultPasswordSession } from '@/frontend/lib/vault-password-session'
 import type { RatchetCipherPacket } from '@morgendrot/shared/morgendrot-ratchet-session'
@@ -61,6 +65,7 @@ describe('unwrapRatchetV3InInboxApiRows', () => {
     writeRatchetExperimentEnabled(false)
     purgeRatchetSessionVault()
     clearVaultPasswordSession()
+    clearOutgoingSendEchoForTests()
   })
 
   it('ersetzt Roh-JSON durch Hint wenn Opt-in aus', async () => {
@@ -79,6 +84,23 @@ describe('unwrapRatchetV3InInboxApiRows', () => {
       BOB
     )
     expect(rows[0]!.text).toBe('hallo')
+  })
+
+  it('eigene Ausgangs-Zeile: Nonce-Echo ohne Ratchet-RAM', async () => {
+    writeRatchetExperimentEnabled(true)
+    rememberOutgoingSendEcho({
+      peerAddress: ALICE,
+      nonce: '1795789953734',
+      plaintext: 'VISITENKARTE\nich',
+    })
+    expect(
+      await resolveRatchetLayerAfterOuterDecrypt({
+        text: fakeWire(),
+        peerAddress: ALICE,
+        myAddress: BOB,
+        iAmSender: true,
+      })
+    ).toBe('VISITENKARTE\nich')
   })
 
   it('eigene Ausgangs-Zeile ohne Echo: Hint statt forceNew-Unwrap', async () => {
@@ -101,7 +123,20 @@ describe('unwrapRatchetV3InInboxApiRows', () => {
       })
     ).toBe('bob out')
 
-    const noEchoWire = wrapped!.wire.replace('bout1', 'other-id')
+    /** msgId divergiert, body gleich → Echo über bodyB64-Index. */
+    const sameBodyOtherId = wrapped!.wire.replace('bout1', 'other-id')
+    expect(
+      await resolveRatchetLayerAfterOuterDecrypt({
+        text: sameBodyOtherId,
+        peerAddress: ALICE,
+        myAddress: BOB,
+        iAmSender: true,
+      })
+    ).toBe('bob out')
+
+    const noEchoWire = wrapped!.wire
+      .replace('bout1', 'other-id')
+      .replace(/"bodyB64":"[^"]+"/, '"bodyB64":"QQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQQ"')
     expect(
       await resolveRatchetLayerAfterOuterDecrypt({
         text: noEchoWire,

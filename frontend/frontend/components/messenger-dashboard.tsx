@@ -406,6 +406,15 @@ function MessengerDashboardBody({
     <>
       <DashboardSharedDialogs
         locked={s.locked}
+        vaultUnlockUiReady={s.statusPollAttempted}
+        preferSessionSignerSyncOnly={
+          Boolean(
+            s.statusPollAttempted &&
+              backendVaultUnlocked &&
+              !browserSignerReady &&
+              (s.sessionSignerSync.open || Boolean(vaultPwSession))
+          )
+        }
         suppressVaultUnlockForHelperSeed={s.unlock.suppressVaultUnlockForHelperSeed}
         suppressVaultUnlockForOnboardingWizard={!vaultOverWizard && onboardingWizardOpen}
         showMessengerSetupInVault={offerMessengerSetupInVault}

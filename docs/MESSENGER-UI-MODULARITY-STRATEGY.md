@@ -125,6 +125,8 @@ CI-Spiegel: **`.github/workflows/frontend-checks.yml`**.
 
 **„Als Nächstes“ (Roadmap, klein):** (a) weiterer RTL-/Vitest-Slice **Send-Panel** / Inbox-Rand (**§ H.1a**); (b) ESLint-Zonen nur bei **messbaren** neuen Querimports; (c) optional: Imports auf **`@/frontend/lib/api`** vereinheitlichen (kosmetisch) — siehe **`docs/ROADMAP-FAHRPLAN.md`** § **H.1b** *Als Nächstes*.
 
+**Nachzug 2026-11-28 (User-Audit-Plan):** Gestaffelt **F0 Secrets → F1 Inventar → F2 Split nur nach Go → F3 Bericht** im Arbeitsstand-Kopf (**§ F**). Bestätigt: **kein** flächendeckender 300-Zeilen-Zwang; Hotspots + Dead-Code; Gate = volle `test:unit` (nicht nur „88“ H.15-Desk).
+
 ---
 
 ## 6. Was absichtlich *nicht* in diesem Dokument steht

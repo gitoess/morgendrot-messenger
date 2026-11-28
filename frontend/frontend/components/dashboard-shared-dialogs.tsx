@@ -17,6 +17,13 @@ import { VaultUnlockDialog } from '@/frontend/components/vault-unlock-dialog'
 
 export function DashboardSharedDialogs(p: {
   locked: boolean
+  /**
+   * Nach F5: erst Status-Poll — sonst öffnet locked=true sofort den Login-Dialog,
+   * obwohl der API-Tresor noch offen ist und nur Session-Signer fehlt.
+   */
+  vaultUnlockUiReady?: boolean
+  /** Backend schon offen, nur Browser-Signer fehlt → Login-Dialog unterdrücken. */
+  preferSessionSignerSyncOnly?: boolean
   suppressVaultUnlockForHelperSeed?: boolean
   /** Wizard offen: Tresor-Modal nicht darüber legen (Wallet-Schritt: „Wallet einrichten“ schließt Wizard). */
   suppressVaultUnlockForOnboardingWizard?: boolean
@@ -96,6 +103,9 @@ export function DashboardSharedDialogs(p: {
       <VaultUnlockDialog
         open={
           p.locked &&
+          p.vaultUnlockUiReady !== false &&
+          !p.preferSessionSignerSyncOnly &&
+          !p.sessionSignerSync?.open &&
           !p.suppressVaultUnlockForHelperSeed &&
           !p.suppressVaultUnlockForOnboardingWizard
         }

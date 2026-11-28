@@ -53,11 +53,26 @@ PC-Jetzt (#39–#46), Soft-Pause/Burn/Solo-Wizard/Visitenkarte-**Share**-MVP + *
 | **H.24** Package-UI | **Später** | Expertenmodus reicht PC; Multi-Package = Inbox-Namespaces |
 | **EXE Scheibe C** (Standalone zum Verteilen) | **Geparkt** (User 2026-11-28) | Eingebettetes Node/Next — warten; A/B reicht Schreibtisch |
 
-**Nächste PC-Arbeit:** Tarnmodus (Stealth) Ist inkl. Empfang/Sort-Fix; Live-Schmerz / Purge-UI später. Spec **`docs/STEALTH-SLOT-TAG-SPEC.md`**. M4e ≠ Stealth.
+**Nächste PC-Arbeit:** (1) Aktuelles Paket **mergen** (Explorer/Ratchet-Badge/F5-Tresor/Tarnmodus/Echo). (2) **F0 Secrets-Audit** (read-only, unten). (3) Live-Schmerz nur mit User-OK. Stealth-**Purge-UI** / Outdoor / Handy = später. Spec **`docs/STEALTH-SLOT-TAG-SPEC.md`**. M4e ≠ Stealth. C1 Gerätewechsel-Backup → `docs/IDEEN-BACKLOG.md`.
+
+**Chat-Modell (Ist, nicht Bug):** Sidebar-Zeile = **Kontakt/Gruppe**, nicht „IOTA-Kanal“. Ein Kontakt mit Label „test iota“ + verknüpfter Telegram-Chat-ID zeigt **Telegram- und IOTA-Zeilen im selben Thread** (Sendepfad **Alle**). Filter: Kopf **IOTA** / **Telegram** / **Funk** blendet Quellen. Untertitel zeigt passende Kanäle (`IOTA · Telegram`). Handbuch Sendepfad-Tabelle.
+
+### F · Code-Audit & Bereinigung (User 2026-11-28 — kritisch verbessert)
+
+**Urteil:** Sinnvoll **gestaffelt**, **nicht** als Big-Bang parallel zum Messenger-Kern. Verzahnt **§ H.1b** / `MESSENGER-UI-MODULARITY-STRATEGY.md`: **Grenzen & Ports** vor Zeilenzahl-Religion. Starre „jede Datei &lt;300 Zeilen“ = **Nicht-Ziel** (bestehende Strategie); Ziel = **Hotspots + toter Code** in kleinen Paketen **ohne** Crypto/API/Move/Send-Kern-Verhalten zu ändern.
+
+| Stufe | Inhalt | Gate | Wann |
+|-------|--------|------|------|
+| **F0 Secrets** | Zero-Leak: `.gitignore` / Tracked Secrets / `NEXT_PUBLIC_*` / Release-Skripte / Desktop-Bundle — **nur Report** | manuell + ggf. kleines Check-Script; kein Refactor | **als Nächstes nach Merge** (risikoarm) |
+| **F1 Inventar** | Liste Dateien ≫~300 Zeilen + Verdacht tot/Alt-Kommentar; **kein** Split | Text-Report an User | nach F0 |
+| **F2 Split** | Nur nach User-**„Go“** (oder explizit „3 größte UI“): 1–3 Dateien/Paket; reine UI/Helfer-Extraktion | `lint` · `tsc --noEmit` · **`npm run test:unit`** (volle Suite — **nicht** hart „88/88“, das ist H.15-Desk) · betroffene Smokes | nach Go |
+| **F3 Bericht** | Secrets-Ergebnis · Splits Vorher/Nachher · CI grün | kurz, ehrlich | pro Paket |
+
+**Nicht:** Wallet-/H.25a-Freeze anfassen; Mesh-Kern + UI-Split in derselben Woche; Secrets „wegrefactoren“ ohne Go; Big-Bang `chat-view`/`handle-send`.
 
 ### C · Geparkt (nach B / nicht jetzt)
 
-**Stealth-Implementierung** (Move/Lookahead/UI — erst nach Spec+User-OK) · **H.19** Forensic · **H.21** Kurier · **M4e-Schubladen-UX** (ganz hinten) · **EXE Scheibe C** · **H.18 Codec2** · **Vault ID-Snapshot** · H.12 · H.24 · H.26 Alarmgruppe · H.30 · H.37 · C1-Default · Delayed-Upload · H.25a Outdoor · H.3 Mesh · Linkify.
+**Stealth-Purge-UI** (+ Move-`created_at_ms` Wall-Clock) · **H.19** Forensic · **H.21** Kurier · **M4e-Schubladen-UX** (ganz hinten) · **EXE Scheibe C** · **H.18 Codec2** · **Vault ID-Snapshot** · H.12 · H.24 · H.26 Alarmgruppe · H.30 · H.37 · C1-Default · C1 Gerätewechsel-Backup · Delayed-Upload · H.25a Outdoor · H.3 Mesh · Linkify · F2-Splits (warten auf Go nach F0/F1).
 
 ### D · Ganz hinten (User 2026-11-27 — nicht anfassen)
 

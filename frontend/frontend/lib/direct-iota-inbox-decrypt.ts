@@ -17,6 +17,7 @@ import { getDirectChainFieldIdsFromLs, getDirectMailboxChainSnapshot } from '@/f
 import { ensureDirectChatPeerPubForRecipient } from '@/frontend/lib/direct-iota-encrypted-send-prep'
 import { tryAutoRestoreDirectChatEcdhPrivateKey } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 import { resolveRatchetLayerAfterOuterDecrypt } from '@/frontend/lib/ratchet-after-outer-decrypt'
+import { looksLikeRatchetV3Wire } from '@/frontend/lib/ratchet-experiment'
 
 function ensurePeerSessionArchive(peerAddr: string): void {
   if (getPeerSessionArchiveForRecipient(peerAddr)) return
@@ -49,7 +50,9 @@ export async function decryptDirectInboxEncryptedPayload(
   peerAddr: string,
   payload: EncryptedInboxPayload,
   meta?: DecryptDirectInboxMeta
-): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
+): Promise<
+  { ok: true; text: string; innerEnc?: 'ratchet_v3' } | { ok: false; error: string }
+> {
   if (!getDirectChatEcdhPrivateKey()) {
     await tryAutoRestoreDirectChatEcdhPrivateKey()
   }
@@ -90,6 +93,7 @@ export async function decryptDirectInboxEncryptedPayload(
     /** Ratchet-Root muss zum Outer-Pub passen (Archiv kann ≠ Live-Pub sein). */
     const ecdhShared = await deriveSharedSecret(mat.ecdhPrivateKey, outer.peerPubUsed)
     const iAmSender = Boolean(meta?.sender && normAddr(meta.sender) === normAddr(myAddress))
+    const wasRatchet = looksLikeRatchetV3Wire(outer.plaintext)
     const resolved = await resolveRatchetLayerAfterOuterDecrypt({
       text: outer.plaintext,
       peerAddress: peerAddr,
@@ -97,7 +101,11 @@ export async function decryptDirectInboxEncryptedPayload(
       iAmSender,
       ecdhShared,
     })
-    return { ok: true, text: resolved }
+    return {
+      ok: true,
+      text: resolved,
+      ...(wasRatchet ? { innerEnc: 'ratchet_v3' as const } : {}),
+    }
   } catch {
     return { ok: false, error: '[Verschlüsselt] Entschlüsselung fehlgeschlagen.' }
   }

@@ -1,5 +1,6 @@
 import { beforeEach, describe, it, expect } from 'vitest'
 import {
+  buildSendMailboxTargetOptions,
   readContactMailboxSlots,
   defaultContactSendSlot,
   firstNonEventSendTarget,
@@ -10,6 +11,7 @@ import {
   writeProfileContactMailboxSlotOverride,
   slotsToSavePayload,
 } from '@/frontend/lib/contact-mailbox-slots'
+import { cacheServerMailboxObjectId } from '@/frontend/lib/my-private-mailbox-store'
 import { writeRegistryState } from '@/frontend/lib/package-profile-registry'
 
 const MB = '0x' + 'a'.repeat(64)
@@ -86,5 +88,14 @@ describe('contact-mailbox-slots', () => {
   it('firstNonEventSendTarget überspringt Event', () => {
     expect(firstNonEventSendTarget([{ value: 'event' }, { value: 'own' }])).toBe('own')
     expect(firstNonEventSendTarget([{ value: 'event' }])).toBeNull()
+  })
+
+  it('Hauptpostfach erscheint aus Cache auch ohne Prop', () => {
+    const srv = '0x' + 'd'.repeat(64)
+    cacheServerMailboxObjectId(srv)
+    const opts = buildSendMailboxTargetOptions(undefined, undefined, WALLET)
+    const server = opts.find((o) => o.value === 'server')
+    expect(server?.objectId).toBe(srv)
+    expect(server?.label).toMatch(/Hauptpostfach \(Messenger\/Shared\)/)
   })
 })

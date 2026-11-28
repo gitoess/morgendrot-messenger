@@ -105,7 +105,10 @@ import {
 } from '@/frontend/lib/dashboard-url-deeplink'
 import { decideVaultUiLockFromStatusPoll } from '@/frontend/lib/vault-status-poll-lock'
 import { isPrivacySoftLocked, setPrivacySoftLocked } from '@/frontend/lib/privacy-soft-lock'
-import { getVaultPasswordSession } from '@/frontend/lib/vault-password-session'
+import {
+  getVaultPasswordSession,
+  setVaultPasswordSession,
+} from '@/frontend/lib/vault-password-session'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { readContactFavorites } from '@/frontend/lib/contact-phonebook-meta-store'
 import { useChatViewPendingHandshakes, OPEN_MESSENGER_INBOX_EVENT } from '@/frontend/hooks/use-chat-view-pending-handshakes'
@@ -146,6 +149,8 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   const [networkInfo, setNetworkInfo] = useState('')
   /** Bis zum ersten Status-Poll: Tresor als gesperrt annehmen (kein Dashboard ohne Entsperren). */
   const [locked, setLocked] = useState(true)
+  /** Verhindert Login-Dialog-Flash nach F5, bevor bekannt ist ob API-Tresor noch offen ist. */
+  const [statusPollAttempted, setStatusPollAttempted] = useState(false)
   const [backendReachable, setBackendReachable] = useState<boolean | null>(null)
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
@@ -312,6 +317,52 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     })
   }, [])
 
+  /**
+   * Nach F5: API oft schon offen, RAM-Signer weg.
+   * Mit Tab-PW still nachladen — sonst nur ein Passwort-Dialog (Session-Signer), kein Login-Stack.
+   */
+  useEffect(() => {
+    if (!statusPollAttempted) return
+    if (apiSnapshot?.locked === true) return
+    if (apiSnapshot?.hasKeys !== true && !isStandaloneMessengerWithoutBasis()) return
+    if (getDirectIotaSessionSigner()) return
+    if (sessionSignerSyncOpen || unlocking) return
+    const pw = getVaultPasswordSession()
+    if (!pw) {
+      /** Nur wenn API-Tresor klar offen — sonst normaler Login nach Poll. */
+      if (apiSnapshot?.hasKeys === true && apiSnapshot?.locked !== true) {
+        setSessionSignerSyncOpen(true)
+      }
+      return
+    }
+    let cancelled = false
+    void (async () => {
+      const { mainnetSignerHint: hint } = await syncMainnetKeysAfterBackendUnlock({
+        vaultPassword: pw,
+        apiSigner: apiSnapshot?.signer,
+        expectedAddress:
+          (apiSnapshot?.myAddressFull || apiSnapshot?.myAddress || myAddress).trim() || undefined,
+      })
+      if (cancelled) return
+      if (hint) {
+        setMainnetSignerHint(hint)
+        setSessionSignerSyncOpen(true)
+        return
+      }
+      await unlockLocalSecretVaults(pw)
+      setLocked(false)
+      sessionUnlockedStableRef.current = true
+      vaultUnlockRequestedRef.current = false
+      window.dispatchEvent(new Event(DIRECT_IOTA_UI_CHANGED))
+      await checkStatus()
+    })()
+    return () => {
+      cancelled = true
+    }
+    // bewusst schmal: nur nach erstem Poll / Snapshot-Lock-Änderung
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- F5-Bootstrap
+  }, [statusPollAttempted, apiSnapshot?.locked, apiSnapshot?.hasKeys])
+
   useEffect(() => {
     const sync = () => setFirstStepsVisible(readFirstStepsVisible())
     window.addEventListener('storage', sync)
@@ -372,6 +423,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       (standaloneWithoutBasis || res.fromLocalHandoff === true || res.fromCache === true)
 
     if ('pollClockHint' in res && (liveBackend || offlineSnapshot)) {
+      setStatusPollAttempted(true)
       setBackendReachable(liveBackend)
       setConnected(liveBackend ? !!res.connected : false)
       setNetworkInfo(
@@ -452,6 +504,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         })
       }
     } else {
+      setStatusPollAttempted(true)
       setBackendReachable(false)
       setConnected(false)
       if (standaloneWithoutBasis) {
@@ -1264,6 +1317,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
           setSessionSignerSyncError('Passwort falsch.')
           return
         }
+        setVaultPasswordSession(vaultPw)
         setPrivacySoftLocked(false)
         setPassword('')
         setSessionSignerSyncBusy(false)
@@ -1283,6 +1337,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         setSessionSignerSyncError(softHint)
         return
       }
+      setVaultPasswordSession(vaultPw)
       setPrivacySoftLocked(false)
       setPassword('')
       closeSessionSignerSync()
@@ -1300,11 +1355,13 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     if (hint) {
       setSessionSignerSyncError(hint)
       setMainnetSignerHint(hint)
-      if (apiSnapshot?.signer === 'sdk') {
+      /**
+       * Kein sofortiges setLocked(true): sonst Login-Dialog über dem Passwort-Dialog (F5-Wirrwarr).
+       * Import nur anbieten, wenn Session-Sync klar fehlschlägt und User den Dialog schließt.
+       */
+      if (apiSnapshot?.signer === 'sdk' && /import|mnemonic|signer/i.test(hint)) {
         setShowSignerImportOpen(true)
         setUnlockMode('vault')
-        setLocked(true)
-        vaultUnlockRequestedRef.current = true
       }
       return
     }
@@ -1322,9 +1379,14 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     if (secrets.errors.length > 0) {
       console.warn('[vault] lokale Secret-Vaults (Teilfehler):', secrets.errors.join('; '))
     }
+    setVaultPasswordSession(vaultPw)
     setPrivacySoftLocked(false)
     setPassword('')
     closeSessionSignerSync()
+    /** API schon offen — kein zweiter Login-Dialog nach Session-Signer. */
+    setLocked(false)
+    sessionUnlockedStableRef.current = true
+    vaultUnlockRequestedRef.current = false
     await checkStatus()
   }, [password, apiSnapshot?.signer, apiSnapshot?.myAddress, apiSnapshot?.myAddressFull, myAddress, closeSessionSignerSync, checkStatus])
 
@@ -1469,6 +1531,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     meshPathMode,
     isBossRole,
     checkStatus,
+    statusPollAttempted,
     openSettingsView,
     openSettingsCategory,
     openConfigView,
