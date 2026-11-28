@@ -1,6 +1,6 @@
 {
   "name": "morgendrot-messenger-desktop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Desktop-Fenster für Morgendrot Messenger (startet Backend im übergeordneten Repo).",
   "main": "main.cjs",

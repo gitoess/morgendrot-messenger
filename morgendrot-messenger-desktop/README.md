@@ -1,6 +1,6 @@
 # Morgendrot Messenger (Desktop)
 
-Eigenständiges **Desktop-Fenster** (Electron): startet das Backend mit `UI_VARIANT=messenger`.
+Eigenständiges **Desktop-Fenster** (Electron): startet **API + Next-Messenger** (wie `npm run dm`, UI auf Port **3341**) — nicht die Lite-UI am API-Port.
 
 - **Entwicklung:** Ordner `morgendrot-messenger-desktop` liegt **im** Repo; `main.cjs` findet den Code **eine Ebene darüber** (Hauptprojekt).
 - **Verteilung:** Nach `npm run bundle:messenger` liegt `main.cjs` **neben** `src/` in `exports/Morgendrot-Messenger-standalone/` – dort **`npm run desktop`** ohne übergeordnetes Repo.
