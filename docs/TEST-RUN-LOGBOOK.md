@@ -21,6 +21,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-11-28** | PC, **Alpha-EXE A/B Live** | Portable Next-UI (`6aef1f9`): Repo-Root via `PORTABLE_EXECUTABLE_DIR`, API+Next spawn, Unlock → normale Messenger-UI. Scheibe C (Standalone-Verteilen) User **warten**. | **PASS (Live)** |
 | **2026-11-28** | PC, **Aktenschrank vs Stealth** | Kritisch: M4e=Ordnung; `slot_tag`-Stealth=Metadaten (Vision); buffer≠Blind/Stealth; Kurier geparkt. Kein Move-Bau. | **DOCS** |
 | **2026-11-28** | PC, **Slot-Avatare + Mailbox-FAQ** | Sidebar Alle/TG/Gruppe/Pinnwand lokale Bilder (⋯); buffer=Zwischenlager; Kurier geparkt. Vitest avatar-keys. | **CODE+DOCS** |
 | **2026-11-27** | PC, **Profilbild B** | Opt-in Thumb+Hash in Visitenkarte-Klartext; QR ohne Bild; Übernehmen mit Hash-Check + lokalem Override. Vitest share/ingest. Danach: Portable-EXE Live-Test. | **CODE** — User-Live Share/Übernehmen |

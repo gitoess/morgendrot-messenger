@@ -13,8 +13,11 @@ Kurznotizen für spätere Phasen — **kein** Implementierungsversprechen.
 
 **Wann Stealth?** Hoher Metadaten-Druck — nicht Alltag. **Mailbox:** Shared/Haupt (`MAILBOX_ID`), nicht Privat (Owner leak). **Aktivierung später:** Opt-in „Diskret senden“ (+ manueller Override). **Preset:** ein Button reicht, erst wenn Move+Client stehen.
 
-**Priorität (User 2026-11-28):** Stealth **wichtiger** als M4e-Schubladen-Feinschliff (Schubladen → ganz hinten). Bau erst nach Portable-EXE-Grün + Spec-Scheibe — nicht parallel zu CI/EXE-Ritual.  
-**Nicht jetzt:** Move-Deploy, Lookahead-Polling, UI. Abgrenzung: **`docs/KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md`**.  
+**Priorität (User 2026-11-28):** Stealth **wichtiger** als M4e-Schubladen-Feinschliff (Schubladen → ganz hinten).  
+**Gate EXE:** Portable A/B **Live PASS 2026-11-28** (Next-UI) — erfüllt.  
+**Jetzt erlaubt:** Spec-Scheibe **`docs/STEALTH-SLOT-TAG-SPEC.md`** (Doku-only).  
+**Noch nicht:** Move-Deploy, Lookahead-Polling, Composer-UI — erst nach Spec-Review + User-OK.  
+Abgrenzung: **`docs/KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md`**.  
 **Nicht verwechseln:** Zwischenlager (`buffer`) · R1-Kurier · Stealth.
 
 ---

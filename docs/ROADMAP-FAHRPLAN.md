@@ -18,25 +18,26 @@
 
 **Cursor-„Plan“-Modus** = nur Chat-Modus, **kein** zweites Produktdokument.
 
-**Aktueller Arbeitsstand (verbindlich 2026-11-27 — Roadmap neu geschnitten):**
+**Aktueller Arbeitsstand (verbindlich 2026-11-28 — EXE-Grün + Messenger-first):**
 
 **Phasen (unverändert):** 1 PC → 2 Handy(1) → 3 Funk/Outdoor → 4 physisches 2. Gerät.  
 **Freeze:** Wallet/IOTA-Aktivität · H.25a Encode/Tempo · kein Ratchet-Default · keine Outdoor/Handy/2-Geräte-Tests ohne OK.  
-**Savepoint:** Tag `savepoint/stabil-2026-11-27` · Zeiger `stabil/README.md`.
+**Savepoint:** Tag `savepoint/stabil-2026-11-27` · Zeiger `stabil/README.md`.  
+**Priorität:** Messenger-Kern **beide Editionen** zuerst; Helfer/Boss/Handoff/EXE-Scheibe-C warten.
 
 ### A · Erledigt halten (nicht neu bauen)
 
-PC-Jetzt (#39–#46), Soft-Pause/Burn/Solo-Wizard/Visitenkarte-**Share**-MVP, H.16 S2 Tabs, H.15 4b–4d, **H.20 `sdk` (geschlossen)**, H.21 Empfänger-Dropdown, **H.22 Kern** Copy+Enc-Event-Merge (**Slot-Feinschliff gestrichen**), H.23 ECDH+C1.6 Opt-in (4c PASS), H.25a Desk STABIL, H.26 Klingel/Notify, H.27 Handshake-UX, Caps Pill Messenger.
+PC-Jetzt (#39–#46), Soft-Pause/Burn/Solo-Wizard/Visitenkarte-**Share**-MVP + **Übernehmen**, Profilbild **A+B**, Slot-Avatare Sidebar, H.16 S2 Tabs, H.15 4b–4d, **H.20 `sdk` (geschlossen)**, H.21 Empfänger-Dropdown, **H.22 Kern** Copy+Enc-Event-Merge (**Slot-Feinschliff gestrichen**), H.23 ECDH+C1.6 Opt-in (4c PASS), H.25a Desk STABIL, H.26 Klingel/Notify, H.27 Handshake-UX, Caps Pill Messenger, Tresor fail-closed (Badge=Scrim inkl. Browser-PW-fehlt).
 
 ### B · Arbeitsauftrag (User 2026-11-27) — **geschlossen** (Live OK)
 
 | Schritt | Thema | Stand |
 |---------|--------|--------|
-| **1** | Visitenkarte-**Übernehmen** + **Profilbild A** | **Ist** — Inbox-CTA; Avatar Sidebar/Inbox/Telefonbuch |
+| **1** | Visitenkarte-**Übernehmen** + **Profilbild A** (+ **B** Ist) | **Ist** — Inbox-CTA; Avatar Sidebar/Inbox/Telefonbuch; Thumb+Hash Klartext |
 | **2** | **H.18** STT/TTS Feinschliff | **Ist** — DE-Whisper lokal (cv11-german); Roh-PCM; Fallback Win+H; **kein** Codec2 |
-| **3** | **Alpha-EXE** Scheibe A/B | **Ist Build** — `npm run desktop:exe`; Doku `ALPHA-EXE-MESSENGER.md` |
+| **3** | **Alpha-EXE** Scheibe A/B | **Live PASS 2026-11-28** — Next-UI wie `npm run dm` (`desktop:exe`, Commit `6aef1f9`); Doku `ALPHA-EXE-MESSENGER.md` |
 
-**Weiter:** Code **stabil halten** (Freezes, kleine Scheiben). **C** nur mit User-OK — kein Big-Bang.
+**Weiter:** Code **stabil halten** (Freezes, kleine Scheiben). **C**-Implementierung nur mit User-OK — kein Big-Bang.
 
 ### Komfort-Triage (User 2026-11-27 — kritisch geprüft)
 
@@ -45,17 +46,18 @@ PC-Jetzt (#39–#46), Soft-Pause/Burn/Solo-Wizard/Visitenkarte-**Share**-MVP, H.
 | **H.18** Rest | **Halten** — kein Codec2 | DE-Whisper Live OK; Codec2 = Funk-Kern-Risiko |
 | **H.19** Forensic | **Später** | Kreuz Send/Attest/LoRa; Mini-Hash ohne Capture lohnt wenig |
 | **H.21** Kurier | **Später** | Empfänger Ist; Umschlag = Crypto/Relay-Big-Bang |
-| **Profilbild B** | **Ist** (User „los“) | Opt-in Thumb+Hash im Klartext; nie im QR; lokales Override |
+| **Profilbild B** | **Ist** | Opt-in Thumb+Hash im Klartext; nie im QR; lokales Override |
 | **Vault ID-Snapshot** | **Später** | Vault/Secrets-Fläche; Backup-Risiko |
 | **Linkify** | **Nicht jetzt** | Regel + Phishing-UX; Backlog merken |
 | **H.37** Multi-Profil | **Später** | Unlock/Vault-Kern; nie parallel = großer Schnitt |
 | **H.24** Package-UI | **Später** | Expertenmodus reicht PC; Multi-Package = Inbox-Namespaces |
+| **EXE Scheibe C** (Standalone zum Verteilen) | **Geparkt** (User 2026-11-28) | Eingebettetes Node/Next — warten; A/B reicht Schreibtisch |
 
-**Nächste PC-Arbeit (Stabilität):** Portable-EXE Live-Test; Live-Schmerz/Copy. **Kein** Stealth-Move/Kurier-Bau — Begriffsklärung: M4e-Aktenschrank Ist ≠ Stealth (`IDEEN-BACKLOG` + `KONTAKT-MAILBOX-VIER-SLOTS`).
+**Nächste PC-Arbeit:** Stealth **`slot_tag` Spec** (Doku-only) → Stopp vor Move/UI; Live-Schmerz/Copy reaktiv. M4e-Aktenschrank Ist ≠ Stealth (`IDEEN-BACKLOG` + `KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD` + Spec).
 
 ### C · Geparkt (nach B / nicht jetzt)
 
-**Stealth `slot_tag`** (Metadaten, vor M4e-Feinschliff — User 2026-11-28) · **H.19** Forensic · **H.21** Kurier · **M4e-Schubladen-UX** (Aktenschrank Feinschliff — nach hinten) · **H.18 Codec2** · **Vault ID-Snapshot** · H.12 · H.24 · H.26 Alarmgruppe · H.30 · H.37 · C1-Default · Delayed-Upload · H.25a Outdoor · H.3 Mesh · Linkify.
+**Stealth-Implementierung** (Move/Lookahead/UI — erst nach Spec+User-OK) · **H.19** Forensic · **H.21** Kurier · **M4e-Schubladen-UX** (ganz hinten) · **EXE Scheibe C** · **H.18 Codec2** · **Vault ID-Snapshot** · H.12 · H.24 · H.26 Alarmgruppe · H.30 · H.37 · C1-Default · Delayed-Upload · H.25a Outdoor · H.3 Mesh · Linkify.
 
 ### D · Ganz hinten (User 2026-11-27 — nicht anfassen)
 
@@ -67,7 +69,7 @@ Handy L1–L5 / APK-Retest · Outdoor H.25a · physisches 2. Gerät / 4e–4f / 
 
 **Leitplanken:** Edition = Boss ohne Helfer (`IOTA-MESSENGER-EDITION-V1` §2.1). Wallet-Freeze. Merge-Ritual nach Paket.
 
-**Nachtrag 2026-11-26 (Entscheidungen — unverändert gültig):** Tresor-Badge bereit|gesperrt · Visitenkarte-Share MVP · Soft-Pause Live · Solo-Wizard · Caps Pill · Storage-Rebate ohne Claim-Queue — Details unverändert in Handbuch / Edition. **Profilbild A Ist** (2026-11-27); Stufe B nur nach „los“ (Komfort-Triage).
+**Nachtrag 2026-11-26 (Entscheidungen — unverändert gültig):** Tresor-Badge bereit|gesperrt · Visitenkarte-Share MVP · Soft-Pause Live · Solo-Wizard · Caps Pill · Storage-Rebate ohne Claim-Queue — Details unverändert in Handbuch / Edition. **Profilbild A+B Ist** (2026-11-27/28).
 
 **Stand-Kopf (Historie):** 2026-03 / **Navigations-Nachzug 2026-11-16** / zuvor **2026-11-08** (H.23 B2 Token-Spend + TBA-Index + Mint-Modi; Fortschrittstabelle unten) / zuvor **2026-07-07** (Nachtrag **2026-07-07:** Block-2-Feldtest **teil-PASS** — Modus A **PASS 2026-07-03**; Standalone **4b–4d** + Helfer→Boss CDP **PASS** (1 Gerät); Boss-Inbox **ohne Flackern**; APK **Mobile-Shell** Bottom-Nav + 2×2-Sendepfad; Handoff-ZIP **Globals-Reconcile**; **4e/4f** + Block-2 §3 Simple-Checks **offen**; zuvor **2026-06-17:** Messenger-**Sidebar-Navigation**, Telefonbuch/Kontakt-Dialog, Funk-Export-Vorschau, **§ H.36 P0/P1 Teil-Ist**, **§ H.3n B2.5 Teil-Ist**, **§ H.26 B4b Teil-Ist**, Scope-B-**lazy**; zuvor **2026-06-16** **§ H.36** Spec + **§ H.3n §9** Zivil-SOS; zuvor 2026-06-02 **§ H.33** API **`GET /api/einsatz-manifest/*`** — **`docs/API-EINSATZ-MANIFEST.md`**; zuvor **Produkt-Matrix** Abgabe Helfer-APK / Boss-PC / Wanderer / Installer; zuvor **§ H.33** Einsatz-On-Chain — **Mainnet direkt** + Testnet→Anker — **`docs/EINSATZ-MANIFEST-MOVE-SKIZZE.md`**; zuvor **§ H.32** Posteingang **„Antworten“** + **„Einsatz beenden“**; zuvor Einsatzleitung **Helfer einrichten** compact — **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`**; zuvor 2026-05-20 Strategie-Pivot **§ H.0-SIMPLE**: Mesh-First, IOTA optional, Simple Mode; zuvor 2026-05-21 Move-Deploy) (Move-Deploy **`create_team_mailbox`** + **`create_globals`**; § **H.28** Discord/Matrix Backlog; § **H.27** Handshake; § **H.26** Telegram Runtime **Ist-Code**; § **H.25a** Flüchtig-LoRa-Bild) — **§ H.22** Messenger-Kanäle & Mailbox **M1–M4** (`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`); zuvor 2026-03-28 — **§ H.18** TTS/STT (Barrierefreiheit / Freihand, Backlog); **§ H.17** Dashboard/Volldashboard vs. Boss-Ansicht (**Nachtrag**); **§ H.16** Telefonbuch / QR-Onboarding / Boss-LAN (**Nachtrag**); zuvor **2026-04-28** — **§ H.15** Handy-first / Client-IOTA / optionaler Node (**`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6) — **§ H.6b–H.6f** Resilience, Cold-Start, Umzug-Zeitfenster, **Konfiguration (.env vs. Runtime)**, **Android FG-Service + minimale Sync-Ehrlichkeit** (**`docs/ANDROID-FOREGROUND-SERVICE-MINIMAL-SYNC.md`**, **§ H.6f**) — **§ C.0/C.0b** Gliederung + **kanonische Ausführungsreihenfolge** — **§ H.3n** SOS / **`MORG_EMERGENCY_V1`** **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** — **§ H.1b** Messenger-UI-Modularität **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**; **§ H.12** Sync/Source-of-Truth **`SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**; **§ H.11** Offline-Karten **`OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`**; **§ H.10** Sicherheit/Vertrauen **`ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`**; **§ H.10b** Boss/Arbeiter-Seed (Team vs. dezentral) **`docs/BOSS-WORKER-SEED-CUSTODY.md`**; **§ H.3l** Spike **Web Serial Android** + USB/BLE-Doku **`HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** (Mesh/BLE zuerst); **§ H.3m** LoRa/Notfall: **keine** volle IOTA-TX über Funk, Gateway **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**; **§ H.3k** modularer Kern/Adapter/Interop **`MODULAR-KERN-ADAPTER-INTEROP.md`**; **§ H.3j** EU-Funk/Hardware/Einsatzprofile **`LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`**; **§ G** Verweis **`NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**; Lite-Messenger **Boss-Ausnahme** in **§ H.0 #1** / **`UI-ROLLEN-WORKSPACES.md`** § 5; **§ H.9** ATAK/CoT-Backlog (**`ATAK-COT-INTEGRATION-ZIELBILD.md`**); Backend vs. IOTA-RPC + **kein Hybrid-Signatur-Pfad** **`BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6; **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**; **Team-Rollenwechsel (Ist vs. Narrativ):** **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**; **§ H.8:** zwei Installationen Dienst/Testnet (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**), Weiterarbeit **A→B**, Aufräumen = fortlaufend (**§ H.5**); **§ H.1a** Qualität/Baseline/Vitest/AppError **`PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**; **§ H.14** Hardening V3 (**`docs/MORGENDROT-HARDENING-V3-PRECISION.md`**: PWA-Speicher, Lite-UI L2, Wipe, Idempotenz, PTB-Audit).  
 **QR-Kontakt v2:** Spezifikation (optional Anchor, API-Basis, Gateway) → **`docs/QR-CONTACT-SCHEMA-V2.md`** (Implementierung später; siehe **H.3b**).  

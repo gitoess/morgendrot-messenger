@@ -1,6 +1,6 @@
 # Alpha-EXE — Morgendrot Messenger (Windows Portable)
 
-**Stand:** 2026-11-28 · Scheibe A/B (Roadmap Block B Schritt 3) · UI = **Next-Messenger** (wie `npm run dm`)
+**Stand:** 2026-11-28 · Scheibe A/B **Live PASS** · UI = **Next-Messenger** (wie `npm run dm`)
 
 ## Was du bekommst
 
@@ -8,6 +8,7 @@
 |---------|----------|-------------|
 | **A** | `exports/messenger-desktop-exe/Morgendrot-Messenger-Portable.exe` | Electron-Fenster |
 | **B** | gleicher Build + klare Voraussetzungen | Start ohne `npm start` tippen |
+| **C** | Offline-Installer / eingebettetes Node | **Geparkt** (User 2026-11-28 — Verteilen wartet) |
 
 **UI:** Electron öffnet **Next auf Port 3341** (Messenger-Dashboard) — **nicht** die Lite-UI (`ui/index.html` am API-Port). Intern startet `main.cjs` API (:3342) + `frontend` `dev:messenger:localhost` (:3341), analog zu `npm run dm`.
 
@@ -18,7 +19,7 @@ Die Portable-`.exe` startet **Electron** und darin API + Next (`main.cjs`). Brau
 1. **Node.js** im PATH (wie bisher für `npm run dm`), und  
 2. das **Morgendrot-Repo** mit `frontend/` (npm install dort + Root) — siehe `morgendrot-messenger-desktop/main.cjs` → `getRepoRoot()`.
 
-Das ist **kein** vollständiger Offline-Installer mit eingebettetem Node (das wäre eine größere Scheibe C).
+Das ist **kein** vollständiger Offline-Installer mit eingebettetem Node (**Scheibe C** — bewusst nicht jetzt).
 
 ## Bauen
 
@@ -52,6 +53,10 @@ Ausgabe: **`exports/messenger-desktop-exe/Morgendrot-Messenger-Portable.exe`**
 - `morgendrot-messenger-desktop/Start-Messenger.bat` (nach `npm install` dort)  
 - `npm start` im Desktop-Ordner  
 
-## Nicht-Ziel jetzt
+## Abnahme
 
-Code-Signing · Auto-Update · NSIS-Installer ohne Node · Einbettung kompletter Node-Runtime.
+**2026-11-28 Live PASS** (User): Unlock → normale Next-Messenger-UI (Posteingang/Sendepfade). Logbuch: `TEST-RUN-LOGBOOK.md`.
+
+## Nicht-Ziel jetzt (Scheibe C)
+
+Code-Signing · Auto-Update · NSIS-Installer ohne Node · Einbettung kompletter Node-Runtime · Verteilen an Tester ohne Repo.
