@@ -381,7 +381,7 @@ Ganzes Private-Mailbox-Object: **Einstellungen → Meine Mailboxen** → Aufräu
 | **Telegram Chat-ID** | ja ohne 0x | Nur Telegram-Hinweise; speicherbar ohne Wallet |
 | **Postfach-ID** | nein | Unter „Erweitert“ — ein on-chain Postfach (Privat); Team/Einsatz/Puffer nur für Experten |
 
-**QR-Code scannen** übernimmt Wallet + optional Postfach aus Peering-QR. Composer **„Speicher auf der Chain“**: Event (flüchtig) · Privat/Einsatz/Team · **Zwischenlager** (Puffer-Schublade — **keine** Explorer-Tarnung). Detail: **`docs/KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md`**. **Stealth/`slot_tag`** und **R1-Kurier** = später/geparkt (Backlog).
+**QR-Code scannen** übernimmt Wallet + optional Postfach aus Peering-QR. Composer **„Speicher auf der Chain“**: Event (flüchtig) · Privat/Einsatz/Team · **Zwischenlager** (Puffer-Schublade — **keine** Explorer-Tarnung). Detail: **`docs/KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md`**. **Stealth/`slot_tag`:** Spec **`docs/STEALTH-SLOT-TAG-SPEC.md`** — Implementierung/UI noch geparkt. **R1-Kurier** = geparkt.
 
 **Telefonbuch → Kontakte verteilen** (Boss/Kommandant) bietet schnelle Datei-Aktionen oberhalb der Kontaktliste:
 

@@ -54,19 +54,13 @@ Pro Kontakt (Wallet `0x…`) vier **optionale** Object-IDs:
 
 ---
 
-## B · Stealth `slot_tag` (Vision — geparkt)
+## B · Stealth `slot_tag` (Spec 2026-11-28 — Implementierung geparkt)
 
-**Idee:** Nachricht in die **allgemeine Haupt-Mailbox** (`MAILBOX_ID` / shared), Index = `slot_tag = Blake2b(SharedSecret || "slot" || epoch)`, nicht die Wallet. Empfänger scannt Lookahead, liest lokal, `purge_stealth_message(slot_tag, delete_secret)` mit `delete_commit`-Check → Rebate.
+**Kanonische Spec:** **`docs/STEALTH-SLOT-TAG-SPEC.md`** (Ableitung, Purge-Skizze, Lookahead, Client-Regeln, Nicht-Ziele).
 
-| Frage | Antwort (Soll) |
-|-------|----------------|
-| **Wann?** | Hoher Metadaten-Druck (wer schreibt wem sichtbar vermeiden); **nicht** Alltag-Chat |
-| **Welche Mailbox?** | Primär **öffentliche/Haupt-Mailbox** (Shared) — dort „untertauchen“. Private Mailbox steals wenig, weil Owner schon sichtbar ist |
-| **Aktivierung?** | Später: Composer-Modus **„Diskret“** (Opt-in) — **nicht** stiller Default |
-| **Preset-Button?** | Später **ein** Button „Diskret senden“ (= Shared + Stealth-Ableitung + Epoch); Experte darf Felder trotzdem setzen. **Kein** Bau jetzt |
-| **Risiken** | Move-Deploy, Lookahead-Polling/Akku, Epoch-Sync, Gas beim Purge, Kollisionen, Explorer-Heuristiken bleiben teilweise |
+**Kurz:** Nachricht in **Haupt-Mailbox** (`MAILBOX_ID` / shared), Index = `slot_tag`; Empfänger Lookahead + optional Purge. Opt-in „Diskret“, Default aus.
 
-**Nicht jetzt:** Move-API, Client-Lookahead, UI — erst nach Handy-Phase / Solo-Check (User 2026-11-28). Spec merken in **`docs/IDEEN-BACKLOG.md`**.
+**Nicht jetzt:** Move/UI — erst nach Spec-Review + User-OK.
 
 ---
 

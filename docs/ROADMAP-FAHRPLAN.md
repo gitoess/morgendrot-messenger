@@ -53,7 +53,7 @@ PC-Jetzt (#39–#46), Soft-Pause/Burn/Solo-Wizard/Visitenkarte-**Share**-MVP + *
 | **H.24** Package-UI | **Später** | Expertenmodus reicht PC; Multi-Package = Inbox-Namespaces |
 | **EXE Scheibe C** (Standalone zum Verteilen) | **Geparkt** (User 2026-11-28) | Eingebettetes Node/Next — warten; A/B reicht Schreibtisch |
 
-**Nächste PC-Arbeit:** Stealth **`slot_tag` Spec** (Doku-only) → Stopp vor Move/UI; Live-Schmerz/Copy reaktiv. M4e-Aktenschrank Ist ≠ Stealth (`IDEEN-BACKLOG` + `KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD` + Spec).
+**Nächste PC-Arbeit:** Stealth-Spec **`docs/STEALTH-SLOT-TAG-SPEC.md`** (2026-11-28) → **Stopp:** User-Review vor Move/UI; Live-Schmerz/Copy reaktiv. M4e ≠ Stealth (`IDEEN-BACKLOG` + `KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD`).
 
 ### C · Geparkt (nach B / nicht jetzt)
 
