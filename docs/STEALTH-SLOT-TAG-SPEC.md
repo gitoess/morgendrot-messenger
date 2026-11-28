@@ -9,7 +9,7 @@
 
 Metadaten-Druck senken: Nachricht liegt in der **gemeinsamen Haupt-Mailbox** (`MAILBOX_ID` / shared). Explorer sieht **keinen** Empfänger-Wallet-Index, sondern nur einen abgeleiteten **`slot_tag`**. Nur wer den Shared Secret kennt, kann den Slot finden und lesen.
 
-**Nicht Alltag.** Opt-in „Diskret“ — Default **aus**.
+**Nicht Alltag.** Opt-in **„Tarnmodus“** (UI; intern Stealth/`slot_tag`) — Default **aus**.
 
 **Ehrliche Grenze:** `slot_tag` tarnt den **Empfänger-Index**, nicht automatisch den **Gas-Zahler** (siehe §4 / §5.1).
 
@@ -120,7 +120,7 @@ purge_stealth_bucket(mailbox, slot_tag, delete_secret)
 
 | Hebel | Regel |
 |-------|--------|
-| Composer | Opt-in **„Diskret senden“** — speichert in Shared/`MAILBOX_ID` + append in `slot_tag`-Bucket |
+| Composer | Opt-in **„Tarnmodus“** — speichert in Shared/`MAILBOX_ID` (bestehendes Hauptpostfach, kein Extra-Objekt) + append in `slot_tag`-Bucket |
 | Default | **aus** |
 | Override | Experte darf Mailbox-ID weiter manuell setzen; Diskret ohne Shared Secret → blocken mit klarer Meldung |
 | Inbox | Alle Bucket-Entries wie Enc-Mails; Badge „diskret“ optional |
@@ -153,8 +153,8 @@ purge_stealth_bucket(mailbox, slot_tag, delete_secret)
 1. ~~User: Spec grün~~ **PASS 2026-11-28** (+ Multi-Msg Queue + Gas-Hinweis).  
 2. ~~Mini-Lib Vitest~~ **Ist** — `stealth-slot-tag.ts` (+ `deriveStealthDeleteSecret`).  
 3. ~~Move-MVP Source + Upgrade~~ **Ist** — Call-Package `0xa3e70f…`; TXB `mailbox-stealth-txb.ts`.  
-4. ~~Client Opt-in „Diskret“ (Composer)~~ **Ist** — Pref Default aus; Plus-Menü + Toggle; Direct-Submit.  
-5. ~~Lookahead-Empfang~~ **Ist** — Direct-Inbox Merge wenn Diskret an; RPC `fetchStealthBucketsForSlotTags`. Smoke-Checkliste: `docs/STEALTH-1GERAET-SMOKE.md` (Live-Zeile nach User-Lauf).  
+4. ~~Client Opt-in „Tarnmodus“ (Composer)~~ **Ist** — Pref Default aus; Plus-Menü + Toggle; Direct-Submit.  
+5. ~~Lookahead-Empfang~~ **Ist** — DOF-Scan + Event-`timestampMs` für Sort (Move-`created_at_ms` unzuverlässig). Smoke: `docs/STEALTH-1GERAET-SMOKE.md`.  
 6. Optional später: Sponsor/Relayer-Pfad für „Diskret + fremder Gas-Zahler“; Purge nach Lesen.
 
 ### Call-Package vs. Stamm (Upgrade)

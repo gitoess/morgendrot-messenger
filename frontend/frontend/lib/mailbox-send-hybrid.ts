@@ -232,16 +232,16 @@ export async function sendEncryptedMailboxHybrid(
   const rTrim = recipient.trim()
   const mode = resolvePersistenceMode(opts)
 
-  /** Diskret: nur Direct + Haupt-Mailbox + slot_tag — kein Event-Fallback, kein `/api`. */
+  /** Tarnmodus: nur Direct + Haupt-Mailbox + slot_tag — kein Event-Fallback, kein `/api`. */
   if (readDiskretSendEnabled()) {
     if (!rTrim) {
-      return { ok: false, error: 'Diskret: Empfänger-Adresse fehlt.' }
+      return { ok: false, error: 'Tarnmodus: Empfänger-Adresse fehlt.' }
     }
     const prep = await prepareEncryptedDirectSend(rTrim, 'mailbox')
     if (!prep.ok) return { ok: false, error: prep.error }
     const mat = getDirectChatEcdhMaterialForRecipient(rTrim)
     if (!mat) {
-      return { ok: false, error: 'Diskret: ECDH-Material fehlt — zuerst Handshake/Connect.' }
+      return { ok: false, error: 'Tarnmodus: ECDH-Material fehlt — zuerst Handshake/Connect.' }
     }
     const ste = await trySubmitStealthMailboxViaDirectIotaFromPlaintext({
       recipient: rTrim,
@@ -252,7 +252,7 @@ export async function sendEncryptedMailboxHybrid(
     if (ste.ok) return { ok: true, txDigest: ste.digest }
     return {
       ok: false,
-      error: ste.error ?? 'Diskret-Send fehlgeschlagen (kein API-Relay für Stealth).',
+      error: ste.error ?? 'Tarnmodus-Send fehlgeschlagen (kein API-Relay für Stealth).',
     }
   }
 

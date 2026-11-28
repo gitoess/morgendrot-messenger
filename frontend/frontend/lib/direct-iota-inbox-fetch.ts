@@ -344,11 +344,12 @@ export async function tryFetchDirectMailboxInboxViaIota(
       })
     }
 
-    /** Diskret Lookahead (Opt-in): slot_tag-Buckets der ECDH-Peers in denselben Merge. */
+    /** Diskret-Empfang: immer Haupt-Mailbox scannen (nicht Privat/Team-Override). */
     try {
+      const stealthMailboxId = snap.mailboxId.trim() || mailboxObjectId
       const stealthRows = await fetchStealthLookaheadInboxRows({
         client,
-        mailboxObjectId,
+        mailboxObjectId: stealthMailboxId,
         myAddress: my,
       })
       for (const s of stealthRows) {

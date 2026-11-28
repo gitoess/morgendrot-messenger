@@ -21,7 +21,9 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
-| **2026-11-28** | PC, **Stealth Lookahead + Smoke-Doku** | `fetchStealthBucketsForSlotTags` + Inbox-Merge (Diskret an); Vitest; Checkliste `STEALTH-1GERAET-SMOKE.md` (Live-Lauf User). | **PASS (Vitest)** |
+| **2026-11-28** | PC, **Tarnmodus Sort+Copy** | Event-`timestampMs` statt klebender Move-ms (Visitenkarte-oben-Bug); UI „Tarnmodus“; Hauptpostfach = bestehendes `MAILBOX_ID`. | **FIX** |
+| **2026-11-28** | PC, **Stealth Empfang-Fix** | Empfang ohne Send-Toggle; DOF-Scan + Decrypt; Haupt-Mailbox. Live Empfang OK. | **PASS (Live)** |
+| **2026-11-28** | PC, **Stealth Lookahead + Smoke-Doku** | `fetchStealthBucketsForSlotTags` + Inbox-Merge; Vitest; Checkliste `STEALTH-1GERAET-SMOKE.md`. | **PASS (Vitest)** |
 | **2026-11-28** | PC, **Stealth Composer Diskret** | Opt-in Default aus; Direct `store_stealth_entry` (Call-Pkg); Prefs/UI/Vitest. | **PASS (Vitest)** |
 | **2026-11-28** | PC, **Stealth Upgrade + TXB** | `upgrade:move-package` → Call-Pkg `0xa3e70f…` (Stamm `0x06e099…`); `mailbox-stealth-txb` + Vitest. | **PASS** |
 | **2026-11-28** | PC, **Stealth Move-MVP Source** | `store/purge_stealth_*` in messaging.move; Cap/Append/delete_commit. `iota move test stealth` **4 PASS**. | **PASS (Move)** |

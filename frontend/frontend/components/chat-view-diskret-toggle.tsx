@@ -14,8 +14,8 @@ import {
 } from '@/frontend/lib/passphrase-message-local-store'
 
 /**
- * Composer Opt-in „Diskret“ — Empfänger hinter slot_tag in der Haupt-Mailbox.
- * Default aus. Braucht Verschlüsselung/ECDH. Gas-Zahler bleibt sichtbar (Spec §5.1).
+ * Composer Opt-in „Tarnmodus“ (Stealth slot_tag) — Empfänger-Index in der Haupt-Mailbox tarnen.
+ * Default aus. Braucht Verschlüsselung/ECDH. Gas-Zahler/Absender bleibt sichtbar (Spec §5.1).
  */
 export function ChatViewDiskretToggle(p: {
   encrypted: boolean
@@ -39,6 +39,7 @@ export function ChatViewDiskretToggle(p: {
           className="mt-0.5"
           checked={on}
           data-testid="composer-diskret-toggle"
+          aria-label="Tarnmodus senden"
           onChange={(e) => {
             const next = e.target.checked
             if (next) {
@@ -53,11 +54,12 @@ export function ChatViewDiskretToggle(p: {
         <span className="min-w-0 flex-1">
           <span className="inline-flex items-center gap-1.5 text-xs font-medium text-foreground">
             <EyeOff className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
-            Diskret senden
+            Tarnmodus
           </span>
           <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">
-            Opt-in · Senden + Empfang-Lookahead (slot_tag, Epoch±2). Immer Haupt-Mailbox.
-            Gas-Zahler bleibt im Explorer sichtbar — Diskret ≠ unsichtbar wer sendet.
+            Empfänger im Blockchain-Logbuch tarnen (Absender bleibt sichtbar). Nutzt das bestehende
+            Hauptpostfach — kein Extra-Postfach nötig. Opt-in nur fürs Senden; Empfang läuft bei
+            Direct-Inbox mit bekanntem ECDH-Peer.
           </span>
         </span>
       </label>

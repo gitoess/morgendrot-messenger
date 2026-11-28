@@ -98,9 +98,15 @@ export type {
   BuildStoreStealthEntryTxInput,
   BuildPurgeStealthEntryTxInput,
 } from './mailbox-stealth-txb'
-export { fetchStealthBucketsForSlotTags } from './mailbox-stealth-inbox-rpc'
+export {
+  fetchStealthBucketsForSlotTags,
+  scanStealthBucketsFromMailbox,
+  fetchStealthStoredEventTimestamps,
+  stealthStoredEventMapKey,
+} from './mailbox-stealth-inbox-rpc'
 export type {
   FetchStealthBucketsRpcInput,
+  ScanStealthBucketsRpcInput,
   StealthInboxBucketRpc,
   StealthInboxEntryRpc,
 } from './mailbox-stealth-inbox-rpc'

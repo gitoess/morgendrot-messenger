@@ -1303,7 +1303,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/70 text-muted-foreground">
                             <EyeOff className="h-4 w-4" aria-hidden />
                           </span>
-                          Diskret senden…
+                          Tarnmodus…
                         </button>
                         <button
                           type="button"

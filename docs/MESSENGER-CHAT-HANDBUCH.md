@@ -307,7 +307,7 @@ Weiter: **`docs/HANDSHAKE-PERSISTENZ-UND-H23.md`**, Abschnitt **Handshake Vertra
 
 **Drei Ebenen** nicht vermischen: (1) **Kanal** 1:1 / Gruppe / Pinnwand, (2) **Speicher** flüchtig (Event) vs. persistent (Mailbox), (3) **welches Postfach** — Haupt / Team / Privat. Verschlüsselung (Schloss) ist unabhängig — braucht Handshake zwischen zwei **`0x`-Adressen** (nicht die Mailbox-Object-ID).
 
-**Hauptpostfach** (`MAILBOX_ID`): gemeinsames Postamt des Deployments — **immer** im Posteingang, meist automatisch. **Privat/Team:** optional unter **Einstellungen → IOTA → Meine Mailboxen** (anlegen/beitreten); Schreiben = **Composer-Ziel**, nicht Settings-Sendeziel.
+**Hauptpostfach** (`MAILBOX_ID`): gemeinsames Postamt des Deployments — **immer** im Posteingang, meist automatisch (aus `create_globals` / Snapshot). **Kein** zweites „Stealth-Postfach“ nötig: **Tarnmodus** schreibt in genau dieses Hauptpostfach unter `slot_tag`. **Privat/Team:** optional unter **Einstellungen → IOTA → Meine Mailboxen** (anlegen/beitreten); Schreiben = **Composer-Ziel**, nicht Settings-Sendeziel.
 
 **Senden (persistent, online):** Kontakt-Postfach im Telefonbuch → gewähltes Team/Privat im Composer → sonst Haupt-`MAILBOX_ID`.
 

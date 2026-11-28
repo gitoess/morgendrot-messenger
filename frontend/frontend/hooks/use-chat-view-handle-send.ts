@@ -314,31 +314,31 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       return
     }
 
-    /** Diskret (Stealth slot_tag): Opt-in, nur Direct Enc 1:1 Internet — Spec §5. */
+    /** Tarnmodus (Stealth slot_tag): Opt-in, nur Direct Enc 1:1 Internet — Spec §5. */
     if (readDiskretSendEnabled()) {
       if (forcedTransport !== 'internet') {
         setStatus('error')
-        setStatusMsg('Diskret nur über Internet/IOTA — Funk/Mesh separat.')
+        setStatusMsg('Tarnmodus nur über Internet/IOTA — Funk/Mesh separat.')
         return
       }
       if (isEmergencySend) {
         setStatus('error')
-        setStatusMsg('SOS und Diskret schließen sich aus (Hilfe > Metadaten-Tarnung).')
+        setStatusMsg('SOS und Tarnmodus schließen sich aus (Hilfe > Metadaten-Tarnung).')
         return
       }
       if (isGroupChannel) {
         setStatus('error')
-        setStatusMsg('Diskret ist MVP nur für 1:1 (Peer-ECDH) — kein Gruppenkanal.')
+        setStatusMsg('Tarnmodus ist MVP nur für 1:1 (Peer-ECDH) — kein Gruppenkanal.')
         return
       }
       if (!sendEncrypted) {
         setStatus('error')
-        setStatusMsg('Diskret braucht Verschlüsselung (ECDH). Oben „Verschlüsselt“ wählen.')
+        setStatusMsg('Tarnmodus braucht Verschlüsselung (ECDH). Oben „Verschlüsselt“ wählen.')
         return
       }
       if (readPassphraseProtectEnabled() || readPassphraseZeitkapselModeEnabled()) {
         setStatus('error')
-        setStatusMsg('Diskret und Passphrase/NFT-Leserecht schließen sich aus — eines aus.')
+        setStatusMsg('Tarnmodus und Passphrase/NFT-Leserecht schließen sich aus — eines aus.')
         return
       }
     }
