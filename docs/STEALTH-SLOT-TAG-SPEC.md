@@ -151,7 +151,7 @@ Genaues Move-Layout = **Implementierungs-Scheibe** (nicht diese Spec).
 ## 7. Abnahme-Reihenfolge
 
 1. ~~User: Spec grün~~ **PASS 2026-11-28** (+ Multi-Msg Queue + Gas-Hinweis).  
-2. Mini-Lib Vitest: `slot_tag`-Ableitung deterministisch (ohne Chain).  
+2. ~~Mini-Lib Vitest~~ **Ist** — `frontend/frontend/lib/stealth-slot-tag.ts` (+ Test): Blake2b-256 Ableitung, Epoch-u64-BE, Stunden-Epoch, Lookahead ±W; Cap-Konstante 32.  
 3. Move-MVP: Bucket-Append + Cap + Entry-Purge; Client Opt-in — **eigene** kleine Scheiben, Default aus.  
 4. 1-Gerät-Smoke (zwei Wallets am PC), dann Logbuch-Zeile.  
 5. Optional später: Sponsor/Relayer-Pfad für „Diskret + fremder Gas-Zahler“.

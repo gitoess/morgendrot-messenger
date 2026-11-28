@@ -16,7 +16,8 @@ Kurznotizen für spätere Phasen — **kein** Implementierungsversprechen.
 **Priorität (User 2026-11-28):** Stealth **wichtiger** als M4e-Schubladen-Feinschliff (Schubladen → ganz hinten).  
 **Gate EXE:** Portable A/B **Live PASS 2026-11-28** (Next-UI) — erfüllt.  
 **Spec (2026-11-28):** **`docs/STEALTH-SLOT-TAG-SPEC.md`** — **grün** (+ Multi-Msg Queue, Gas-Zahler-Ehrlichkeit).  
-**Noch nicht:** Move-Deploy, Lookahead-Polling, Composer-UI — nächste Scheibe nur mit Start-OK.  
+**Mini-Lib Ist:** `frontend/frontend/lib/stealth-slot-tag.ts` (Vitest).  
+**Noch nicht:** Move-Deploy, Lookahead-Polling, Composer-UI — Move-Scheibe nur mit Start-OK.  
 Abgrenzung: **`docs/KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md`**.  
 **Nicht verwechseln:** Zwischenlager (`buffer`) · R1-Kurier · Stealth.
 

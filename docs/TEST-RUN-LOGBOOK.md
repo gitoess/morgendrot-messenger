@@ -21,6 +21,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-11-28** | PC, **Stealth Mini-Lib** | `stealth-slot-tag.ts`: Blake2b slot_tag, Epoch-BE, Lookahead; Vitest. Kein Move/UI. | **PASS (Vitest)** |
 | **2026-11-28** | PC, **Stealth Spec grün** | User OK; Nachzug: Epoch-Bucket + Queue (kein Replace); Gas-Zahler ≠ Empfänger-Tarnung (Sponsor/Relayer Hinweis). | **DOCS** — Gate Move/UI |
 | **2026-11-28** | PC, **Alpha-EXE A/B Live** | Portable Next-UI (`6aef1f9`): Repo-Root via `PORTABLE_EXECUTABLE_DIR`, API+Next spawn, Unlock → normale Messenger-UI. Scheibe C (Standalone-Verteilen) User **warten**. | **PASS (Live)** |
 | **2026-11-28** | PC, **Aktenschrank vs Stealth** | Kritisch: M4e=Ordnung; `slot_tag`-Stealth=Metadaten (Vision); buffer≠Blind/Stealth; Kurier geparkt. Kein Move-Bau. | **DOCS** |
