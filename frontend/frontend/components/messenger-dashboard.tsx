@@ -56,6 +56,10 @@ import {
   PRIVACY_SOFT_LOCK_CHANGED_EVENT,
 } from '@/frontend/lib/privacy-soft-lock'
 import {
+  hasVaultPasswordSession,
+  VAULT_PASSWORD_SESSION_CHANGED,
+} from '@/frontend/lib/vault-password-session'
+import {
   IOTA_MESSENGER_UI,
   isIotaMessengerProduct,
   PRODUCT_DISPLAY_NAME,
@@ -152,6 +156,7 @@ function MessengerDashboardBody({
   const [onboardingWizardOpen, setOnboardingWizardOpen] = useState(false)
   const [vaultOverWizard, setVaultOverWizard] = useState(false)
   const [privacySoftLocked, setPrivacySoftLockedState] = useState(() => isPrivacySoftLocked())
+  const [vaultPwSession, setVaultPwSession] = useState(() => hasVaultPasswordSession())
   const vaultFromWizardFlowRef = useRef(false)
 
   useEffect(() => {
@@ -159,6 +164,13 @@ function MessengerDashboardBody({
     sync()
     window.addEventListener(PRIVACY_SOFT_LOCK_CHANGED_EVENT, sync)
     return () => window.removeEventListener(PRIVACY_SOFT_LOCK_CHANGED_EVENT, sync)
+  }, [])
+
+  useEffect(() => {
+    const sync = () => setVaultPwSession(hasVaultPasswordSession())
+    sync()
+    window.addEventListener(VAULT_PASSWORD_SESSION_CHANGED, sync)
+    return () => window.removeEventListener(VAULT_PASSWORD_SESSION_CHANGED, sync)
   }, [])
   const liteMessengerFromApi = true
   const effectiveRole = s.role || s.apiSnapshot?.role
@@ -195,14 +207,18 @@ function MessengerDashboardBody({
   }, [s.checkStatus])
 
   const vaultSessionLocked = !!(s.locked || s.apiSnapshot?.locked)
+  const browserSignerReady = isBrowserSessionSignerReady(s.locked)
+  /** Keys da, Browser-PW-Sitzung weg → Badge „gesperrt“ muss Scrim+PW erzwingen. */
+  const browserVaultPasswordMissing =
+    browserSignerReady && !vaultSessionLocked && !vaultPwSession
   const applyVaultFailClosed = shouldApplyVaultFailClosedOverlay({
     vaultSessionLocked,
     privacySoftLocked,
+    browserVaultPasswordMissing,
     suppressForHelperSeed: s.unlock.suppressVaultUnlockForHelperSeed,
     suppressForOnboardingWizard: !vaultOverWizard && onboardingWizardOpen,
   })
-  const softUiPauseOnly = privacySoftLocked && !vaultSessionLocked
-  const browserSignerReady = isBrowserSessionSignerReady(s.locked)
+  const softUiPauseOnly = privacySoftLocked && !vaultSessionLocked && !browserVaultPasswordMissing
   const vaultKeysReady = browserSignerReady
   const standaloneApkWithoutBasis = isStandaloneMessengerWithoutBasis()
   const standaloneWalletActive = standaloneApkWithoutBasis && !vaultSessionLocked && vaultKeysReady
@@ -448,7 +464,9 @@ function MessengerDashboardBody({
         lockedHint={
           softUiPauseOnly
             ? 'Tresor pausiert — Badge tippen oder Passwort-Dialog.'
-            : undefined
+            : browserVaultPasswordMissing
+              ? 'Tresor gesperrt — Passwort eingeben.'
+              : undefined
         }
         lockedDetail={softUiPauseOnly ? null : undefined}
         className={cn(
@@ -682,7 +700,9 @@ function MessengerDashboardBody({
       lockedHint={
         softUiPauseOnly
           ? 'Tresor pausiert — Badge tippen oder Passwort-Dialog.'
-          : undefined
+          : browserVaultPasswordMissing
+            ? 'Tresor gesperrt — Passwort eingeben.'
+            : undefined
       }
       lockedDetail={softUiPauseOnly ? null : undefined}
       className={cn(

@@ -4,14 +4,29 @@ Kurznotizen für spätere Phasen — **kein** Implementierungsversprechen.
 
 ---
 
+## Stealth-Mailbox (`slot_tag`) — Metadaten-Tarnung
+
+**Entscheidung 2026-11-28 (kritisch):** Zwei verschiedene Dinge:
+
+1. **Ist M4e Aktenschrank** — 4 Ziel-Postfächer pro Kontakt (Privat/Einsatz/Team/**Zwischenlager=`buffer`**). Ordnung & Purge-Trennung. Owner im Explorer **sichtbar**.  
+2. **Vision Stealth** — Nachricht in der **Haupt-Mailbox**, Index = `slot_tag = Blake2b(SharedSecret || "slot" || epoch)`; Empfänger Lookahead + `purge_stealth_message` mit `delete_secret`/`delete_commit`. Empfänger-Adresse soll im Explorer **nicht** erkennbar sein.
+
+**Wann Stealth?** Hoher Metadaten-Druck — nicht Alltag. **Mailbox:** Shared/Haupt (`MAILBOX_ID`), nicht Privat (Owner leak). **Aktivierung später:** Opt-in „Diskret senden“ (+ manueller Override). **Preset:** ein Button reicht, erst wenn Move+Client stehen.
+
+**Priorität (User 2026-11-28):** Stealth **wichtiger** als M4e-Schubladen-Feinschliff (Schubladen → ganz hinten). Bau erst nach Portable-EXE-Grün + Spec-Scheibe — nicht parallel zu CI/EXE-Ritual.  
+**Nicht jetzt:** Move-Deploy, Lookahead-Polling, UI. Abgrenzung: **`docs/KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md`**.  
+**Nicht verwechseln:** Zwischenlager (`buffer`) · R1-Kurier · Stealth.
+
+---
+
 ## Tresor gesperrt → Messenger-Overlay (Fail-closed)
 
 **Entscheidung 2026-11-20:** Statt vieler Einzel-Gates: bei `locked` Messenger-Hauptfläche ausgrauen/`pointer-events: none`, **nur** Unlock-Dialog bedienbar. Optional Statusleiste sichtbar; SOS nur mit expliziter Whitelist.
 
-**Ist 2026-11-24 / Badge 2026-11-26:** Zwei klare Modi:
-- **Abmelden** = Wipe + Unlock-Dialog + Übersicht.
-- **Tresor sperren** (Badge bereit→Klick) = Soft-Pause (Scrim, **RAM bleibt**); **Weitersprechen nur nach Passwort**.
-- Badge-Text nur **bereit | gesperrt**; Pause/F5 stecken hinter „gesperrt“ + Tooltip.
+**Ist 2026-11-24 / Badge 2026-11-26 / Fail-closed 2026-11-28:** Zwei sichtbare Zustände:
+- **bereit** = UI nutzbar.
+- **gesperrt** = Scrim + Passwort (Hard-Lock, Soft-Pause, **oder** Browser-PW fehlt nach F5 — früher Bug: Badge „gesperrt“ ohne Overlay).
+- **Abmelden** = Wipe + Unlock-Dialog.
 
 Auge im Unlock: `mousedown preventDefault` gegen Dialog-Flackern.
 
@@ -39,29 +54,29 @@ Auge im Unlock: `mousedown preventDefault` gegen Dialog-Flackern.
 | Aktion in „Ich“ | Inhalt |
 |-----------------|--------|
 | **Visitenkarte teilen** (Button) | Checkboxen: Anzeigename, Wallet-ID, optional TG / Funk-Node (Klartext) / Mailbox / ECDH — → **Kontakt-QR** (`k:'mc'`) / Text / **Als Nachricht**. Keine dritte QR-Welt. **Kein** klassisches Telefon/E-Mail. |
-| **Mein Profilbild** | **Stufe A Ist 2026-11-27** (lokal in „Ich“/Kontakt); Stufe B teilen = später Opt-in. |
+| **Mein Profilbild** | **Stufe A Ist**; **Stufe B Ist** (opt-in Thumb+Hash im Klartext, nie im QR). |
 
 **Ist heute:** „Ich“ = Kontakt-ID + Peering-QR + technische IDs. Empfangen-QR = nur Coins.
 
-**Profilbild — Stufen (nicht jetzt bauen):**
+**Profilbild — Stufen:**
 
-| Stufe | Was | Telegram-ähnlich? |
-|-------|-----|-------------------|
-| **A lokal** | Empfänger speichert *dein* Bild lokal; du kannst Kontakten auch manuell Bilder zuordnen | Teilweise |
-| **B teilen** | Beim Teilen der Visitenkarte / nach Scan: kleines Bild oder Hash mitliefern | Ja |
+| Stufe | Was | Stand |
+|-------|-----|--------|
+| **A lokal** | Eigenes/Kontakt-Bild nur lokal | **Ist** |
+| **B teilen** | Opt-in Thumb + SHA-256-Hash im Visitenkarte-**Klartext**; QR ohne Bild | **Ist 2026-11-27** |
 
-**Sicherheit / Logik (Pflicht beim Bau):**
+**Sicherheit / Logik:**
 
-- **Kein Vollbild im QR** — QR bleibt klein; Avatar max. ~2–4 KB Thumbnail **außerhalb** QR (z. B. kurze Folge-Nachricht / Datei nach Scan) oder nur **Hash** + späterer Abruf nach Bestätigung.
-- **Keine stillen Remote-URLs** als Pflicht (Tracking/SSRF) — Opt-in, lokal speichern.
-- Empfänger: **lokales Override** (Spitzname/Bild) schlägt fremdes Profilbild.
+- **Kein Vollbild im QR** — Thumb + Hash nur Klartext/Nachricht.
+- **Keine Remote-URLs** — nur eingebettetes `data:image/…`; Hash-Check beim Übernehmen.
+- Empfänger: **lokales Override** schlägt fremdes Profilbild.
 - Wallet-Empfangen unverändert.
 
-**Status 2026-11-27:** Share-MVP **Ist**; **Übernehmen-CTA Ist**; **Profilbild A Ist** (lokal + Chat-Thumb). Visitenkarte-Blase zeigt **lesbare Karte** (JSON nur Wire). **Stufe B** = einziger Komfort-C-Kandidat (opt-in Hash/Thumb neben Share, nicht blind im QR) — **nur nach explizitem „los“** (`ROADMAP` Komfort-Triage).
+**Status 2026-11-27:** Share-MVP · Übernehmen-CTA · Profilbild A+B Ist. Visitenkarte-Blase zeigt Thumb-Vorschau wenn dabei.
 
 ### Visitenkarte empfangen → Kontakt übernehmen
 
-**Ist 2026-11-27:** Inbox-Button **Als Kontakt übernehmen** → Parse + `saveContactEntry` + optional Peer-Pub; Merge-Confirm wenn Kontakt existiert. Bild kommt **nicht** mit der Karte (nur lokales Profilbild A).
+**Ist:** Inbox **Als Kontakt übernehmen** → Kontakt + optional ECDH + optional Profilbild B (wenn kein lokales Override). Confirm bei Merge / bei neuem Kontakt mit Bild.
 
 **Nicht-Ziel:** stille Auto-Anlage; Bild in QR; Wallet-Empfangen-QR (Freeze).
 

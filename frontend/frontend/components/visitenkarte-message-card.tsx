@@ -43,6 +43,22 @@ export function VisitenkarteMessageCard({ content }: { content: string }) {
           Verschlüsselungs-Schlüssel dabei — wird beim Übernehmen lokal gemerkt.
         </p>
       ) : null}
+      {fields.avatarThumbDataUrl ? (
+        <div className="flex items-center gap-2 pt-0.5">
+          <img
+            src={fields.avatarThumbDataUrl}
+            alt=""
+            className="h-10 w-10 rounded-full border border-border object-cover"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Profilbild dabei
+            {fields.avatarHashHex
+              ? ` · Hash ${fields.avatarHashHex.slice(0, 8)}…`
+              : ''}{' '}
+            — beim Übernehmen lokal (eigenes Bild bleibt).
+          </p>
+        </div>
+      ) : null}
       <div className="pt-1">
         <VisitenkarteIngestButton content={content} />
       </div>

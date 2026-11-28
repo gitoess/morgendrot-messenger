@@ -1,16 +1,45 @@
 /**
- * Profilbild Stufe A — nur lokal (kein Share/QR).
+ * Profilbild lokal — Wallet (`0x…`) oder Sidebar-Slot (`slot:…` / `group:…`).
+ * Stufe B Share nur für Wallet-Adressen (Visitenkarte).
  * @see docs/IDEEN-BACKLOG.md
  */
 
 export const CONTACT_AVATAR_STORAGE_KEY = 'morgendrot.contactAvatars.v1'
 export const CONTACT_AVATAR_CHANGED_EVENT = 'morgendrot-contact-avatar-changed'
 
-function emitAvatarChanged(address: string): void {
+/** Feste Sidebar-Slots (kein Chain-Objekt). */
+export const AVATAR_SLOT_INBOX_ALL = 'slot:inbox-all'
+export const AVATAR_SLOT_TG_ALARM = 'slot:tg-alarm'
+export const AVATAR_SLOT_PINNWAND = 'slot:pinnwand'
+
+export function avatarKeyForGroup(groupId: string): string {
+  const id = groupId.trim()
+  return id ? `group:${id}` : ''
+}
+
+/**
+ * Gültige Keys: `0x`+64 Hex, `slot:…` (a-z0-9-), `group:…` (nicht leer).
+ */
+export function normalizeAvatarKey(key: string): string | null {
+  const t = key.trim().toLowerCase()
+  if (!t) return null
+  if (/^0x[a-f0-9]{64}$/.test(t)) return t
+  if (/^slot:[a-z0-9][a-z0-9_-]{0,63}$/.test(t)) return t
+  if (/^group:[a-z0-9][a-z0-9_.:-]{0,127}$/i.test(t)) return t
+  return null
+}
+
+export function isWalletAvatarKey(key: string): boolean {
+  return /^0x[a-f0-9]{64}$/i.test(key.trim())
+}
+
+function emitAvatarChanged(key: string): void {
   if (typeof window === 'undefined') return
   try {
     window.dispatchEvent(
-      new CustomEvent(CONTACT_AVATAR_CHANGED_EVENT, { detail: { address: address.toLowerCase() } })
+      new CustomEvent(CONTACT_AVATAR_CHANGED_EVENT, {
+        detail: { address: key, key },
+      })
     )
   } catch {
     /* */
@@ -22,10 +51,6 @@ const AVATAR_MAX_EDGE = 96
 const AVATAR_JPEG_QUALITY = 0.72
 const AVATAR_MAX_DATA_URL_CHARS = 8_000
 
-function normalizeAddr(address: string): string {
-  return address.trim().toLowerCase()
-}
-
 function readMap(): Record<string, string> {
   if (typeof window === 'undefined') return {}
   try {
@@ -35,8 +60,8 @@ function readMap(): Record<string, string> {
     if (!j || typeof j !== 'object' || Array.isArray(j)) return {}
     const out: Record<string, string> = {}
     for (const [k, v] of Object.entries(j as Record<string, unknown>)) {
-      const a = normalizeAddr(k)
-      if (a && typeof v === 'string' && v.startsWith('data:image/')) out[a] = v
+      const key = normalizeAvatarKey(k)
+      if (key && typeof v === 'string' && v.startsWith('data:image/')) out[key] = v
     }
     return out
   } catch {
@@ -53,27 +78,63 @@ function writeMap(m: Record<string, string>): void {
   }
 }
 
-export function getContactAvatarDataUrl(address: string): string | null {
-  const a = normalizeAddr(address)
-  if (!a) return null
-  return readMap()[a] ?? null
+export function getContactAvatarDataUrl(key: string): string | null {
+  const k = normalizeAvatarKey(key)
+  if (!k) return null
+  return readMap()[k] ?? null
 }
 
-export function clearContactAvatar(address: string): void {
-  const a = normalizeAddr(address)
-  if (!a) return
+export function clearContactAvatar(key: string): void {
+  const k = normalizeAvatarKey(key)
+  if (!k) return
   const m = readMap()
-  delete m[a]
+  delete m[k]
+  writeMap(m)
+  emitAvatarChanged(k)
+}
+
+/** Stufe B Empfang: Data-URL speichern (kein Remote-Fetch). Nur Wallet-Keys. */
+export function setContactAvatarDataUrl(
+  address: string,
+  dataUrl: string,
+  opts?: { overwrite?: boolean }
+): { ok: true; skippedLocalOverride?: boolean } | { ok: false; error: string } {
+  const a = normalizeAvatarKey(address)
+  if (!a || !isWalletAvatarKey(a)) return { ok: false, error: 'Adresse ungültig.' }
+  const url = String(dataUrl || '').trim()
+  if (!url.startsWith('data:image/')) return { ok: false, error: 'Kein Bild-Data-URL.' }
+  if (url.length > AVATAR_MAX_DATA_URL_CHARS * 1.5) {
+    return { ok: false, error: 'Profilbild-Thumb zu groß.' }
+  }
+  const m = readMap()
+  if (m[a] && !opts?.overwrite) {
+    return { ok: true, skippedLocalOverride: true }
+  }
+  m[a] = url
   writeMap(m)
   emitAvatarChanged(a)
+  return { ok: true }
+}
+
+/** SHA-256 Hex über den Data-URL-String (Integrität Stufe B). Nur Web Crypto — kein node:crypto (Webpack). */
+export async function sha256HexUtf8(text: string): Promise<string> {
+  const subtle = globalThis.crypto?.subtle
+  if (!subtle?.digest) {
+    throw new Error('SHA-256 (Web Crypto) nicht verfügbar.')
+  }
+  const data = new TextEncoder().encode(text)
+  const buf = await subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
 }
 
 export async function setContactAvatarFromFile(
-  address: string,
+  key: string,
   file: Blob
 ): Promise<{ ok: true; dataUrl: string } | { ok: false; error: string }> {
-  const a = normalizeAddr(address)
-  if (!/^0x[a-fA-F0-9]{64}$/i.test(a)) return { ok: false, error: 'Adresse ungültig.' }
+  const k = normalizeAvatarKey(key)
+  if (!k) return { ok: false, error: 'Avatar-Key ungültig.' }
   if (typeof createImageBitmap === 'undefined' && typeof Image === 'undefined') {
     return { ok: false, error: 'Bildverarbeitung im Browser nicht verfügbar.' }
   }
@@ -101,9 +162,9 @@ export async function setContactAvatarFromFile(
       return { ok: false, error: 'Bild zu groß nach Kompression — kleineres Foto wählen.' }
     }
     const m = readMap()
-    m[a] = dataUrl
+    m[k] = dataUrl
     writeMap(m)
-    emitAvatarChanged(a)
+    emitAvatarChanged(k)
     return { ok: true, dataUrl }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Avatar speichern fehlgeschlagen.' }

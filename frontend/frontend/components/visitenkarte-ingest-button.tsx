@@ -18,7 +18,13 @@ export function VisitenkarteIngestButton({ content }: { content: string }) {
     if (exists) {
       const ok = window.confirm(
         'Kontakt existiert bereits. Felder aus der Visitenkarte mergen?\n\n' +
-          'Vorhandener Anzeigename bleibt, wenn die Karte keinen Namen liefert.'
+          'Vorhandener Anzeigename bleibt, wenn die Karte keinen Namen liefert.\n' +
+          'Eigenes Profilbild wird nicht überschrieben.'
+      )
+      if (!ok) return
+    } else if (fields.avatarThumbDataUrl) {
+      const ok = window.confirm(
+        'Kontakt anlegen und Profilbild von der Visitenkarte lokal speichern?'
       )
       if (!ok) return
     }

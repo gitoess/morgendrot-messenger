@@ -93,7 +93,8 @@ export function ChatViewContactSendMailboxSelect(p: ChatViewContactSendMailboxSe
       <label className="mb-1 block text-xs font-medium text-muted-foreground">
         Speicher auf der Chain
         <span className="mt-0.5 block font-normal text-[10px] text-muted-foreground/90">
-          Event = flüchtig · sonst Kontakt-Slot / Hauptpostfach (nicht die Wallet-ID)
+          Event = flüchtig · Privat/Einsatz/Team = Postfach · Zwischenlager = Puffer (Ordnung, nicht
+          Stealth/Kurier)
         </span>
       </label>
       <select

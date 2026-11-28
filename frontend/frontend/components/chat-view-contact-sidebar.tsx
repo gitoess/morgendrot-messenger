@@ -3,6 +3,14 @@
 import { useMemo, useState, useEffect } from 'react'
 import { BookUser, Check, Megaphone, MessageCircle, MoreVertical, Plus, Settings2, User, Users } from 'lucide-react'
 import { ContactAvatarThumb } from '@/frontend/components/contact-avatar-thumb'
+import { SidebarSlotAvatarDialog } from '@/frontend/components/sidebar-slot-avatar-dialog'
+import {
+  AVATAR_SLOT_INBOX_ALL,
+  AVATAR_SLOT_PINNWAND,
+  AVATAR_SLOT_TG_ALARM,
+  avatarKeyForGroup,
+  normalizeAvatarKey,
+} from '@/frontend/lib/contact-avatar-local-store'
 import { cn } from '@/lib/utils'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { InboxPartnerOption } from '@/frontend/components/chat-view-inbox-partner-strip'
@@ -97,7 +105,9 @@ function SidebarRow(p: {
   unreadCount?: number
   handshakeBadge?: ContactHandshakeBadgeKind
   icon?: React.ReactNode
-  /** Wallet → lokales Profilbild (Stufe A); sonst icon/Buchstabe. */
+  /** Wallet oder Slot-Key → lokales Profilbild; sonst icon/Buchstabe. */
+  avatarKey?: string
+  /** @deprecated use avatarKey */
   avatarAddress?: string
   onClick: () => void
   onToggleRecipient?: () => void
@@ -105,8 +115,7 @@ function SidebarRow(p: {
   onOpenMore?: () => void
   moreLabel?: string
 }) {
-  const avatarOk =
-    Boolean(p.avatarAddress) && /^0x[a-fA-F0-9]{64}$/i.test((p.avatarAddress || '').trim())
+  const avatarResolved = normalizeAvatarKey((p.avatarKey ?? p.avatarAddress ?? '').trim())
   return (
     <div
       className={cn(
@@ -122,9 +131,9 @@ function SidebarRow(p: {
           p.active ? '' : 'hover:bg-muted/60'
         )}
       >
-        {avatarOk ? (
+        {avatarResolved ? (
           <ContactAvatarThumb
-            address={p.avatarAddress!}
+            avatarKey={avatarResolved}
             fallbackLabel={p.title}
             className="mt-0.5 h-10 w-10"
           />
@@ -206,6 +215,7 @@ function SidebarRow(p: {
 
 export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
   const [selfProfileOpen, setSelfProfileOpen] = useState(false)
+  const [slotAvatar, setSlotAvatar] = useState<{ key: string; title: string } | null>(null)
   const [joinMetaTick, setJoinMetaTick] = useState(0)
   const [phonebookMetaTick, setPhonebookMetaTick] = useState(0)
   const favorites = useMemo(() => readContactFavorites(), [phonebookMetaTick])
@@ -379,7 +389,7 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
               title="Ich"
               subtitle={selfSubtitle}
               active={p.activeSelfSelected === true}
-              avatarAddress={(p.myAddress ?? p.selfProfile?.myAddressLine ?? '').trim()}
+              avatarKey={(p.myAddress ?? p.selfProfile?.myAddressLine ?? '').trim()}
               icon={<User className="h-5 w-5" />}
               onClick={handleSelectSelf}
               onOpenMore={() => {
@@ -406,8 +416,13 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
                 subtitle={pinnwandItem.subtitle}
                 active={p.activePinnwandSelected === true}
                 unreadCount={pinnwandItem.unreadCount}
+                avatarKey={AVATAR_SLOT_PINNWAND}
                 icon={<Megaphone className="h-4 w-4" />}
                 onClick={() => p.onSelectPinnwand?.()}
+                onOpenMore={() =>
+                  setSlotAvatar({ key: AVATAR_SLOT_PINNWAND, title: pinnwandItem.displayName })
+                }
+                moreLabel={`Bild für ${pinnwandItem.displayName}`}
               />
             </section>
           ) : null}
@@ -436,8 +451,16 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
                   title={telegramAlarm.displayName}
                   subtitle={telegramAlarm.subtitle}
                   active={p.activeTelegramAlarmSelected === true}
+                  avatarKey={AVATAR_SLOT_TG_ALARM}
                   icon={<MessageCircle className="h-4 w-4" />}
                   onClick={() => p.onSelectTelegramAlarmGroup?.()}
+                  onOpenMore={() =>
+                    setSlotAvatar({
+                      key: AVATAR_SLOT_TG_ALARM,
+                      title: telegramAlarm.displayName,
+                    })
+                  }
+                  moreLabel={`Bild für ${telegramAlarm.displayName}`}
                 />
               ) : null}
               {filteredGroups.length === 0 && !showTelegramAlarm ? (
@@ -445,25 +468,24 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
                   Noch keine Gruppe — <span className="font-medium text-foreground">Verwalten</span> tippen.
                 </p>
               ) : null}
-              {filteredGroups.map((g) => (
+              {filteredGroups.map((g) => {
+                const gKey = avatarKeyForGroup(g.groupId)
+                return (
                 <SidebarRow
                   key={g.key}
                   title={g.displayName}
                   subtitle={`${g.memberCount} Mitglieder`}
                   active={p.activeGroupId === g.groupId}
+                  avatarKey={gKey}
                   icon={<Users className="h-4 w-4" />}
                   onClick={() => p.onSelectGroup(g.groupId)}
-                  onOpenMore={
-                    p.onOpenGroupSettings
-                      ? () => {
-                          p.onSelectGroup(g.groupId)
-                          p.onOpenGroupSettings?.()
-                        }
-                      : undefined
+                  onOpenMore={() =>
+                    setSlotAvatar({ key: gKey, title: g.displayName })
                   }
-                  moreLabel={`„${g.displayName}“ verwalten`}
+                  moreLabel={`Bild für „${g.displayName}“`}
                 />
-              ))}
+                )
+              })}
             </section>
           ) : null}
 
@@ -494,7 +516,10 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
                     : 'Posteingang Alle'
               }
               active={p.showAllActive}
+              avatarKey={AVATAR_SLOT_INBOX_ALL}
               onClick={p.onSelectAll}
+              onOpenMore={() => setSlotAvatar({ key: AVATAR_SLOT_INBOX_ALL, title: 'Alle' })}
+              moreLabel="Bild für Alle"
             />
             {filteredContacts.length === 0 ? (
               <p className="px-2 py-4 text-xs text-muted-foreground">
@@ -517,7 +542,7 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
                   active={p.activePartnerKey != null && p.activePartnerKey.toLowerCase() === c.address.toLowerCase()}
                   unreadCount={c.unreadCount}
                   handshakeBadge={handshakeKindFor(c.address)}
-                  avatarAddress={c.address}
+                  avatarKey={c.address}
                   onClick={() => p.onSelectContact(c.address)}
                   onToggleRecipient={
                     canToggleRecipient ? () => p.onToggleRecipientContact?.(c.address) : undefined
@@ -533,6 +558,15 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
         </div>
 
       </aside>
+
+      <SidebarSlotAvatarDialog
+        open={slotAvatar != null}
+        onOpenChange={(open) => {
+          if (!open) setSlotAvatar(null)
+        }}
+        avatarKey={slotAvatar?.key ?? AVATAR_SLOT_INBOX_ALL}
+        title={slotAvatar?.title ?? ''}
+      />
 
       {p.selfProfile ? (
         <ChatViewSelfProfileDialog

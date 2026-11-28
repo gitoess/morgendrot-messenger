@@ -45,17 +45,17 @@ PC-Jetzt (#39–#46), Soft-Pause/Burn/Solo-Wizard/Visitenkarte-**Share**-MVP, H.
 | **H.18** Rest | **Halten** — kein Codec2 | DE-Whisper Live OK; Codec2 = Funk-Kern-Risiko |
 | **H.19** Forensic | **Später** | Kreuz Send/Attest/LoRa; Mini-Hash ohne Capture lohnt wenig |
 | **H.21** Kurier | **Später** | Empfänger Ist; Umschlag = Crypto/Relay-Big-Bang |
-| **Profilbild B** | **Einziges C-Kandidat** (opt-in) | Hash/Thumb **neben** Share, nicht blind im QR; Privacy |
+| **Profilbild B** | **Ist** (User „los“) | Opt-in Thumb+Hash im Klartext; nie im QR; lokales Override |
 | **Vault ID-Snapshot** | **Später** | Vault/Secrets-Fläche; Backup-Risiko |
 | **Linkify** | **Nicht jetzt** | Regel + Phishing-UX; Backlog merken |
 | **H.37** Multi-Profil | **Später** | Unlock/Vault-Kern; nie parallel = großer Schnitt |
 | **H.24** Package-UI | **Später** | Expertenmodus reicht PC; Multi-Package = Inbox-Namespaces |
 
-**Nächste PC-Arbeit (Stabilität):** Live-Schmerz / Copy / EXE-Reibung — **kein** Feature-Zug parallel. Profilbild B nur nach explizitem „los“.
+**Nächste PC-Arbeit (Stabilität):** Portable-EXE Live-Test; Live-Schmerz/Copy. **Kein** Stealth-Move/Kurier-Bau — Begriffsklärung: M4e-Aktenschrank Ist ≠ Stealth (`IDEEN-BACKLOG` + `KONTAKT-MAILBOX-VIER-SLOTS`).
 
 ### C · Geparkt (nach B / nicht jetzt)
 
-**H.19** Forensic · **H.21** Kurier · **H.18 Codec2** (nur Spec in Backlog) · **Vault ID-Snapshot** · H.12 Feinschliff · H.24 · H.26 Alarmgruppe · H.30 · H.37 · C1-Default · Delayed-Upload Gateway · H.25a Outdoor · H.3 Mesh · Linkify/Zauberstab.
+**Stealth `slot_tag`** (Metadaten, vor M4e-Feinschliff — User 2026-11-28) · **H.19** Forensic · **H.21** Kurier · **M4e-Schubladen-UX** (Aktenschrank Feinschliff — nach hinten) · **H.18 Codec2** · **Vault ID-Snapshot** · H.12 · H.24 · H.26 Alarmgruppe · H.30 · H.37 · C1-Default · Delayed-Upload · H.25a Outdoor · H.3 Mesh · Linkify.
 
 ### D · Ganz hinten (User 2026-11-27 — nicht anfassen)
 
@@ -1780,8 +1780,8 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 ### H.21 Empfaenger-Auswahl + optional verschluesselter Kurier-Umschlag
 
-**Stand 2026-11-27 (Komfort-Triage):** Empfänger-Dropdown **Ist**; Kurier-Umschlag **geparkt** (Crypto/Relay).  
-**Status:** R1 bleibt beim klaren `submit_ready`-Kern ohne neuen Kryptopfad.
+**Stand 2026-11-28:** Empfänger-Dropdown **Ist**; Kurier-Umschlag **geparkt** (Gas/Relayer/Crypto).  
+**Status:** R1 `submit_ready`-Dialog (Beta) bleibt Expertenpfad — **kein** Ersatz für Event/Privat/Einsatz-Mailbox. FAQ: **`docs/KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md`**.
 
 | Aspekt | Kurz |
 |--------|------|

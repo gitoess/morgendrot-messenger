@@ -4,39 +4,41 @@ import { useEffect, useState } from 'react'
 import {
   CONTACT_AVATAR_CHANGED_EVENT,
   getContactAvatarDataUrl,
+  normalizeAvatarKey,
 } from '@/frontend/lib/contact-avatar-local-store'
 import { cn } from '@/lib/utils'
 
-/** Kleines Avatar im Chat — Stufe A lokal. */
+/** Kleines Avatar — Wallet oder Sidebar-Slot (lokal). */
 export function ContactAvatarThumb(p: {
-  address: string
+  /** Wallet `0x…` oder Slot-Key (`slot:…` / `group:…`). Legacy: `address` alias. */
+  avatarKey?: string
+  address?: string
   className?: string
   /** Initialen-Fallback wenn kein Bild */
   fallbackLabel?: string
 }) {
-  const addr = p.address.trim()
-  const [url, setUrl] = useState<string | null>(() =>
-    /^0x[a-fA-F0-9]{64}$/i.test(addr) ? getContactAvatarDataUrl(addr) : null
-  )
+  const raw = (p.avatarKey ?? p.address ?? '').trim()
+  const key = normalizeAvatarKey(raw)
+  const [url, setUrl] = useState<string | null>(() => (key ? getContactAvatarDataUrl(key) : null))
 
   useEffect(() => {
-    if (!/^0x[a-fA-F0-9]{64}$/i.test(addr)) {
+    if (!key) {
       setUrl(null)
       return
     }
-    setUrl(getContactAvatarDataUrl(addr))
-    const key = addr.toLowerCase()
+    setUrl(getContactAvatarDataUrl(key))
     const onChange = (ev: Event) => {
-      const d = (ev as CustomEvent<{ address?: string }>).detail
-      if (d?.address && d.address.toLowerCase() !== key) return
-      setUrl(getContactAvatarDataUrl(addr))
+      const d = (ev as CustomEvent<{ address?: string; key?: string }>).detail
+      const changed = (d?.key || d?.address || '').toLowerCase()
+      if (changed && changed !== key) return
+      setUrl(getContactAvatarDataUrl(key))
     }
     window.addEventListener(CONTACT_AVATAR_CHANGED_EVENT, onChange)
     return () => window.removeEventListener(CONTACT_AVATAR_CHANGED_EVENT, onChange)
-  }, [addr])
+  }, [key])
 
   if (!url) {
-    const letter = (p.fallbackLabel || addr.slice(2, 3) || '?').trim().slice(0, 1).toUpperCase()
+    const letter = (p.fallbackLabel || raw.slice(0, 1) || '?').trim().slice(0, 1).toUpperCase()
     return (
       <div
         className={cn(
@@ -51,7 +53,6 @@ export function ContactAvatarThumb(p: {
   }
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={url}
       alt=""

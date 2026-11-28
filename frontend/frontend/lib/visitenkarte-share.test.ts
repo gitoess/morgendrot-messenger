@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseContactQrPayload } from '@/frontend/lib/contact-qr'
+import { sha256HexUtf8 } from '@/frontend/lib/contact-avatar-local-store'
 import {
   buildVisitenkarteShare,
   defaultVisitenkarteShareFlags,
@@ -14,6 +15,7 @@ describe('visitenkarte-share', () => {
       includeWallet: true,
       includeTelegram: true,
       includeEcdh: true,
+      includeAvatarThumb: false,
     })
   })
 
@@ -32,6 +34,7 @@ describe('visitenkarte-share', () => {
         includeEcdh: false,
         includeMailbox: true,
         includeMeshNode: true,
+        includeAvatarThumb: false,
       },
     })
     const p = parseContactQrPayload(r.qrJson)
@@ -58,9 +61,33 @@ describe('visitenkarte-share', () => {
         includeEcdh: true,
         includeMailbox: false,
         includeMeshNode: false,
+        includeAvatarThumb: false,
       },
     })
     expect(r.plainText).toMatch(/Verschlüsselung: Schlüssel dabei/)
     expect(r.plainText).not.toContain('im QR enthalten')
+  })
+
+  it('Profilbild B: Thumb+Hash nur Klartext, nie im QR', async () => {
+    const thumb = 'data:image/jpeg;base64,AAAA'
+    const hash = await sha256HexUtf8(thumb)
+    const r = buildVisitenkarteShare({
+      address: addr,
+      avatarThumbDataUrl: thumb,
+      avatarHashHex: hash,
+      flags: {
+        includeDisplayName: false,
+        includeWallet: true,
+        includeTelegram: false,
+        includeEcdh: false,
+        includeMailbox: false,
+        includeMeshNode: false,
+        includeAvatarThumb: true,
+      },
+    })
+    expect(r.plainText).toContain(`Profilbild-Hash: ${hash}`)
+    expect(r.plainText).toContain(`Profilbild-Thumb: ${thumb}`)
+    expect(r.qrJson).not.toContain('data:image')
+    expect(r.qrJson).not.toContain(hash)
   })
 })

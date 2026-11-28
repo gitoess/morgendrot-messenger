@@ -21,7 +21,10 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
-| **2026-11-27** | PC, **Komfort-Triage** | H.18 halten (kein Codec2); H.19/H.21/Vault-ID/H.24/H.37/Linkify parken; Profilbild B einziger C-Kandidat (nur nach „los“). PC = Stabilität. | **DOCS** — Fahrplan Arbeitsstand |
+| **2026-11-28** | PC, **Aktenschrank vs Stealth** | Kritisch: M4e=Ordnung; `slot_tag`-Stealth=Metadaten (Vision); buffer≠Blind/Stealth; Kurier geparkt. Kein Move-Bau. | **DOCS** |
+| **2026-11-28** | PC, **Slot-Avatare + Mailbox-FAQ** | Sidebar Alle/TG/Gruppe/Pinnwand lokale Bilder (⋯); buffer=Zwischenlager; Kurier geparkt. Vitest avatar-keys. | **CODE+DOCS** |
+| **2026-11-27** | PC, **Profilbild B** | Opt-in Thumb+Hash in Visitenkarte-Klartext; QR ohne Bild; Übernehmen mit Hash-Check + lokalem Override. Vitest share/ingest. Danach: Portable-EXE Live-Test. | **CODE** — User-Live Share/Übernehmen |
+| **2026-11-27** | PC, **Komfort-Triage** | H.18 halten (kein Codec2); H.19/H.21/Vault-ID/H.24/H.37/Linkify parken; Profilbild B freigegeben („los“). | **DOCS** — Fahrplan Arbeitsstand |
 | **2026-11-27** | PC, **B geschlossen Live** | Avatar Sidebar OK; Lokal-STT → DE-Whisper `cv11-german` + Roh-PCM (tiny unbrauchbar; language/task-Fix). Vitest `local-whisper-stt`. | **PASS (Live)** — Transkript ok, etwas Latenz ok |
 | **2026-11-27** | PC, **Top-10 Freigabe → Schritte 1–3** | Visitenkarte-Übernehmen+Profilbild A; H.18 Web-Speech STT; Portable EXE ~98 MB (`desktop:exe`). H.20/H.22 geschlossen; H.19/H.21/Codec2/Vault-ID geparkt. | **CODE** — EXE Live-Doppelklick User |
 | **2026-11-27** | PC, **PC-Rest H.22 Enc-Event + Edition** | Direct+Nest: Indexer∪Package-`queryEvents` (kein Early-Exit bei Teiltreffer); Dedup Event↔Mailbox/Event. Vitest `messaging-events-inbox-rpc`. Edition: Auto-Execute-Default + §6 Claims nachgezogen. Surrogat = Zwei-Wallet PC (C1.6 4c schon PASS). | **CODE+DOCS** — Live Enc+Event optional Retest |

@@ -1,10 +1,14 @@
 /**
  * Visitenkarte teilen — Checkboxen → bestehendes Kontakt-QR (`k:'mc'`) + Klartext.
- * Kein Avatar / keine dritte QR-Welt / kein klassisches Telefon.
+ * Profilbild B: Thumb + Hash nur im Klartext (nicht im QR).
  * @see docs/IDEEN-BACKLOG.md
  */
 
 import { buildContactQrPayload } from '@/frontend/lib/contact-qr'
+
+/** Klartext-Marker Stufe B — außerhalb QR. */
+export const VISITENKARTE_AVATAR_HASH_PREFIX = 'Profilbild-Hash:'
+export const VISITENKARTE_AVATAR_THUMB_PREFIX = 'Profilbild-Thumb:'
 
 export type VisitenkarteShareFlags = {
   includeDisplayName: boolean
@@ -15,6 +19,8 @@ export type VisitenkarteShareFlags = {
   includeMailbox: boolean
   /** Nur Klartext — Mesh-Node-ID ist kein Feld im `mc`-QR. */
   includeMeshNode: boolean
+  /** Stufe B: lokales Profilbild als Thumb+Hash im Klartext (nicht im QR). */
+  includeAvatarThumb: boolean
 }
 
 export type VisitenkarteShareInput = {
@@ -24,6 +30,10 @@ export type VisitenkarteShareInput = {
   meshNodeId?: string | null
   ecdhPubB64?: string | null
   mailboxObjectId?: string | null
+  /** data:image/… — nur wenn flags.includeAvatarThumb. */
+  avatarThumbDataUrl?: string | null
+  /** SHA-256 Hex des Thumb-Data-URL. */
+  avatarHashHex?: string | null
   flags: VisitenkarteShareFlags
 }
 
@@ -38,6 +48,7 @@ export function defaultVisitenkarteShareFlags(opts?: {
   hasEcdh?: boolean
   hasMailbox?: boolean
   hasMeshNode?: boolean
+  hasAvatar?: boolean
 }): VisitenkarteShareFlags {
   return {
     includeDisplayName: opts?.hasDisplayName !== false,
@@ -46,6 +57,8 @@ export function defaultVisitenkarteShareFlags(opts?: {
     includeEcdh: Boolean(opts?.hasEcdh),
     includeMailbox: Boolean(opts?.hasMailbox),
     includeMeshNode: Boolean(opts?.hasMeshNode),
+    /** Default aus — Opt-in Privacy. */
+    includeAvatarThumb: false,
   }
 }
 
@@ -59,6 +72,8 @@ export function buildVisitenkarteShare(input: VisitenkarteShareInput): Visitenka
   const mesh = (input.meshNodeId ?? '').trim()
   const ecdh = (input.ecdhPubB64 ?? '').trim().replace(/\s+/g, '')
   const mb = (input.mailboxObjectId ?? '').trim()
+  const thumb = (input.avatarThumbDataUrl ?? '').trim()
+  const hash = (input.avatarHashHex ?? '').trim().toLowerCase()
 
   const qrJson = buildContactQrPayload({
     address,
@@ -78,6 +93,10 @@ export function buildVisitenkarteShare(input: VisitenkarteShareInput): Visitenka
   if (input.flags.includeMeshNode && mesh) lines.push(`Funk-Node: ${mesh}`)
   if (input.flags.includeEcdh && ecdh) {
     lines.push('Verschlüsselung: Schlüssel dabei (wird beim Übernehmen gemerkt)')
+  }
+  if (input.flags.includeAvatarThumb && thumb.startsWith('data:image/') && /^[a-f0-9]{64}$/.test(hash)) {
+    lines.push(`${VISITENKARTE_AVATAR_HASH_PREFIX} ${hash}`)
+    lines.push(`${VISITENKARTE_AVATAR_THUMB_PREFIX} ${thumb}`)
   }
   lines.push('')
   lines.push(qrJson)

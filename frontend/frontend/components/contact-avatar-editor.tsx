@@ -1,32 +1,42 @@
 'use client'
 
-import { useId, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { toast } from 'sonner'
 import {
   clearContactAvatar,
   getContactAvatarDataUrl,
+  isWalletAvatarKey,
+  normalizeAvatarKey,
   setContactAvatarFromFile,
 } from '@/frontend/lib/contact-avatar-local-store'
 
-/** Profilbild Stufe A — lokal, Opt-in, nicht in QR/Visitenkarte. */
+/** Profilbild lokal (Wallet oder Sidebar-Slot). Teilen = nur Wallet Stufe B. */
 export function ContactAvatarEditor(p: {
-  address: string
+  /** Wallet oder Slot-Key. Legacy-Alias: `address`. */
+  avatarKey?: string
+  address?: string
   /** Kurzlabel für aria */
   label?: string
 }) {
   const inputId = useId()
-  const [url, setUrl] = useState<string | null>(() => getContactAvatarDataUrl(p.address))
+  const key = normalizeAvatarKey((p.avatarKey ?? p.address ?? '').trim()) ?? ''
+  const [url, setUrl] = useState<string | null>(() => (key ? getContactAvatarDataUrl(key) : null))
   const [busy, setBusy] = useState(false)
+  const walletShare = key ? isWalletAvatarKey(key) : false
+
+  useEffect(() => {
+    setUrl(key ? getContactAvatarDataUrl(key) : null)
+  }, [key])
 
   const onFile = async (file: File | null) => {
-    if (!file) return
+    if (!file || !key) return
     if (!file.type.startsWith('image/')) {
       toast.error('Bitte ein Bild wählen.')
       return
     }
     setBusy(true)
     try {
-      const r = await setContactAvatarFromFile(p.address, file)
+      const r = await setContactAvatarFromFile(key, file)
       if (!r.ok) {
         toast.error(r.error)
         return
@@ -38,11 +48,14 @@ export function ContactAvatarEditor(p: {
     }
   }
 
+  if (!key) {
+    return <p className="text-[11px] text-muted-foreground">Kein gültiger Avatar-Key.</p>
+  }
+
   return (
     <div className="flex items-center gap-3">
       <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border border-border bg-muted">
         {url ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img src={url} alt="" className="h-full w-full object-cover" />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">
@@ -52,8 +65,9 @@ export function ContactAvatarEditor(p: {
       </div>
       <div className="flex min-w-0 flex-col gap-1">
         <p className="text-[11px] text-muted-foreground">
-          Profilbild lokal (dieses Gerät). Im Chat neben Blasen sichtbar. Teilen mit Partnern =
-          Stufe B, noch nicht gebaut.
+          {walletShare
+            ? 'Profilbild lokal (dieses Gerät). Im Chat sichtbar; Teilen = Visitenkarte-Opt-in (Klartext, nicht QR).'
+            : 'Bild nur lokal für diese Sidebar-Zeile — nicht in QR/Visitenkarte.'}
         </p>
         <div className="flex flex-wrap gap-2">
           <label
@@ -81,7 +95,7 @@ export function ContactAvatarEditor(p: {
               className="text-xs text-muted-foreground hover:underline"
               disabled={busy}
               onClick={() => {
-                clearContactAvatar(p.address)
+                clearContactAvatar(key)
                 setUrl(null)
                 toast.message('Profilbild entfernt.')
               }}

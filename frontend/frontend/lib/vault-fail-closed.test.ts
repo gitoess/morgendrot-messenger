@@ -19,6 +19,15 @@ describe('shouldApplyVaultFailClosedOverlay', () => {
     ).toBe(true)
   })
 
+  it('an wenn Browser-PW-Sitzung fehlt (Badge gesperrt, API oft offen)', () => {
+    expect(
+      shouldApplyVaultFailClosedOverlay({
+        vaultSessionLocked: false,
+        browserVaultPasswordMissing: true,
+      })
+    ).toBe(true)
+  })
+
   it('aus bei Helper-Seed-Suppress', () => {
     expect(
       shouldApplyVaultFailClosedOverlay({

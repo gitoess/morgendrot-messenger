@@ -4,6 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Check, Copy, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
+  getContactAvatarDataUrl,
+  sha256HexUtf8,
+  CONTACT_AVATAR_CHANGED_EVENT,
+} from '@/frontend/lib/contact-avatar-local-store'
+import {
   buildVisitenkarteShare,
   defaultVisitenkarteShareFlags,
   type VisitenkarteShareFlags,
@@ -53,6 +58,11 @@ export function ChatViewVisitenkarteShare(p: {
   const activeMb = readActiveSendMailbox()
   const mailboxId = activeMb.kind === 'private' ? activeMb.objectId : ''
 
+  const [hasAvatar, setHasAvatar] = useState(() =>
+    addrOk ? Boolean(getContactAvatarDataUrl(p.address)) : false
+  )
+  const [avatarPack, setAvatarPack] = useState<{ dataUrl: string; hash: string } | null>(null)
+
   const [flags, setFlags] = useState<VisitenkarteShareFlags>(() =>
     defaultVisitenkarteShareFlags({
       hasDisplayName: Boolean(name),
@@ -60,23 +70,53 @@ export function ChatViewVisitenkarteShare(p: {
       hasEcdh: Boolean(ecdh),
       hasMailbox: Boolean(mailboxId),
       hasMeshNode: Boolean(mesh),
+      hasAvatar,
     })
   )
   const [copied, setCopied] = useState<'text' | 'qr' | null>(null)
   const [err, setErr] = useState('')
 
   useEffect(() => {
+    if (!addrOk) return
+    const refresh = () => setHasAvatar(Boolean(getContactAvatarDataUrl(p.address)))
+    refresh()
+    window.addEventListener(CONTACT_AVATAR_CHANGED_EVENT, refresh)
+    return () => window.removeEventListener(CONTACT_AVATAR_CHANGED_EVENT, refresh)
+  }, [addrOk, p.address])
+
+  useEffect(() => {
     if (!p.address) return
-    setFlags(
-      defaultVisitenkarteShareFlags({
+    setFlags((prev) => ({
+      ...defaultVisitenkarteShareFlags({
         hasDisplayName: Boolean(name),
         hasTelegram: Boolean(tg),
         hasEcdh: Boolean(getDirectChatEcdhOwnPubRawBase64()),
         hasMailbox: Boolean(mailboxId),
         hasMeshNode: Boolean(mesh),
-      })
-    )
-  }, [p.address, name, tg, mesh, mailboxId])
+        hasAvatar,
+      }),
+      includeAvatarThumb: prev.includeAvatarThumb && hasAvatar,
+    }))
+  }, [p.address, name, tg, mesh, mailboxId, hasAvatar])
+
+  useEffect(() => {
+    if (!flags.includeAvatarThumb || !addrOk) {
+      setAvatarPack(null)
+      return
+    }
+    const url = getContactAvatarDataUrl(p.address)
+    if (!url) {
+      setAvatarPack(null)
+      return
+    }
+    let cancelled = false
+    void sha256HexUtf8(url).then((hash) => {
+      if (!cancelled) setAvatarPack({ dataUrl: url, hash })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [flags.includeAvatarThumb, addrOk, p.address, hasAvatar])
 
   const built = useMemo(() => {
     if (!addrOk) return null
@@ -88,12 +128,14 @@ export function ChatViewVisitenkarteShare(p: {
         meshNodeId: mesh || undefined,
         ecdhPubB64: getDirectChatEcdhOwnPubRawBase64() || undefined,
         mailboxObjectId: mailboxId || undefined,
+        avatarThumbDataUrl: avatarPack?.dataUrl,
+        avatarHashHex: avatarPack?.hash,
         flags,
       })
     } catch (e) {
       return { error: e instanceof Error ? e.message : String(e) }
     }
-  }, [addrOk, p.address, name, tg, mesh, mailboxId, flags])
+  }, [addrOk, p.address, name, tg, mesh, mailboxId, flags, avatarPack])
 
   const copy = useCallback(async (kind: 'text' | 'qr') => {
     if (!built || 'error' in built) return
@@ -120,7 +162,7 @@ export function ChatViewVisitenkarteShare(p: {
       <div>
         <p className="text-sm font-semibold text-foreground">Visitenkarte teilen</p>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          Kontakt-QR (`mc`) + Klartext. Profilbild später (Backlog). Kein Telefon/E-Mail — nur Messenger-Pfade.
+          Kontakt-QR (`mc`) + Klartext. Profilbild nur opt-in im Klartext — nie im QR. Kein Telefon/E-Mail.
         </p>
       </div>
       <div className="space-y-2">
@@ -171,6 +213,18 @@ export function ChatViewVisitenkarteShare(p: {
           disabled={!ecdh}
           hint={ecdh ? 'Feld e im Kontakt-QR' : 'Kein ECDH-Pub in der Sitzung'}
           onChange={(v) => setFlags((f) => ({ ...f, includeEcdh: v }))}
+        />
+        <FlagRow
+          id="vk-avatar"
+          label="Profilbild (Thumb + Hash)"
+          checked={flags.includeAvatarThumb}
+          disabled={!hasAvatar}
+          hint={
+            hasAvatar
+              ? 'Nur Klartext/Nachricht — nicht im QR. Empfänger speichert lokal beim Übernehmen.'
+              : 'Zuerst unter „Ich“ ein Profilbild setzen'
+          }
+          onChange={(v) => setFlags((f) => ({ ...f, includeAvatarThumb: v }))}
         />
       </div>
       {built && 'error' in built ? (

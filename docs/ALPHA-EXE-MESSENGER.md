@@ -35,9 +35,12 @@ Ausgabe: **`exports/messenger-desktop-exe/Morgendrot-Messenger-Portable.exe`**
 
 1. Node installiert (`node -v`).  
 2. Repo mit gültiger `.env` / Tresor wie für `npm run dm`.  
-3. Doppelklick Portable-EXE → Fenster „Backend startet …“ → Lite-UI.  
-4. Chat öffnen (Tresor entsperren).  
-5. Fenster schließen → Backend soll enden.
+3. Artefakt bauen falls fehlt: `npm run desktop:exe` → `exports/messenger-desktop-exe/Morgendrot-Messenger-Portable.exe`.  
+4. Doppelklick Portable-EXE → Fenster „Backend startet …“ → Lite-UI.  
+5. Chat öffnen (Tresor entsperren); kurz Posteingang/„Ich“ prüfen.  
+6. Fenster schließen → Backend soll enden.
+
+**Hinweis:** Die EXE startet Backend aus dem **Repo** (kein eingebettetes Node). Frontend-Änderungen (z. B. Profilbild B) siehst du in der EXE erst, wenn das gestartete Backend/UI denselben Stand lädt — bei Dev oft parallel `npm run dm` klarer zum Feature-Check; EXE = Start-/Pack-Ritual.
 
 ## Alternativen ohne EXE-Build
 

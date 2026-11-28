@@ -41,7 +41,9 @@ Details + Tabelle: **`EINSTELLUNGEN-NUTZER-HANDBUCH.md`**.
 
 ### Visitenkarte (Ich)
 
-Sidebar **„Ich“** (⋯ **Mehr zu Ich** oder Kontakt-Detail): **Profilbild** lokal (Stufe A — erscheint im Chat neben Blasen; **Teilen mit Partnern = Stufe B, noch nicht**). **Visitenkarte teilen** — Checkboxen → **Als Nachricht** / Text / QR; Empfänger sieht eine lesbare Karte (ohne Roh-JSON) und **Als Kontakt übernehmen**. Maschinen-JSON bleibt im Wire für den Parser, wird in der Blase ausgeblendet. Peering-QR = Partner verbinden. **Kein** Telefon/E-Mail.
+Sidebar **„Ich“** (⋯ **Mehr zu Ich** oder Kontakt-Detail): **Profilbild** lokal (Stufe A) und optional **mit Visitenkarte teilen** (Stufe B: Thumb+Hash nur im Klartext, **nie** im QR; Empfänger speichert lokal, eigenes Bild bleibt). **Visitenkarte teilen** — Checkboxen → **Als Nachricht** / Text / QR; Empfänger sieht lesbare Karte + **Als Kontakt übernehmen**. Peering-QR = Partner verbinden. **Kein** Telefon/E-Mail.
+
+**Sidebar-Bilder (lokal):** Auch **Alle**, **Gruppen**, **Einsatz-Alarmgruppe**, **Pinnwand** — ⋯ → Bild wählen (nur dieses Gerät, kein QR/Chain). Direktkontakte (z. B. „Partner“) wie bisher über Kontakt-Detail.
 
 **Caps (Edition):** Kein eigener Dialog — Produkt-Flags (`NEXT_PUBLIC_PRODUCT_ID=iota-messenger`); Kopfzeile zeigt dann Pill **Messenger** statt Boss.
 
@@ -222,7 +224,7 @@ Spezifikation: **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** (**§9** Zivil-SOS).
 
 **Sprachmemo:** Maximal **ca. 35 s**, nur bei **Online/IOTA** (Opus; nicht über Meshtastic-Funk wie normales Memo). Datei per **Drag & Drop**, **Datei importieren** oder **Kamera/Webcam** — danach **Senden**.
 
-**Einsatzmodus Diktat:** Textfeld fokussieren und **OS-Diktat** nutzen — **Windows:** **Win+H** | **Android:** **Mikrofon** in der Tastaturleiste.
+**Diktat (STT):** Plus → **Lokal-Diktat** (DE-Whisper on-device; erstes Mal Modell-Download ~150 MB). Sprechen, erneut tippen → Text im Composer. Fallback: **Windows Win+H** / **Android:** Mikrofon in der Tastatur.
 
 ---
 
@@ -379,7 +381,7 @@ Ganzes Private-Mailbox-Object: **Einstellungen → Meine Mailboxen** → Aufräu
 | **Telegram Chat-ID** | ja ohne 0x | Nur Telegram-Hinweise; speicherbar ohne Wallet |
 | **Postfach-ID** | nein | Unter „Erweitert“ — ein on-chain Postfach (Privat); Team/Einsatz/Puffer nur für Experten |
 
-**QR-Code scannen** übernimmt Wallet + optional Postfach aus Peering-QR. Erklärungen zu Mailbox-Slots und Composer-Zielwahl: siehe Sendepanel „Ziel-Postfach“ beim Senden an einen Kontakt.
+**QR-Code scannen** übernimmt Wallet + optional Postfach aus Peering-QR. Composer **„Speicher auf der Chain“**: Event (flüchtig) · Privat/Einsatz/Team · **Zwischenlager** (Puffer-Schublade — **keine** Explorer-Tarnung). Detail: **`docs/KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md`**. **Stealth/`slot_tag`** und **R1-Kurier** = später/geparkt (Backlog).
 
 **Telefonbuch → Kontakte verteilen** (Boss/Kommandant) bietet schnelle Datei-Aktionen oberhalb der Kontaktliste:
 

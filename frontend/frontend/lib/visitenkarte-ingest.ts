@@ -1,9 +1,13 @@
 /**
  * Visitenkarte aus Inbox-Klartext parsen → Kontaktfelder.
- * @see docs/IDEEN-BACKLOG.md (Übernehmen-CTA)
+ * @see docs/IDEEN-BACKLOG.md (Übernehmen-CTA + Profilbild B)
  */
 
 import { parseContactQrPayload } from '@/frontend/lib/contact-qr'
+import {
+  VISITENKARTE_AVATAR_HASH_PREFIX,
+  VISITENKARTE_AVATAR_THUMB_PREFIX,
+} from '@/frontend/lib/visitenkarte-share'
 
 export type VisitenkarteIngestFields = {
   address: string
@@ -15,6 +19,9 @@ export type VisitenkarteIngestFields = {
   telegramChatId?: string
   meshNodeId?: string
   ecdhPubB64?: string
+  /** Stufe B — Thumb nur im Klartext. */
+  avatarThumbDataUrl?: string
+  avatarHashHex?: string
 }
 
 /** Erkennt typische Visitenkarte (Header und/oder eingebettetes `mc`-JSON). */
@@ -66,6 +73,20 @@ export function parseVisitenkarteMessage(content: string): VisitenkarteIngestFie
   const mailboxLine = pickLineValue(text, /^Mailbox:\s*(0x[a-fA-F0-9]{64})\s*$/i)
   const tgLine = pickLineValue(text, /^Telegram-Chat-ID:\s*(\S+)\s*$/i)
   const meshLine = pickLineValue(text, /^Funk-Node:\s*(\S+)\s*$/i)
+  const hashLine = pickLineValue(
+    text,
+    new RegExp(`^${VISITENKARTE_AVATAR_HASH_PREFIX}\\s*([a-fA-F0-9]{64})\\s*$`, 'i')
+  )
+  const thumbLine = pickLineValue(
+    text,
+    new RegExp(`^${VISITENKARTE_AVATAR_THUMB_PREFIX}\\s*(data:image\\/\\S+)\\s*$`, 'i')
+  )
+  const avatarThumb =
+    thumbLine && thumbLine.startsWith('data:image/') && thumbLine.length < 20_000
+      ? thumbLine
+      : undefined
+  const avatarHash =
+    hashLine && /^[a-fA-F0-9]{64}$/.test(hashLine) ? hashLine.toLowerCase() : undefined
 
   return {
     address,
@@ -81,5 +102,7 @@ export function parseVisitenkarteMessage(content: string): VisitenkarteIngestFie
     ...(tgLine ? { telegramChatId: tgLine } : {}),
     ...(meshLine ? { meshNodeId: meshLine } : {}),
     ...(fromQr?.ecdhPubB64 ? { ecdhPubB64: fromQr.ecdhPubB64 } : {}),
+    ...(avatarThumb ? { avatarThumbDataUrl: avatarThumb } : {}),
+    ...(avatarHash ? { avatarHashHex: avatarHash } : {}),
   }
 }
