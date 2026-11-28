@@ -3,6 +3,8 @@ import { blake2b } from '@noble/hashes/blake2b'
 import {
   STEALTH_BUCKET_ENTRY_CAP,
   STEALTH_SLOT_DOMAIN,
+  deriveStealthDeleteCommit,
+  deriveStealthDeleteCommitHex,
   deriveStealthSlotTag,
   deriveStealthSlotTagHex,
   encodeEpochU64Be,
@@ -61,5 +63,17 @@ describe('stealth-slot-tag', () => {
 
   it('Bucket-Cap-Konstante laut Spec', () => {
     expect(STEALTH_BUCKET_ENTRY_CAP).toBe(32)
+  })
+
+  it('deriveStealthDeleteCommit = Blake2b256(secret||slot_tag)', () => {
+    const tag = deriveStealthSlotTag(secret, 1)
+    const del = new TextEncoder().encode('stealth-delete-secret-bytes!!')
+    const commit = deriveStealthDeleteCommit(del, tag)
+    expect(commit).toHaveLength(32)
+    const msg = new Uint8Array(del.length + tag.length)
+    msg.set(del, 0)
+    msg.set(tag, del.length)
+    expect(stealthSlotTagToHex(commit)).toBe(stealthSlotTagToHex(blake2b(msg, { dkLen: 32 })))
+    expect(deriveStealthDeleteCommitHex(del, tag)).toMatch(/^[0-9a-f]{64}$/)
   })
 })

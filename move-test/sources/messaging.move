@@ -1,5 +1,6 @@
 module messaging::messaging { // Named address via Move.toml
     use 0x2::event;
+    use 0x2::hash;
     use 0x2::object::{Self, ID, UID};
     use 0x2::table::{Self, Table};
     use 0x2::transfer;
@@ -1922,5 +1923,322 @@ module messaging::messaging { // Named address via Move.toml
         event::emit(PhysicalAssetPurged { asset_id, by });
         let PhysicalAsset { id, name: _, metadata: _, streams_anchor_id: _, nfc_uid: _, created_at_ms: _, creator_address: _, creator_signature: _ } = asset;
         object::delete(id);
+    }
+
+    /// ----------------------------------------------------------------
+    /// Stealth slot_tag buckets (Spec docs/STEALTH-SLOT-TAG-SPEC.md)
+    /// Empfänger-Index = slot_tag; kein recipient/sender im Entry.
+    /// ----------------------------------------------------------------
+    const STEALTH_TAG_LEN: u64 = 32;
+    const STEALTH_BUCKET_CAP: u64 = 32;
+    const E_STEALTH_BAD_TAG_LEN: u64 = 90;
+    const E_STEALTH_BAD_COMMIT_LEN: u64 = 91;
+    const E_STEALTH_BUCKET_FULL: u64 = 92;
+    const E_STEALTH_BUCKET_MISSING: u64 = 93;
+    const E_STEALTH_ENTRY_MISSING: u64 = 94;
+    const E_STEALTH_BAD_SECRET: u64 = 95;
+
+    struct StealthSlotKey has copy, drop, store {
+        tag: vector<u8>,
+    }
+
+    struct StealthEntry has store {
+        entry_id: u64,
+        ciphertext: vector<u8>,
+        iv: vector<u8>,
+        aes_tag: vector<u8>,
+        delete_commit: vector<u8>,
+        created_at_ms: u64,
+        expires_at_ms: u64,
+    }
+
+    struct StealthBucket has key, store {
+        id: UID,
+        entries: vector<StealthEntry>,
+        next_entry_id: u64,
+    }
+
+    /// Keine Adressen — Empfänger-Tarnung; Gas-Zahler nur an der TX sichtbar.
+    struct StealthStored has copy, drop {
+        slot_tag: vector<u8>,
+        entry_id: u64,
+        expires_at_ms: u64,
+    }
+
+    struct StealthPurged has copy, drop {
+        slot_tag: vector<u8>,
+        entry_id: u64,
+    }
+
+    fun stealth_concat_secret_tag(delete_secret: &vector<u8>, slot_tag: &vector<u8>): vector<u8> {
+        let data = *delete_secret;
+        let i = 0;
+        let n = vector::length(slot_tag);
+        while (i < n) {
+            vector::push_back(&mut data, *vector::borrow(slot_tag, i));
+            i = i + 1;
+        };
+        data
+    }
+
+    fun stealth_verify_delete_commit(delete_secret: &vector<u8>, slot_tag: &vector<u8>, delete_commit: &vector<u8>) {
+        let computed = hash::blake2b256(&stealth_concat_secret_tag(delete_secret, slot_tag));
+        assert!(computed == *delete_commit, E_STEALTH_BAD_SECRET);
+    }
+
+    fun find_stealth_entry_index(entries: &vector<StealthEntry>, entry_id: u64): (bool, u64) {
+        let i = 0;
+        let n = vector::length(entries);
+        while (i < n) {
+            if (vector::borrow(entries, i).entry_id == entry_id) {
+                return (true, i)
+            };
+            i = i + 1;
+        };
+        (false, 0)
+    }
+
+    fun destroy_stealth_entry(e: StealthEntry) {
+        let StealthEntry {
+            entry_id: _,
+            ciphertext: _,
+            iv: _,
+            aes_tag: _,
+            delete_commit: _,
+            created_at_ms: _,
+            expires_at_ms: _,
+        } = e;
+    }
+
+    /// Append Ciphertext in Epoch-Bucket. Cap 32. Replace verboten.
+    public entry fun store_stealth_entry(
+        mailbox: &mut Mailbox,
+        slot_tag: vector<u8>,
+        ciphertext: vector<u8>,
+        iv: vector<u8>,
+        aes_tag: vector<u8>,
+        delete_commit: vector<u8>,
+        ttl_days: u64,
+        ctx: &mut TxContext,
+    ) {
+        assert!(vector::length(&slot_tag) == STEALTH_TAG_LEN, E_STEALTH_BAD_TAG_LEN);
+        assert!(vector::length(&delete_commit) == STEALTH_TAG_LEN, E_STEALTH_BAD_COMMIT_LEN);
+        let key = StealthSlotKey { tag: slot_tag };
+        let now = tx_context::epoch_timestamp_ms(ctx);
+        let expires = now + ttl_days * 86400000;
+
+        if (!dof::exists_<StealthSlotKey>(&mailbox.id, key)) {
+            let bucket0 = StealthBucket {
+                id: object::new(ctx),
+                entries: vector::empty<StealthEntry>(),
+                next_entry_id: 0,
+            };
+            dof::add(&mut mailbox.id, key, bucket0);
+        };
+
+        let bucket = dof::borrow_mut<StealthSlotKey, StealthBucket>(&mut mailbox.id, key);
+        assert!(vector::length(&bucket.entries) < STEALTH_BUCKET_CAP, E_STEALTH_BUCKET_FULL);
+        let entry_id = bucket.next_entry_id;
+        bucket.next_entry_id = entry_id + 1;
+        vector::push_back(&mut bucket.entries, StealthEntry {
+            entry_id,
+            ciphertext,
+            iv,
+            aes_tag,
+            delete_commit,
+            created_at_ms: now,
+            expires_at_ms: expires,
+        });
+        event::emit(StealthStored {
+            slot_tag: key.tag,
+            entry_id,
+            expires_at_ms: expires,
+        });
+    }
+
+    /// Purge eine Entry: blake2b256(delete_secret || slot_tag) == delete_commit.
+    public entry fun purge_stealth_entry(
+        mailbox: &mut Mailbox,
+        slot_tag: vector<u8>,
+        entry_id: u64,
+        delete_secret: vector<u8>,
+        _ctx: &mut TxContext,
+    ) {
+        assert!(vector::length(&slot_tag) == STEALTH_TAG_LEN, E_STEALTH_BAD_TAG_LEN);
+        let key = StealthSlotKey { tag: slot_tag };
+        assert!(dof::exists_<StealthSlotKey>(&mailbox.id, key), E_STEALTH_BUCKET_MISSING);
+        let bucket = dof::borrow_mut<StealthSlotKey, StealthBucket>(&mut mailbox.id, key);
+        let (found, idx) = find_stealth_entry_index(&bucket.entries, entry_id);
+        assert!(found, E_STEALTH_ENTRY_MISSING);
+        let entry_ref = vector::borrow(&bucket.entries, idx);
+        stealth_verify_delete_commit(&delete_secret, &key.tag, &entry_ref.delete_commit);
+        let removed = vector::remove(&mut bucket.entries, idx);
+        destroy_stealth_entry(removed);
+        event::emit(StealthPurged { slot_tag: key.tag, entry_id });
+    }
+
+    /// Leert den Bucket; jedes Entry braucht denselben delete_secret-Beweis (pro Entry-Commit).
+    /// Für Burn-nach-Lesen oft einfacher: pro Entry `purge_stealth_entry`.
+    /// Hier: Secret muss **jeden** Entry-Commit matchen (typisch gleicher Secret für alle Entries einer Epoche).
+    public entry fun purge_stealth_bucket(
+        mailbox: &mut Mailbox,
+        slot_tag: vector<u8>,
+        delete_secret: vector<u8>,
+        _ctx: &mut TxContext,
+    ) {
+        assert!(vector::length(&slot_tag) == STEALTH_TAG_LEN, E_STEALTH_BAD_TAG_LEN);
+        let key = StealthSlotKey { tag: slot_tag };
+        assert!(dof::exists_<StealthSlotKey>(&mailbox.id, key), E_STEALTH_BUCKET_MISSING);
+        let bucket = dof::borrow_mut<StealthSlotKey, StealthBucket>(&mut mailbox.id, key);
+        while (!vector::is_empty(&bucket.entries)) {
+            let e = vector::pop_back(&mut bucket.entries);
+            stealth_verify_delete_commit(&delete_secret, &key.tag, &e.delete_commit);
+            let eid = e.entry_id;
+            destroy_stealth_entry(e);
+            event::emit(StealthPurged { slot_tag: key.tag, entry_id: eid });
+        };
+    }
+
+    #[test_only]
+    use 0x2::test_scenario as ts;
+
+    #[test_only]
+    fun stealth_test_tag(): vector<u8> {
+        let t = vector::empty<u8>();
+        let i = 0;
+        while (i < 32) {
+            vector::push_back(&mut t, (i as u8));
+            i = i + 1;
+        };
+        t
+    }
+
+    #[test_only]
+    fun stealth_test_commit(secret: &vector<u8>, tag: &vector<u8>): vector<u8> {
+        hash::blake2b256(&stealth_concat_secret_tag(secret, tag))
+    }
+
+    #[test]
+    fun test_stealth_append_two_no_replace() {
+        let sender = @0xA;
+        let scenario = ts::begin(sender);
+        ts::next_tx(&mut scenario, sender);
+        {
+            create_team_mailbox(ts::ctx(&mut scenario));
+        };
+        ts::next_tx(&mut scenario, sender);
+        {
+            let mb = ts::take_shared<Mailbox>(&scenario);
+            let tag = stealth_test_tag();
+            let secret = b"stealth-delete-secret-bytes!!";
+            let commit = stealth_test_commit(&secret, &tag);
+            store_stealth_entry(
+                &mut mb,
+                tag,
+                b"ct1",
+                b"iv1",
+                b"tg1",
+                commit,
+                7,
+                ts::ctx(&mut scenario),
+            );
+            let tag2 = stealth_test_tag();
+            let commit2 = stealth_test_commit(&secret, &tag2);
+            store_stealth_entry(
+                &mut mb,
+                tag2,
+                b"ct2",
+                b"iv2",
+                b"tg2",
+                commit2,
+                7,
+                ts::ctx(&mut scenario),
+            );
+            let key = StealthSlotKey { tag: stealth_test_tag() };
+            let bucket = dof::borrow<StealthSlotKey, StealthBucket>(&mb.id, key);
+            assert!(vector::length(&bucket.entries) == 2, 0);
+            assert!(vector::borrow(&bucket.entries, 0).entry_id == 0, 1);
+            assert!(vector::borrow(&bucket.entries, 1).entry_id == 1, 2);
+            ts::return_shared(mb);
+        };
+        ts::end(scenario);
+    }
+
+    #[test]
+    #[expected_failure(abort_code = E_STEALTH_BUCKET_FULL)]
+    fun test_stealth_cap_aborts() {
+        let sender = @0xA;
+        let scenario = ts::begin(sender);
+        ts::next_tx(&mut scenario, sender);
+        { create_team_mailbox(ts::ctx(&mut scenario)); };
+        ts::next_tx(&mut scenario, sender);
+        {
+            let mb = ts::take_shared<Mailbox>(&scenario);
+            let tag = stealth_test_tag();
+            let secret = b"stealth-delete-secret-bytes!!";
+            let commit = stealth_test_commit(&secret, &tag);
+            let i = 0;
+            while (i < 33) {
+                store_stealth_entry(
+                    &mut mb,
+                    stealth_test_tag(),
+                    b"c",
+                    b"i",
+                    b"t",
+                    commit,
+                    1,
+                    ts::ctx(&mut scenario),
+                );
+                i = i + 1;
+            };
+            ts::return_shared(mb);
+        };
+        ts::end(scenario);
+    }
+
+    #[test]
+    #[expected_failure(abort_code = E_STEALTH_BAD_SECRET)]
+    fun test_stealth_purge_bad_secret() {
+        let sender = @0xA;
+        let scenario = ts::begin(sender);
+        ts::next_tx(&mut scenario, sender);
+        { create_team_mailbox(ts::ctx(&mut scenario)); };
+        ts::next_tx(&mut scenario, sender);
+        {
+            let mb = ts::take_shared<Mailbox>(&scenario);
+            let tag = stealth_test_tag();
+            let secret = b"stealth-delete-secret-bytes!!";
+            let commit = stealth_test_commit(&secret, &tag);
+            store_stealth_entry(&mut mb, tag, b"c", b"i", b"t", commit, 1, ts::ctx(&mut scenario));
+            purge_stealth_entry(&mut mb, stealth_test_tag(), 0, b"wrong-secret!!!!!!!!!!!!!!!!", ts::ctx(&mut scenario));
+            ts::return_shared(mb);
+        };
+        ts::end(scenario);
+    }
+
+    #[test]
+    fun test_stealth_purge_entry_ok() {
+        let sender = @0xA;
+        let scenario = ts::begin(sender);
+        ts::next_tx(&mut scenario, sender);
+        { create_team_mailbox(ts::ctx(&mut scenario)); };
+        ts::next_tx(&mut scenario, sender);
+        {
+            let mb = ts::take_shared<Mailbox>(&scenario);
+            let tag = stealth_test_tag();
+            let secret = b"stealth-delete-secret-bytes!!";
+            let commit = stealth_test_commit(&secret, &tag);
+            store_stealth_entry(&mut mb, tag, b"c", b"i", b"t", commit, 1, ts::ctx(&mut scenario));
+            let tag2 = stealth_test_tag();
+            let commit2 = stealth_test_commit(&secret, &tag2);
+            store_stealth_entry(&mut mb, tag2, b"c2", b"i2", b"t2", commit2, 1, ts::ctx(&mut scenario));
+            purge_stealth_entry(&mut mb, stealth_test_tag(), 0, secret, ts::ctx(&mut scenario));
+            let key = StealthSlotKey { tag: stealth_test_tag() };
+            let bucket = dof::borrow<StealthSlotKey, StealthBucket>(&mb.id, key);
+            assert!(vector::length(&bucket.entries) == 1, 0);
+            assert!(vector::borrow(&bucket.entries, 0).entry_id == 1, 1);
+            ts::return_shared(mb);
+        };
+        ts::end(scenario);
     }
 }

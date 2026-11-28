@@ -17,7 +17,8 @@ Kurznotizen für spätere Phasen — **kein** Implementierungsversprechen.
 **Gate EXE:** Portable A/B **Live PASS 2026-11-28** (Next-UI) — erfüllt.  
 **Spec (2026-11-28):** **`docs/STEALTH-SLOT-TAG-SPEC.md`** — **grün** (+ Multi-Msg Queue, Gas-Zahler-Ehrlichkeit).  
 **Mini-Lib Ist:** `frontend/frontend/lib/stealth-slot-tag.ts` (Vitest).  
-**Noch nicht:** Move-Deploy, Lookahead-Polling, Composer-UI — Move-Scheibe nur mit Start-OK.  
+**Move-Source Ist:** `store_stealth_entry` / purge in `messaging.move` (Tests PASS) — **Publish ausstehend**.  
+**Noch nicht:** Package-Upgrade, Lookahead-Polling, Composer „Diskret“.  
 Abgrenzung: **`docs/KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md`**.  
 **Nicht verwechseln:** Zwischenlager (`buffer`) · R1-Kurier · Stealth.
 

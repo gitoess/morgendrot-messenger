@@ -97,7 +97,7 @@ purge_stealth_bucket(mailbox, slot_tag, delete_secret)
 - **Ohne** gültigen Commit: Abort.
 - Replace-Semantik **verboten** für Store: nur **append** in den Bucket (bis Cap).
 
-Genaues Move-Layout = **Implementierungs-Scheibe** (nicht diese Spec).
+**Move-Layout Ist (Source):** `StealthSlotKey` / `StealthBucket` / `StealthEntry` unter Mailbox-DOF; Cap 32; `delete_commit = blake2b256(delete_secret || slot_tag)`. Publish noch nicht.
 
 ---
 
@@ -151,9 +151,9 @@ Genaues Move-Layout = **Implementierungs-Scheibe** (nicht diese Spec).
 ## 7. Abnahme-Reihenfolge
 
 1. ~~User: Spec grün~~ **PASS 2026-11-28** (+ Multi-Msg Queue + Gas-Hinweis).  
-2. ~~Mini-Lib Vitest~~ **Ist** — `frontend/frontend/lib/stealth-slot-tag.ts` (+ Test): Blake2b-256 Ableitung, Epoch-u64-BE, Stunden-Epoch, Lookahead ±W; Cap-Konstante 32.  
-3. Move-MVP: Bucket-Append + Cap + Entry-Purge; Client Opt-in — **eigene** kleine Scheiben, Default aus.  
-4. 1-Gerät-Smoke (zwei Wallets am PC), dann Logbuch-Zeile.  
+2. ~~Mini-Lib Vitest~~ **Ist** — `frontend/frontend/lib/stealth-slot-tag.ts` (+ Test): Blake2b-256 Ableitung, Epoch-u64-BE, Stunden-Epoch, Lookahead ±W; Cap-Konstante 32; `deriveStealthDeleteCommit`.  
+3. ~~Move-MVP Source~~ **Ist** (2026-11-28) — `store_stealth_entry` / `purge_stealth_entry` / `purge_stealth_bucket` in `move-test/sources/messaging.move`; Move-Tests PASS. **Package-Publish/Upgrade ausstehend** (User-OK). Client Opt-in „Diskret“ = eigene Scheibe.  
+4. 1-Gerät-Smoke (zwei Wallets am PC), dann Logbuch-Zeile — nach Publish.  
 5. Optional später: Sponsor/Relayer-Pfad für „Diskret + fremder Gas-Zahler“.
 
 ---

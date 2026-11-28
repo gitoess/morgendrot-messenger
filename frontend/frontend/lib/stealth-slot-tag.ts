@@ -76,3 +76,20 @@ export function stealthSlotTagToHex(tag: Uint8Array): string {
 export function deriveStealthSlotTagHex(sharedSecret: Uint8Array, epoch: number | bigint): string {
   return stealthSlotTagToHex(deriveStealthSlotTag(sharedSecret, epoch))
 }
+
+/**
+ * Move: `delete_commit = blake2b256(delete_secret || slot_tag)` (32 Byte).
+ * Gleich wie `messaging::stealth_verify_delete_commit`.
+ */
+export function deriveStealthDeleteCommit(deleteSecret: Uint8Array, slotTag: Uint8Array): Uint8Array {
+  // Copy: jsdom TextEncoder-Bytes scheitern oft an `instanceof Uint8Array`
+  const secret = new Uint8Array(deleteSecret)
+  const tag = new Uint8Array(slotTag)
+  if (secret.length < 1) throw new Error('stealth deleteSecret fehlt')
+  if (tag.length !== 32) throw new Error('stealth slotTag muss 32 Byte sein')
+  return blake2b(concatBytes([secret, tag]), { dkLen: 32 })
+}
+
+export function deriveStealthDeleteCommitHex(deleteSecret: Uint8Array, slotTag: Uint8Array): string {
+  return stealthSlotTagToHex(deriveStealthDeleteCommit(deleteSecret, slotTag))
+}
