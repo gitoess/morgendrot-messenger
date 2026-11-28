@@ -2,9 +2,11 @@ import { describe, it, expect } from 'vitest'
 import { blake2b } from '@noble/hashes/blake2b'
 import {
   STEALTH_BUCKET_ENTRY_CAP,
+  STEALTH_DELETE_DOMAIN,
   STEALTH_SLOT_DOMAIN,
   deriveStealthDeleteCommit,
   deriveStealthDeleteCommitHex,
+  deriveStealthDeleteSecret,
   deriveStealthSlotTag,
   deriveStealthSlotTagHex,
   encodeEpochU64Be,
@@ -75,5 +77,16 @@ describe('stealth-slot-tag', () => {
     msg.set(tag, del.length)
     expect(stealthSlotTagToHex(commit)).toBe(stealthSlotTagToHex(blake2b(msg, { dkLen: 32 })))
     expect(deriveStealthDeleteCommitHex(del, tag)).toMatch(/^[0-9a-f]{64}$/)
+  })
+
+  it('deriveStealthDeleteSecret = Blake2b256(shared||delete)', () => {
+    const del = deriveStealthDeleteSecret(secret)
+    expect(del).toHaveLength(32)
+    const te = new TextEncoder()
+    const msg = new Uint8Array(secret.length + STEALTH_DELETE_DOMAIN.length)
+    msg.set(secret, 0)
+    msg.set(te.encode(STEALTH_DELETE_DOMAIN), secret.length)
+    expect(stealthSlotTagToHex(del)).toBe(stealthSlotTagToHex(blake2b(msg, { dkLen: 32 })))
+    expect(stealthSlotTagToHex(del)).not.toBe(deriveStealthSlotTagHex(secret, 0))
   })
 })

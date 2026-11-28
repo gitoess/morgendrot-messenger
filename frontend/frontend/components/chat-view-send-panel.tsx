@@ -11,6 +11,7 @@ import {
   BookUser,
   Camera,
   Check,
+  EyeOff,
   KeyRound,
   ListOrdered,
   Lock,
@@ -62,6 +63,7 @@ import {
 import { ChatViewEncryptionModeToggle } from '@/frontend/components/chat-view-encryption-mode-toggle'
 import { ChatViewEncryptionContextHint } from '@/frontend/components/chat-view-encryption-context-hint'
 import { PassphraseProtectComposerToggle } from '@/frontend/components/chat-view-passphrase-protect-toggle'
+import { ChatViewDiskretToggle } from '@/frontend/components/chat-view-diskret-toggle'
 import {
   readPassphraseProtectEnabled,
   readPassphraseZeitkapselModeEnabled,
@@ -69,6 +71,11 @@ import {
   writePassphraseZeitkapselModeEnabled,
   PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT,
 } from '@/frontend/lib/passphrase-message-local-store'
+import {
+  DISKRET_SEND_CHANGED_EVENT,
+  readDiskretSendEnabled,
+  writeDiskretSendEnabled,
+} from '@/frontend/lib/diskret-send-pref'
 import { hasTeamBroadcastKey } from '@/frontend/lib/team-broadcast-key-store'
 import { GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG } from '@/frontend/lib/group-team-broadcast'
 import {
@@ -593,7 +600,10 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
   })
   const [manualAddressMode, setManualAddressMode] = useState(false)
   const [privacyToolsOpen, setPrivacyToolsOpen] = useState(
-    () => readPassphraseProtectEnabled() || readPassphraseZeitkapselModeEnabled()
+    () =>
+      readPassphraseProtectEnabled() ||
+      readPassphraseZeitkapselModeEnabled() ||
+      readDiskretSendEnabled()
   )
   useEffect(() => {
     setManualAddressMode(false)
@@ -601,12 +611,20 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
 
   useEffect(() => {
     const syncPrivacy = () => {
-      if (readPassphraseProtectEnabled() || readPassphraseZeitkapselModeEnabled()) {
+      if (
+        readPassphraseProtectEnabled() ||
+        readPassphraseZeitkapselModeEnabled() ||
+        readDiskretSendEnabled()
+      ) {
         setPrivacyToolsOpen(true)
       }
     }
     window.addEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, syncPrivacy)
-    return () => window.removeEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, syncPrivacy)
+    window.addEventListener(DISKRET_SEND_CHANGED_EVENT, syncPrivacy)
+    return () => {
+      window.removeEventListener(PASSPHRASE_MESSAGE_VAULT_CHANGED_EVENT, syncPrivacy)
+      window.removeEventListener(DISKRET_SEND_CHANGED_EVENT, syncPrivacy)
+    }
   }, [])
 
   /** „Nochmals senden“ in der Abbruch-Nachricht (Posteingang). */
@@ -942,6 +960,10 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 Zuklappen
               </button>
             </div>
+            <ChatViewDiskretToggle
+              encrypted={encrypted}
+              onEncryptedChange={onEncryptedChange ?? encryptionModeToggle?.onEncryptedChange}
+            />
             <PassphraseProtectComposerToggle
               encrypted={encrypted}
               onEncryptedChange={onEncryptedChange ?? encryptionModeToggle?.onEncryptedChange}
@@ -1267,6 +1289,24 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                       <>
                         <button
                           type="button"
+                          disabled={sending || voiceLocksComposer}
+                          onClick={() => {
+                            writePassphraseProtectEnabled(false)
+                            writePassphraseZeitkapselModeEnabled(false)
+                            writeDiskretSendEnabled(true)
+                            if (!encrypted) onEncryptedChange?.(true)
+                            setPrivacyToolsOpen(true)
+                            closePlus()
+                          }}
+                          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
+                        >
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/70 text-muted-foreground">
+                            <EyeOff className="h-4 w-4" aria-hidden />
+                          </span>
+                          Diskret senden…
+                        </button>
+                        <button
+                          type="button"
                           disabled={sending || voiceLocksComposer || encrypted}
                           title={
                             encrypted
@@ -1274,6 +1314,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                               : undefined
                           }
                           onClick={() => {
+                            writeDiskretSendEnabled(false)
                             writePassphraseZeitkapselModeEnabled(false)
                             writePassphraseProtectEnabled(true)
                             if (encrypted) onEncryptedChange?.(false)
@@ -1295,6 +1336,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                               : undefined
                           }
                           onClick={() => {
+                            writeDiskretSendEnabled(false)
                             writePassphraseProtectEnabled(false)
                             writePassphraseZeitkapselModeEnabled(true)
                             if (encrypted) onEncryptedChange?.(false)

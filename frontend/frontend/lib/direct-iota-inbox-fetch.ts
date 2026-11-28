@@ -34,6 +34,7 @@ import { decryptDirectInboxEncryptedPayload } from '@/frontend/lib/direct-iota-i
 import { decryptTeamBroadcastInboxPayload } from '@/frontend/lib/team-broadcast-inbox-decrypt'
 import { formatDirectIotaSubmitError } from '@/frontend/lib/direct-iota-error-messages'
 import { isIotaRelayOnlyMode } from '@/frontend/lib/direct-iota-plain-submit'
+import { fetchStealthLookaheadInboxRows } from '@/frontend/lib/direct-iota-stealth-lookahead-fetch'
 
 export type TryFetchDirectMailboxInboxViaIotaOpts = {
   limit: number
@@ -341,6 +342,20 @@ export async function tryFetchDirectMailboxInboxViaIota(
           }),
         },
       })
+    }
+
+    /** Diskret Lookahead (Opt-in): slot_tag-Buckets der ECDH-Peers in denselben Merge. */
+    try {
+      const stealthRows = await fetchStealthLookaheadInboxRows({
+        client,
+        mailboxObjectId,
+        myAddress: my,
+      })
+      for (const s of stealthRows) {
+        sortable.push({ sortTs: s.sortTs, row: s.row })
+      }
+    } catch {
+      /* Lookahead optional — normaler Inbox bleibt */
     }
 
     if (includeTeamBroadcast) {

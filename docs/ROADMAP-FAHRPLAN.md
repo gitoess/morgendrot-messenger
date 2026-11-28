@@ -53,7 +53,7 @@ PC-Jetzt (#39–#46), Soft-Pause/Burn/Solo-Wizard/Visitenkarte-**Share**-MVP + *
 | **H.24** Package-UI | **Später** | Expertenmodus reicht PC; Multi-Package = Inbox-Namespaces |
 | **EXE Scheibe C** (Standalone zum Verteilen) | **Geparkt** (User 2026-11-28) | Eingebettetes Node/Next — warten; A/B reicht Schreibtisch |
 
-**Nächste PC-Arbeit:** Stealth Move+TXB Ist (Call-Package `0xa3e70f…`); als Nächstes Composer **„Diskret“** Opt-in (Default aus) / Live-Schmerz. Spec **`docs/STEALTH-SLOT-TAG-SPEC.md`**. M4e ≠ Stealth.
+**Nächste PC-Arbeit:** Stealth Diskret+Lookahead Ist; Live **1-Gerät-Smoke** (`docs/STEALTH-1GERAET-SMOKE.md`) / Live-Schmerz. Spec **`docs/STEALTH-SLOT-TAG-SPEC.md`**. M4e ≠ Stealth.
 
 ### C · Geparkt (nach B / nicht jetzt)
 

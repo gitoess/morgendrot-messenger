@@ -18,7 +18,9 @@ Kurznotizen für spätere Phasen — **kein** Implementierungsversprechen.
 **Spec (2026-11-28):** **`docs/STEALTH-SLOT-TAG-SPEC.md`** — **grün** (+ Multi-Msg Queue, Gas-Zahler-Ehrlichkeit).  
 **Mini-Lib Ist:** `frontend/frontend/lib/stealth-slot-tag.ts` (Vitest).  
 **Move Ist:** Source + Upgrade on-chain; TXB `mailbox-stealth-txb` mit `callPackageId` (published-at `0xa3e70f…`).  
-**Noch nicht:** Composer „Diskret“, Lookahead-Polling.  
+**Composer Ist:** Opt-in „Diskret“ (Default aus) → Direct `store_stealth_entry` + Lookahead-Empfang.  
+**Smoke:** `docs/STEALTH-1GERAET-SMOKE.md`.  
+**Noch nicht:** Purge-UI nach Lesen.  
 Abgrenzung: **`docs/KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md`**.  
 **Nicht verwechseln:** Zwischenlager (`buffer`) · R1-Kurier · Stealth.
 

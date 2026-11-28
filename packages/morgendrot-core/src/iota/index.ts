@@ -98,6 +98,12 @@ export type {
   BuildStoreStealthEntryTxInput,
   BuildPurgeStealthEntryTxInput,
 } from './mailbox-stealth-txb'
+export { fetchStealthBucketsForSlotTags } from './mailbox-stealth-inbox-rpc'
+export type {
+  FetchStealthBucketsRpcInput,
+  StealthInboxBucketRpc,
+  StealthInboxEntryRpc,
+} from './mailbox-stealth-inbox-rpc'
 export {
   fetchPlaintextMailboxInboxRows,
   normalizeMailboxAddress,

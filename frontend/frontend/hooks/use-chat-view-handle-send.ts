@@ -72,6 +72,7 @@ import {
 } from '@/frontend/lib/compact-image-wire'
 import { sendEncryptedMailboxHybrid } from '@/frontend/lib/mailbox-send-hybrid'
 import { canTryLiveEncryptedDirectMailbox } from '@/frontend/lib/direct-iota-encrypted-submit'
+import { readDiskretSendEnabled } from '@/frontend/lib/diskret-send-pref'
 import { findPeerHandshake } from '@/frontend/lib/api/package-connect'
 import { connectPartnerHybrid } from '@/frontend/lib/connect-hybrid'
 import { readCachedHandshakeOffers } from '@/frontend/lib/handshake-offers-cache'
@@ -311,6 +312,35 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       setStatus('error')
       setStatusMsg(groupPreSendErr)
       return
+    }
+
+    /** Diskret (Stealth slot_tag): Opt-in, nur Direct Enc 1:1 Internet — Spec §5. */
+    if (readDiskretSendEnabled()) {
+      if (forcedTransport !== 'internet') {
+        setStatus('error')
+        setStatusMsg('Diskret nur über Internet/IOTA — Funk/Mesh separat.')
+        return
+      }
+      if (isEmergencySend) {
+        setStatus('error')
+        setStatusMsg('SOS und Diskret schließen sich aus (Hilfe > Metadaten-Tarnung).')
+        return
+      }
+      if (isGroupChannel) {
+        setStatus('error')
+        setStatusMsg('Diskret ist MVP nur für 1:1 (Peer-ECDH) — kein Gruppenkanal.')
+        return
+      }
+      if (!sendEncrypted) {
+        setStatus('error')
+        setStatusMsg('Diskret braucht Verschlüsselung (ECDH). Oben „Verschlüsselt“ wählen.')
+        return
+      }
+      if (readPassphraseProtectEnabled() || readPassphraseZeitkapselModeEnabled()) {
+        setStatus('error')
+        setStatusMsg('Diskret und Passphrase/NFT-Leserecht schließen sich aus — eines aus.')
+        return
+      }
     }
 
     /**

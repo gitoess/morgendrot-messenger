@@ -30,6 +30,7 @@ import {
   trySubmitEncryptedMailboxViaDirectIota,
   trySubmitEncryptedMailboxViaDirectIotaFromPlaintext,
 } from '@/frontend/lib/direct-iota-encrypted-submit'
+import { trySubmitStealthMailboxViaDirectIotaFromPlaintext } from '@/frontend/lib/direct-iota-stealth-submit'
 import {
   isOfflineEncryptedWirePayload,
   offlineEncryptedWireToDirectSubmitInput,
@@ -42,6 +43,7 @@ import { tryAutoRestoreDirectIotaSessionSignerAsync } from '@/frontend/lib/direc
 import { readNetworkProfilesState, validateNetworkProfile } from '@/frontend/lib/einsatz-network-profiles'
 import { shouldSkipMessengerApiRelayFallback } from '@/frontend/lib/messenger-standalone-relay'
 import { prepareEncryptedDirectSend } from '@/frontend/lib/direct-iota-encrypted-send-prep'
+import { readDiskretSendEnabled } from '@/frontend/lib/diskret-send-pref'
 
 /** Boss `/api` nutzt oft noch Testnet-PACKAGE_ID — auf Mainnet nur Direkt-RPC, nicht Relay. */
 function shouldUseMailboxApiRelayFallback(): boolean {
@@ -229,6 +231,31 @@ export async function sendEncryptedMailboxHybrid(
   await tryAutoRestoreDirectIotaSessionSignerAsync()
   const rTrim = recipient.trim()
   const mode = resolvePersistenceMode(opts)
+
+  /** Diskret: nur Direct + Haupt-Mailbox + slot_tag — kein Event-Fallback, kein `/api`. */
+  if (readDiskretSendEnabled()) {
+    if (!rTrim) {
+      return { ok: false, error: 'Diskret: Empfänger-Adresse fehlt.' }
+    }
+    const prep = await prepareEncryptedDirectSend(rTrim, 'mailbox')
+    if (!prep.ok) return { ok: false, error: prep.error }
+    const mat = getDirectChatEcdhMaterialForRecipient(rTrim)
+    if (!mat) {
+      return { ok: false, error: 'Diskret: ECDH-Material fehlt — zuerst Handshake/Connect.' }
+    }
+    const ste = await trySubmitStealthMailboxViaDirectIotaFromPlaintext({
+      recipient: rTrim,
+      plaintextUtf8: wireForApi,
+      peerPubRaw: mat.peerPubRaw,
+      ecdhPrivateKey: mat.ecdhPrivateKey,
+    })
+    if (ste.ok) return { ok: true, txDigest: ste.digest }
+    return {
+      ok: false,
+      error: ste.error ?? 'Diskret-Send fehlgeschlagen (kein API-Relay für Stealth).',
+    }
+  }
+
   let directErr: string | undefined
   if (rTrim) {
     const attemptDirect = async (persistenceMode: MessagingPersistenceMode) => {

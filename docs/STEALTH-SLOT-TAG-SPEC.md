@@ -1,6 +1,6 @@
 # Stealth `slot_tag` — Spec (Doku-Scheibe)
 
-**Stand:** 2026-11-28 · **Status:** Spec **grün** (User) + Nachzug Multi-Msg + Gas-Ehrlichkeit · **kein** Move-Deploy / Client-Bau bis nächste OK-Scheibe  
+**Stand:** 2026-11-28 · **Status:** Spec **grün** · Move+TXB Ist · Composer Opt-in **„Diskret“** Ist (Default aus) · Lookahead noch offen  
 **Bezug:** `IDEEN-BACKLOG.md` · `KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md` · Roadmap Arbeitsstand · Gas: `SPONSORING-AND-CREDITS-DOUBLE-FLOOR.md` · Relayer: R1/R2 in Roadmap
 
 ---
@@ -97,7 +97,9 @@ purge_stealth_bucket(mailbox, slot_tag, delete_secret)
 - **Ohne** gültigen Commit: Abort.
 - Replace-Semantik **verboten** für Store: nur **append** in den Bucket (bis Cap).
 
-**Move-Layout Ist (Source):** `StealthSlotKey` / `StealthBucket` / `StealthEntry` unter Mailbox-DOF; Cap 32; `delete_commit = blake2b256(delete_secret || slot_tag)`. Publish noch nicht.
+**Client-Ableitung (Ist):** `delete_secret = Blake2b256(SharedSecret || UTF8("delete"))` — 32 Byte; SharedSecret selbst geht nicht on-chain.
+
+**Move-Layout Ist:** `StealthSlotKey` / `StealthBucket` / `StealthEntry` unter Mailbox-DOF; Cap 32; `delete_commit = blake2b256(delete_secret || slot_tag)`. Call-Package `0xa3e70f…`.
 
 ---
 
@@ -137,11 +139,9 @@ purge_stealth_bucket(mailbox, slot_tag, delete_secret)
 
 ---
 
-## 6. Nicht-Ziele dieser Spec-Scheibe
+## 6. Nicht-Ziele (noch offen / geparkt)
 
-- Move-Deploy / Package-Upgrade  
-- Lookahead-Polling-Code  
-- Composer-UI „Diskret“  
+- Purge-UI nach Lesen  
 - M4e-Schubladen-UX-Feinschliff  
 - Kurier / Linkify / Handy-Feldtest  
 - Pflicht-Sponsoring für jedes Diskret-Send (nur dokumentierte Grenze + später Opt-in)
@@ -151,11 +151,11 @@ purge_stealth_bucket(mailbox, slot_tag, delete_secret)
 ## 7. Abnahme-Reihenfolge
 
 1. ~~User: Spec grün~~ **PASS 2026-11-28** (+ Multi-Msg Queue + Gas-Hinweis).  
-2. ~~Mini-Lib Vitest~~ **Ist** — `frontend/frontend/lib/stealth-slot-tag.ts` (+ Test): Blake2b-256 Ableitung, Epoch-u64-BE, Stunden-Epoch, Lookahead ±W; Cap-Konstante 32; `deriveStealthDeleteCommit`.  
-3. ~~Move-MVP Source + Upgrade~~ **Ist** (2026-11-28) — Source + on-chain Upgrade; Call-Package `0xa3e70f…` (Stamm-Mailbox-Typen `0x06e099…` unverändert). TXB: `mailbox-stealth-txb.ts` (`callPackageId`).  
-4. Client Opt-in „Diskret“ (Composer) — **nächste** UI-Scheibe.  
-5. 1-Gerät-Smoke (zwei Wallets am PC), dann Logbuch-Zeile.  
-6. Optional später: Sponsor/Relayer-Pfad für „Diskret + fremder Gas-Zahler“.
+2. ~~Mini-Lib Vitest~~ **Ist** — `stealth-slot-tag.ts` (+ `deriveStealthDeleteSecret`).  
+3. ~~Move-MVP Source + Upgrade~~ **Ist** — Call-Package `0xa3e70f…`; TXB `mailbox-stealth-txb.ts`.  
+4. ~~Client Opt-in „Diskret“ (Composer)~~ **Ist** — Pref Default aus; Plus-Menü + Toggle; Direct-Submit.  
+5. ~~Lookahead-Empfang~~ **Ist** — Direct-Inbox Merge wenn Diskret an; RPC `fetchStealthBucketsForSlotTags`. Smoke-Checkliste: `docs/STEALTH-1GERAET-SMOKE.md` (Live-Zeile nach User-Lauf).  
+6. Optional später: Sponsor/Relayer-Pfad für „Diskret + fremder Gas-Zahler“; Purge nach Lesen.
 
 ### Call-Package vs. Stamm (Upgrade)
 
@@ -173,4 +173,4 @@ purge_stealth_bucket(mailbox, slot_tag, delete_secret)
 - `buffer` bleibt Aktenschrank.  
 - `slot_tag` = **Epoch-Bucket**; Multi-Msg = **Queue/Append**, nicht Replace; **kein** Seq-im-Hash als MVP.  
 - Gas-Zahler ≠ Empfänger-Tarnung — Sponsor/Relayer für Maximal-Tarnung, Stealth allein reicht für Empfänger-Index.  
-- Bau (Move/UI) erst nach explizitem Start der nächsten Scheibe.
+- Bau Move/UI Diskret + Lookahead: **Ist**; Live-Smoke am PC nach Checkliste.

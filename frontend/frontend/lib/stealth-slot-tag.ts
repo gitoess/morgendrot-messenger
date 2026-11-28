@@ -7,6 +7,9 @@ import { blake2b } from '@noble/hashes/blake2b'
 /** Domain-Separator laut Spec §3.1 */
 export const STEALTH_SLOT_DOMAIN = 'slot'
 
+/** Domain für `delete_secret` (Spec §3.3) — getrennt vom Slot-Hash. */
+export const STEALTH_DELETE_DOMAIN = 'delete'
+
 /** Max Entries pro Epoch-Bucket (Spec §3.1.1) — nur Konstante für spätere Move/Client-Scheibe. */
 export const STEALTH_BUCKET_ENTRY_CAP = 32
 
@@ -75,6 +78,19 @@ export function stealthSlotTagToHex(tag: Uint8Array): string {
 
 export function deriveStealthSlotTagHex(sharedSecret: Uint8Array, epoch: number | bigint): string {
   return stealthSlotTagToHex(deriveStealthSlotTag(sharedSecret, epoch))
+}
+
+/**
+ * `delete_secret = Blake2b256(SharedSecret || UTF8("delete"))` — 32 Byte.
+ * Purge-Beweis; SharedSecret selbst geht nicht on-chain.
+ */
+export function deriveStealthDeleteSecret(sharedSecret: Uint8Array): Uint8Array {
+  if (!(sharedSecret instanceof Uint8Array) || sharedSecret.length < 1) {
+    throw new Error('stealth SharedSecret fehlt')
+  }
+  return blake2b(concatBytes([new Uint8Array(sharedSecret), te.encode(STEALTH_DELETE_DOMAIN)]), {
+    dkLen: 32,
+  })
 }
 
 /**
